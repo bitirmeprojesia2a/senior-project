@@ -1,0 +1,168 @@
+{
+  "version": "1.0",
+  "description": "RAG sistemi değerlendirme soruları — Öğrenci İşleri departmanı",
+  "created_at": "2026-02-28",
+  "total_questions": 20,
+  "questions": [
+    {
+      "id": 1,
+      "question": "ÇAP başvurusu için gereken not ortalaması kaçtır?",
+      "expected_topic": "çap",
+      "expected_source_patterns": ["cift_anadal", "çift ana dal", "çap"],
+      "category": "factual",
+      "difficulty": "easy"
+    },
+    {
+      "id": 2,
+      "question": "Yan dal programına başvuru şartları nelerdir?",
+      "expected_topic": "yan dal",
+      "expected_source_patterns": ["yandal", "yan dal", "cift_anadal"],
+      "category": "factual",
+      "difficulty": "easy"
+    },
+    {
+      "id": 3,
+      "question": "Yatay geçiş için gerekli belgeler nelerdir?",
+      "expected_topic": "yatay geçiş",
+      "expected_source_patterns": ["yatay_gecis", "yatay geçiş"],
+      "category": "factual",
+      "difficulty": "easy"
+    },
+    {
+      "id": 4,
+      "question": "Kayıt dondurma süresi ne kadardır?",
+      "expected_topic": "kayıt dondurma",
+      "expected_source_patterns": ["kayit", "kayıt", "izin", "lisans"],
+      "category": "factual",
+      "difficulty": "easy"
+    },
+    {
+      "id": 5,
+      "question": "Staj süresi kaç gündür?",
+      "expected_topic": "staj",
+      "expected_source_patterns": ["staj"],
+      "category": "factual",
+      "difficulty": "easy"
+    },
+    {
+      "id": 6,
+      "question": "Sınav sonucuna itiraz nasıl yapılır?",
+      "expected_topic": "sınav",
+      "expected_source_patterns": ["sinav", "sınav", "lisans", "onlisans"],
+      "category": "procedural",
+      "difficulty": "easy"
+    },
+    {
+      "id": 7,
+      "question": "Mezuniyet için gereken toplam AKTS kaçtır?",
+      "expected_topic": "mezuniyet",
+      "expected_source_patterns": ["mezuniyet", "lisans", "onlisans"],
+      "category": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "id": 8,
+      "question": "Devamsızlık sınırı nedir?",
+      "expected_topic": "devamsızlık",
+      "expected_source_patterns": ["devam", "lisans", "onlisans"],
+      "category": "factual",
+      "difficulty": "easy"
+    },
+    {
+      "id": 9,
+      "question": "Çift ana dal programından çıkarılma koşulları nelerdir?",
+      "expected_topic": "çap",
+      "expected_source_patterns": ["cift_anadal", "çift ana dal"],
+      "category": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "id": 10,
+      "question": "Yan dal programı kaç yarıyılda tamamlanmalıdır?",
+      "expected_topic": "yan dal",
+      "expected_source_patterns": ["yandal", "yan dal", "cift_anadal"],
+      "category": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "id": 11,
+      "question": "Not ortalaması nasıl hesaplanır?",
+      "expected_topic": "not",
+      "expected_source_patterns": ["lisans", "onlisans", "not"],
+      "category": "procedural",
+      "difficulty": "medium"
+    },
+    {
+      "id": 12,
+      "question": "Ders tekrarı hangi durumlarda yapılır?",
+      "expected_topic": "ders",
+      "expected_source_patterns": ["lisans", "onlisans", "ders"],
+      "category": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "id": 13,
+      "question": "Azami öğrenim süresi kaç yıldır?",
+      "expected_topic": "öğrenim süresi",
+      "expected_source_patterns": ["lisans", "onlisans", "sure", "süre"],
+      "category": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "id": 14,
+      "question": "Bütünleme sınavına kimler girebilir?",
+      "expected_topic": "bütünleme",
+      "expected_source_patterns": ["sinav", "sınav", "lisans", "butunleme", "bütünleme"],
+      "category": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "id": 15,
+      "question": "Ders muafiyeti başvurusu nasıl yapılır?",
+      "expected_topic": "muafiyet",
+      "expected_source_patterns": ["muafiyet", "intibak", "lisans", "yatay"],
+      "category": "procedural",
+      "difficulty": "medium"
+    },
+    {
+      "id": 16,
+      "question": "Mazeret sınavı ne zaman yapılır?",
+      "expected_topic": "mazeret",
+      "expected_source_patterns": ["sinav", "sınav", "mazeret", "lisans"],
+      "category": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "id": 17,
+      "question": "Diploma notu nasıl belirlenir?",
+      "expected_topic": "diploma",
+      "expected_source_patterns": ["mezuniyet", "diploma", "lisans", "not"],
+      "category": "factual",
+      "difficulty": "hard"
+    },
+    {
+      "id": 18,
+      "question": "Çift ana dal öğrencisi ana daldan mezun olabilir mi?",
+      "expected_topic": "çap",
+      "expected_source_patterns": ["cift_anadal", "çift ana dal"],
+      "category": "factual",
+      "difficulty": "hard"
+    },
+    {
+      "id": 19,
+      "question": "Kurum içi yatay geçişte not ortalaması şartı nedir?",
+      "expected_topic": "yatay geçiş",
+      "expected_source_patterns": ["yatay_gecis", "yatay geçiş"],
+      "category": "factual",
+      "difficulty": "hard"
+    },
+    {
+      "id": 20,
+      "question": "Öğrenci işleri daire başkanlığının görevleri nelerdir?",
+      "expected_topic": "birim",
+      "expected_source_patterns": ["Daire", "daire", "baskanlik", "başkanlık", "birim"],
+      "category": "factual",
+      "difficulty": "hard"
+    }
+  ]
+}
