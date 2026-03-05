@@ -1,0 +1,390 @@
+ Sistem giriş şifremi unuttuğum için sisteme giriş yapamıyorum. Ne yapmalıyım?
+parola.omu.edu.tr giriş yaptıktan sonra öğrenci numaranız ile şifre güncelleme işlemi yapabilirsiniz.
+ Mezuniyet ve İlişik Kesme İşlemlerimi UBYS'den Nasıl Başlatabilirim?
+Öğrencilerimizin ilişik kesme ve mezuniyet işlemlerinin yapılabilmesi için Öğrenci Bilgi Ekranındaki Diğer menüsü altında yer alan "İlişik Kesme Talebinde Bulun" seçeneğinden İlişik Kesme Sürecini başlatmaları gerekmektedir.
+
+İlişik kesme sürecinin tamamlanmış olması mezun olunduğu anlamına gelmemekte olup, mezuniyet ve diploma basım işlemleri sürecinin başlatılması için yapılmaktadır. Mezuniyet durumlarının E-Devlet üzerinden kontrol edilmesi gerekmektedir.
+ Tek Ders Sınav Ataması Nasıl Yapılır?
+UBYS'den tek ders sınav atamasının nasıl yapılacağına dair bilgiye aşağıda linki paylaşılan videodan erişebilirsiniz
+
+https://bulut.omu.edu.tr/index.php/s/TfYHOaYeLsxDmvg
+
+Önemli Not: Dersin not sistemi, yılı ve döneminin doğru seçilmesi gerekmektedir. Yanlış seçilen not sistemi nedeniyle hatalı not oluşacaktır. Dönemin hatalı seçilmesi durumunda ise öğretim elemanı tarafından not girişi yapılamayacaktır.
+
+ Üniversiteyi kazanarak ilk kayıt yaptırdığım yıl ders kaydı yaptırmam gerekir mi?
+Evet yeni kayıt yaptıran öğrencilerimizin de ders kaydı yapması gerekmektedir.
+
+Ders kayıtlarını hangi tarihler arasında yapmam gerekir?
+Ders kaydınızı eğitim gördüğünüz birime ait akademik takvimde belirtilen süreler içerisinde yapmak zorundasınız. Akademik takvimlere Öğrenci İşleri Daire Başkanlığı WEB sayfasından ulaşabilirsiniz.
+
+Akademik Takvim nedir ve tüm işlemleri akademik takvime göre mi yapmak zorundayım?
+Akademik Takvim, Üniversite Senatolarınca belirlenen ve kayıt yenileme, ders ekleme veya çıkarma, akademik konulara ilişkin son tarihler, sınav başlangıç ve bitiş tarihleri gibi tüm eğitim ve öğretim süreçlerini içeren plandır. Tüm işlemlerinizi akademik takvimde belirtilen tarihler arasında tamamlamanız gerekmektedir.
+
+ Akademik takvimde belirtilen süreler içerisinde ders kaydımı yapmazsam ne olur?
+Belirtilen tarihlerde ders kaydı yapmayan öğrenci, o yarıyıl kaydını yenilememiş sayılır ve öğrencilik haklarından yararlanamaz.
+
+ Birinci sınıf öğrencisiyim. Kaç krediye kadar ders seçebilirim?
+Birinci sınıf öğrencileri kayıtlı olduğu yarıyıla ait bütün dersleri almakla yükümlüdür.
+
+ Hangi durumda üst sınıftan ders alabilirim?
+Birinci yarıyıl sonundan itibaren; varsa öncelikle daha önce alıp başarısız olduğunuz dersleri ve öğrenim gördüğünüz yarıyıllarda almadığınız ders veya dersleri aldıktan sonra, her yarıyıl sonunda oluşan, genel not ortalamasına göre bir üst sınıftan kredi sınırları içerisinde kalarak ders alabilirsiniz.
+
+ Kayıt yenileme sırasında öncelikle başarısız olunan ders mi alınmalıdır?
+Evet. Öncelikle başarısız olduğunuz ders/dersler ve kredi sınırları içinde alt yarıyılda almadığınız dersleri alıp seçerek kayıt yaptırmanız gerekmektedir.
+
+ Alt yarıyıl/yarıyıllarda olan veya dönemimden dersimi bırakarak üst yarıyıl/yarıyıllardan ders alabilir miyim?
+Hayır. Dersleri alt dönemlerden itibaren sıra ile almak zorundasınız.
+
+ Seçmeli dersten başarısız oldum. Yerine başka seçmeli ders seçebilir miyim?
+Bir seçmeli ders grubunda alıp başarısız olduğunuz ders yerine aynı grupta başka bir ders seçebilirsiniz.
+
+ Daha önce başarısız olduğum derslere devam zorunluluğum var mı?
+Tekrar alınan derslerin devam koşulu yerine getirilmişse, yeniden devam koşulu aranmaz. Fakat başarısız olduğunuz seçmeli ders yerine yeni seçtiğiniz seçmeli derse devam şartınız doğacaktır.
+
+ Ders kaydını nerede yapabilirim?
+İnternet ortamında ubys.omu.edu.tr adresine giriş yapmak sureti ile interneti bulunan her yerden yapabilirsiniz.
+
+ Ders kaydını yaptırmadığımız dönem eğitim süresinden sayılır mı?
+Ders kaydı yapmadığınız dönemler de eğitim süresinden sayılmaktadır.
+
+Güz yarıyılı ders kaydı yaptırmadım. Bir sonraki yarıyıl (bahar) ders kaydı yaptırabilir miyim?
+Evet.
+
+ Bir dönemde ne kadar ders alma hakkım bulunmaktadır?
+Bir dönemde 30 AKTS'lik ders alma hakkınız bulunmaktadır. Fakat başarı durumunuza göre ilave olarak 6, 10, 12 veya 15 AKTS oranlarında fazla ders alabilirsiniz.
+
+ Ders seçme ekranında alacağım dersler çıkmıyor ne yapmam gerekiyor?
+Ders planlarınıza bağlı olarak derslerinizin sistemde gözükmemesi dersin kaldırılmış olması, kodunun değişmiş olması, dersin açılmamış veya eksik açılmış olması nedeniyle olabilir. Bu durumda danışmanınızla irtibata geçiniz. Fakat sorun çözülmeden ders kaydınızı tamamlamayınız
+
+ Derslerde kontenjan dolu uyarısı veriyor, dersi seçemiyorum, ne yapmalıyım?
+Öncelikle alabileceğiniz diğer seçmeli veya grup dersini almaya çalışmalısınız. Tüm kontenjanlar doluysa danışmanınızla iletişime geçmeniz gerekmektedir.
+
+ Ders kaydımı yaptım ve danışman onayı için gönderdim. Onaylanma sürecini takip etmeli miyim?
+Evet. Danışman onayından emin olunuz. Danışman onayı olmayan ders kayıtları geçersizdir ve bu durumda ders ve sınavlara katılamazsınız. Sorumluluk tamamen öğrenciye aittir.
+
+Danışmanıma ulaşamaz ve ders kaydımı onaylatamazsam ne yapmam gerekir?
+Bölüm başkanınıza, bölüm başkanına da ulaşamazsanız Dekan/Müdürünüze durumu bildirmek sureti ile akademik takvimde belirtilen sürede danışman onayını muhakkak yaptırınız. Hiçbir yetkiliye ulaşılamadığı takdirde oidb@omu.edu.tr adresine sistemle ilgili sorununuzu e-posta yolu ile iletebilirsiniz.
+
+ Ders kayıt aşamasında en çok hangi hususlara dikkat etmem gerekir?
+Ders kaydında üç önemli hususa dikkat etmeniz gerekir. Eksik ders alarak dönem uzatmamak için her dönem başında müfredat durum kontrolü, akademik takvimde belirtilen süre içinde kaydın tamamlanması ve danışman onayı işlemidir.
+
+ Müfredat nedir?
+Müfredat, eğitim gördüğünüz programda tamamlamak durumunda olduğunuz derslerdir. Müfredatta yer alan derslerden biri veya bir kaçını eksik almanız veya alıp başaramamanız durumunda mezuniyet hakkı elde demezsiniz.
+
+ Müfredat kontrolü nedir ve ne zaman yapmalıyım?
+Öğrenci bilgi yönetim sisteminde yer alan müfredat bilgileri ve transkriptinize ulaşarak, her kayıt dönemi başında alıp başarılı olduğunuz dersleri müfredatınızla karşılaştırmanız gerekmektedir.
+
+ Danışman onay bittikten sonra yapmam gereken bir şey var mı?
+Danışman onayı işlemi tamamlandıktan sonra, kayıtlanmış olduğunuz dersleri tek tek kontrol ediniz. Sizin danışman onayına göndermiş olduğunuz derslerden bir veya birkaçı danışmanınız tarafından listeden çıkartılmış olabilir.
+
+ Sınıf yoklama listesine imza atmalı mıyım?
+Evet, sistemden alınan ve üzerinde adınızın yer aldığı sınıf yoklama listesine devam/devamsızlık imzasını atınız.
+
+Sınıf yoklama listesinde adımız yoksa ne yapmalıyız?
+Listede adınız yoksa kaydınızda sorun vardır demektir ve derhal danışmanınızla görüşünüz.
+
+ Danışmanın kayıt olmak istediğim derslerde değişiklik yapma hakkı var mıdır?
+Evet. Ondokuz Mayıs Üniversitesi Ön Lisans ve Lisans Eğitim Öğretim Yönetmeliği hükümleri kapsamında danışman bu hakkını kullanabilir.
+
+ Kayıt olacağım derslere devam şartım yoksa yine de ders kaydı yaptırmalı mıyım?
+Devam şartınız olmasa bile derslerin sınavlarına girebilmek için ders kaydı yapmanız gerekmektedir.
+
+ Ders ekleme/çıkarma nedir? Bu işlemi nasıl yapmalıyım?
+Seçmiş olduğunuz derslerden açılmayan seçmeli ders olduğunda veya değiştirmek istediğiniz dersler için Akademik Takvimde belirtilen süreler içerisinde danışmanınızla irtibata geçerek yapabileceğiniz işlemdir.
+
+5-i derslerini (TürkDili, Yabancı Dil ve Atatürk İlke ve İnkılap Tarihi derslerini) uzaktan eğitim yolu ile alabilir miyim?
+5-i dersleri için uzaktan eğitim şubesi açılmış ise dersi uzaktan eğitim yolu ile alabilirsiniz.
+
+ 5-i Derslerini uzaktan eğitim yolu ile alabilmek için ne yapmam gerekir?
+Ders kayıt esnasında dersler UZAKTAN EĞİTİM ve YÜZYÜZE EĞİTİM şeklinde iki alternatifle sunulacaktır. Dilediğiniz eğitim şeklini ilk kayıt aşamasında tercih etmek durumundasınız. Uzaktan eğitimi seçmeniz durumunda ücretini ödemek durumundasınız.
+
+ Danışmanı olduğum öğrencilere ne gibi bilgilendirmede bulunmam gerekir ve bilgilendirmeyi nasıl yapabilirim?
+Öğrenci bilgi yönetim sisteminden öğrencilere toplu ya da bireysel mesaj göndererek yapabilirsiniz. Kayıt dönemi başlamadan transkript/müfredat kontrolünü yaparak akademik takvimde tanımlanan süre içerisinde ders kaydını yapmaları gerektiği, derslere başladığında ise sınıf yoklama listesinde adları yoksa danışmanlarına uğramaları gerektiği bilgisi paylaşılmalıdır.
+
+ Öğrenci daha önce aldığı ve başarısız olduğu seçmeli dersi değiştirebilir mi?
+Evet, değiştirebilir.
+
+ Danışman onayını vermek için, öğrencinin şahsen gelmesini zorunlu tutabilir miyim?
+Öğrenci bilgi yönetim sistemi üzerinden internet ortamında ders kaydını yapan öğrenci, danışman onayına sistem üzerinden gönderebilmektedir. Danışman onayı için öğrencinin şahsen gelmesi gerektiği yönünde bağlayıcı bir hüküm bulunmamaktadır. Danışman, onaya gönderilen ders kaydını onaylama veya yine sistem üzerinden iade etme hakkını kullanabilir.
+
+Onaylamadığım ve sistem üzerinden iade ettiğim ders kaydını öğrenci takip ederek tamamlamadığı takdirde sorumluluk kime aittir?
+Her öğrenci ders kaydını yapmak, yaptığı kaydı danışman onayına göndermek ve onaya gönderdiği kaydın danışman tarafından kesin kayda dönüşmesini takip etmekle yükümlüdür. Danışman tarafından iade edilen ders kayıt teklifini öğrenci, akademik takvimde belirtilen sürede yeniden düzenleyerek danışmanına onaylatmakla yükümlüdür.
+
+ Danışman olarak öğrenci ile sistem üzerinden iletişime geçebilir miyim?
+Evet. UBYS üzerinden öğrenciye mesaj gönderebilirsiniz.
+
+Öğrencinin almak istediği dersin, ders kayıt ekranında çıkmaması durumunda danışman olarak ne yapabilirim?
+Öğrenci İşleri Daire Başkanlığı bünyesinde faaliyet gösteren ve biriminize bakmakla yükümlü görevlilere ulaşmanız halinde sorununuz çözümlenebilecektir. Yoğunluk nedeni ile kendilerine ulaşamamanız durumunda; Başkanlık yöneticilerine, Öğrenci ve akademik personellere otomasyon sistemine teknik destek vermek amacı ile oluşturulan oidb@omu.edu.tr adreslerinden birine ulaşarak yaşadığınız sorunu bildirmeniz ve iletişim numaranızı bırakmanız durumunda sorununuza çözüm üretilecek ve geri dönüş yapılacaktır.
+
+ Eğer ders kontenjanında dolu uyarısı alırsam ne yapmam gerekir?
+Öncelikle kontenjan tanımlanmış diğer grup dersleri denemelisiniz. Tüm grup ders kontenjanların dolu olması halinde durumu bölüm başkanına bildirmeniz gerekmektedir.
+
+ Öğrencinin aldığı alan dışı veya serbest seçmeli dersler, müfredat derslerine intibak ettirilebilir mi?
+Hayır. Alan dışı veya serbest seçmeli dersler öğrenciye hobi olarak verilir ve başarı notu işlenmez.
+
+ Ders kayıt onayı aşamasında nelere dikkat etmem gerekir?
+Öğrenci mezuniyet hakkı elde edebilmesi için, tabi olduğu müfredattaki tüm dersleri almak ve başarmak zorundadır. O nedenle her kayıt döneminde müfredat transkript kontrolünün yapılması önemlidir. Ayrıca öncelikle başarısız olduğu ve ya hiç almadığı alt dönem derslerini almak zorundadır.
+
+ Danışman olarak öğrencinin kayıt olmak istediği derste değişiklik yapma hakkım var mıdır?
+Evet. Ön Lisans ve Lisans Eğitim Öğretim Yönetmeliği hükümleri kapsamında danışman bu hakkını kullanabilir. Fakat ders değişiklik işleminin öğrenci ile görüşülerek yapılması önemlidir.
+
+Öğrencinin kayıt olmak istediği derste değişiklik yaptığımda öğrenciye bilgi vermek zorunda mıyım?
+Evet. Öğrenci ders kaydının kesin kayda dönüştüğünü görüp, dersleri tek tek kontrol etmeyebilir. Bu durumda ise sizin tarafınızdan değiştirilmiş dersi fark etmeme sonucunda, seçmemiş olduğu derse devam etme gibi olumsuz durumlar meydana gelmektedir. O nedenle ders değişikliği ile ilgili olarak öğrenci ile bilgi paylaşılması önemlidir.
+
+ Öğrenci tarafından onaya gönderilen ve tarafımca onayı gerçekleştirilen ders kaydının, doğru olup olmadığını öğrenci ile birlikte ne zaman kontrol edebilirim?
+Akademik takvimde tanımlanan ekle-sil haftasında kontrol edebilir, hata varsa düzeltme yoluna gidebilirsiniz.
+
+Kesin kayda dönüştürdüğüm fakat değişiklik yapmak istediğim kaydı nasıl açtırabilirim?
+Biriminizde görevli, yetkilendirilmiş personellere ulaşarak kesin kaydı açtırabileceksiniz.
+
+ Kayıt işlemi bittikten sonra sistem çıktı alarak saklamam gerekir mi?
+Böyle bir zorunluluk bulunmamaktadır. Fakat zaman zaman öğrenciler tarafından dile getirilen haksız iddialar karşısında somut veri sunabilme adına onay sonrası sistem çıktısı alınabilir veya bilgisayarda bir dosya oluşturularak kayıt yoluna gidilebilir.
+
+ Herhangi bir nedenle öğrenime ara vermek (kayıt dondurma) mümkün müdür?
+Evet. Öğrencilere, kanıtlayacakları önemli nedenlerin veya eğitim öğretimlerine katkıda bulunacak Üniversite dışı burs, staj, araştırma ve benzeri imkânların ortaya çıkması halinde ilgili yönetim kurulu kararı kayıt dondurabilirler.
+
+ En fazla ne kadar süre kayıt dondurabilirim?
+
+ Sportif faaliyet dolayısıyla maksimum ne kadar izinli sayılabilirim?
+Üniversite tarafından görevlendirilmiş iseniz, görevli olduğunuz sürece izinli sayılırsınız. Ancak, izinli sayıldığınız süre de dahil, toplam devamsızlık süresi bir dersin o yarıyıldaki/yıldaki toplam saatinin % 50’sini aşamazsınız.
+
+ II. Öğretim öğrencisiyim. Kayıt dondurmak istediğimde harç ücretimi yatırmak zorunda mıyım?
+Kayıt dondurma isteğinizin ilgili yönetim kurulunca kabul edilmesi durumunda öğrenim ücretini yatırmanıza gerek yoktur.
+
+ Kayıt dondurma ile kayıt yaptırmamak arasında bir fark var mı?
+Kayıt dondurduğunuz süreler eğitim-öğretimden sayılmaz.
+
+ Kaydımı sildirmek için ne yapmam gerekir?
+UBYS üzerinden talepte bulunarak ilişik kesme süreci başlatabilir ve ilişiğinizin kesilmesini sağlayabilirsiniz.
+
+Bunun yanı sıra şahsen başvurarak tarafınızca doldurulacak ilişik kesme formunu, form üzerinde belirtilen merkezlerde onaylattıktan sonra öğrenim gördüğünüz birime teslim etmeniz yeterli olacaktır. Kaydınızın silinmesi ile birlikte öğrencilik hakkınız sona erer.
+
+ Daha önceden başardığım derslerden muaf tutulabilmem için ne yapmam gerekir?
+Fakülteye/yüksekokula/meslek yüksekokuluna ilk kez kayıt yaptıran öğrenciler, eğitim öğretimin başladığı tarihten itibaren üç hafta içinde daha önce öğrenim gördüğü yükseköğretim kurumlarında aldığı ve başarılı olduğu dersler için muaf olmak istediği dersleri içeren bir dilekçe, onaylı transkript ve onaylı ders içerikleriyle ile birlikte ilgili birime başvurabilirler.
+
+ Daha önce aldığım ders/dersler için Dekanlığa/Müdürlüğe muafiyet dilekçesi verdim, muafiyet başvurum sonuçlanıncaya kadar bu derse kayıt yaptırıp devam etmeli miyim?
+Birim Yönetim Kurulu’nun muafiyet talebini uygun görmesi ve muaf olunan derslerin sisteme işlenmesi sonrasında, danışmanınız ile birlikte alacak olduğunuz derslere kaydınız yapılır. Muafiyet kararının alınması süreci, Akademik takvimde belirtilen ders ekleme/çıkarma süresinin sonrasına sarkması durumunda ders kayıt işlemi Öğrenci İşleri personellerince yerine getirilir. Fakat bu süre zarfında mağdur olmamanız için dönem derslerine devam etmeniz önem arz etmektedir.
+
+Üniversitenize dikey/yatay geçiş yolu ile kayıt yaptırdım. Üniversitenizden muaf olduğum dersleri ve almam gereken dersleri nasıl öğrenebilirim?
+Üniversitemize bağlı programlara kayıt yaptırıp muafiyet başvurusunda bulunan her öğrenci için ilgili birimlerin muafiyet ve intibak komisyonu tarafından bir muafiyet çizelgesi hazırlanarak yönetim kurulu kararıyla birlikte öğrenciye tebliğ edilir.
+
+ Üniversitenize dikey geçiş/yatay geçiş/Merkezi Yerleştirme sınavı ile kayıt hakkı kazandım. Kaçıncı sınıftan devam edebilirim?
+Yatay geçişle gelen öğrenciler, başvurdukları yarıyıla; dikey geçişle gelen öğrenciler, beşinci yarıyıla; merkezi yerleştirme sınavları ile gelen öğrenciler ise birinci yarıyıla intibak ettirilir.
+
+ Yapılan muafiyet ve intibak komisyonu kararına itiraz etmek istiyorum. Ne yapmalıyım?
+Muafiyet işleminin kesinleşip tarafınıza bildirildiği tarihten itibaren en geç bir hafta içinde ilgili birime dilekçe ile itirazda bulunabilirsiniz.
+
+ Muafiyet talep ettiğim dersin notu en az ne olmadır?
+Bir dersten muaf olabilmesi için notunun en az CC ve üzeri olması gerekir. Fakat şartlı geçer statüsündeki ve bu derslerden geçmiş olmanız şartı ile daha alt notlardan da muafiyet talep edilebilir.
+
+Sınav sonuçlarına nasıl itiraz edebilirim?
+Akademik takvimde belirtilen sınav not girişlerinin öğrenci otomasyon sistemine girilmesinin son gününden itibaren beş iş günü içerisinde ilgili birime (Bölüm Başkanlığına ) dilekçe vererek itiraz edebilirsiniz.
+
+ Stajlarda bütünleme sınav hakkı var mıdır?
+Bütünleme sınav hakkı yoktur. Başarısız olunan staj tekrar alınır.
+
+Ara sınavlarda mazeret sınavı yapılıyor mu?
+Fakülte, yüksekokul ve meslek yüksekokullarında, ara sınavlardan herhangi birine haklı ve geçerli nedenlerle katılamayan öğrenciler için ilgili yönetim kurulu kararı ile mazeret sınavı yapılabilir.
+
+ Yarıyıl sonu/ Bütünleme sınavlarının mazeret sınav hakkı var mı?
+Hayır.
+
+Mazeret sınavına girmek için almış olduğum sağlık raporunu kaç gün içinde nereye vermem gerekir?
+Öğrenciler, mazeretlerine ilişkin isteklerini, mazeretin bitiminden bir hafta içerisinde ilgili Dekanlık/Müdürlüklere dilekçe ile bildirirler. Bu süre içinde başvuru yapmayanlar bu haklarını kullanmaktan vazgeçmiş sayılır.
+
+ Diş Hekimliği Fakültesindeki dönemlik dersler için mazeret sınav hakkım bulunmakta mıdır?
+Evet.
+
+ Ara sınav ve yarıyıl sonu sınavları ortalama hangi oranlarda etki eder?
+Üniversitemizde ders geçme sisteminin uygulandığı birimlerde, bir dersin başarı puanı dönem içi değerlendirme puanının % 40’ı ile yarıyıl sonu veya bütünleme sınavından alınan puanın % 60’ı, Diş Hekimliği Fakültesinde dönem içi değerlendirme puanının % 50’si ile yılsonu veya bütünleme sınav puanının %50’sinin toplamıdır.
+
+ Devamsızlıktan kaldığım dersin bütünleme sınavına girebilir miyim?
+Bir dersten devamsızlıktan kalan öğrenci o dersin bütünleme sınavına giremez.
+
+ Yarıyıl/yılsonu başarı notumun en az kaç olması gerekir?
+Bir dersten başarılı sayılabilmek için; yarıyıl/yılsonu veya bütünleme sınav puanının en az 50, başarı puanının en az 60 olması zorunludur. Uzaktan eğitim öğrencilerinin başarı puanı dönem içi sınavının % 20’si ile yıl sonu sınavı puanının veya bütünleme sınavının %80’inin toplamıdır.
+
+ Önceki dönemlerde başarılı olduğum bir dersi not yükselmek amacıyla tekrar alabilir miyim?
+Hayır.
+
+ Tek ders sınavı nedir? Tek ders sınavına ne zaman başvurmam gerekir?
+Müfredatınızda tanımlı bütün dersleri almış fakat mezuniyetiniz için daha önce devam şartını sağladığınız tek dersinizin kalmış olması durumunda o dersten tek ders sınavına girebilirsiniz. Bütünleme sınavlarını takip eden bir hafta içinde dilekçe ile biriminize başvurmanız ve başvurunuzun uygun görülmesi halinde on gün içinde birimlerce açılacak tek ders sınavına girebilirsiniz.
+
+ Tek ders sınavı sonucunda hangi not aldığımda başarılı sayılabilirim?
+Ara sınav şartı aranmaksızın en az CC alırsanız başarılı sayılırsınız.
+
+ Henüz staj dersimi tamamlamadığım halde tek ders sınavına girebilir miyim?
+Evet.
+
+ Tek ders sınavından başarı şartını sağlayamadığım durumlarda bir sonraki dönemlerde tek ders sınavına başvurabilmem için dönem başında ders kaydı yaptırmam zorunlu mudur?
+Hayır. Tek ders sınavına başvurabilmeniz için o derse kayıt yaptırmış olmanız gerekmez.
+
+Bağıl değerlendirme nedir?
+Öğrencilerin yarıyıl içi çalışmaları (laboratuvar, kısa sınav, ödev vb.) ile ara sınav ve yarıyıl sonu sınavı katkı paylarına göre hesaplanan ağırlıklı ortalamasını, o dersi alan diğer öğrencilerin puanlarını dikkate alarak başarı düzeyini belirleyen bir sistemdir.
+
+ Bağıl değerlendirmeye dahil edilmek için alt not var mıdır?
+Evet. Eğer ham puanı 20'nin altındaysa bağıl değerlendirmeye dahil edilmez ve FF not alır.
+
+ Bir dersten başarılı sayılabilmek için Yarıyıl/Yıl Sonu Sınavı Alt Limiti var mıdır?
+Evet. 100 puan üzerinden 50’nin altında not alan öğrenciler başarısız sayılır fakat bağıl değerlendirmeye dahil edilirler.
+
+ Öğrenci sayısına göre değerlendirmelerde farklılık var mıdır?
+Evet. Öğrenci sayısı 10 ve altında ise öğrenciler mutlak değerlendirmeye tabi tutulur. 11 -29 arası farklı, 30 ve üstü ise farklı kriterlere göre değerlendirilir.
+
+Öğrenim ücreti/katkı payını hangi hesaba yatırmalıyım?
+Herhangi bir Ziraat Bankası şubesinden öğrenci numaranızla harç ücretini yatırabilirsiniz.
+
+Yatırdığım ücrete ait dekontu teslim etmek zorunda mıyım?
+Hayır.
+
+ Şehit/Gazi çocuğuyum öğrenim ücreti ödememek için ne yapmalıyım?
+Bu durumdaki öğrenciler öğrenim harcından muaf durumdadır.
+
+ Üniversitenizde kayıtlı öğrenciyim. Engelli raporum bulunmaktadır. Öğrenim ücretinin ne kadarını yatırmalıyım?
+Engelli olduğunuza dair sağlık raporunun aslı ve bir dilekçe ile birlikte okulunuz öğrenci işlerine müracaat etmeniz durumunda, engel oranınız kadar öğrenim ücretinden indirim yapılacaktır.
+
+Öğrenci harç iademi nasıl alabilirim?
+İade gerekçenizi belirtir bir dilekçe ve kendi adınıza açılmış hesaba ait 26 haneli IBAN numaranızı belirtir banka çıktı görüntüsü ile Öğrenci İşleri Daire Başkanlığı harç bürosuna başvurmanız sonrasında, iade gerekçenizin haklı görülmesi halinde iade alabilirsiniz.
+
+ UBYS’de kayıt ekranında ücret yatırmamam gerekirken borçlu veya yatırmam gereken ücret fazla görünüyor. Ne yapmam gerekir?
+Öğrenci İşleri Daire Başkanlığı harç bürosuna başvurmanız gerekmektedir.
+
+ Kayıtlı olduğum programı uzatmam durumunda katkı payını öder miyim?
+Evet. Program süresini aşmanız durumunda ilgili dönem katkı payı ücreti ödenir.
+
+ Yatay geçiş başvuru tarihlerini nasıl öğrenebilirim?
+Üniversitemiz ve Daire Başkanlığımız internet sayfalarında yayınlanan duyuruda yatay geçiş başvuru ve değerlendirme takvimi yayınlanmaktadır. Duyuru sayfası https://oidb.omu.edu.tr/tr/ogrenci/yatay-gecis
+
+ Yatay geçiş başvuru ve değerlendirme koşulları nelerdir?
+Yatay geçiş başvuru ve değerlendirme koşullarına yayınlanan duyuruların olduğu sayfadan veya sitemizdeki Mevzuat'lar sayfasındaki yönergeden ulaşabilirsiniz.
+
+ Yatay geçiş türleri nelerdir? Hangi türde başvuru yapabilirim?
+Kurum içi yatay geçiş: Üniversitemiz öğrencilerinin aynı düzeydeki diğer diploma programlarına geçiş türüdür. Sadece Üniversitemiz öğrencileri başvurabilir.
+Kurumlar arası yatay geçiş: Bir üniversite, yüksek teknoloji enstitüsü veya vakıflar tarafından bir üniversiteye bağlı olmaksızın kurulan meslek yüksekokullarından Ondokuz Mayıs Üniversitesindeki eşdeğer eğitim veren fakülte, yüksekokul veya bölüme yapılan geçiş türüdür. Farklı kurumlarda öğrenim gören öğrenciler başvuru yapabilir. Kurumlar arası yatay geçiş başvurularının değerlendirilmesinde öğrencinin YKS puanı ve GANO'su yönergede belirtilen formüle göre hesaplanarak sıralama yapılır.
+Ek Madde-1 yatay geçiş: Öğrenim gördüğünüz üniversiteye yerleştiğiniz yıl aldığınız ÖSYM sınav puanları ile başvuru yapabileceğiniz geçiş türüdür. Hem diğer üniversite öğrencileri hem de üniversitemiz öğrencileri başvuru yapabilir.
+
+ Yatay geçiş için gerekli başarı şartları nelerdir?
+Ek Madde-1 kapsamında yapılacak yatay geçiş başvurularında öğrencinin kayıt olduğu yıldaki merkezi yerleştirme puanının, geçmek istediği programın taban puanına eşit ya da yüksek olması durumunda herhangi bir başarı şartı aranmaz. Detaylı bilgi ve diğer koşullar Yükseköğretim Kurulu internet sitesinde yayınlanan "Güz ve Bahar Dönemi Ek Madde 1 Uygulama İlkeleri"nde yer almaktadır.
+
+Kurumlararasıve kurum içi yatay geçiş başvurusu yapabilmek için gerekli koşullara Mevzuat'lar sayfasındaki yönergeden ulaşabilirsiniz.
+
+Ortalama şartını sağlayan öğrencilerin başarısız dersleri olması başvurularının değerlendirilmesine engel değildir.
+
+ Başvuru için sisteme hangi belgeleri yüklemem gerekiyor?
+Başvuru için sisteme yüklenecek evraklar yapılan duyuruda ilan edilmektedir. Başvuru yapacağınız dönem yayınlanan duyuruyu inceleyerek gerekli evrakları öğrenebilirsiniz.
+
+ Yatay geçiş hakkı kazanıp kayıt yaptırmasam herhangi bir sorun olur mu?
+Üniversitemize yatay geçişle kayıt hakkı kazanıp, kayıt yaptırmamanız durumunda herhangi bir sorun olmayacaktır. Belirtilen süre sonunda kayıt yaptırmamanız halinde kayıtlı olduğunuz üniversitede öğreniminize devam edebilirsiniz.
+
+ Hazırlık sınıfı okuduğum için transkriptim bulunmuyor. Ek Madde-1 (Merkezi Yerleştirme Puanı) ile yatay geçiş yapabilir miyim?
+Hazırlık sınıfı okuyan ve Ek Madde-1 kapsamında merkezi yerleştirme puanı ile yatay geçiş başvurusu yapmak isteyen adaylar, transkriptleri olmadan da başvuru yapabilirler. Ek Madde-1 kapsamında yapılan yatay geçiş başvurularında öğrencinin GANO'su değerlendirme aşamasında etkili değildir.
+
+ Birden fazla üniversiteye yatay geçiş başvurusu yapabilir miyim?
+Farklı üniversitelere yatay geçiş başvurusu yapabilirsiniz. Birden çok yere kayıt hakkı kazanmanız durumunda, öğrenim görmek istediğiniz üniversiteye kaydınızı yaptırarak eğitiminize devam edebilirsiniz.
+
+ Yatay geçiş yaparsam bursumu devredebilir miyim, bursum kesilir mi?
+Bursunuzun devri veya kesilip kesilmeyeceği konusunda bilgiye ulaşmak için burs aldığınız kurumla iletişim kurmanız gerekmektedir.
+
+ Başka bir üniversiteye geçiş yapmak istiyorum. Gerekli belgeleri nereden temin edebilirim?
+Üniversitemizden başka bir üniversiteye geçiş yapmak isteyen öğrenciler, istenen belgeleri E-Devlet üzerinden, UBYS öğrenci bilgi ekranından veya öğrenim gördükleri fakülte/yüksekokuldan temin edebilirle
+
+ Yatay geçişle yabancı uyruklu öğrenci alıyor musunuz?
+Kontenjan tablosunda yabancı uyruklu öğrenci kontenjanı bulunan programlara yatay geçiş başvurusu yapabilirsiniz.
+
+ Yurt dışında öğrenim görüyorum. Yatay geçiş yapabilir miyim?
+Yurt dışı öğrenci kontenjanı olduğu belirtilen programlara yatay geçiş başvurusu yapabilirsiniz.
+
+ Üniversitenize özel öğrenci olarak başvuru yapabilmem için kendi üniversitemde ne kadar süre eğitim almış olmam gerekmektedir?
+Önlisans programlarının en az bir yarıyılını, lisans programlarının en az iki yarıyılını tamamlamış olmanız gerekmektedir.
+
+ Özel Öğrenci olarak ne zaman gelebilirim?
+Eğitim-öğretim yarıyılı başlamadan (15) gün öncesine kadar Üniversitemizin ilgili birimine başvuru yapmalıdır.
+
+ Özel öğrenci statüsünde Üniversitenizden eğitim almam için hangi belgelerle başvuru yapmam gerekir?
+Üniversitemize bağlı birimden alacağı dersleri de gösterir, kayıtlı olduğu birim yönetim kurulunun olumlu kararı, disiplin durumunu gösterir belge, not çizelgesi (transkript) ve dilekçe ile başvuru yapmanız gerekir. Ayrıca sağlık/aile/can güvenliği sorunları nedeniyle başvuran öğrencilerin aşağıda belirtilen belgeleri temin etmeleri gerekir. Üniversite veya Kamu Hastanelerinden son 6 ay içerisinde alınmış, hayatitehlikeyi belgeleyen sağlık raporu, Bağımsız yaşamı engelleyen nörolojik ve kas-iskelet sorunu olan öğrenciler, Üniversite veya Kamu Hastanelerinden alınmış ve Başhekim tarafından onaylanmışsağlıkraporu ile ailesi yanında kalması gerekli görülen öğrenciler, Resmî olarak belgelenmek kaydıyla can ve mal güvenliğini tehdit eden birriskin ortaya çıkması.
+
+ Özel öğrenci olarak nasıl başvuru yapabilirim?
+Üniversitemiz Özel Öğrenci Yönergesi'nde istenen belgelerle ilgili Fakülte/Yüksekokula dilekçe ile başvuru yapmanız gerekir
+
+ Üniversitenize özel öğrenci olarak kabul edildim ne yapmalıyım?
+Özel öğrenci olarak kabul edildiğiniz birime (Merkez Kampüste ise Öğrenci İşleri Daire Başkanlığı, Merkez Kampüs Dışında İse Birimlerin Kendilerine) müracaat ederek, kesin kaydınızı yaptırmanız gerekmektedir.
+
+ Özel öğrenci olarak kesin kayıt işlemlerinden sonra nasıl yol izlemeliyim?
+Fakülte/Yüksekokulunuza giderek danışmanınızı bulmanız ve ders kayıt işlemlerinizi tamamlamanız gerekmektedir.
+
+ Özel öğrenci statüsünde kalan eğitimimi Üniversitenizde tamamlayabilir miyim?
+Özel öğrencilik süresi, bir defada en fazla 1 yıl olarak belirlenir. Ancak, özel öğrencilik statüsünden yararlanma şartlarının devam etmesi durumunda, ilgili birim yönetim kurulu önerisi, Üniversite senatosunca özel öğrenciliğin devamı yönünde karara bağlanabilir.
+
+ İkinci öğretim öğrencisiyim. Üniversitenizde özel öğrenci olduğum takdirde harç ödeyecek miyim?
+Evet. Öğrencilik hakkınız kendi Üniversitenizde devam ettiği için kendi Üniversitenize harç ödemeye devam etmelisiniz.
+
+Mezun olabilme koşulları nelerdir?
+Kayıtlı olduğunuz öğretim programının ders, uygulama, staj gibi tüm gereklerini OMU Eğitim Öğretim ve Sınav Yönetmeliği hükümlerine göre başarıyla tamamlamanız ve GANO’nuzun 2,00 veya daha yüksek olması halinde diploma almaya hak kazanırsınız.
+
+ Lisans öğrencileri hangi durumda ön lisans diploması almaya hak kazanır?
+Lisans programına kayıtlı bir öğrenci iseniz; ilk dört dönemlik programı başarıyla tamamlamış, en az 2,00 genel not ortalamasını sağlamış ve sorumluysa yabancı dil muafiyet sınavını başarmak şartı ile kaydınızı sildirmiş olmak koşuluyla, önlisans diploması alabilirsiniz.
+
+ Yeni mezun oldum. Diplomamı ne zaman alabilirim?
+Dönem sonlarında WEB sitemizde ilan edilen takvimde belirtilen tarihlerden itibaren öğrenci kimlik kartı ve nüfus cüzdanı ile birlikte Öğrenci İşleri Daire Başkanlığı Diploma Birimine müracaat edilerek diplomalar alınabilmektedir.
+
+ Geçmiş yıllarda mezun oldum. Diplomamı nasıl alabilirim?
+Nüfus cüzdanınız ile birlikte Öğrenci İşleri Daire Başkanlığı diploma birimine müracaat etmeniz halinde diplomanızı alabilirsiniz. Kendiniz gelemiyor iseniz noter vekâleti vererek vekilinize aldırabilir veya kamu kurumunda çalışıyorsanız resmi yazı ile talep edildiği takdirde kurumunuza resmi yazı ile gönderilmektedir.
+
+ Üniversitenizden mezun oldum. Diploma ve mezuniyet bilgilerim e-devlette görünmüyor. Ne yapmalıyım?
+2002 yılı ve öncesinde mezun olan öğrencilerimizin bilgilerinde T.C. Kimlik Numarası bulunmadığı için mezuniyet bilgileri YÖKSİS veri tabanına aktarılamamıştır. Mezuniyet bilginiz e-devlette görünmüyor ise internet sitemizde yer alan formun eksiksiz doldurularak ve nüfus cüzdanı fotokopisi ile birlikte 0 362 457 60 12 numaralı faks numarasına gönderilmesi gerekmektedir. Sisteme girilen bilgilerinizin e-devlette görüntülenebilmesi için kişinin kendi ÖSYM ADAY İŞLEMLERİ sayfasında yer alan eğitim durum bilgileri kısmından bilgilerini güncellemesi gerekmektedir.
+
+ Diplomamı kaybettim. Ne yapmalıyım?
+Diplomasını kaybeden mezun öğrencilerimize 2.Nüsha diploma düzenlenmektedir. 2.nüsha diploma düzenlenmesi için; web sitemiz hizmetler menüsü altındaki diploma-transkript başlığında belirtilen belgelerle birlikte Üniversitemiz Öğrenci İşleri Daire Başkanlığına şahsen veya posta yolu ile başvurulması gerekmektedir.
+
+Transkript belgemi nasıl alabilirim?
+Öğrenimine devam eden öğrencilerimiz transkript belgelerini bölüm/program sekreterliklerine şahsen başvurarak alabilmektedirler. Mezun olan öğrencilerimiz Öğrenci İşleri Daire Başkanlığı diploma birimine şahsen müracaat ederek alabilir, kendisi gelip alamıyor ise bir dilekçe ile adresine gönderilmesini isteyebilir. Transkript belgesinin 1 (bir) adedi ücretsiz olup, birden fazla talep edilmesi durumunda T.C. Ziraat Bankası OMÜ şubesi 14799712382-5017, IBAN: TR 37 000 100 1479 0971 23 82 5017 hesap numarasına 10₺ yatırıldığına dair dekont gönderilmesi halinde 3 (üç) adet transkript alabilir.
+
+ Diploma eki nedir?
+Diploma Eki (Diploma Supplement: DS), uluslararası saydamlığı pekiştirmeyi hedefleyen ve elde edilmiş yeti ve becerilerin ifade edildiği diploma, derece, sertifika gibi belgelerin, akademik ve meslekî tanınmasını sağlamaya yönelik, bir yükseköğretim diplomasına ek olarak verilen belgedir.
+
+ Diploma eki neden verilir?
+Kişinin takip edip başarıyla tamamladığı öğrenimin yapı, düzey, bağlam, içerik ve statüsünü tarif etmek üzere verilir.
+
+ Diploma ekinin Avrupa’daki tanınırlığı nedir?
+Ulusal kurumlar tarafından, Avrupa Komisyonu, Avrupa Konseyi ve UNESCO tarafından ortaklaşa hazırlanmış bir şablona göre düzenlenir. Bu üç kurumun organize ettiği bir ortak kurul tarafından denenmiş ve geliştirilmiş olan bu şablon, Avrupa Birliğinin tüm resmî dillerinde düzenlenmiştir.
+
+ Diploma ekinde neler bulunur?
+Diploma Ekini hak etmiş olan kişinin kimliği, kazanılmış yeti, kazanılmış yetinin düzeyi, kazanılmış yetinin içerik ve sonuçları, kazanılmış yetinin işlevi, ek bilgiler, ulusal yükseköğrenim sistemi hakkında bilgiler yer almaktadır.
+
+ Diploma ekini transkript yerine kullanabilir miyim?
+Diploma eki transkript (not çizelgesi) veya diploma yerine geçmez.
+
+ Diploma eki ile hangi kazanımları elde edebilirim?
+Yurtdışında daha okunabilir ve mukayese edilebilir bir diploma, akademik güzergâhının ve yurtiçinde ve yurtdışında edindiği yeti ve becerilerin tam bir tarifi, başarı ve yetilerinin nesnel ve âdil değerlendirmesi, geleceğe yönelik olarak yurtdışında iş ve eğitim imkânlarına daha rahat ulaşma olanağı, İş bulma olanaklarını artırma kazanımlarını elde debilirsiniz.
+
+Diploma eki neden gereklidir?
+Bugün tüm dünyada yeni diploma ve sertifikasyon şekilleri gelişmekte, hızla değişen iktisadî, siyasal ve teknolojik gelişmeler karşısında ülkeler öğrenci başarısını değerlendirme tarzlarını ve eğitim sistemlerini sürekli olarak değiştirmektedir. Sayıları hızla artan hareketli yurttaşlar, yeti ve becerilerinin âdil değerlendirmesini talep etmektedir. Yeti ve becerilerin tanınmaması ya da yanlış veya eksik değerlendirilmesi küresel bir sorun haline gelmiştir. Orijinal diploma ve diğer belgeler kendi başlarına yeterli açıklayıcı bilgi arz etmediklerinden dolayı, ayrıntılı ek açıklama tedarik etmeden bir diplomanın düzey ve işlevini kabul ettirmek son derece güç bir hal almıştır.
+
+ Burs başvuruları hangi tarihte yapılır?
+Burs başvuruları ilgili kurumların ilan ettiği tarihler arasında yapılmaktadır. Burs verecek kurumların duyuruları ve WEB sayfalarını takip ederek tarihler öğrenilebilir.
+
+ Nasıl burs başvurusu yapabilirim ?
+Burs verecek her kurumun yayınladığı duyuruda belirtilen şekilde başvurunuzu gerçekleştirebilirsiniz.
+
+ Hangi şartlarda bursum kesilir?
+Ondokuzmayıs Üniversitesi Vakfı bursu için 1 dersten fazla dersten başarısız olduğunuz takdirde bursunuz kesilmektedir. Kredi Yurtlar Kurumu ve diğer kurum/kuruluşlar tarafından verilen burslar hakkında bilgiye ilgili kurumlardan erişebilirsiniz.
+
+Kayıtlı olduğunuz üniversiteden başka bir üniversiteye geçiş yaptığınız takdirde de bursunuz kesilebilir. Bursunuzun devam etmesi için üniversite değişikliğini bildirir dilekçe ile kayıt yaptırdığınız üniversiteye ait öğrenci belgesini burs aldığınız kuruma mutlaka bildiriniz.
+
+AKTS Nedir?
+AKTS (Avrupa kredi transfer sistemi), öğrencilerin yurt içinde ve/veya yurt dışında alıp başarılı oldukları ders kredilerinin/notlarının bir yükseköğretim kurumundan diğerine transferini sağlayan iş yüküne dayalı bir sistemdir.
+
+AKTS, ders ünitelerini tamamlamak için gerekli öğrenci iş yükünü gösteren (1 ile 60 arasında) sayısal bir değerdir. Bu değer, bir kurumdaki yıllık akademik çalışma içerisinde her bir dersin gerektirdiği iş yükünü gösterir. Bu iş yükü içerisine bir akademik yılda ders kapsamındaki pratik çalışmalar, seminerler, alan çalışmaları, bireysel çalışmalar, sınavlar gibi çalışmalar da girer.
+
+Üniversitemiz AKTS sistemini uygulamak zorunda mıdır?
+Evet. Türkiye’de faaliyet gösteren tüm yükseköğretim kurumları AKTS sistemini uygulamak zorundadır.
+
+ Bir dersin AKTS Kredisi değeri nasıl hesaplanır?
+Tanımdan da anlaşılacağı üzere bir dersin AKTS değeri, o dersin iş yükünün hesaplanması ile oluşur. Örneğin 2 kredilik bir ders için AKTS değerini hesaplamaya çalışalım. 2 saatlik olan ve 14 haftalık ders için; 28 saatlik derse katılım, 1 saat vize, 1 saat final sınavı, 8 saat sınava hazırlık, 22 saat ise ders ve ödev olarak düşünüldüğünde öğrenciye 60 saatlik iş yükü yüklemektedir. 60 saatlik iş yükü de 2 AKTS’lik değer oluşturmaktadır.
+
+ Bir dönemde alacak olduğumuz dersler neden AKTS olarak sınırlandırılmaktadır?
+Bir dönemde alabilecek olduğunuz derslerin 30 AKTS olarak sınırlandırılmasının nedeni; alacak olduğunuz derslerin size yükleyeceği iş yükü ile bağlantılıdır. 1 AKTS’nin 30 saatlik iş yükünden oluştuğu göz önünde bulundurulduğunda, bir dönemde öğrenci 30x30=900 saatlik iş yükü ile karşı karşıya bırakmaktadır. Bu da öğrencinin günde yaklaşık 9 saat çalışmasını gerektirmektedir. Verilen örnekten de anlaşılacağı üzere, öğrencinin günlük olarak kaç saat iş yükü harcayabileceği göz önünde bulundurulduğundan sınırlamaya gidilmiştir.
+
+Üniversitemizden mezun olabilmek için kaç AKTS krediyi kamamlamam gerekmektedir?
+5 (ı) dersleri dışında, dört yıllık öğretim programları 240 AKTS, beş yıllık öğretim programları 300 AKTS, altı yıllık öğretim programları 360 AKTS ve meslek yüksekokulu programları ise 120 AKTS kredisi olarak almanız gerekir.
+

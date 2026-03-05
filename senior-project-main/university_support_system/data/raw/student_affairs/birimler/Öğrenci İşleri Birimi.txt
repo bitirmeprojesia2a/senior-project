@@ -1,0 +1,468 @@
+Bilgi Sistemleri Ofisi
+ADI SOYADI	ÜNVANI	DAHİLİ(☎ )
+Yusuf Suat ŞENYURT	Programcı	☎ 7321
+Recep ARSLAN	Teknisyen	☎ 7339
+Ziya ERGİN	Tekniker	☎ 7316
+Görev Adı: ÖİDB Bilgi Sistemleri Ofisi Personeli
+Kod: GT157
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Öğrenci İşleri Daire Başkanlığı web sayfasının içerik yönetimini sağlamak.
+Sosyal medya hesaplarının kontrolünü sağlamak.
+YÖKSİS veri gönderme, güncelleme işlemlerini yürütmek, takip etmek ve kontrol etmek.
+Yatay geçiş başvuru sistemini yönetip, kullanıcı sorunlarını çözmek.
+Birimde bulunan bilişim cihazlarının kullanılmasına destek vermek.
+Yükseköğretim Mekanları Yatırım karar sistemi hakkında toplantılar yapmak ve konu ile ilgili çalışacak personeli bilgilendirmek.
+MEKSİS veri girişi yapacak olan personeli yetkilendirmek, problemleri  çözmek ve koordinatör üniversite ile iletişimi sağlamak.
+Teknolojik gelişmelerden haberdar olmak.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Bilgi Sistemleri Yönetimi Sorumlusu
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+Görev Adı: ORT- Birim Web Sorumlusu
+Kod: GT343
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Biriminin web sayfasının güncel bir şekilde sorunsuz çalışmasını sağlamak,
+Birimi ile ilgili duyuru, haberleri yayınlamak.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Yok
+Aranan Nitelikler
+Bilgisayar kullanacısı olmak.
+
+Ders Kayıt ve Not İşlemleri Ofisi
+OTOMASYON 1
+Adı Soyadı: Muzaffer AYDIN
+Dahili No: 7325
+Sorumlu Olduğu Birimler: Mühendislik Fakültesi, Lâdik Meslek Yüksekokulu
+
+Adı Soyadı: İlknur PEKER
+Dahili No: 7319
+Sorumlu Olduğu Birimler: Ziraat Fakültesi, Terme Meslek Yüksekokulu
+
+Adı Soyadı: Nilüfer YALIN
+Dahili No: 7318
+Sorumlu Olduğu Birimler: Sağlık Bilimleri Fakültesi, Alaçam Meslek Yüksekokulu
+
+--------------------------------------------------
+
+OTOMASYON 2
+Adı Soyadı: Nihal GÜZEL
+Dahili No: 7333
+Sorumlu Olduğu Birimler: Ali Fuat Başgil Hukuk Fakültesi, Bafra İletişim Fakültesi, Diş Hekimliği Fakültesi, Veteriner Fakültesi, Eczacılık Fakültesi, İktisadi ve İdari Bilimleri Fakültesi
+
+Adı Soyadı: Hava YÖNTEN
+Dahili No: 7320
+Sorumlu Olduğu Birimler: İlahiyat Fakültesi, Güzel Sanatlar Fakültesi, Bilişim Teknolojileri Meslek Yüksekokulu, Bafra Turizm Meslek Yüksekokulu
+
+Adı Soyadı: Emine YETİŞ
+Dahili No: 7329
+Sorumlu Olduğu Birimler: Turizm Fakültesi, Sağlık Hizmetleri Meslek Yüksekokulu
+
+--------------------------------------------------
+
+OTOMASYON 3
+Adı Soyadı: Dilek KALENDER
+Dahili No: 7322
+Sorumlu Olduğu Birimler: Fen Edebiyat Fakültesi, Fen Fakültesi, İnsan ve Toplum Bilimleri Fakültesi, Devlet Konservatuvarı
+
+Adı Soyadı: Arif SAVSAR
+Dahili No: 7323
+Sorumlu Olduğu Birimler: Adalet Meslek Yüksekokulu, Bafra Meslek Yüksekokulu, Samsun Meslek Yüksekokulu, Çarşamba İnsan ve Toplum Bilimleri Fakültesi
+
+Adı Soyadı: Sevim DEMİR
+Dahili No: 7330
+Sorumlu Olduğu Birimler: Yaşar Doğu Spor Bilimleri Fakültesi, Yabancı Diller Yüksekokulu, Yeşilyurt Demir Çelik Meslek Yüksekokulu
+
+--------------------------------------------------
+
+BİLGİ İŞLEM VE DESTEK
+Adı Soyadı: Recep ARSLAN
+Dahili No: 7339
+Sorumlu Olduğu Birimler: İletişim Fakültesi, Çarşamba Ticaret Borsası Meslek Yüksekokulu
+
+Adı Soyadı: Ziya ERGİN
+Dahili No: 7316
+Sorumlu Olduğu Birimler: Eğitim Fakültesi
+
+Adı Soyadı: Yusuf Suat ŞENYURT
+Dahili No: 7321
+Sorumlu Olduğu Birimler: Mimarlık Fakültesi, Havza Meslek Yüksekokulu, Vezirköprü Meslek Yüksekokulu
+
+Görev Adı: ÖİDB Ders Kayıt ve Not İşlemleri Ofisi Sorumlusu
+Kod: GT148
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Ders katalog ve müfredat menüsünde yapılacak güncellemelerin personele dağıtımını ve kontrolünü yapmak.
+Ders kayıtlanma öncesi düzenlenen senaryonun sistem üzerinden test edilerek ders kayıtlanma sistemini aktif hale getirmek.
+Ders kayıtlanma işlemleri sırasında öğrenci veya danışmanların yaşadığı problemlerde destek hizmetinin verilmesini sağlamak.
+Ders kayıtlanma dönemi öncesi toplu transkript hesaplama işlemini yapmak.
+Ders Ekle/Sil formlarının bilgi yönetim sistemine işlenmesini sağlamak.
+Derslerin intibak notlarını, Not Bildirim, Not Düzeltme, Tek Ders Not Bİldirim, Ek Sınav Not Bildirim Formlarını, Yabancı Dil Muafiyet notlarını bilgi yönetim sistemine işlenmesini organize etmek.
+Öğretim elemanlarının sisteme giriş yaptığı notların sistem üzerinden öğrencilere yansıtma işlemini yapmak.
+Öğretim Elemanının kesin kayıt yaptığı not işlemlerinin geri alma işlemini yapmak.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Görev Adı: ÖİDB Ders Kayıt İşlemleri Personeli
+Kod: GT154
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Birimden gelen yeni açılan program müfredatı, ders değişikliği, yeni ders açılması, dersin kaldırılması tekliflerinin bilgi yönetim sistemine uygunluğunu kontrol ederek raporlamak.
+Mezuniyet ve bologna süreci için yeterli AKTS ve kredi değerlerinin yönetmeliğe, dönemlik ders dağılımına uygunluğunu kontrol ederek raporlamak ve Müfredat İşlemleri Personeline göndermek.
+Senatoda onaylanan dersleri kataloğa tanımlamak.
+Müfredata dersleri eğitim programına göre eklemek.
+Ders kayıtlanma işlemleri sırasında öğrenci veya danışmanların yaşadığı problemlerde destek hizmeti vermek.
+Ders Ekle/Sil formu gönderilen öğrencileri sistem üzerinde manuel olarak kayıtlamak.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Görev Adı: ÖİDB Not İşlemleri Ofisi Personeli
+Kod: GT149
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Öğrencinin DGS, Yatay Geçiş, İkinci Üniversite, Farabi, Erasmus sebebiyle alıp başarılı olduğu ve birimler tarafından kurul kararı ile bildirilen derslerin intibak notlarını bilgi yönetim sistemine işlemek.
+Not Bildirim, Not Düzeltme, Tek Ders Not Bildirim, Ek Sınav Not Bildirim formlarını sisteme işlemek.
+Yabancı Dil muafiyet notlarını sisteme işlemek.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Görevinde bulunmadığı zamanlarda vekâlet edecek unvan: Not işlemleri personeli
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+Diploma ve Mezun Öğrenci İşlemleri Ofisi
+ADI SOYADI	ÜNVANI	DAHİLİ(☎ )
+Şaban ARSLAN	Bilgisayar İşletmeni	☎ 7305
+Abdulkadir KIRKINCI	Bilgisayar İşletmeni	☎ 7326
+Metin YILMAZOĞLU	Teknisyen	☎ 7335
+Fatih TÜTER	Memur	☎ 7314
+
+Görev Adı: ÖİDB Diploma İşlemleri Personeli
+Kod: GT151
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Diploma ve diploma ekini hazırlamak ve kontrol etmek.
+Diploma ve diploma ekinin kayıp veya zayi olması durumunda başvuruya istinaden ikinci nüsha diploma ve diploma ekini hazırlamak.
+Yandal sertifikalarını hazırlamak.
+Diploma, Diploma Eklerini ve Yandal Sertifikalarını tutanakla Fakülte/ Yüksekokul/ MYO'na teslim etmek.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Görevinde bulunmadığı zamanlarda vekâlet edecek unvan: Diploma işlemleri personeli
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+Görev Adı: ÖİDB Mezun Öğrenci İşlemleri Personeli
+Kod: GT152
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Denklik işlemleri ile ilgili yazışma yapmak.
+Kurum ve Kuruluşlardan gelen diploma ve mezuniyet bilgilerinin teyit etmek.
+YÖKSİS veri tabanına mezun öğrenci bilgilerini işlemek ve güncellemek.
+Tıp ve diş hekimliği fakültelerinden mezun olan öğrencilerin diplomalarını sağlık bakanlığına, diğer sağlık programı mezunlarının diplomalarını sağlık il müdürlüklerine tescil için göndermek.
+Diploma teslim tutanaklarının arşivlemek.
+Kamu kurumlarından gelen diploma taleplerinin kurumuna gönderilmek üzere ilgili birime yönlendirmek.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Görevinde bulunmadığı zamanlarda vekâlet edecek unvan: Mezun öğrenci işlemleri personeli
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+Katkı Payı ve Öğrenim Ücreti Ofisi
+ADI SOYADI	ÜNVANI	DAHİLİ(☎ )
+Sema KEMENT	Bilgisayar İşletmeni	☎ 7310
+Yunus Emre KÖSTEK	Memur	☎ 7327
+E-Posta Adresi: omuharcburosu@omu.edu.tr
+
+Görev Adı: ÖİDB Katkı Payı ve Öğrenim Ücreti Ofisi Personeli
+Kod: GT158
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Öğrencilerin kayıt yaptırdığı program düzeyinde bilgi yönetim sisteminden borçlandırma işlemini yapmak ve ödemelerini takip etmek.
+%10'luk başarı diliminde olan öğrencilerin ve diğer ücret iade işlemlerini yapmak.
+Mezuniyet işlemleri öncesi öğrencinin borçlanmasını kontrol etmek.
+Normal öğrenim süresi içerisindeki öğrencilerin YÖKSİS veri tabanındaki sayılarla karşılaştırılarak hatalı olanları bildirmek.
+İslam Kalkınma Bankası, Afganistan, Yemen hükümet burslusu öğrencilerin ödemesini hesaplayarak ilgili kuruluşlara bildirmek.
+YTB burslusu olarak üniversiteye yerleşen öğrencilerin burs ödemelerini takip etmek.
+667 KHK kapsamında öğrenim gören ğrencilerin ücret ödeme ve aktarımlarını takip etmek.
+Birden fazla programda aktif olarak görünen öğrencilerin ödeme takibi ve kontrolünü yapmak.
+Ortak derslerin (UZEM yoluyla verilen) ödemelerinin takibini yapmak.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Görevinde bulunmadığı zamanlarda vekâlet edecek unvan: Katkı payı ve öğrenim ücreti işlemleri personeli
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+Kesin Kayıt ve Özlük İşlemleri Ofisi
+Görev Adı: ÖİDB Kesin Kayıt ve Özlük İşlemleri Ofisi Sorumlusu
+Kod: GT143
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Üniversiteye kayıt yaptıracakların kayıt yeri bilgisini, kayıt tarihlerini ÖSYM sistemine giriş yapmak ve ÖİDB web sayfasında ilan etmek.
+Disiplin cezası, kayıt silme, kayıt dondurma ve mezuniyet bilgilerinin bilgi yönetim sistemine işlenmesini organize etmek.
+Disiplin cezalarının YÖKSİS'e gönderim işlemini yapmak.
+ÇAP/YAP başvuru listesini alarak birimlere gönderilmek üzere personele bildirmek.
+YÖS ile başvuru yapan öğrencilerin belge ve sistemdeki bilgilerinin doğruluğunu teyit ederek onay vermek.
+Belge işlemlerinin yürütülmesini sağlamak.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Görevinde bulunmadığı zamanlarda vekâlet edecek unvan: Kesin kayıt personeli
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+Görev Adı: Öğrenci Özlük İşlemleri Personeli
+Kod: GT207
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+Disiplin cezalarını bilgi yönetim sistemine işlemek, ilişik kesme cezası alan öğrenci bilgilerini YÖK'e ve diğer ilgili kurumlara bildirmek, 3 aydan fazla süreli uzaklaştırma cezası alan öğrencileri KYK'ya bildirmek.
+Öğrencilere ait kayıt dondurma, ilişik kesme, mezuniyet vb. bilgilerini sisteme işlemek.
+YÖS öğrencilerinin yeni kayıt, kayıt silme, disiplin cezası, mezuniyet bilgilerinin KYK ve Göç İdarisine göndermek.
+Türkiye burslusu öğrencilerin yeni kayıt, kayıt silme, disiplin cezası, mezuniyet bilgilerini göç idaresi, KYK, yurt dışı Türkler başkanlığına göndermek.
+İslam kalkınma bankası, Yemen Hükümeti ve Afganistan Hükümeti burslusu öğrencilerin yeni kayıt, kayıt silme, disiplin cezası, mezuniyet bilgilerini ilgili kurum ve kuruluşlara göndermek.
+Her eğitim öğretim döneminde yabancı uyruklu öğrencilerin ders kayıtlanma durumunu göç idaresine göndermek.
+YÖK tarafından yayınlanan 667 KHK kapsamında gelen öğrenciler ile ilgili yazılar doğrultusunda işlem yapmak, öğrenci taleplerine sözlü veya yazılı cevap vermek.
+667 Sayılı KHK kapsamında gelen özel öğrencilerin ödemelerini takip etmek, mezun duruma gelen veya kayıtlı üniversitesine geri dönmek isteyenlerin ilişik kesme işlemini yaparak üniversitesine bildirmek.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Görevinde bulunmadığı zamanlarda vekâlet edecek unvan: Özlük işlemleri personeli
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+Görev Adı: ÖİDB Kesin Kayıt Personeli
+Kod: GT144
+
+Hassas Görev: Hayır
+
+Görev, Yetki ve Sorumluluklar
+ÖSYM tarafından yerleştirilen öğrencilerin bilgi yönetim sistemine kayıtlarını yapmak.
+Yatay geçiş ile yerleştirilen öğrencilerin sisteme kayıtlarını yapmak.
+Özel Yetenek ile kayıt hakkı kazanan, af kapsamında gelen, özel öğrenciliği senatodan kabul edilen öğrencilerin sisteme kayıtlarını yapmak.
+Lisans ve mühendislik tamamlama öğrencilerinin sisteme kayıtlarını yapmak.
+Yabancı Uyruklu Öğrencilerin sisteme kayıtlarını yapmak.
+ÇAP/YAP başvuru listesini birimlere bildirmek, yerleştirilen öğrencilerin bilgisi geldiğinde sisteme kayıtlarını yapmak.
+Okuyan öğrencilerin transkript ve öğrenci belgesi talebinde belgelerini düzenlemek, yabancı uyruklu öğrenciye bilgi formu vermek.
+Ortak Sorumluluklar
+Etik Kurallara uygun davranışlarda bulunmak, görevlerini yerine getirmek.
+
+Mevzuatı takip etmek, değişiklikler hakkında birim üst yönetimine bilgi vererek ilgili iş ve işlemleri yerine getirmek.
+
+Görevi ile ilgili tüm faaliyetlerini kalite geliştirme ve iç kontrol sistemi tanım ve düzenlemelerine uygun olarak yürütülmesini sağlamak.
+
+Yapacağı iş ve eylemleri, şeffaflık, hesap verebilirlik ve katılımcılık anlayışı içerisinde ve kamu kaynaklarını verimli kullanılacak biçimde yerine getirmek.
+
+İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.
+
+Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanında bilgi girişlerini yapmak.
+
+Kalite politikaları ve prosedürlerinden haberdar olmak ve gerekli hallerde güncellenmesine katkı sunmak.
+
+PP.5.3.PRS.0001 OMÜ PAYDAŞ GERİ BİLDİRİM YÖNETİMİ PROSEDÜRÜ gereğince paydaşlarla nezaketli olarak iletişim kurmak, geri bildirim kaynaklarından ulaşan paydaş bildirimini birim paydaş iletişim görevlisine iletmek.
+
+Kurumun iç ve dış tetkik/değerlendirme süreçlerine katılım sağlamak.
+
+Vekalet Durumu
+Görevinde bulunmadığı zamanlarda vekâlet edecek unvan: Kesin kayıt personeli
+Aranan Nitelikler
+En az ortaöğretim mezunu olmak.
+
+İletişim Ofisi
+ADI SOYADI	ÜNVANI	DAHİLİ(☎ )
+Emine ÖZTÜRK	Bilgisayar İşletmeni	☎ 7340
