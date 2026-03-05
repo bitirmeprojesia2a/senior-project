@@ -119,19 +119,19 @@ def mock_redis():
 # ── Örnek Test Verileri ─────────────────────────
 @pytest.fixture
 def sample_student_data():
-    """Örnek öğrenci verisi."""
+    """Sample student payload matching the ORM model."""
     return {
         "student_id": "20210001",
         "full_name": "Ahmet Yılmaz",
         "email": "ahmet.yilmaz@uni.edu.tr",
-        "department": "Bilgisayar Mühendisliği",
-        "faculty": "Mühendislik Fakültesi",
-        "grade": 3,
+        "department": "Computer Engineering",
+        "faculty": "Engineering Faculty",
+        "class_year": 3,
         "enrollment_year": 2021,
         "gpa": 3.45,
         "total_credits": 180,
         "completed_credits": 120,
-        "current_semester": 6,
+        "current_semester": "6",
     }
 
 

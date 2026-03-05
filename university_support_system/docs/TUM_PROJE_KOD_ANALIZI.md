@@ -41,17 +41,24 @@ PostgreSQL'e bağlanan Asenkron Motoru (Engine) yönetir.
 *   **`check_db_health()` (Metod):** Sisteme "SELECT 1" isimli mikro-sorgu fırlatıp milisaniye cinsinden gecikme (latency) hesaplar. "Ping pong" mantığıdır.
 
 ### 2.2. `src/db/models.py`
-SQL kodları yazmak yerine, veritabanı tablolarını Python Sınıfları (Class) gibi göstermeye yarayan ORM (Object-Relational Mapping) dosyasıdır.
+SQL kodları yazmak yerine, veritabanı tablolarını Python sınıfları (Class) gibi göstermeye yarayan ORM (Object-Relational Mapping) dosyasıdır.
 *   **`TimestampMixin` (Sınıf):** Altındaki tüm tablolara zorunlu olarak `created_at` (oluşturulma) ve `updated_at` (güncellenme) saatleri ekler. Hiçbir zaman el ile yazılmaz, veritabanı saati (UTC) otomatik basılır.
-*   **Öğrenci & Ders Tabloları:**
-    *   `Student`: Öğrenci id, mail, gpa (ortalaması), vs tutar.
-    *   `Course`: Ders kodları ve kredilerini tutar.
-    *   `StudentCourse`: (Çapraz tablo) Hangi öğrencinin hangi dersi aldığı ve harf notunu (grade) tutar. Many-to-Many köprüsüdür.
-*   **Finans Tabloları:**
-    *   `Tuition`, `Payment`, `Installment`, `Scholarship`: Öğrencinin harcı var mı, ödeme makbuz no (receipt_no), ve taksit ödemelerinin durumu.
-*   **Telemetri Tabloları:**
-    *   `QueryLog`: Kullanıcının sisteme yazdığı "Cennet cehennem gibi olur mu?" gibi anlamsızdan anlama her soruyu, yapay zekanın ne kadar sürede cevap verdiğini (`response_time_ms`), ve güven skorunu kaydeder.
-    *   `AgentRegistry`: Aktif yapay zekaların (Department Agent'ların) ping atarak yaşadıklarını kanıtladıkları "Heartbeat" tablosudur.
+*   **Öğrenci İşleri Tabloları:**
+    *   `Student`: Öğrencinin kimlik, e‑posta, bölüm/fakülte, sınıf, GNO ve toplam/tamamlanan kredi bilgilerini tutar.
+    *   `Course`: Ders kodları, adları, kredileri ve hangi bölüm/yarıyılda açıldığını tutar.
+    *   `CoursePrerequisite`: Bir dersin diğer derslere olan önkoşul ilişkisini Many‑to‑Many köprü tablo olarak modeller.
+    *   `StudentCourse`: Hangi öğrencinin hangi dersi hangi dönemde aldığını, harf notunu ve durumunu (`enrolled/completed/...`) tutar.
+    *   `CourseRegistrationPeriod`: Her dönem için ders kayıt başlangıç/bitiş tarihlerini ve aktiflik bilgisini saklar.
+*   **Finans & Burs Tabloları:**
+    *   `Tuition`, `Payment`, `Installment`: Öğrencinin dönemlik harç toplamını, yaptığı ödemeleri ve varsa taksit planını tutar. `has_debt` ve `debt_amount` alanları PostgreSQL'de GENERATED kolon olarak otomatik hesaplanır.
+    *   `AvailableScholarship`, `Scholarship`, `ScholarshipApplication`: Burs ilan kataloğu, öğrenciye atanmış burslar ve başvuru geçmişini temsil eder.
+*   **Kimlik Doğrulama & Duyuru Tabloları:**
+    *   `OTPCode`, `VerificationSession`, `SlackStudentMapping`: OTP kodlarının hash'lerini, doğrulanmış oturumları ve Slack kullanıcılarının öğrencilerle eşlemesini tutan runtime tablolardır.
+    *   `Announcement`: Üniversite/fakülte/bölüm duyurularının ham metni, LLM özeti ve kaynak URL'sini saklar.
+*   **Ajan / Telemetri Tabloları:**
+    *   `AgentRegistry`: Aktif yapay zekaların (ana/departman/uzman ajanların) kayıtlı olduğu ajan envanteri tablosudur.
+    *   `QueryLog`: Kullanıcının sorduğu her soruyu, yönlendirme stratejisini, güven skorunu ve yanıt süresini (`response_time_ms`) kaydeder; ek JSON bilgiler Python tarafında `query_metadata` alanı üzerinden tutulur.
+    *   `AgentTask`: A2A protokolü üzerinden ajanlar arasında dolaşan görevlerin gönderilme, işlenme ve sonuçlanma adımlarını kayıt altına alır.
 
 ### 2.3. `src/db/schemas.py`
 Modeller veritabanına giderken, Schema'lar kullanıcıdan / frontend'den gelen JSON verilerini filtreleyen güvenlik duvarıdır (Pydantic Doğrulaması).

@@ -296,29 +296,41 @@ print(f'RAG Chunk:   {settings.rag.chunk_size} / {settings.rag.chunk_overlap}')
 
 ## 6. Veritabanı Migration
 
-PostgreSQL tabloları Alembic migration'ları ile yönetilir.
+PostgreSQL tabloları Alembic migration'ları ile yönetilir. **Tabloları veritabanına eklemek** için aşağıdaki adımları uygulayın.
 
-### 6.1 Migration Uygulama
+**Ön koşul:** Docker servisleri çalışıyor olmalı (`docker compose up -d`). PostgreSQL konteyneri ayaktayken migration çalıştırılır.
+
+### 6.1 Tabloları Oluşturma (Migration Uygulama)
 
 ```powershell
 python -m alembic upgrade head
 ```
 
-Bu komut `migrations/` klasöründeki migration dosyalarını sırayla uygulayarak tabloları oluşturur.
+Bu komut `migrations/` klasöründeki migration dosyalarını sırayla uygulayarak tüm tabloları (students, courses, tuition, scholarships, otp_codes, announcements, agent_registry, query_logs vb.) veritabanında oluşturur.
 
-### 6.2 Migration Durumunu Kontrol Etme
+### 6.2 Tabloların Oluştuğunu Doğrulama
+
+Tabloların gerçekten oluştuğunu görmek için:
+
+```powershell
+docker exec uni_postgres psql -U postgres -d university_support -c "\dt"
+```
+
+Çıktıda `students`, `courses`, `tuition`, `announcements`, `query_logs` vb. tablolar listelenmelidir.
+
+### 6.3 Migration Durumunu Kontrol Etme
 
 ```powershell
 python -m alembic current
 ```
 
-### 6.3 Yeni Migration Oluşturma (Model Değişikliği Sonrası)
+### 6.4 Yeni Migration Oluşturma (Model Değişikliği Sonrası)
 
 ```powershell
 python -m alembic revision --autogenerate -m "açıklama"
 ```
 
-### 6.4 Son Migration'ı Geri Alma
+### 6.5 Son Migration'ı Geri Alma
 
 ```powershell
 python -m alembic downgrade -1
@@ -657,17 +669,68 @@ python scripts/compare_collections.py "Kayıt dondurma nasıl yapılır"
 
 ---
 
-## 11. Uygulamayı Başlatma
+## 11. Sentetik Öğrenci Verisi Yükleme (Opsiyonel)
+
+Test senaryolarında gerçek veriler yerine örnek (sentetik) öğrenci verisi kullanmak istersen, `scripts/seed_synthetic_data.py` betiği ile PostgreSQL'e hazır kayıtlar ekleyebilirsin. Bu betik yalnızca tablolar **boşsa** veri ekler; aynı betiği ikinci kez çalıştırmak veriyi çoğaltmaz.
+
+### 11.1 Ön Koşullar
+
+- Docker servisleri çalışıyor olmalı (`docker compose up -d`).
+- Migration uygulanmış olmalı (`python -m alembic upgrade head`).
+- Sanal ortam aktif olmalı.
+
+### 11.2 Sentetik Veriyi Eklemek
+
+```powershell
+cd C:\Users\tubas\Desktop\university_support_system
+venv\Scripts\activate
+docker compose up -d
+python -m alembic upgrade head
+python scripts/seed_synthetic_data.py
+```
+
+Başarılı çalıştırmada aşağıdaki mesajı görürsün:
+
+```text
+Synthetic student-focused test data inserted successfully.
+```
+
+Betik şu tabloları doldurur:
+
+- `students` → Eğitim, Fen-Edebiyat ve Mühendislik fakültelerinden 9 öğrenci
+- `courses` → Her bölüm için örnek dersler
+- `student_courses` → Geçmişte alınan ve şu an alınan dersler (not ve durumlarıyla)
+- `course_registration_periods` → 2025-Güz ve 2026-Bahar kayıt dönemleri
+- `tuition`, `payments`, `installments` → Farklı harç ve taksit senaryoları
+- `available_scholarships`, `scholarships`, `scholarship_applications` → Örnek burs ve başvuru kayıtları
+
+Aynı komutu tekrar çalıştırırsan, tablolar boş değilse şu mesajı yazar ve veri eklemez:
+
+```text
+Synthetic seed skipped: students or courses already contain data.
+```
+
+### 11.3 Eklenen Veriyi Kontrol Etmek
+
+Örneğin eklenen öğrencileri görmek için:
+
+```powershell
+docker exec uni_postgres psql -U postgres -d university_support -c "SELECT id, student_id, full_name, faculty, department, class_year, gpa FROM students ORDER BY id;"
+```
+
+---
+
+## 12. Uygulamayı Başlatma
 
 > **Not:** FAZ 2 (LLM entegrasyonu, API gateway, Slack bot) henüz geliştirilme aşamasındadır. Aşağıdaki adımlar tamamlandığında güncellenecektir.
 
-### 11.1 FastAPI Sunucusu (Geliştirme Modu)
+### 12.1 FastAPI Sunucusu (Geliştirme Modu)
 
 ```powershell
 python -m uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 11.2 Tüm Servislerin Çalışma Sırası
+### 12.2 Tüm Servislerin Çalışma Sırası
 
 Tam sistemi ayağa kaldırmak için önerilen sıra:
 
@@ -680,7 +743,7 @@ Tam sistemi ayağa kaldırmak için önerilen sıra:
 
 ---
 
-## 12. Makefile Kısayolları
+## 13. Makefile Kısayolları
 
 Sık kullanılan komutlar `Makefile` ile kısayollara bağlanmıştır:
 

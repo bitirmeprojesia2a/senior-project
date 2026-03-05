@@ -318,244 +318,326 @@ departments: Mapped[Optional[dict]] = mapped_column(JSON)
 
 #### 6.1.4 Tablo Listesi ve İlişki Diyagramı
 
+Yeni şema; Öğrenci İşleri, Finans, Burs, Kimlik Doğrulama, Duyurular ve Ajan/Telemetri olmak üzere 6 ana grupta toplanmıştır.
+
 ```
-┌─────────────┐     ┌──────────────────┐     ┌────────────┐
-│  students   │────<│ student_courses  │>────│  courses   │
-│             │     └──────────────────┘     └────────────┘
+┌─────────────┐     ┌──────────────────┐      ┌────────────┐
+│  students   │────<│ student_courses  │ >────│  courses   │
+│             │     └──────────────────┘      └────────────┘
 │             │
 │             │──── tuition ──── payments
 │             │            └──── installments
 │             │
 │             │──── scholarships
-│             │──── user_accounts
 │             │──── scholarship_applications
 └─────────────┘
 
-┌───────────────┐  ┌──────────────┐  ┌──────────────────────────┐
-│  it_tickets   │  │ known_issues │  │ course_registration_     │
-│               │  │              │  │ periods                  │
-└───────────────┘  └──────────────┘  └──────────────────────────┘
+┌──────────────┐
+│ courses      │
+│              │
+│  ┌───────────────┐
+└─>│ course_prereq │  (ders–önkoşul ilişkisi)
+   └───────────────┘
 
-┌─────────────┐  ┌────────────────┐
-│ query_logs  │  │ agent_registry │  ← Yeni tablolar (izlenebilirlik)
-└─────────────┘  └────────────────┘
+┌──────────────────────────┐
+│ course_registration_     │  (dönemlik kayıt tarihleri)
+│ periods                  │
+└──────────────────────────┘
+
+┌──────────────────────────┐
+│ available_scholarships   │  (burs ilan kataloğu)
+└──────────────────────────┘
+
+┌──────────────────────────┐
+│ otp_codes                │  (OTP kodları)
+│ verification_sessions    │  (aktif oturumlar)
+│ slack_student_mapping    │  (kalıcı Slack-öğrenci eşlemesi)
+└──────────────────────────┘
+
+┌──────────────┐
+│ announcements│  (üniversite/fakülte duyuruları)
+└──────────────┘
+
+┌─────────────┐     ┌─────────────┐
+│ agent_      │     │ query_logs  │
+│ registry    │     └─────────────┘
+│             │            │
+│             │     ┌─────────────┐
+└─────────────┘     │ agent_tasks │  (A2A görev yaşam döngüsü)
+                    └─────────────┘
 ```
 
-**Toplam: 15 tablo**, her biri `TimestampMixin` ile `created_at`/`updated_at` otomatik alır.
+**Toplam: 19 tablo**, hepsi `TimestampMixin` üzerinden `created_at`/`updated_at` alanlarını otomatik alır (runtime tablolarında da izlenebilirlik korunur).
 
-| Tablo | Alan Sayısı | İndeksler | İlişkiler |
-|-------|------------|-----------|-----------|
-| `students` | 12 | `student_id` (unique), `department` | courses, tuition, scholarships, account |
-| `courses` | 7 | `course_code` (unique), `department` | enrollments |
-| `student_courses` | 5 | `student_id`, `course_id` | student, course |
-| `tuition` | 8 | `student_id` | student, payments, installments |
-| `payments` | 5 | `tuition_id` | tuition |
-| `installments` | 5 | `tuition_id` | tuition |
-| `scholarships` | 7 | `student_id` | student |
-| `scholarship_applications` | 5 | `student_id` | — |
-| `available_scholarships` | 6 | — | — |
-| `user_accounts` | 9 | `student_id`, `username` (unique) | student |
-| `it_tickets` | 7 | `student_id`, `status` | — |
-| `known_issues` | 5 | — | — |
-| `course_registration_periods` | 4 | — | — |
-| `query_logs` | 9 | `user_id`, `created_at` | — | *`metadata` kolonu Python'da `query_metadata` olarak erişilir (SQLAlchemy reserved name)* |
-| `agent_registry` | 9 | `agent_id` (unique), `department` | — |
+| Tablo | Amaç | Notlar |
+|-------|------|--------|
+| `students` | Öğrenci ana kaydı | Diğer tabloların çoğu buraya FK ile bağlıdır. |
+| `courses` | Ders kataloğu | Bölüm ve dönem bazlı ders bilgisi. |
+| `course_prerequisites` | Ders–önkoşul ilişkisi | Bir dersin birden çok önkoşulu olabilir. |
+| `student_courses` | Öğrenci–ders ilişkisi | Aldığı dersler, notu ve durumu. |
+| `course_registration_periods` | Ders kayıt tarihleri | Her dönem için tek satır, aktif dönem işaretlenir. |
+| `tuition` | Dönemlik harç durumu | Borç alanları PostgreSQL tarafında otomatik hesaplanır. |
+| `payments` | Ödeme geçmişi | Harç ödemelerinin logu. |
+| `installments` | Taksit planı | Her taksit için ayrı satır. |
+| `available_scholarships` | Burs ilanları | Öğrenciden bağımsız burs kataloğu. |
+| `scholarships` | Öğrenciye atanmış burslar | Aktif/askıda burslar. |
+| `scholarship_applications` | Burs başvuruları | Başvuru tarihi ve sonuç durumu. |
+| `otp_codes` | OTP kod kayıtları | Süresi dolan ve kullanılan kodlar dahil. |
+| `verification_sessions` | Doğrulanmış oturumlar | OTP sonrası açılan, süreli oturumlar. |
+| `slack_student_mapping` | Slack–öğrenci eşlemesi | İlk doğrulamadan sonra kalıcı kimlik bağı. |
+| `announcements` | Duyuru arşivi | Ham metin + LLM özeti saklanır. |
+| `agent_registry` | Ajan envanteri | Ana/departman/uzman ajan kartları. |
+| `query_logs` | Sorgu telemetrisi | Hangi sorgu, hangi ajanlar, kaç ms sürdü? |
+| `agent_tasks` | A2A görev kayıtları | Görev gönderme/işleme/sonuç döngüsü. |
+
+> Not: İlk taslakta yer alan `user_accounts`, `it_tickets`, `known_issues` tabloları; yeni OTP tabanlı kimlik doğrulama ve Slack entegrasyonu mimarisine geçtiğimiz için şemadan çıkarılmıştır. IT destek senaryoları, ileride RAG tarafında tutulacak dokümanlar üzerinden yönetilecektir.
 
 #### 6.1.5 Veri Sözlüğü — Tablo ve Alan Açıklamaları
 
-Her tablonun **neden** var olduğu ve her alanın **ne amaçla** kullanıldığı aşağıda açıklanmıştır.
+Her tablonun **neden** var olduğu ve kritik alanların **ne amaçla** kullanıldığı aşağıda özetlenmiştir.
 
-##### `students` — Öğrenci Ana Tablosu
-Sistemdeki tüm öğrencilerin merkezi kaydı. Diğer tabloların çoğu bu tabloya FK ile bağlıdır.
+##### 1) Öğrenci İşleri Grubu
 
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `student_id` | String(20), UK | Okul numarası (ör: "20210001"). Unique Index — sorgulamalarda birincil arama anahtarı |
-| `full_name` | String(100) | Ad Soyad. NOT NULL — her öğrencinin adı olmalı |
-| `email` | String(100), UK | Kurumsal e-posta. UK — çift kayıt önlenir |
-| `department` | String(100), IDX | Bölüm (ör: "Bilgisayar Mühendisliği"). İndeksli — departman bazlı filtreleme sık yapılır |
-| `faculty` | String(100) | Fakülte (ör: "Mühendislik Fakültesi") |
-| `grade` | Integer | Sınıf (1–4) |
-| `enrollment_year` | Integer | Kayıt yılı (ör: 2021) |
-| `registration_status` | String(50) | Kayıt durumu: Aktif, Pasif, Mezun, Donmuş |
-| `gpa` | Float | Genel Not Ortalaması (0.0–4.0) |
-| `total_credits` | Integer | Toplam alınması gereken kredi |
-| `completed_credits` | Integer | Tamamlanan kredi |
-| `current_semester` | Integer | Mevcut dönem (1–8) |
-
-##### `courses` — Ders Kataloğu
-Üniversitede açılan tüm derslerin listesi.
+###### `students` — Öğrenci Ana Tablosu
+Sistemdeki tüm öğrencilerin merkezi kaydıdır. Departman, fakülte ve sınıf bilgisi üzerinden hem RAG hem de duyuru filtrelemesi yapılır.
 
 | Alan | Tip | Amaç |
 |------|-----|------|
-| `course_code` | String(20), UK | Ders kodu (ör: "BIL301"). Unique Index — sorgulamalarda birincil arama anahtarı |
-| `course_name` | String(200) | Ders adı (ör: "Yazılım Mühendisliği") |
-| `credits` | Integer | AKTS kredisi (varsayılan: 3) |
-| `department` | String(100), IDX | Dersin bağlı olduğu bölüm |
-| `semester` | Integer | Müfredatta önerilen dönem |
-| `instructor` | String(100) | Dersi veren öğretim üyesi |
-| `prerequisite` | String(20) | Ön koşul ders kodu (ör: "BIL201") |
+| `student_id` | String(20), UK | Okul numarası (ör: "20210001"). Birincil arama anahtarı. |
+| `full_name` | String(120) | Ad Soyad. |
+| `email` | String(120), UK | OTP kodunun gönderileceği kurumsal e-posta. |
+| `department` | String(80), IDX | Bölüm (ör: "Bilgisayar Mühendisliği"). Duyuru ve sorgu filtrelemede kullanılır. |
+| `faculty` | String(80) | Fakülte (ör: "Mühendislik Fakültesi"). Fakülte bazlı duyurular için. |
+| `class_year` | SmallInt | Sınıf (1–6 arası). |
+| `enrollment_year` | SmallInt | Kayıt yılı (ör: 2021). |
+| `registration_status` | String(30) | `active`, `frozen`, `graduated`, `dismissed`, `leave_of_absence`. |
+| `gpa` | Numeric(3,2) | Genel Not Ortalaması (0.00–4.00). Boş kalabilir. |
+| `total_credits` | SmallInt | Program boyunca tamamlanması beklenen kredi. |
+| `completed_credits` | SmallInt | Şu ana kadar tamamlanan kredi. |
+| `current_semester` | String(20) | Örneğin: "2024-Güz". |
 
-##### `student_courses` — Öğrenci-Ders İlişkisi (Many-to-Many)
-Hangi öğrencinin hangi dersi aldığını tutar. Klasik **join table** deseni.
-
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `student_id` | FK → students | Dersi alan öğrenci |
-| `course_id` | FK → courses | Alınan ders |
-| `semester` | String(20) | Dersin alındığı dönem (ör: "2025-Güz") |
-| `grade` | String(5) | Harf notu (AA, BA, BB, …, FF) |
-| `status` | String(20) | Devam, Geçti, Kaldı, Bıraktı |
-
-##### `tuition` — Harç Bilgileri
-Her öğrencinin dönemlik harç/öğrenim ücreti durumu. Öğrenci ile **1:1** ilişki.
+###### `courses` — Ders Kataloğu
+Üniversitede açılan tüm derslerin listesidir.
 
 | Alan | Tip | Amaç |
 |------|-----|------|
-| `student_id` | FK → students | Harç sahibi öğrenci |
-| `semester` | String(20) | İlgili dönem |
-| `total_amount` | Float | Toplam harç tutarı (TL) |
-| `paid_amount` | Float | Ödenen tutar |
-| `has_debt` | Boolean | Borç var mı? (hızlı filtreleme için) |
-| `debt_amount` | Float | Kalan borç tutarı |
-| `due_date` | DateTime | Son ödeme tarihi |
-| `last_payment_date` | DateTime | En son ödeme yapılan tarih |
+| `course_code` | String(20), UK | Ders kodu (ör: "BIL301"). |
+| `course_name` | String(120) | Ders adı (ör: "Yazılım Mühendisliği"). |
+| `credits` | SmallInt | AKTS kredisi (1–10 arası). |
+| `department` | String(80) | Dersi açan bölüm. |
+| `semester` | String(20) | Hangi yarıyılda verildiği (Güz/Bahar). |
+| `instructor` | String(120) | Dersi veren öğretim elemanı (metin olarak). |
 
-##### `payments` — Ödeme Geçmişi
-Her harç ödemesinin kaydı. Bir harç kaydına **birden fazla ödeme** yapılabilir.
+###### `course_prerequisites` — Ders Önkoşulları
+"Bu dersin önkoşulu ne?" sorusunu destekleyen tablo. Bir dersin birden fazla önkoşulu olabilir.
 
 | Alan | Tip | Amaç |
 |------|-----|------|
-| `tuition_id` | FK → tuition | İlişkili harç kaydı |
-| `amount` | Float | Ödeme tutarı |
-| `payment_date` | DateTime | Ödeme tarihi (server_default: NOW()) |
-| `payment_method` | String(50) | Ödeme yöntemi: Banka, Kredi Kartı, Havale |
-| `receipt_no` | String(50), UK | Dekont/makbuz numarası (benzersiz) |
+| `course_id` | FK → courses | Asıl ders. |
+| `prerequisite_id` | FK → courses | Önkoşul ders. |
 
-##### `installments` — Taksit Planı
-Harçların taksitlendirme detayları.
+> `PRIMARY KEY (course_id, prerequisite_id)` ikili anahtar ile bir ders–önkoşul çifti yalnızca bir kez tanımlanabilir; `CHECK (course_id <> prerequisite_id)` ile dersin kendisini önkoşul göstermesi engellenir.
 
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `tuition_id` | FK → tuition | İlişkili harç kaydı |
-| `installment_number` | Integer | Taksit sırası (1, 2, 3, …) |
-| `amount` | Float | Taksit tutarı |
-| `due_date` | DateTime | Taksit vade tarihi |
-| `status` | String(20) | Bekliyor, Ödendi, Gecikmiş |
-
-##### `scholarships` — Aktif Burslar
-Öğrencilere verilen aktif burslar. Bir öğrencinin **birden fazla** bursu olabilir.
+###### `student_courses` — Öğrenci–Ders İlişkisi (Many-to-Many)
+Öğrencinin hangi dersi hangi dönemde aldığını ve notunu tutar.
 
 | Alan | Tip | Amaç |
 |------|-----|------|
-| `student_id` | FK → students | Burs sahibi öğrenci |
-| `scholarship_name` | String(100) | Burs adı (ör: "Başarı Bursu") |
-| `scholarship_type` | String(50) | Tam burs, kısmi burs, yemek bursu vb. |
-| `monthly_amount` | Float | Aylık burs tutarı (TL) |
-| `start_date` / `end_date` | DateTime | Burs başlangıç ve bitiş tarihi |
-| `status` | String(20) | Aktif, Dondurulmuş, Sona Erdi |
+| `student_id` | FK → students | Dersi alan öğrenci. |
+| `course_id` | FK → courses | Alınan ders. |
+| `semester` | String(20) | Alındığı dönem (ör: "2024-Güz"). |
+| `grade` | String(5) | Harf notu (AA, BA, BB, …, FF, NA). |
+| `status` | String(20) | `enrolled`, `completed`, `withdrawn`, `failed`. |
 
-##### `scholarship_applications` — Burs Başvuruları
-Öğrencilerin burs başvuru kayıtları.
-
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `student_id` | FK → students | Başvuran öğrenci |
-| `scholarship_name` | String(100) | Başvurulan burs adı |
-| `application_date` | DateTime | Başvuru tarihi |
-| `status` | String(20) | Beklemede, Onaylandı, Reddedildi |
-| `notes` | Text | Başvuruyla ilgili notlar/açıklamalar |
-
-##### `available_scholarships` — Başvuruya Açık Burs Kataloğu *(bağımsız tablo)*
-Herhangi bir öğrenciye bağlı değil. Üniversitenin sunduğu burs seçeneklerinin listesi.
+###### `course_registration_periods` — Ders Kayıt Dönemleri
+Akademik takvimde ders kayıtlarının hangi tarihlerde yapılacağını tutar.
 
 | Alan | Tip | Amaç |
 |------|-----|------|
-| `name` | String(100) | Burs adı |
-| `description` | Text | Burs açıklaması ve koşulları |
-| `monthly_amount` | Float | Aylık tutar |
-| `min_gpa` | Float | Minimum GPA şartı |
-| `deadline` | DateTime | Son başvuru tarihi |
-| `is_active` | Boolean | Başvuruya açık mı? |
-
-##### `user_accounts` — Kullanıcı Hesapları (IT Departmanı)
-Üniversite bilgi sistemi hesap bilgileri. Öğrenci ile **1:1** ilişki.
-
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `student_id` | FK → students | Hesap sahibi öğrenci |
-| `username` | String(50), UK | Kullanıcı adı (benzersiz) |
-| `email` | String(100) | Hesaba bağlı e-posta |
-| `status` | String(20) | Aktif, Pasif, Askıya Alındı |
-| `last_login` | DateTime | Son giriş tarihi |
-| `is_locked` | Boolean | Hesap kilitli mi? |
-| `failed_attempts` | Integer | Başarısız giriş denemesi (3'te kilit) |
-| `password_last_changed` | DateTime | Şifre son değiştirilme tarihi |
-| `password_expired` | Boolean | Şifre süresi dolmuş mu? |
-
-##### `it_tickets` — IT Destek Talepleri
-Öğrencilerin IT departmanına açtığı destek talepleri.
-
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `student_id` | FK → students | Talebi açan öğrenci |
-| `ticket_no` | String(20), UK | Talep numarası (ör: "IT-2026-0042") |
-| `category` | String(50) | Kategori: E-posta, WiFi, VPN, Yazılım |
-| `subject` | String(200) | Talep başlığı |
-| `description` | Text | Detaylı açıklama |
-| `status` | String(20), IDX | Açık, İşlemde, Çözüldü, Kapatıldı. İndeksli — status bazlı filtreleme sık |
-| `priority` | String(20) | Normal, Yüksek, Acil |
-
-##### `known_issues` — Bilinen Sorunlar (IT Bilgi Bankası) *(bağımsız tablo)*
-IT departmanının sık karşılaşılan sorunlar ve çözümleri veritabanı. RAG ile sorgulanacak.
-
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `category` | String(50) | Sorun kategorisi |
-| `title` | String(200) | Sorun başlığı |
-| `description` | Text | Sorunun açıklaması |
-| `solution` | Text | Çözüm adımları |
-| `is_resolved` | Boolean | Sorun çözüldü mü? |
-
-##### `course_registration_periods` — Ders Kayıt Dönemleri *(bağımsız tablo)*
-Akademik takvim verisi — ders kayıt dönemlerinin başlangıç ve bitiş tarihleri.
-
-| Alan | Tip | Amaç |
-|------|-----|------|
-| `semester` | String(20) | Dönem adı (ör: "2026-Bahar") |
-| `start_date` / `end_date` | DateTime | Kayıt dönemi başlangıç ve bitiş |
+| `semester` | String(20), UK | Dönem adı (ör: "2024-Güz"). |
+| `start_date` | Date | Kayıt başlangıç tarihi. |
+| `end_date` | Date | Kayıt bitiş tarihi (`end_date > start_date`). |
 | `is_active` | Boolean | Şu an aktif kayıt dönemi mi? |
 
-##### `query_logs` — Sorgu Logları (İzlenebilirlik) *(bağımsız tablo)*
-Kullanıcıların sisteme sorduğu tüm soruların kaydı. Analiz, performans ölçümü ve izlenebilirlik için.
+##### 2) Finans Grubu
+
+###### `tuition` — Dönemlik Harç Durumu
+"Borcum var mı?" ve "Ne kadar borcum var?" sorularının veritabanı tarafı.
 
 | Alan | Tip | Amaç |
 |------|-----|------|
-| `user_id` | String(50), IDX | Sorgulayan kullanıcı (FK değil — öğrenci silinse bile log korunmalı) |
-| `query_text` | Text | Kullanıcının sorduğu soru |
-| `departments` | JSON | Sorgunun yönlendirildiği departmanlar |
-| `routing_strategy` | String(50) | Kullanılan yönlendirme stratejisi (direct, parallel, sequential) |
-| `confidence_score` | Float | Yönlendirme güven skoru (0.0–1.0) |
-| `response_text` | Text | Sistemin verdiği yanıt |
-| `response_time_ms` | Float | Yanıt süresi (milisaniye) — performans ölçümü |
-| `status` | String(20) | completed, failed, timeout |
-| `error` | Text | Hata mesajı (varsa) |
-| `metadata` | JSON | Ek bilgi (Python'da `query_metadata` olarak erişilir) |
+| `student_id` | FK → students | Harç sahibi öğrenci. |
+| `semester` | String(20) | İlgili dönem (ör: "2024-Güz"). |
+| `total_amount` | Numeric(10,2) | Dönemlik toplam borç. |
+| `paid_amount` | Numeric(10,2) | Şu ana kadar ödenen tutar. |
+| `has_debt` | Boolean (GENERATED) | `paid_amount < total_amount` ise TRUE. Uygulama tarafından manuel set edilmez. |
+| `debt_amount` | Numeric(10,2) (GENERATED) | `total_amount - paid_amount`. |
+| `due_date` | Date | Son ödeme tarihi. |
+| `last_payment_date` | Date | Son ödemenin tarihi. |
 
-##### `agent_registry` — Ajan Kayıt Tablosu *(bağımsız tablo)*
-A2A protokolünde dinamik ajan keşfi için. Her ajan kendisini bu tabloya kaydeder.
+> `UNIQUE (student_id, semester)` ile aynı dönem için birden fazla harç kaydı açılması engellenir. `chk_paid_lte_total` kontrolü ödenen tutarın toplamdan fazla olmasını önler.
+
+###### `payments` — Ödeme Geçmişi
+Her harç ödemesinin kaydı. Bir harca birden fazla ödeme yapılabilir.
 
 | Alan | Tip | Amaç |
 |------|-----|------|
-| `agent_id` | String(100), UK | Ajan benzersiz kimliği (ör: "finance-specialist-01") |
-| `name` | String(200) | Ajan görüntüleme adı |
-| `department` | String(100), IDX | Ajanın bağlı olduğu departman |
-| `role` | String(50) | main_orchestrator, department_orchestrator, specialist_agent |
-| `description` | Text | Ajanın yeteneklerinin açıklaması |
-| `endpoint` | String(500) | Ajanın API endpoint'i |
-| `capabilities` | JSON | Ajanın desteklediği görev tipleri (yapılandırılmış veri) |
-| `is_active` | Boolean | Ajan aktif mi? |
-| `last_heartbeat` | DateTime | Son yaşam sinyali — belirli süre gelmezse ajan çevrimdışı sayılır |
+| `tuition_id` | FK → tuition | İlgili harç kaydı. |
+| `amount` | Numeric(10,2) | Ödeme tutarı. |
+| `payment_date` | Date | Ödemenin yapıldığı tarih. |
+| `payment_method` | String(30) | `bank_transfer`, `credit_card`, `cash`, `online`. |
+| `receipt_no` | String(50), UK | Dekont/makbuz numarası. |
+
+###### `installments` — Taksit Planı
+Harçların taksitlendirilmiş halini tutar.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `tuition_id` | FK → tuition | İlgili harç kaydı. |
+| `installment_number` | SmallInt | Taksit sırası (1, 2, 3, …). |
+| `amount` | Numeric(10,2) | Her bir taksitin tutarı. |
+| `due_date` | Date | Taksit vade tarihi. |
+| `status` | String(20) | `pending`, `paid`, `overdue`, `cancelled`. |
+| `paid_at` | Date | Ödeme tarihi (varsa). |
+
+##### 3) Burs Grubu
+
+###### `available_scholarships` — Başvuruya Açık Burslar
+Üniversitede duyurulan tüm burs tiplerinin kataloğudur.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `name` | String(120), UK | Burs adı. |
+| `description` | Text | Burs açıklaması ve koşulları. |
+| `monthly_amount` | Numeric(8,2) | Aylık nakdi destek (varsa). |
+| `min_gpa` | Numeric(3,2) | Not ortalaması şartı (opsiyonel). |
+| `deadline` | Date | Son başvuru tarihi. |
+| `is_active` | Boolean | Başvuruya açık mı? |
+
+###### `scholarships` — Öğrenciye Atanmış Burslar
+Aktif veya geçmiş bursları tutar.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `student_id` | FK → students | Burs alan öğrenci. |
+| `available_scholarship_id` | FK → available_scholarships | Hangi burs ilanından geldiği. |
+| `monthly_amount` | Numeric(8,2) | Öğrenciye tanımlanan aylık tutar (katalogdan override edilebilir). |
+| `start_date` | Date | Burs başlangıç tarihi. |
+| `end_date` | Date | Burs bitiş tarihi (opsiyonel). |
+| `status` | String(20) | `active`, `expired`, `cancelled`, `suspended`. |
+
+###### `scholarship_applications` — Burs Başvuru Geçmişi
+Öğrencinin hangi bursa ne zaman başvurduğu ve sonucunu kaydeder.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `student_id` | FK → students | Başvuran öğrenci. |
+| `available_scholarship_id` | FK → available_scholarships | Başvurulan burs. |
+| `application_date` | Date | Başvuru tarihi (varsayılan: bugünün tarihi). |
+| `status` | String(20) | `pending`, `approved`, `rejected`, `waitlisted`. |
+| `notes` | Text | İnceleme notları. |
+| `reviewed_at` | DateTime | Değerlendirme zamanı (varsa). |
+
+##### 4) Kimlik Doğrulama Grubu
+
+###### `otp_codes` — OTP Kod Kayıtları
+Öğrencinin e-posta adresine gönderilen tek kullanımlık kodların hash'lerini tutar.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `student_id` | FK → students | Kodu gönderdiğimiz öğrenci. |
+| `code_hash` | String(64) | OTP kodunun SHA-256 hash'i (düz metin saklanmaz). |
+| `expires_at` | DateTime | Kodun son geçerlilik zamanı (ör: +10 dakika). |
+| `used` | Boolean | Kod kullanıldı mı? |
+| `failed_attempts` | SmallInt | Yanlış girilen deneme sayısı (3'te iptal). |
+
+###### `verification_sessions` — Doğrulanmış Oturumlar
+OTP doğrulamasından sonra açılan, belirli süre geçerli oturumları tutar.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `student_id` | FK → students | Oturum sahibi öğrenci. |
+| `slack_user_id` | String(50) | Slack tarafındaki kullanıcı kimliği. |
+| `session_token` | String(64), UK | Rastgele üretilmiş oturum anahtarı. |
+| `expires_at` | DateTime | Oturumun sona ereceği zaman (ör: +2 saat). |
+| `is_active` | Boolean | Oturum hala aktif mi? |
+
+###### `slack_student_mapping` — Kalıcı Slack–Öğrenci Eşlemesi
+İlk doğrulamadan sonra Slack kullanıcısı ile öğrenci kaydını kalıcı olarak ilişkilendirir.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `slack_user_id` | String(50), UK | Slack kullanıcı kimliği. |
+| `student_id` | FK → students | İlgili öğrenci. |
+| `verified_at` | DateTime | Eşlemenin yapıldığı an. |
+| `is_active` | Boolean | Eşleştirme hala geçerli mi? |
+
+##### 5) Duyurular Grubu
+
+###### `announcements` — Üniversite/Fakülte Duyuruları
+Üniversite sitesinden periyodik olarak çekilen duyurular burada tutulur; LLM özeti de aynı tabloda saklanır.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `title` | String(300) | Duyuru başlığı. |
+| `original_text` | Text | Sitenin orijinal duyuru metni. |
+| `summary` | Text | LLM tarafından üretilen kısa özet. |
+| `source_url` | String(500), UK | Duyurunun web adresi (tekil). |
+| `faculty` | String(80) | Fakülteye özel duyurular için filtre alanı. |
+| `department` | String(80) | Bölüme özel duyurular için filtre alanı. |
+| `published_at` | DateTime | Sitenin yayın tarihi (varsa). |
+| `fetched_at` | DateTime | Scraper'ın duyuruyu çektiği zaman. |
+| `is_active` | Boolean | Geçerliliğini koruyan duyurular. |
+
+##### 6) Ajan / Telemetri Grubu
+
+###### `agent_registry` — Ajan Kayıt Tablosu
+A2A mimarisindeki tüm ajanların kartlarını saklar. Ana orkestratör, hangi soruyu hangi ajana göndereceğine buradan karar verir.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `agent_id` | String(50), UK | Ajan benzersiz kimliği (ör: "finance-main-orchestrator"). |
+| `name` | String(100) | İnsan tarafından okunabilir isim. |
+| `department` | String(50) | İlgili departman (`finance`, `student_affairs` vb.). |
+| `role` | String(30) | `main_orchestrator`, `dept_orchestrator`, `specialist_agent`. |
+| `description` | Text | Ajanın yeteneklerinin açıklaması. |
+| `endpoint` | String(255) | Ajanın HTTP endpoint'i (opsiyonel). |
+| `capabilities` | JSONB | Desteklediği görev tipleri ve parametreler. |
+| `is_active` | Boolean | Ajan şu anda aktif mi? |
+| `last_heartbeat` | DateTime | En son "yaşıyorum" sinyali. |
+
+###### `query_logs` — Sorgu Logları (İzlenebilirlik)
+Kullanıcıların sisteme sorduğu her sorunun, yönlendirme kararının ve yanıt süresinin kaydıdır.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `student_id` | FK → students (opsiyonel) | Soru sahibi öğrenci biliniyorsa ilişkilenir; genel sorularda NULL kalabilir. |
+| `agent_id` | FK → agent_registry (opsiyonel) | Sorguyu son yanıtlayan ajan. |
+| `query_text` | Text | Kullanıcının sorduğu soru. |
+| `departments` | JSONB | Sorgunun yönlendirildiği departmanlar listesi. |
+| `routing_strategy` | String(20) | `keyword`, `llm`, `hybrid`. |
+| `confidence_score` | Numeric(4,3) | 0–1 arası yönlendirme güven skoru. |
+| `response_text` | Text | Üretilen yanıt. |
+| `response_time_ms` | Integer | Yanıt süresi (milisaniye). |
+| `status` | String(20) | `completed`, `failed`, `timeout`, `partial`. |
+| `error` | Text | Hata mesajı (varsa). |
+| `metadata` | JSONB | Ek bağlam (Python kodunda `query_metadata` alanı üzerinden erişilir; SQLAlchemy'deki `metadata` reserved ismiyle çakışmayı önlemek için). |
+
+###### `agent_tasks` — A2A Görev Yaşam Döngüsü
+Ana orkestratör ile alt ajanlar arasındaki görev alışverişinin tamamını kayıt altına alır.
+
+| Alan | Tip | Amaç |
+|------|-----|------|
+| `task_id` | UUID, UK | Görevin global benzersiz kimliği. |
+| `query_log_id` | FK → query_logs | Hangi kullanıcı sorgusundan doğduğunu gösterir. |
+| `sender_agent_id` | FK → agent_registry | Görevi gönderen ajan. |
+| `receiver_agent_id` | FK → agent_registry | Görevi alan ajan. |
+| `task_type` | String(50) | `procedure_query`, `data_query`, `hybrid`. |
+| `status` | String(20) | `submitted`, `processing`, `completed`, `failed`, `cancelled`. |
+| `payload` | JSONB | Giden görevin detaylı içeriği. |
+| `result` | JSONB | Ajanın ürettiği sonuç (varsa). |
+| `error_msg` | Text | Hata açıklaması (varsa). |
+| `created_at` / `updated_at` / `completed_at` | DateTime | Görev zaman çizelgesi. |
 ### 6.2 Bağlantı Yönetimi (`src/db/connection.py`)
 
 #### 6.2.1 Lazy Initialization Pattern

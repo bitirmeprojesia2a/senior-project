@@ -9,24 +9,14 @@ from datetime import datetime
 
 from sqlalchemy import select
 
-from src.db.models import (
-    Student,
-    Course,
-    StudentCourse,
-    Tuition,
-    Payment,
-    Scholarship,
-    UserAccount,
-    QueryLog,
-    AgentRegistry,
-)
+from src.db.models import Student, Tuition, QueryLog, AgentRegistry
 
 
 class TestStudentModel:
-    """Student model testleri."""
+    """Student model tests."""
 
     async def test_create_student(self, db_session, sample_student_data):
-        """Öğrenci oluşturulabilir."""
+        """Student can be created with full payload."""
         student = Student(**sample_student_data)
         db_session.add(student)
         await db_session.flush()
@@ -37,38 +27,42 @@ class TestStudentModel:
         assert student.gpa == 3.45
 
     async def test_student_default_values(self, db_session):
-        """Öğrenci varsayılan değerleri doğru."""
+        """Default values are applied correctly."""
         student = Student(
             student_id="20210002",
             full_name="Ayşe Demir",
+            email="ayse.demir@uni.edu.tr",
+            department="Computer Engineering",
+            faculty="Engineering Faculty",
+            class_year=2,
+            enrollment_year=2022,
         )
         db_session.add(student)
         await db_session.flush()
 
-        assert student.registration_status == "Aktif"
-        assert student.gpa == 0.0
+        assert student.registration_status == "active"
         assert student.total_credits == 0
-        assert student.current_semester == 1
+        assert student.completed_credits == 0
 
     async def test_student_repr(self, db_session, sample_student_data):
-        """Student __repr__ doğru çalışıyor."""
+        """Student __repr__ contains key fields."""
         student = Student(**sample_student_data)
         assert "20210001" in repr(student)
         assert "Ahmet Yılmaz" in repr(student)
 
 
 class TestTuitionModel:
-    """Tuition (harç) model testleri."""
+    """Tuition model tests."""
 
     async def test_create_tuition(self, db_session, sample_student_data):
-        """Harç kaydı oluşturulabilir."""
+        """Tuition record can be created."""
         student = Student(**sample_student_data)
         db_session.add(student)
         await db_session.flush()
 
         tuition = Tuition(
             student_id=student.id,
-            semester="2024-Güz",
+            semester="2024-Fall",
             total_amount=15000.0,
             paid_amount=10000.0,
             has_debt=True,
@@ -83,15 +77,14 @@ class TestTuitionModel:
 
 
 class TestQueryLogModel:
-    """QueryLog model testleri."""
+    """QueryLog model tests."""
 
     async def test_create_query_log(self, db_session):
-        """Sorgu logu oluşturulabilir."""
+        """Query log can be created."""
         log = QueryLog(
-            user_id="user_123",
             query_text="Harç borcum ne kadar?",
             departments={"departments": ["finance"]},
-            routing_strategy="direct",
+            routing_strategy="hybrid",
             confidence_score=0.92,
             response_text="Harç borcunuz 5000 TL'dir.",
             response_time_ms=1250.5,
@@ -104,7 +97,7 @@ class TestQueryLogModel:
         assert log.departments == {"departments": ["finance"]}
 
     async def test_query_log_jsonb(self, db_session):
-        """JSONB query_metadata alanı çalışıyor."""
+        """Metadata JSON field can store arbitrary payload."""
         log = QueryLog(
             query_text="Test sorgusu",
             query_metadata={"source": "slack", "channel": "#general"},
@@ -116,16 +109,16 @@ class TestQueryLogModel:
 
 
 class TestAgentRegistryModel:
-    """AgentRegistry model testleri."""
+    """AgentRegistry model tests."""
 
     async def test_create_agent_registry(self, db_session):
-        """Ajan kaydı oluşturulabilir."""
+        """Agent registry record can be created."""
         agent = AgentRegistry(
             agent_id="finance_orchestrator",
-            name="Finans Orkestratörü",
+            name="Finance Orchestrator",
             department="finance",
-            role="department_orchestrator",
-            description="Finans departmanı görevlerini yönetir.",
+            role="dept_orchestrator",
+            description="Handles finance-related tasks.",
             capabilities={"task_types": ["tuition_query", "scholarship_query"]},
             is_active=True,
         )

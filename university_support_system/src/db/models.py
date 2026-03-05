@@ -1,14 +1,21 @@
 """
-Veritabanı Modelleri (SQLAlchemy ORM)
+Database models (SQLAlchemy ORM)
 
-PostgreSQL tablo şemaları.
-Tablolar: students, courses, student_courses, tuition, payments,
-          installments, scholarships, scholarship_applications,
-          available_scholarships, user_accounts, it_tickets, known_issues,
-          course_registration_periods, query_logs, agent_registry
+This module defines the relational schema for the university
+multi‑agent support system. Tables are grouped conceptually as:
 
-Kullanım:
-    from src.db.models import Student, Tuition, Payment
+1. Student Affairs   → students, courses, course_prerequisites,
+                       student_courses, course_registration_periods
+2. Finance           → tuition, payments, installments
+3. Scholarships      → available_scholarships, scholarships,
+                       scholarship_applications
+4. Authentication    → otp_codes, verification_sessions,
+                       slack_student_mapping
+5. Announcements     → announcements
+6. Agent / Telemetry → agent_registry, query_logs, agent_tasks
+
+The actual DDL is applied via Alembic migrations; this file is the
+single source of truth for application code and migration generation.
 """
 
 from datetime import datetime, timezone
@@ -16,12 +23,13 @@ from typing import Optional
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
-    Index,
     Integer,
     JSON,
+    SmallInteger,
     String,
     Text,
     func,
@@ -30,301 +38,467 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def _utcnow() -> datetime:
-    """Timezone-aware UTC zaman damgası üretir."""
+    """Return a timezone-aware UTC timestamp."""
     return datetime.now(timezone.utc)
 
 
 class Base(DeclarativeBase):
-    """Tüm modeller için temel sınıf."""
-    pass
+    """Base class for all ORM models."""
 
 
-# ── Ortak Mixin ──────────────────────────────────
 class TimestampMixin:
-    """created_at ve updated_at alanlarını otomatik ekler."""
+    """Common mixin that adds created_at and updated_at columns."""
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=_utcnow, nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=_utcnow,
+        nullable=False,
     )
 
 
-# ── Öğrenci ──────────────────────────────────────
+# ============================================================
+# 1. STUDENT AFFAIRS
+# ============================================================
+
+
 class Student(TimestampMixin, Base):
-    """Öğrenci tablosu."""
+    """Core student record used by all departments."""
 
     __tablename__ = "students"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
-    full_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
-    department: Mapped[Optional[str]] = mapped_column(String(100), index=True)
-    faculty: Mapped[Optional[str]] = mapped_column(String(100))
-    grade: Mapped[Optional[int]] = mapped_column(Integer)
-    enrollment_year: Mapped[Optional[int]] = mapped_column(Integer)
-    registration_status: Mapped[str] = mapped_column(String(50), default="Aktif")
-    gpa: Mapped[float] = mapped_column(Float, default=0.0)
-    total_credits: Mapped[int] = mapped_column(Integer, default=0)
-    completed_credits: Mapped[int] = mapped_column(Integer, default=0)
-    current_semester: Mapped[int] = mapped_column(Integer, default=1)
+    student_id: Mapped[str] = mapped_column(
+        String(20), unique=True, nullable=False, index=True
+    )
+    full_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    department: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    faculty: Mapped[str] = mapped_column(String(80), nullable=False)
+    class_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    enrollment_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    registration_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="active",
+    )
+    gpa: Mapped[Optional[float]] = mapped_column(Float)
+    total_credits: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0
+    )
+    completed_credits: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0
+    )
+    current_semester: Mapped[Optional[str]] = mapped_column(String(20))
 
-    # İlişkiler
-    courses = relationship("StudentCourse", back_populates="student", lazy="selectin")
-    tuition = relationship("Tuition", back_populates="student", uselist=False, lazy="selectin")
-    scholarships = relationship("Scholarship", back_populates="student", lazy="selectin")
-    account = relationship("UserAccount", back_populates="student", uselist=False, lazy="selectin")
+    # Relationships
+    courses: Mapped[list["StudentCourse"]] = relationship(
+        "StudentCourse", back_populates="student", lazy="selectin"
+    )
+    tuitions: Mapped[list["Tuition"]] = relationship(
+        "Tuition", back_populates="student", lazy="selectin"
+    )
+    scholarships: Mapped[list["Scholarship"]] = relationship(
+        "Scholarship", back_populates="student", lazy="selectin"
+    )
 
-    def __repr__(self) -> str:
-        return f"<Student(id={self.student_id}, name={self.full_name})>"
+    def __repr__(self) -> str:  # pragma: no cover - repr convenience
+        return f"<Student(student_id={self.student_id}, name={self.full_name})>"
 
 
-# ── Ders ─────────────────────────────────────────
 class Course(TimestampMixin, Base):
-    """Ders tablosu."""
+    """Course catalog entry."""
 
     __tablename__ = "courses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    course_code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
-    course_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    credits: Mapped[int] = mapped_column(Integer, default=3)
-    department: Mapped[Optional[str]] = mapped_column(String(100), index=True)
-    semester: Mapped[Optional[int]] = mapped_column(Integer)
-    instructor: Mapped[Optional[str]] = mapped_column(String(100))
-    prerequisite: Mapped[Optional[str]] = mapped_column(String(20))
+    course_code: Mapped[str] = mapped_column(
+        String(20), unique=True, nullable=False, index=True
+    )
+    course_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    credits: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=3
+    )
+    department: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    semester: Mapped[Optional[str]] = mapped_column(String(20))
+    instructor: Mapped[Optional[str]] = mapped_column(String(120))
 
-    # İlişkiler
-    enrollments = relationship("StudentCourse", back_populates="course", lazy="selectin")
+    # Relationships
+    enrollments: Mapped[list["StudentCourse"]] = relationship(
+        "StudentCourse", back_populates="course", lazy="selectin"
+    )
+    prerequisites: Mapped[list["CoursePrerequisite"]] = relationship(
+        "CoursePrerequisite",
+        foreign_keys="CoursePrerequisite.course_id",
+        back_populates="course",
+        lazy="selectin",
+    )
+    required_for: Mapped[list["CoursePrerequisite"]] = relationship(
+        "CoursePrerequisite",
+        foreign_keys="CoursePrerequisite.prerequisite_id",
+        back_populates="prerequisite_course",
+        lazy="selectin",
+    )
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover - repr convenience
         return f"<Course(code={self.course_code}, name={self.course_name})>"
 
 
-# ── Öğrenci-Ders ─────────────────────────────────
+class CoursePrerequisite(Base):
+    """Many-to-many mapping for course prerequisites."""
+
+    __tablename__ = "course_prerequisites"
+
+    course_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("courses.id", ondelete="CASCADE"), primary_key=True
+    )
+    prerequisite_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("courses.id", ondelete="CASCADE"), primary_key=True
+    )
+
+    course: Mapped[Course] = relationship(
+        "Course",
+        foreign_keys=[course_id],
+        back_populates="prerequisites",
+    )
+    prerequisite_course: Mapped[Course] = relationship(
+        "Course",
+        foreign_keys=[prerequisite_id],
+        back_populates="required_for",
+    )
+
+
 class StudentCourse(TimestampMixin, Base):
-    """Öğrenci-Ders ilişki tablosu."""
+    """Enrollment and grade information for a student in a course."""
 
     __tablename__ = "student_courses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.id"), index=True)
-    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id"), index=True)
-    semester: Mapped[Optional[str]] = mapped_column(String(20))
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), index=True
+    )
+    course_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("courses.id", ondelete="RESTRICT"), index=True
+    )
+    semester: Mapped[str] = mapped_column(String(20), nullable=False)
     grade: Mapped[Optional[str]] = mapped_column(String(5))
-    status: Mapped[str] = mapped_column(String(20), default="Devam")
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="enrolled",
+    )
 
-    # İlişkiler
-    student = relationship("Student", back_populates="courses")
-    course = relationship("Course", back_populates="enrollments")
-
-
-# ── Harç ─────────────────────────────────────────
-class Tuition(TimestampMixin, Base):
-    """Harç tablosu."""
-
-    __tablename__ = "tuition"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.id"), index=True)
-    semester: Mapped[Optional[str]] = mapped_column(String(20))
-    total_amount: Mapped[float] = mapped_column(Float, default=0.0)
-    paid_amount: Mapped[float] = mapped_column(Float, default=0.0)
-    has_debt: Mapped[bool] = mapped_column(Boolean, default=False)
-    debt_amount: Mapped[float] = mapped_column(Float, default=0.0)
-    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    last_payment_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-
-    # İlişkiler
-    student = relationship("Student", back_populates="tuition")
-    payments = relationship("Payment", back_populates="tuition", lazy="selectin")
-    installments = relationship("Installment", back_populates="tuition", lazy="selectin")
+    student: Mapped[Student] = relationship(
+        "Student", back_populates="courses", lazy="selectin"
+    )
+    course: Mapped[Course] = relationship(
+        "Course", back_populates="enrollments", lazy="selectin"
+    )
 
 
-# ── Ödeme Geçmişi ────────────────────────────────
-class Payment(TimestampMixin, Base):
-    """Ödeme geçmişi tablosu."""
-
-    __tablename__ = "payments"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    tuition_id: Mapped[int] = mapped_column(Integer, ForeignKey("tuition.id"), index=True)
-    amount: Mapped[float] = mapped_column(Float)
-    payment_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    payment_method: Mapped[Optional[str]] = mapped_column(String(50))
-    receipt_no: Mapped[Optional[str]] = mapped_column(String(50), unique=True)
-
-    # İlişkiler
-    tuition = relationship("Tuition", back_populates="payments")
-
-
-# ── Taksit ───────────────────────────────────────
-class Installment(TimestampMixin, Base):
-    """Taksit tablosu."""
-
-    __tablename__ = "installments"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    tuition_id: Mapped[int] = mapped_column(Integer, ForeignKey("tuition.id"), index=True)
-    installment_number: Mapped[int] = mapped_column(Integer)
-    amount: Mapped[float] = mapped_column(Float)
-    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    status: Mapped[str] = mapped_column(String(20), default="Bekliyor")
-
-    # İlişkiler
-    tuition = relationship("Tuition", back_populates="installments")
-
-
-# ── Burs ─────────────────────────────────────────
-class Scholarship(TimestampMixin, Base):
-    """Burs tablosu."""
-
-    __tablename__ = "scholarships"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.id"), index=True)
-    scholarship_name: Mapped[Optional[str]] = mapped_column(String(100))
-    scholarship_type: Mapped[Optional[str]] = mapped_column(String(50))
-    monthly_amount: Mapped[float] = mapped_column(Float, default=0.0)
-    start_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    end_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    status: Mapped[str] = mapped_column(String(20), default="Aktif")
-
-    # İlişkiler
-    student = relationship("Student", back_populates="scholarships")
-
-
-# ── Burs Başvuru ─────────────────────────────────
-class ScholarshipApplication(TimestampMixin, Base):
-    """Burs başvuru tablosu."""
-
-    __tablename__ = "scholarship_applications"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.id"), index=True)
-    scholarship_name: Mapped[Optional[str]] = mapped_column(String(100))
-    application_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    status: Mapped[str] = mapped_column(String(20), default="Beklemede")
-    notes: Mapped[Optional[str]] = mapped_column(Text)
-
-
-# ── Başvuruya Açık Burslar ───────────────────────
-class AvailableScholarship(TimestampMixin, Base):
-    """Başvuruya açık burslar."""
-
-    __tablename__ = "available_scholarships"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[Optional[str]] = mapped_column(String(100))
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    monthly_amount: Mapped[float] = mapped_column(Float, default=0.0)
-    min_gpa: Mapped[float] = mapped_column(Float, default=0.0)
-    deadline: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-
-
-# ── Kullanıcı Hesabı (IT) ───────────────────────
-class UserAccount(TimestampMixin, Base):
-    """Kullanıcı hesap tablosu (IT departmanı)."""
-
-    __tablename__ = "user_accounts"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.id"), index=True)
-    username: Mapped[str] = mapped_column(String(50), unique=True)
-    email: Mapped[Optional[str]] = mapped_column(String(100))
-    status: Mapped[str] = mapped_column(String(20), default="Aktif")
-    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    is_locked: Mapped[bool] = mapped_column(Boolean, default=False)
-    failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    password_last_changed: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    password_expired: Mapped[bool] = mapped_column(Boolean, default=False)
-
-    # İlişkiler
-    student = relationship("Student", back_populates="account")
-
-
-# ── IT Destek Talepleri ──────────────────────────
-class ITTicket(TimestampMixin, Base):
-    """IT destek talepleri."""
-
-    __tablename__ = "it_tickets"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.id"), index=True)
-    ticket_no: Mapped[str] = mapped_column(String(20), unique=True)
-    category: Mapped[Optional[str]] = mapped_column(String(50))
-    subject: Mapped[Optional[str]] = mapped_column(String(200))
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(20), default="Açık", index=True)
-    priority: Mapped[str] = mapped_column(String(20), default="Normal")
-
-
-# ── Bilinen Sorunlar ─────────────────────────────
-class KnownIssue(TimestampMixin, Base):
-    """Bilinen sorunlar (IT)."""
-
-    __tablename__ = "known_issues"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    category: Mapped[Optional[str]] = mapped_column(String(50))
-    title: Mapped[Optional[str]] = mapped_column(String(200))
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    solution: Mapped[Optional[str]] = mapped_column(Text)
-    is_resolved: Mapped[bool] = mapped_column(Boolean, default=False)
-
-
-# ── Ders Kayıt Dönemi ────────────────────────────
 class CourseRegistrationPeriod(TimestampMixin, Base):
-    """Ders kayıt dönemi."""
+    """Registration window for a given academic semester."""
 
     __tablename__ = "course_registration_periods"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    semester: Mapped[Optional[str]] = mapped_column(String(20))
-    start_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    end_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    semester: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
-# ── Sorgu Logları ────────────────────────────────
-class QueryLog(TimestampMixin, Base):
-    """Kullanıcı sorgu logları — izlenebilirlik ve analiz için."""
+# ============================================================
+# 2. FINANCE
+# ============================================================
 
-    __tablename__ = "query_logs"
+
+class Tuition(TimestampMixin, Base):
+    """Per-semester tuition information for a student."""
+
+    __tablename__ = "tuition"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[Optional[str]] = mapped_column(String(50), index=True)
-    query_text: Mapped[str] = mapped_column(Text, nullable=False)
-    departments: Mapped[Optional[dict]] = mapped_column(JSON)
-    routing_strategy: Mapped[Optional[str]] = mapped_column(String(50))
-    confidence_score: Mapped[Optional[float]] = mapped_column(Float)
-    response_text: Mapped[Optional[str]] = mapped_column(Text)
-    response_time_ms: Mapped[Optional[float]] = mapped_column(Float)
-    status: Mapped[str] = mapped_column(String(20), default="completed")
-    error: Mapped[Optional[str]] = mapped_column(Text)
-    query_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSON)
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), index=True
+    )
+    semester: Mapped[str] = mapped_column(String(20), nullable=False)
+    total_amount: Mapped[float] = mapped_column(Float, nullable=False)
+    paid_amount: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    has_debt: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    debt_amount: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    due_date: Mapped[Optional[Date]] = mapped_column(Date)
+    last_payment_date: Mapped[Optional[Date]] = mapped_column(Date)
 
-    __table_args__ = (
-        Index("ix_query_logs_created_at", "created_at"),
+    student: Mapped[Student] = relationship(
+        "Student", back_populates="tuitions", lazy="selectin"
+    )
+    payments: Mapped[list["Payment"]] = relationship(
+        "Payment", back_populates="tuition", lazy="selectin"
+    )
+    installments: Mapped[list["Installment"]] = relationship(
+        "Installment", back_populates="tuition", lazy="selectin"
     )
 
 
-# ── Ajan Registry ───────────────────────────────
+class Payment(TimestampMixin, Base):
+    """Historical payment record for a tuition entry."""
+
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tuition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tuition.id", ondelete="RESTRICT"), index=True
+    )
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    payment_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    payment_method: Mapped[str] = mapped_column(String(30), nullable=False)
+    receipt_no: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+
+    tuition: Mapped[Tuition] = relationship(
+        "Tuition", back_populates="payments", lazy="selectin"
+    )
+
+
+class Installment(TimestampMixin, Base):
+    """Installment plan entries for a tuition record."""
+
+    __tablename__ = "installments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tuition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tuition.id", ondelete="RESTRICT"), index=True
+    )
+    installment_number: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    due_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="pending",
+    )
+    paid_at: Mapped[Optional[Date]] = mapped_column(Date)
+
+    tuition: Mapped[Tuition] = relationship(
+        "Tuition", back_populates="installments", lazy="selectin"
+    )
+
+
+# ============================================================
+# 3. SCHOLARSHIPS
+# ============================================================
+
+
+class AvailableScholarship(TimestampMixin, Base):
+    """Scholarship program that students can apply to."""
+
+    __tablename__ = "available_scholarships"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    monthly_amount: Mapped[Optional[float]] = mapped_column(Float)
+    min_gpa: Mapped[Optional[float]] = mapped_column(Float)
+    deadline: Mapped[Optional[Date]] = mapped_column(Date)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class Scholarship(TimestampMixin, Base):
+    """Scholarship assigned to a particular student."""
+
+    __tablename__ = "scholarships"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), index=True
+    )
+    available_scholarship_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("available_scholarships.id", ondelete="RESTRICT")
+    )
+    monthly_amount: Mapped[Optional[float]] = mapped_column(Float)
+    start_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[Optional[Date]] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="active",
+    )
+
+    student: Mapped[Student] = relationship(
+        "Student", back_populates="scholarships", lazy="selectin"
+    )
+    program: Mapped[AvailableScholarship] = relationship(
+        "AvailableScholarship", lazy="selectin"
+    )
+
+
+class ScholarshipApplication(TimestampMixin, Base):
+    """History of scholarship applications made by students."""
+
+    __tablename__ = "scholarship_applications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), index=True
+    )
+    available_scholarship_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("available_scholarships.id", ondelete="RESTRICT")
+    )
+    application_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="pending",
+    )
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+# ============================================================
+# 4. AUTHENTICATION (OTP + SESSIONS + SLACK MAPPING)
+# ============================================================
+
+
+class OTPCode(TimestampMixin, Base):
+    """One-time password entry associated with a student."""
+
+    __tablename__ = "otp_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), index=True
+    )
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    failed_attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+
+
+class VerificationSession(TimestampMixin, Base):
+    """Active verification session after a successful OTP challenge."""
+
+    __tablename__ = "verification_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), index=True
+    )
+    slack_user_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    session_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class SlackStudentMapping(TimestampMixin, Base):
+    """Persistent mapping between Slack user and student."""
+
+    __tablename__ = "slack_student_mapping"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slack_user_id: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), index=True
+    )
+    verified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+# ============================================================
+# 5. ANNOUNCEMENTS
+# ============================================================
+
+
+class Announcement(TimestampMixin, Base):
+    """University announcements periodically fetched and summarized by LLM."""
+
+    __tablename__ = "announcements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    original_text: Mapped[Optional[str]] = mapped_column(Text)
+    summary: Mapped[Optional[str]] = mapped_column(Text)
+    source_url: Mapped[Optional[str]] = mapped_column(String(500), unique=True)
+    faculty: Mapped[Optional[str]] = mapped_column(String(80))
+    department: Mapped[Optional[str]] = mapped_column(String(80))
+    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+# ============================================================
+# 6. AGENTS / TELEMETRY
+# ============================================================
+
+
 class AgentRegistry(TimestampMixin, Base):
-    """Ajan kayıt tablosu — dinamik ajan keşfi için."""
+    """Registered agents participating in the multi-agent system."""
 
     __tablename__ = "agent_registry"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    agent_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
-    department: Mapped[Optional[str]] = mapped_column(String(100), index=True)
-    role: Mapped[str] = mapped_column(String(50))
+    agent_id: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    department: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(30), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    endpoint: Mapped[Optional[str]] = mapped_column(String(500))
+    endpoint: Mapped[Optional[str]] = mapped_column(String(255))
     capabilities: Mapped[Optional[dict]] = mapped_column(JSON)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    last_heartbeat: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_heartbeat: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class QueryLog(TimestampMixin, Base):
+    """Telemetry for each user query processed by the system."""
+
+    __tablename__ = "query_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="SET NULL"), index=True
+    )
+    agent_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("agent_registry.id", ondelete="SET NULL"), index=True
+    )
+    query_text: Mapped[str] = mapped_column(Text, nullable=False)
+    departments: Mapped[Optional[dict]] = mapped_column(JSON)
+    routing_strategy: Mapped[Optional[str]] = mapped_column(String(20))
+    confidence_score: Mapped[Optional[float]] = mapped_column(Float)
+    response_text: Mapped[Optional[str]] = mapped_column(Text)
+    response_time_ms: Mapped[Optional[int]] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="completed")
+    error: Mapped[Optional[str]] = mapped_column(Text)
+    # Column name is "metadata" in the database; attribute uses a safer name.
+    query_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSON)
+
+
+class AgentTask(TimestampMixin, Base):
+    """Lifecycle record for tasks exchanged between agents (A2A)."""
+
+    __tablename__ = "agent_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    query_log_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("query_logs.id", ondelete="SET NULL"), index=True
+    )
+    sender_agent_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("agent_registry.id", ondelete="CASCADE"), index=True
+    )
+    receiver_agent_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("agent_registry.id", ondelete="CASCADE"), index=True
+    )
+    task_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="submitted")
+    payload: Mapped[Optional[dict]] = mapped_column(JSON)
+    result: Mapped[Optional[dict]] = mapped_column(JSON)
+    error_msg: Mapped[Optional[str]] = mapped_column(Text)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
