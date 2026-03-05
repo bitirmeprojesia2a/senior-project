@@ -1,1 +1,0 @@
-"""API modülü - FastAPI gateway."""
