@@ -30,6 +30,8 @@ Bu doküman, projenin kuruluş fazında (FAZ 0) gerçekleştirilen **tüm** tekn
 
 ---
 
+> Ek Not (Mart 2026): Bu dokümandaki bazı klasör ağacı örnekleri tarihsel FAZ 0 taslağını yansıtır. Güncel departman isimleri ve kaynak klasörleri `finance`, `it_support`, `student_affairs` ve `academic_programs` olarak okunmalıdır.
+
 ## 2. Prototipten Nihai Sisteme Geçiş Kararları
 
 Prototip aşamasında kullanılan teknolojiler, test ve değerlendirme sonuçlarına dayanarak nihai sistem için güncellenmiştir.
@@ -37,7 +39,7 @@ Prototip aşamasında kullanılan teknolojiler, test ve değerlendirme sonuçlar
 | Bileşen | Prototip | Nihai Sistem | Geçiş Gerekçesi |
 |---------|----------|-------------|-----------------|
 | **Veritabanı** | SQLite | PostgreSQL 15 | SQLite tek kullanıcılı ortamda başarılıydı ancak eşzamanlı erişim, Row-Level Security (RLS) ve JSONB desteği için PostgreSQL'e geçildi. |
-| **Gömme Modeli** | paraphrase-multilingual-MiniLM-L12-v2 | BERTurk (dbmdz/bert-base-turkish-cased) | 35GB Türkçe veriyle eğitilmiş BERTurk modeli Türkçe morfolojik yapıyı daha iyi yakalamaktadır. 768 boyutlu vektörler üretir. |
+| **Gömme Modeli** | paraphrase-multilingual-MiniLM-L12-v2 | BAAI/bge-m3 | Mevcut kod tabanında çok dilli ve 1024 boyutlu `BAAI/bge-m3` modeli kullanılmaktadır. |
 | **LLM** | Gemini/Claude API (bulut) | Qwen2.5:7B via Ollama (yerel) + OpenAI yedek | Maliyet etkinliği, veri gizliliği ve offline çalışma. 128K token bağlam penceresi. |
 | **A2A Protokolü** | Elle yazılmış sınıflar | `a2a-sdk` (Google resmi SDK) | Kalite denetiminde elle yazılan A2A sınıflarının spec ile uyumsuz olduğu tespit edildi. Resmi SDK'ya geçildi. |
 | **Kuyruk Sistemi** | InMemoryQueue | Redis 7 | Kalıcılık, öncelik kuyruğu, TTL yönetimi ve yatay ölçeklendirme. |
@@ -84,7 +86,7 @@ university_support_system/
 │       ├── test_models.py         # 7 test
 │       ├── test_schemas.py        # 15 test
 │       └── test_connection.py     # 8 test
-├── data/raw/{finance,it_support,student_affairs}/
+├── data/raw/{finance,it_support,student_affairs,academic_programs}/
 ├── migrations/                    # Alembic
 ├── docker-compose.yml
 ├── requirements.txt               # Runtime paketler (pinlenmiş sürümler)
@@ -150,7 +152,7 @@ class PostgresSettings(BaseSettings):
 | `OllamaSettings` | `OLLAMA_` | `host`, `model`, `timeout`, `max_retries` | — | Yerel LLM servisi. Hata dayanıklılığı: 30s timeout, 3 retry |
 | `OpenAISettings` | `OPENAI_` | `api_key`, `model` | — | `is_available` property'si API anahtarı kontrolü yapar |
 | `ChromaSettings` | `CHROMA_` | `host`, `port` | `url` | Docker'da port `8100` (varsayılan 8000 ile çakışma önlendi) |
-| `EmbeddingSettings` | `EMBEDDING_` | `model`, `dimension` | — | BERTurk modeli, 768 boyutlu vektör |
+| `EmbeddingSettings` | `EMBEDDING_` | `model`, `dimension` | — | `BAAI/bge-m3` modeli, 1024 boyutlu vektör |
 | `RAGSettings` | `RAG_` | `chunk_size`, `chunk_overlap`, `top_k`, `min_similarity` | — | RAG pipeline parametreleri |
 | `SlackSettings` | `SLACK_` | `bot_token`, `signing_secret`, `app_token` | — | `is_configured` property'si tüm ayarları kontrol eder |
 | `ServerSettings` | `SERVER_` | `host`, `port`, `debug`, `log_level` | — | FastAPI sunucu ayarları |
@@ -182,11 +184,11 @@ class PostgresSettings(BaseSettings):
 | `OPENAI_MODEL` | `gpt-4o-mini` | Yedek LLM modeli |
 | `CHROMA_HOST` | `localhost` | ChromaDB sunucu adresi |
 | `CHROMA_PORT` | `8100` | ChromaDB port |
-| `EMBEDDING_MODEL` | `dbmdz/bert-base-turkish-cased` | Gömme modeli |
-| `RAG_CHUNK_SIZE` | `512` | Doküman parçalama boyutu (karakter) |
-| `RAG_CHUNK_OVERLAP` | `64` | Parçalar arası örtüşme |
+| `EMBEDDING_MODEL` | `BAAI/bge-m3` | Gömme modeli |
+| `RAG_CHUNK_SIZE` | `1024` | Doküman parçalama boyutu (karakter) |
+| `RAG_CHUNK_OVERLAP` | `128` | Parçalar arası örtüşme |
 | `RAG_TOP_K` | `5` | Döndürülecek sonuç sayısı |
-| `RAG_MIN_SIMILARITY` | `0.6` | Minimum benzerlik eşiği (0.0–1.0) |
+| `RAG_MIN_SIMILARITY` | `0.0` | Minimum benzerlik eşiği (0.0–1.0) |
 | `SERVER_HOST` | `0.0.0.0` | Sunucu dinleme adresi |
 | `SERVER_PORT` | `8000` | Sunucu port |
 | `SERVER_DEBUG` | `true` | Debug modu |
@@ -208,9 +210,12 @@ Tüm sabit değerler Python `Enum` sınıfları olarak tanımlanmıştır. `str,
 ```python
 class Department(str, Enum):
     FINANCE = "finance"              # Finans departmanı
-    IT = "it"                        # Bilgi İşlem departmanı
+    IT_SUPPORT = "it_support"        # Bilgi İşlem desteği
     STUDENT_AFFAIRS = "student_affairs"  # Öğrenci İşleri departmanı
+    ACADEMIC_PROGRAMS = "academic_programs"  # Akademik Programlar
 ```
+
+> Not: Güncel çekirdek `Department` enum'u `finance`, `it_support`, `student_affairs` ve `academic_programs` değerlerini içerir.
 
 `display_name` property'si ile Türkçe görüntüleme adı döndürülür: `Department.FINANCE.display_name → "Finans"`.
 
@@ -219,7 +224,7 @@ class Department(str, Enum):
 | Departman | Görev Tipleri |
 |-----------|--------------|
 | Finans | `tuition_query` (harç), `scholarship_query` (burs), `payment_query` (ödeme) |
-| IT | `tech_support` (teknik), `email_support` (e-posta), `account_support` (hesap) |
+| IT Support | `tech_support` (teknik), `email_support` (e-posta), `account_support` (hesap) |
 | Öğrenci İşleri | `course_query` (ders), `registration_query` (kayıt), `academic_query` (akademik) |
 | Genel | `procedure_query` (RAG), `data_query` (SQL), `hybrid_query` (RAG+SQL) |
 
@@ -598,7 +603,7 @@ A2A mimarisindeki tüm ajanların kartlarını saklar. Ana orkestratör, hangi s
 |------|-----|------|
 | `agent_id` | String(50), UK | Ajan benzersiz kimliği (ör: "finance-main-orchestrator"). |
 | `name` | String(100) | İnsan tarafından okunabilir isim. |
-| `department` | String(50) | İlgili departman (`finance`, `student_affairs` vb.). |
+| `department` | String(50) | İlgili departman (`finance`, `it`, `student_affairs` vb.). |
 | `role` | String(30) | `main_orchestrator`, `dept_orchestrator`, `specialist_agent`. |
 | `description` | Text | Ajanın yeteneklerinin açıklaması. |
 | `endpoint` | String(255) | Ajanın HTTP endpoint'i (opsiyonel). |
@@ -862,7 +867,7 @@ config.set_main_option("sqlalchemy.url", settings.postgres.sync_url)
 
 | Dosya | Test Sayısı | Kapsam |
 |-------|:----------:|--------|
-| `test_config.py` | 10 | Department enum değerleri ve display_name, InternalTaskStatus tüm durumları, TaskType alt tipleri (finance, IT, student), Priority sıralaması, güven eşik değerleri |
+| `test_config.py` | 10 | Department enum değerleri ve display_name, InternalTaskStatus tüm durumları, TaskType alt tipleri (finance, it_support, student_affairs), Priority sıralaması, güven eşik değerleri |
 | `test_connection.py` | 8 | Engine başlangıçta None, init_engine ile oluşturma, session factory oluşturma, session commit/rollback/dispose, SQLite izolasyonu |
 | `test_models.py` | 7 | Student oluşturma ve varsayılan değerler, Tuition ilişkileri, QueryLog JSONB (`query_metadata`) alanları, AgentRegistry capabilities, `__repr__` metodu |
 | `test_schemas.py` | 15 | RAGQuery validasyon (boş/uzun sorgu red, custom top_k), RAGResult oluşturma, RoutingResult çoklu departman, DepartmentResponse varsayılanlar, UserQueryRequest user_id, HealthCheck timestamp |
@@ -1059,8 +1064,8 @@ FAZ 0 tamamlandıktan sonra iki aşamalı kapsamlı kalite denetimi gerçekleşt
 
 FAZ 0 tamamlanmıştır. **FAZ 1 — Veri ve RAG Altyapısı** kapsamında:
 
-1. 3 departman için 60+ sentetik Türkçe doküman üretimi
-2. BERTurk ile RAG indeksleme pipeline'ı
+1. Öğrenci işleri ağırlıklı ve bölüm bazlı Türkçe doküman üretimi
+2. BAAI/bge-m3 ile RAG indeksleme pipeline'ı
 3. ChromaDB semantik sorgulama
 4. RAGAS metrikleri ile RAG değerlendirmesi
 5. PostgreSQL Docker entegrasyonu
@@ -1069,3 +1074,81 @@ FAZ 0 tamamlanmıştır. **FAZ 1 — Veri ve RAG Altyapısı** kapsamında:
 ---
 
 *Bu doküman, projenin her fazı tamamlandıkça güncellenecektir.*
+
+---
+
+## 16. Mart 2026 Düzeltme ve Güncelleme Notları
+
+Bu doküman Faz 0 çekirdeğini anlatsa da, aşağıdaki maddeler mevcut repo durumunu yansıtan güncel düzeltmelerdir. Eski satırlarda geçen çelişkili bilgiler için bu bölüm önceliklidir.
+
+### 16.1 Güncel Departman Sözleşmesi
+
+Mevcut çekirdek `Department` sözleşmesi artık dört ana departman içerir:
+
+* `finance`
+* `it_support`
+* `student_affairs`
+* `academic_programs`
+
+Daha önce belgede geçen `it` değeri veri klasörü, metadata ve koleksiyon isimleriyle hizalanarak `it_support` olarak standartlaştırılmıştır.
+
+### 16.2 Dinamik Koleksiyon Yapısı
+
+RAG çekirdeği artık tek bir sabit koleksiyona bağlı değildir. Koleksiyonlar ana departman bazında dinamik çözülür:
+
+* `student_affairs_docs`
+* `academic_programs_docs`
+* `finance_docs`
+* `it_support_docs`
+
+Kaynak klasör ile koleksiyon adı arasındaki ilişki şu şekilde çalışır:
+
+* `data/raw/student_affairs` -> `student_affairs_docs`
+* `data/raw/academic_programs` -> `academic_programs_docs`
+* `data/raw/finance` -> `finance_docs`
+* `data/raw/it_support` -> `it_support_docs`
+
+### 16.3 Doküman Metadata Genişlemesi
+
+`document_loader.py` tarafında özellikle `academic_programs` belgeleri için metadata kapsamı genişletilmiştir:
+
+* `department`
+* `subcategory`
+* `bolum`
+* `bolum_adi`
+
+Bir belge birden fazla bölüme işaret ediyorsa tek bir bölüm seçmek yerine `bolum="genel"` ve `bolum_adi="Genel"` kullanılır.
+
+### 16.4 Konfigürasyon ve Cihaz Desteği
+
+`EmbeddingSettings` ve `RerankerSettings` alanlarına açık cihaz desteği eklenmiştir. Geçerli değerler:
+
+* `auto`
+* `cpu`
+* `cuda`
+
+Yeni ortam değişkenleri:
+
+* `EMBEDDING_DEVICE`
+* `RERANKER_DEVICE`
+
+`auto` seçildiğinde CUDA görünürse GPU, aksi halde CPU kullanılır.
+
+### 16.5 Test Envanteri ve Güncel Doğrulama
+
+Repo içindeki güncel test envanteri:
+
+* **206 unit test**
+* **20 integration test**
+
+Mart 2026 doğrulamasında ayrıca şu noktalar teyit edilmiştir:
+
+* `torch 2.6.0+cu124`
+* `torch.cuda.is_available() == True`
+* `Embedder` `auto -> cuda` çözümleyerek 1024 boyutlu vektör üretmiştir
+* `CrossEncoderReranker` `auto -> cuda` çözümleyerek başarılı reranking yapmıştır
+* `tests/integration/test_rag_retrieval.py::TestHybridSearch::test_reranker_runs_successfully` testi geçmiştir
+
+### 16.6 Gelecek Teknik İyileştirme Notu
+
+Mevcut durumda yeni bir departman eklemek mümkündür; ancak hâlâ birden fazla dosyada kontrollü güncelleme gerektirir. İleri aşamada hedef, yeni departman eklemeyi tek noktadan yönetilebilir hale getirmek ve eklenen departmanın tüm kod yüzeyinde otomatik tanınmasını sağlamaktır.

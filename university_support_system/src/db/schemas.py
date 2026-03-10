@@ -3,6 +3,10 @@ Pydantic Şemaları (Request/Response)
 
 İş mantığı katmanı için veri doğrulama şemaları.
 
+Not:
+    Bu dosyadaki şemaların bir bölümü aktif RAG ve yönlendirme çekirdeğinde
+    kullanılır; bir bölümü ise planlı veya kısmi arayüz katmanları için hazırdır.
+
 NOT: A2A protokolüne ait tipler (Task, Message, Artifact, AgentCard vb.)
      resmi a2a-sdk paketinden kullanılmaktadır:
          from a2a.types import (
@@ -85,7 +89,7 @@ class RoutingResult(BaseModel):
 # ═══════════════════════════════════════════════════
 
 class DepartmentResponse(BaseModel):
-    """Departman orkestratöründen gelen yanıt."""
+    """Departman bazlı işlem sonucunu taşıyan ortak yanıt modeli."""
 
     department: Department
     answer: str
@@ -97,11 +101,11 @@ class DepartmentResponse(BaseModel):
 
 
 # ═══════════════════════════════════════════════════
-# Kullanıcı API Şemaları
+# Dış Arayüz Şemaları
 # ═══════════════════════════════════════════════════
 
 class UserQueryRequest(BaseModel):
-    """Kullanıcı sorgusu girdi şeması (API)."""
+    """Kullanıcı sorgusu girdi şeması."""
 
     query: str = Field(..., min_length=1, max_length=500, description="Kullanıcı sorusu")
     user_id: Optional[str] = Field(None, description="Kullanıcı ID")
@@ -109,7 +113,7 @@ class UserQueryRequest(BaseModel):
 
 
 class UserQueryResponse(BaseModel):
-    """Kullanıcı sorgusu yanıt şeması (API)."""
+    """Kullanıcı sorgusu yanıt şeması."""
 
     answer: str = Field(..., description="Nihai yanıt")
     departments_involved: List[str] = Field(default_factory=list)

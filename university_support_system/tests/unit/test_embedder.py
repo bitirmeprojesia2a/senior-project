@@ -56,6 +56,35 @@ class TestEmbedderInit:
         assert embedder._is_e5_model is False
         assert embedder._is_bge_model is False
 
+    def test_auto_device_resolves_to_cpu_when_cuda_unavailable(self):
+        with patch("src.rag.embedder.torch.cuda.is_available", return_value=False):
+            embedder = Embedder()
+
+        assert embedder.device == "auto"
+        assert embedder.resolved_device == "cpu"
+
+    def test_auto_device_resolves_to_cuda_when_available(self):
+        with patch("src.rag.embedder.torch.cuda.is_available", return_value=True):
+            embedder = Embedder()
+
+        assert embedder.resolved_device == "cuda"
+
+    def test_custom_device_is_preserved(self):
+        embedder = Embedder(device="cpu")
+        assert embedder.device == "cpu"
+        assert embedder.resolved_device == "cpu"
+
+    def test_model_loader_passes_resolved_device(self):
+        with patch("src.rag.embedder.SentenceTransformer") as mock_transformer:
+            mock_model = MagicMock()
+            mock_model.get_sentence_embedding_dimension.return_value = 3
+            mock_transformer.return_value = mock_model
+
+            embedder = Embedder(model_name="BAAI/bge-m3", device="cpu")
+            _ = embedder.model
+
+        mock_transformer.assert_called_once_with("BAAI/bge-m3", device="cpu")
+
 
 class TestEmbedTexts:
     """embed_texts() metodu testleri."""

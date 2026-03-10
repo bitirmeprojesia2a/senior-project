@@ -4,6 +4,10 @@ Uygulama Konfigürasyonu
 Tüm ortam değişkenlerini ve uygulama ayarlarını merkezi olarak yönetir.
 Pydantic Settings v2 kullanarak tip güvenli konfigürasyon sağlar.
 
+Not:
+    Bu dosyadaki bazı ayarlar aktif RAG/LLM çekirdeği tarafından doğrudan
+    kullanılır; bazıları ise planlı veya kısmi entegrasyonlar için hazır tutulur.
+
 Her alt sınıf kendi env_prefix'ini tanımlar:
     POSTGRES_HOST, REDIS_PORT, OLLAMA_MODEL, vb.
 
@@ -14,7 +18,7 @@ Kullanım:
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -49,7 +53,11 @@ class PostgresSettings(BaseSettings):
 
 
 class RedisSettings(BaseSettings):
-    """Redis ayarları."""
+    """Hazır Redis ayarları.
+
+    Aktif retrieval önbelleği şu anda process içi in-memory çalışır.
+    Bu ayarlar harici önbellek veya kuyruk entegrasyonları için korunur.
+    """
 
     model_config = SettingsConfigDict(env_prefix="REDIS_", extra="ignore")
 
@@ -77,7 +85,11 @@ class OllamaSettings(BaseSettings):
 
 
 class OpenAISettings(BaseSettings):
-    """OpenAI (yedek LLM) ayarları."""
+    """Opsiyonel OpenAI ayarları.
+
+    Yerel Ollama istemcileri tercih edilir; OpenAI anahtarı varsa yedek veya
+    alternatif istemci akışlarında kullanılabilir.
+    """
 
     model_config = SettingsConfigDict(env_prefix="OPENAI_", extra="ignore")
 
@@ -106,7 +118,7 @@ class ChromaSettings(BaseSettings):
 
 
 class EmbeddingSettings(BaseSettings):
-    """Gomme modeli ayarlari."""
+    """Gömme modeli ayarları."""
 
     model_config = SettingsConfigDict(env_prefix="EMBEDDING_", extra="ignore")
 
@@ -114,10 +126,11 @@ class EmbeddingSettings(BaseSettings):
     # MIRACL benchmark'ta state-of-the-art, Turkce dahil 100+ dil
     model: str = "BAAI/bge-m3"
     dimension: int = 1024
+    device: Literal["auto", "cpu", "cuda"] = "auto"
 
 
 class RAGSettings(BaseSettings):
-    """RAG pipeline ayarlari."""
+    """RAG hattı ayarları."""
 
     model_config = SettingsConfigDict(env_prefix="RAG_", extra="ignore")
 
@@ -128,17 +141,22 @@ class RAGSettings(BaseSettings):
 
 
 class RerankerSettings(BaseSettings):
-    """Cross-encoder reranker ayarlari."""
+    """Cross-encoder reranker ayarları."""
 
     model_config = SettingsConfigDict(env_prefix="RERANKER_", extra="ignore")
 
     model: str = "seroe/bge-reranker-v2-m3-turkish-triplet"
     max_length: int = 512
     batch_size: int = 16
+    device: Literal["auto", "cpu", "cuda"] = "auto"
 
 
 class SlackSettings(BaseSettings):
-    """Slack entegrasyon ayarları."""
+    """Slack entegrasyon ayarları.
+
+    Repo içinde Slack tarafı henüz iskelet veya kısmi durumdadır; buna rağmen
+    yapılandırma anahtarları şimdiden merkezi olarak tutulur.
+    """
 
     model_config = SettingsConfigDict(env_prefix="SLACK_", extra="ignore")
 
@@ -148,12 +166,15 @@ class SlackSettings(BaseSettings):
 
     @property
     def is_configured(self) -> bool:
-        """Slack ayarları yapılandırılmış mı?"""
+        """Gerekli Slack kimlik bilgileri tanımlı mı?"""
         return bool(self.bot_token and self.signing_secret)
 
 
 class ServerSettings(BaseSettings):
-    """Sunucu ayarları."""
+    """Sunucu ayarları.
+
+    Geliştirme ve ileride eklenecek servis katmanları için ortak tutulur.
+    """
 
     model_config = SettingsConfigDict(env_prefix="SERVER_", extra="ignore")
 
@@ -168,12 +189,13 @@ class Settings(BaseSettings):
     Ana konfigürasyon sınıfı.
 
     Tüm alt ayarları birleştirir ve merkezi erişim noktası sağlar.
+    Her alt grup her çalıştırma senaryosunda aktif olarak kullanılmayabilir.
 
     Kullanım:
         from src.core.config import settings
 
         settings.postgres.async_url   # PostgreSQL URL
-        settings.embedding.model    # Gömme modeli
+        settings.embedding.model      # Gömme modeli
         settings.rag.top_k            # RAG top-k parametresi
     """
 
@@ -183,7 +205,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Alt konfigurasyonlar
+    # Alt konfigürasyonlar
     postgres: PostgresSettings = Field(default_factory=PostgresSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     ollama: OllamaSettings = Field(default_factory=OllamaSettings)
@@ -202,5 +224,5 @@ class Settings(BaseSettings):
     docs_dir: Path = base_dir / "docs"
 
 
-# Singleton instance — tüm modüller bu instance'ı kullanır
+# Singleton instance: tüm modüller bu örneği kullanır
 settings = Settings()

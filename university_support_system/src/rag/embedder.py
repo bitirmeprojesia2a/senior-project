@@ -20,6 +20,7 @@ from typing import List
 
 from sentence_transformers import SentenceTransformer
 import structlog
+import torch
 
 from src.core.config import settings
 
@@ -46,24 +47,41 @@ class Embedder:
         self,
         model_name: str | None = None,
         batch_size: int = 32,
+        device: str | None = None,
     ):
         self.model_name = model_name or settings.embedding.model
         self.batch_size = batch_size
+        self.device = device or settings.embedding.device
+        self.resolved_device = self._resolve_device(self.device)
         self._model: SentenceTransformer | None = None
 
         model_lower = self.model_name.lower()
         self._is_e5_model = "e5" in model_lower
         self._is_bge_model = "bge" in model_lower
 
+    @staticmethod
+    def _resolve_device(device: str) -> str:
+        """İstenen cihazı mevcut ortama göre çözümler."""
+        if device == "auto":
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        return device
+
     @property
     def model(self) -> SentenceTransformer:
         """Model'i lazy olarak yukler."""
         if self._model is None:
-            logger.info("loading_embedding_model", model=self.model_name)
-            self._model = SentenceTransformer(self.model_name)
+            logger.info(
+                "loading_embedding_model",
+                model=self.model_name,
+                requested_device=self.device,
+                resolved_device=self.resolved_device,
+            )
+            self._model = SentenceTransformer(self.model_name, device=self.resolved_device)
             logger.info(
                 "embedding_model_loaded",
                 model=self.model_name,
+                requested_device=self.device,
+                resolved_device=self.resolved_device,
                 dimension=self._model.get_sentence_embedding_dimension(),
                 is_e5=self._is_e5_model,
                 is_bge=self._is_bge_model,

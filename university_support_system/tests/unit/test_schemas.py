@@ -112,7 +112,7 @@ class TestRoutingResultSchema:
         """Geçersiz güven skoru reddedilir (0-1 aralığı dışı)."""
         with pytest.raises(ValidationError):
             RoutingResult(
-                departments=[Department.IT],
+                departments=[Department.IT_SUPPORT],
                 confidence=1.5,
                 confidence_level=ConfidenceLevel.HIGH,
                 strategy=RoutingStrategy.DIRECT,
@@ -125,7 +125,7 @@ class TestDepartmentResponseSchema:
     def test_valid_response(self):
         """Geçerli departman yanıtı."""
         resp = DepartmentResponse(
-            department=Department.IT,
+            department=Department.IT_SUPPORT,
             answer="Şifrenizi OBS'den sıfırlayabilirsiniz.",
         )
         assert resp.success is True

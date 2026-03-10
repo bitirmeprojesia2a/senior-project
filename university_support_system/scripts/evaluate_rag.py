@@ -8,6 +8,7 @@ Kullanım:
     python scripts/evaluate_rag.py
     python scripts/evaluate_rag.py --top-k 3
     python scripts/evaluate_rag.py --output docs/rag_evaluation_report.md
+    python scripts/evaluate_rag.py --department academic_programs
 """
 
 import argparse
@@ -19,6 +20,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.constants import department_values
 from src.rag.retriever import HybridRetriever
 
 
@@ -26,6 +28,13 @@ def load_test_questions(path: Path) -> list:
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     return data["questions"]
+
+
+def filter_questions_by_department(questions: list, department: str | None) -> list:
+    """Soru listesini departman alanına göre filtreler."""
+    if not department:
+        return questions
+    return [q for q in questions if q.get("department") == department]
 
 
 def check_source_match(results: list, expected_patterns: list) -> dict:
@@ -48,7 +57,12 @@ def check_source_match(results: list, expected_patterns: list) -> dict:
     }
 
 
-def evaluate(questions: list, retriever: HybridRetriever, top_k: int) -> list:
+def evaluate(
+    questions: list,
+    retriever: HybridRetriever,
+    top_k: int,
+    department: str | None = None,
+) -> list:
     """Tüm soruları değerlendirir."""
     results = []
     total_time_ms = 0.0
@@ -59,7 +73,7 @@ def evaluate(questions: list, retriever: HybridRetriever, top_k: int) -> list:
         expected = q["expected_source_patterns"]
 
         start = time.perf_counter()
-        search_results = retriever.search(question, top_k=top_k)
+        search_results = retriever.search(question, top_k=top_k, department=department)
         elapsed_ms = (time.perf_counter() - start) * 1000
         total_time_ms += elapsed_ms
 
@@ -217,6 +231,13 @@ def main():
         default="docs/rag_evaluation_report.md",
         help="Rapor çıktı dosyası",
     )
+    parser.add_argument(
+        "--department",
+        type=str,
+        choices=department_values(),
+        default=None,
+        help="Değerlendirmeyi belirli bir departmanla sınırla",
+    )
     parser.add_argument("--no-cache", action="store_true", help="Sorgu cache'ini devre dışı bırak")
     args = parser.parse_args()
 
@@ -226,10 +247,16 @@ def main():
         sys.exit(1)
 
     questions = load_test_questions(questions_path)
+    questions = filter_questions_by_department(questions, args.department)
+    if not questions:
+        print("❌ Seçilen departman için soru bulunamadı.")
+        sys.exit(1)
 
     print("=" * 70)
     print("  RAG Değerlendirme")
     print("=" * 70)
+    if args.department:
+        print(f"  Departman:   {args.department}")
     print(f"  Soru sayısı: {len(questions)}")
     print(f"  Top-K:       {args.top_k}")
     print("=" * 70)
@@ -239,7 +266,12 @@ def main():
     retriever = HybridRetriever(cache_ttl=cache_ttl)
 
     try:
-        results = evaluate(questions, retriever, args.top_k)
+        results = evaluate(
+            questions,
+            retriever,
+            args.top_k,
+            department=args.department,
+        )
         metrics = compute_metrics(results)
 
         print("\n" + "=" * 70)

@@ -5,8 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "university-support-system"
 version = "1.0.0"
-description = "A2A + RAG tabanlı çoklu ajan üniversite destek sistemi"
+description = "RAG, LLM ve veritabanı çekirdeği içeren üniversite destek sistemi"
 requires-python = ">=3.11"
+readme = "README.md"
+keywords = ["rag", "llm", "university", "turkish", "postgresql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -18,6 +20,9 @@ python_classes = "Test*"
 addopts = "-v --tb=short"
 markers = [
     "integration: ChromaDB ve gerçek modeller gerektiren integration testler",
+    "smoke: Hızlı bağlantı ve durum kontrolleri (model yüklemesi yok)",
+    "model: Gerçek AI modelleri gerektiren testler (embedding, reranker)",
+    "slow: Uzun süren kalite testleri (precision değerlendirme vb.)",
 ]
 
 [tool.black]

@@ -1,18 +1,21 @@
 """
 Database models (SQLAlchemy ORM)
 
-This module defines the relational schema for the university
-multi‑agent support system. Tables are grouped conceptually as:
+This module defines the relational schema for the university support
+system. Tables are grouped conceptually as:
 
-1. Student Affairs   → students, courses, course_prerequisites,
-                       student_courses, course_registration_periods
-2. Finance           → tuition, payments, installments
-3. Scholarships      → available_scholarships, scholarships,
-                       scholarship_applications
-4. Authentication    → otp_codes, verification_sessions,
-                       slack_student_mapping
-5. Announcements     → announcements
-6. Agent / Telemetry → agent_registry, query_logs, agent_tasks
+1. Student Affairs   -> students, courses, course_prerequisites,
+                        student_courses, course_registration_periods
+2. Finance           -> tuition, payments, installments
+3. Scholarships      -> available_scholarships, scholarships,
+                        scholarship_applications
+4. Authentication    -> otp_codes, verification_sessions,
+                        slack_student_mapping
+5. Announcements     -> announcements
+6. Agent / Telemetry -> agent_registry, query_logs, agent_tasks
+
+Some tables are actively used by the current RAG/LLM core, while others
+prepare planned or partial integration layers.
 
 The actual DDL is applied via Alembic migrations; this file is the
 single source of truth for application code and migration generation.
@@ -395,7 +398,7 @@ class VerificationSession(TimestampMixin, Base):
 
 
 class SlackStudentMapping(TimestampMixin, Base):
-    """Persistent mapping between Slack user and student."""
+    """Slack kullanıcısı ile öğrenci arasında kalıcı eşleme."""
 
     __tablename__ = "slack_student_mapping"
 
@@ -440,7 +443,7 @@ class Announcement(TimestampMixin, Base):
 
 
 class AgentRegistry(TimestampMixin, Base):
-    """Registered agents participating in the multi-agent system."""
+    """Planlı veya kısmi ajan kayıtları için saklama tablosu."""
 
     __tablename__ = "agent_registry"
 
@@ -481,7 +484,7 @@ class QueryLog(TimestampMixin, Base):
 
 
 class AgentTask(TimestampMixin, Base):
-    """Lifecycle record for tasks exchanged between agents (A2A)."""
+    """Planlı veya kısmi ajan görev yaşam döngüsü kaydı."""
 
     __tablename__ = "agent_tasks"
 

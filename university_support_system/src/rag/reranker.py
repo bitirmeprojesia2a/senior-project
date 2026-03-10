@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 import structlog
 from sentence_transformers import CrossEncoder
+import torch
 
 from src.core.config import settings
 
@@ -46,21 +47,43 @@ class CrossEncoderReranker:
         model_name: str | None = None,
         max_length: int | None = None,
         batch_size: int | None = None,
+        device: str | None = None,
     ):
         self.model_name = model_name or settings.reranker.model
         self.max_length = max_length or settings.reranker.max_length
         self.batch_size = batch_size or settings.reranker.batch_size
+        self.device = device or settings.reranker.device
+        self.resolved_device = self._resolve_device(self.device)
         self._model: Optional[CrossEncoder] = None
+        self.last_run_succeeded: Optional[bool] = None
+
+    @staticmethod
+    def _resolve_device(device: str) -> str:
+        """İstenen cihazı mevcut ortama göre çözümler."""
+        if device == "auto":
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        return device
 
     @property
     def model(self) -> CrossEncoder:
         if self._model is None:
-            logger.info("loading_reranker_model", model=self.model_name)
+            logger.info(
+                "loading_reranker_model",
+                model=self.model_name,
+                requested_device=self.device,
+                resolved_device=self.resolved_device,
+            )
             self._model = CrossEncoder(
                 self.model_name,
                 max_length=self.max_length,
+                device=self.resolved_device,
             )
-            logger.info("reranker_model_loaded", model=self.model_name)
+            logger.info(
+                "reranker_model_loaded",
+                model=self.model_name,
+                requested_device=self.device,
+                resolved_device=self.resolved_device,
+            )
         return self._model
 
     def rerank(
@@ -82,6 +105,7 @@ class CrossEncoderReranker:
             Cross-encoder skoruna gore siralanmis sonuclar.
         """
         if not candidates:
+            self.last_run_succeeded = None
             return candidates
 
         pairs = [(query, c["content"]) for c in candidates]
@@ -99,8 +123,11 @@ class CrossEncoderReranker:
                 show_progress_bar=False,
             )
         except Exception:
+            self.last_run_succeeded = False
             logger.exception("reranking_failed")
             return candidates[:top_k]
+
+        self.last_run_succeeded = True
 
         for candidate, score in zip(candidates, scores):
             candidate["score"] = round(float(score), 4)

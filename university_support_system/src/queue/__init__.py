@@ -1,1 +1,1 @@
-"""Kuyruk modülü - Redis tabanlı görev kuyruğu."""
+"""Kuyruk modülü - planlı veya iskelet görev kuyruğu katmanı."""

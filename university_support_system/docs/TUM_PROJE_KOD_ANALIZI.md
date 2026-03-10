@@ -14,13 +14,13 @@ Projenin gizli şifrelerini ve ince ayarlarını barındıran konfigürasyon yö
     *   *`async_url` (property):* PostgreSQL'e asenkron bağlanmak için gerekli olan `postgresql+asyncpg://...` metnini otomatik formatlar.
 *   **`RedisSettings` Sınıfı:** Kuyruk ve önbellekleme (Cache) için Redis URL (6379) dizgesi oluşturur.
 *   **`ChromaSettings` Sınıfı:** Vektör arama motorunun HTTP portunu (8100) ayarlar, `url` isimli computed field (property) ile sunar.
-*   **`EmbeddingSettings` Sınıfı:** Yapay zekanın (BAAI/bge-m3) kaç boyutlu (1024-D) matris çıkaracağını ve limitlerini bilir.
+*   **`EmbeddingSettings` Sınıfı:** Yapay zekanın (BAAI/bge-m3) kaç boyutlu (1024-D) matris çıkaracağını, limitlerini ve `device` seçimini bilir.
 *   **`RAGSettings` Sınıfı:** `chunk_size` (1024), `chunk_overlap` (128) ve `top_k` (Aramada dönecek sonuç sayısı: 5) ayarlarını standartlaştırır.
 *   **`Settings` Sınıfı (Singleton):** Python dosya yüklenir yüklenmez yukarıdaki tüm küçük ayar sınıflarını (Postgres, RAG vb.) tek bir devasa `settings` nesnesine toplar. Projedeki herkes `from config import settings` yazarak bu tek objeden veri çeker.
 
 ### 1.2. `src/core/constants.py`
 Sistem genelinde kullanılacak kural isimlerini metin (String) kalabalığından kurtarıp, kod yazarken otomatik tamamlanan `Enum` yapılarına (Sabitlere) dönüştürür.
-*   **`Department` (Enum):** FINANCE (Finans), IT (Bilgi İşlem), STUDENT_AFFAIRS (Öğrenci İşleri).
+*   **`Department` (Enum):** FINANCE (Finans), IT_SUPPORT (Bilgi İşlem Desteği), STUDENT_AFFAIRS (Öğrenci İşleri), ACADEMIC_PROGRAMS (Akademik Programlar).
     *   *`display_name` (property):* Enum'un Türkçe görünen adını basar. API'den hata dönerken "Öğrenci İşleri" yazmasını sağlar.
 *   **`TaskType` (Enum):** LLM'e giden sorunun tipini tutar (`COURSE_QUERY`, `TUITION_QUERY` vb.).
 *   **`RoutingStrategy` (Enum):** Gelen sorunun LLM tarafından ne yapılacağını belirler. (Direkt ilgili departmana gönder `DIRECT`, veya ne dediğini anlamadım soruyu netleştir `CLARIFICATION`).
@@ -143,7 +143,7 @@ Arama yapıldı. Getirilen 20 metin gerçekten öğrencinin yazdığı yediğimi
 RAG ile oynadığımız geliştirici / otomasyon araçlarıdır.
 
 *   **`scripts/index_documents.py`:** Konsoldan veritabanı kurulumu yapar. Argparse kural kütüphanesi ile `python index_documents.py --chunk-size 512 --reindex` gibi argümanları alır ve asıl RAG `pipeline.run()` fonksiyonunu işletir.
-*   **`scripts/evaluate_rag.py`:** Otomatik zeka (RAGTest) test sistemidir. İçerisinde 19 tane sahte zorlu öğrenci sorusu (Örn: Hem GANO 1.5 iken ÇAP yapılır mı?) sorup, RAG'ın doğru PDF'i çekip çekmediği sayar. `compute_metrics()` altında *Precision@1* (ilk sonuçta vurdum), *Precision@3* (vites 3te vurdum) metriklerini orantılayıp devasa `docs/rag_evaluation_report.md` rapor dosyasını Markdown'a basar.
+*   **`scripts/evaluate_rag.py`:** Otomatik zeka (RAGTest) test sistemidir. Güncel durumda departman etiketli ortak soru havuzunu kullanır; havuz 30 sorudan oluşur (20 `student_affairs`, 10 `academic_programs`). `compute_metrics()` altında *Precision@1* ve *Precision@3* metriklerini orantılayıp `docs/rag_evaluation_report.md` rapor dosyasını üretir.
 *   **`scripts/query_db.py`:** Saf arama denemesidir. Kelimelere, reranker'a falan takılmadan ChromaDB vektör uzayında E5 Prefix ekleyerek ham sorgu testleri atar geliştiriciye CLI çıktıları (Console prints) yollar.
 *   **`scripts/test_hybrid_search.py`:** En ileri sistem sorgucusudur. BM25 (Kelime) ve Vector (Anlam) ağırlıklarını dengeler. Terminale "Kayıt dondurma nasıl yapılır?" yazınca, Sinonim sözlüğünün (genişletmenin) kelimeye eklenip eklenmediğini (Debug/Verbose modda) gösterir ve 1-den-5'e kadar skorlayarak Terminaldeki en güzel görünümü basar.
 *   **`scripts/compare_collections.py`:** Bilimsel analiz aracı. Veritabanını 3 farklı şekilde (256, 512, 1024 boyutla) kestiğimizde paralel bağlayıp "Hangi kesintide LLM daha nokta atışı hit buldu?" diye tablolaşmış çıktı üretmeye yarar. (Araştırma modülü).
@@ -152,3 +152,56 @@ RAG ile oynadığımız geliştirici / otomasyon araçlarıdır.
 Oluşturulan mimari, basit bir *Prompt -> LLM / LangChain* zincirlemesinin ötesinde; **Bağlantı Havuzlamalı Async Veritabanı (Event-loop non-blocking DB), Pydantic Kalkanlarıyla Korunan Objeler (Domain Driven Design), Lazy Loader Model Yönetimi, RegEx Temizlikçisi ve 3 Taraflı (Keyword + Vector + Reranker) False Positive Eliminasyon** algoritması üzerine inşa edilmiş çok ağır kurumsal standartlı bir "Arama & Bilgi Bulma (RAG)" yazılımıdır. 
 
 Bu rehberi her türlü IT sunumunda, raporlamada veya tez (kavramsal algoritma) açıklamasında kodlarınızın altyapısının arkasındaki muazzam mühendisliği kanıtlamak için direkt olarak referans gösterebilirsiniz.
+
+---
+
+## Mart 2026 Ek Analiz
+
+Bu dokümanın ana gövdesi daha erken bir repo durumunu anlatmaktadır. Güncel durumda aşağıdaki maddeler özellikle not edilmelidir:
+
+### 1. Güncel Güçlü Yanlar
+
+* RAG çekirdeği hâlâ projenin en olgun ve en iyi ayrıştırılmış katmanıdır.
+* `academic_programs` departmanının çekirdeğe eklenmesiyle birlikte sistem tek-koleksiyon yaklaşımından daha genel bir yapıya yaklaşmıştır.
+* LLM katmanında sağlık kontrolü, fallback ve stream desteği pratikte kullanılabilir durumdadır.
+* GPU farkındalığı embedder ve reranker tarafına eklenmiş, CUDA destekli ortamda doğrulanmıştır.
+
+### 2. Güncel Mimari Değişiklikler
+
+* `Department` artık `finance`, `it_support`, `student_affairs` ve `academic_programs` değerlerini kapsar.
+* Koleksiyon çözümü dinamik hale getirilmiştir:
+  * `student_affairs_docs`
+  * `academic_programs_docs`
+  * `finance_docs`
+  * `it_support_docs`
+* `academic_programs` belgeleri için `bolum` ve `bolum_adi` metadata alanları üretilir; çoklu eşleşme durumunda `genel` etiketi kullanılır.
+
+### 3. LLM Katmanı İçin Ek Notlar
+
+Kod tabanında aktif olarak bulunan fakat önceki anlatıda daha sınırlı görünen yetenekler:
+
+* `LLMService.get_health()`
+* `LLMService.generate_stream()`
+* Ollama için retry
+* OpenAI için fallback
+* `json_mode=True` ile yapılandırılmış çıktı doğrulaması
+
+### 4. Test ve Doğrulama Durumu
+
+Güncel test envanteri:
+
+* 206 unit test
+* 20 integration test
+
+Ek doğrulamalar:
+
+* Reranker'ın gerçekten çalıştığını test eden ek assertion mevcuttur.
+* CUDA destekli `torch` ile embedder ve reranker `auto -> cuda` çözerek smoke testten geçmiştir.
+
+### 5. Açık Teknik Borçlar
+
+* Yeni departman eklemek hâlâ birden fazla dosyada kontrollü güncelleme gerektirir.
+* RAG değerlendirme metodunda dosya adı heuristiklerine dayalı bölümler tamamen temizlenmemiştir.
+* Ağır integration testleri günlük geliştirme döngüsünde pahalı kalabilir.
+
+Daha ayrıntılı ve güncel özet için: `docs/MART_2026_GUNCELLEME_NOTLARI.md`

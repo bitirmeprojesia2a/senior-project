@@ -88,6 +88,11 @@ class TestSessionManagement:
             student = Student(
                 student_id="TEST001",
                 full_name="Test Kullanıcı",
+                email="test@omu.edu.tr",
+                department="Bilgisayar Mühendisliği",
+                faculty="Mühendislik Fakültesi",
+                class_year=3,
+                enrollment_year=2024,
             )
             session.add(student)
 
@@ -100,6 +105,7 @@ class TestSessionManagement:
             found = result.scalar_one_or_none()
             assert found is not None
             assert found.full_name == "Test Kullanıcı"
+            assert found.email == "test@omu.edu.tr"
 
     async def test_get_session_rollbacks_on_error(self):
         """Hata durumunda session rollback yapar."""
@@ -110,6 +116,11 @@ class TestSessionManagement:
                 student = Student(
                     student_id="TEST002",
                     full_name="Hatalı Kullanıcı",
+                    email="hata@omu.edu.tr",
+                    department="Bilgisayar Mühendisliği",
+                    faculty="Mühendislik Fakültesi",
+                    class_year=2,
+                    enrollment_year=2025,
                 )
                 session.add(student)
                 raise ValueError("Test hatası")

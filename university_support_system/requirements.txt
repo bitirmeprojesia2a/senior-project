@@ -1,60 +1,60 @@
 # ================================================
-# Üniversite Kurumsal Destek Sistemi - Runtime Bağımlılıklar
+# Üniversite Destek Sistemi - Runtime Bağımlılıklar
 # ================================================
-# Yalnızca production'da gereken paketler.
-# Test ve kod kalitesi araçları için: requirements-dev.txt
-# Güncelleme yapmadan önce testlerin geçtiğinden emin olun.
+# Bu dosyada yalnızca runtime paketleri bulunur.
+# Test ve kod kalitesi araçları `requirements-dev.txt` içindedir.
 
-# ── Web Framework & API ─────────────────────────
+# -- Web Framework & API (iskelet / ileriki faz) --
 fastapi==0.115.12
 uvicorn==0.34.0
 httpx==0.28.1
 pydantic==2.11.3
 pydantic-settings==2.9.1
 
-# ── A2A Protokolü (Google Resmi SDK) ────────────
+# -- A2A Protokolü (hedef mimari / kısmi iskelet) --
 a2a-sdk==0.2.7
 
-# ── Veritabanı ──────────────────────────────────
+# -- Veritabanı --
 sqlalchemy==2.0.37
 asyncpg==0.30.0
 alembic==1.14.1
 psycopg2-binary==2.9.10
 aiosqlite==0.20.0
 
-# ── Kuyruk & Cache ──────────────────────────────
+# -- Kuyruk & Cache (Redis altyapısı hazır, aktif retrieval cache in-memory) --
 redis==5.2.1
 
-# ── RAG & Vektör Veritabanı ─────────────────────
-# chromadb → Docker container olarak çalışır, iletişim httpx ile REST API üzerinden
+# -- RAG & Vektör DB --
+# ChromaDB Docker servisi olarak çalışır; iletişim `httpx` ile REST üzerinden yapılır.
 langchain==0.3.14
 langchain-core==0.3.63
 langchain-community==0.3.14
 langchain-text-splitters==0.3.4
 rank_bm25==0.2.2
 
-# ── Gömme Modeli ────────────────────────────────
+# -- Gömme modeli --
 sentence-transformers==3.4.1
 transformers==4.48.1
 torch==2.6.0
 
-# ── LLM Entegrasyonu ───────────────────────────
+# -- LLM entegrasyonu --
+# Mevcut istemciler `httpx` tabanlıdır; `openai` paketi uyumluluk ve ileriki ihtiyaçlar için tutulur.
 openai==1.59.9
 
-# ── Slack Entegrasyonu ──────────────────────────
+# -- Slack entegrasyonu (iskelet / planlı) --
 slack-sdk==3.34.0
 slack-bolt==1.22.0
 
-# ── Güvenlik & Doğrulama ───────────────────────
+# -- Güvenlik & kimlik doğrulama (iskelet / planlı) --
 PyJWT==2.10.1
 passlib==1.7.4
 bcrypt==4.2.1
 
-# ── Yardımcı ────────────────────────────────────
+# -- Yardımcı paketler --
 python-dotenv==1.0.1
 structlog==25.1.0
 tenacity==9.0.0
 pdfplumber==0.11.4
 tqdm==4.67.1
 
-# NOT: Test ve kod kalitesi araçları requirements-dev.txt'tedir.
+# NOT: Test ve kod kalitesi araçları `requirements-dev.txt` içindedir.

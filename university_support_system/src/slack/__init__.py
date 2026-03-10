@@ -1,1 +1,1 @@
-"""Slack modülü - Slack bot entegrasyonu."""
+"""Slack modülü - planlı veya iskelet Slack entegrasyonu."""

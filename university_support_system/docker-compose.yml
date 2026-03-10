@@ -4,6 +4,8 @@
 # Tüm servisleri ayağa kaldırmak için: docker compose up -d
 # Servisleri durdurmak için: docker compose down
 # Logları görmek için: docker compose logs -f
+# Not: Bu dosya altyapı servislerini ayağa kaldırır; repo içinde
+# doğrudan çalıştırılabilir bir FastAPI uygulama girişi henüz yoktur.
 
 services:
   # ── PostgreSQL 15 ─────────────────────────────
@@ -39,6 +41,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Redis servisi hazır tutulur; mevcut retrieval cache uygulama içinde in-memory çalışır.
     command: redis-server --appendonly yes
 
   # ── ChromaDB ──────────────────────────────────
@@ -54,7 +57,7 @@ services:
       IS_PERSISTENT: "TRUE"
       ANONYMIZED_TELEMETRY: "FALSE"
 
-  # ── Ollama (LLM) ─────────────────────────────
+  # ── Ollama (LLM) ──────────────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: uni_ollama
@@ -63,6 +66,8 @@ services:
       - "${OLLAMA_PORT:-11434}:11434"
     volumes:
       - ollama_data:/root/.ollama
+    # LLM servisi aktif olarak kullanılır. API ve Slack katmanları tamamlanmasa da
+    # mevcut LLM istemcileri bu servise bağlanır.
     # GPU desteği için aşağıdaki satırları açın:
     # deploy:
     #   resources:

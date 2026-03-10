@@ -1,1 +1,1 @@
-"""Cache modülü - Redis tabanlı önbellekleme."""
+"""Önbellek modülü - planlı veya iskelet harici önbellek katmanı."""

@@ -1,7 +1,8 @@
 """
-Üniversite Kurumsal Destek Sistemi - Ana Paket
+Üniversite Kurumsal Destek Sistemi - ana paket.
 
-A2A protokolü ve RAG teknolojisi ile çoklu ajan kurumsal destek sistemi.
+Mevcut depo yüzeyi ağırlıklı olarak RAG, LLM ve veritabanı çekirdeğini içerir.
+Diğer katmanların bir bölümü iskelet veya planlı durumdadır.
 """
 
 __version__ = "1.0.0"

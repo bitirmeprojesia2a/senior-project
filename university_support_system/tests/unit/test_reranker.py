@@ -44,6 +44,7 @@ class TestRerankerRerank:
         assert len(results) == 5
         scores = [r["score"] for r in results]
         assert scores == sorted(scores, reverse=True)
+        assert reranker.last_run_succeeded is True
 
     def test_top_k_limits_results(self, mock_cross_encoder, sample_candidates):
         reranker = CrossEncoderReranker()
@@ -70,6 +71,7 @@ class TestRerankerRerank:
 
         assert results == []
         mock_cross_encoder.predict.assert_not_called()
+        assert reranker.last_run_succeeded is None
 
     def test_single_candidate(self, mock_cross_encoder):
         mock_cross_encoder.predict.return_value = np.array([0.85])
@@ -82,6 +84,7 @@ class TestRerankerRerank:
 
         assert len(results) == 1
         assert results[0]["score"] == 0.85
+        assert reranker.last_run_succeeded is True
 
     def test_preserves_metadata(self, mock_cross_encoder, sample_candidates):
         reranker = CrossEncoderReranker()
@@ -92,6 +95,18 @@ class TestRerankerRerank:
         for r in results:
             assert "content" in r
             assert "source" in r
+        assert reranker.last_run_succeeded is True
+
+    def test_sets_failure_flag_when_predict_raises(self, mock_cross_encoder, sample_candidates):
+        mock_cross_encoder.predict.side_effect = RuntimeError("predict failed")
+
+        reranker = CrossEncoderReranker()
+        reranker._model = mock_cross_encoder
+
+        results = reranker.rerank("test", sample_candidates, top_k=3)
+
+        assert len(results) == 3
+        assert reranker.last_run_succeeded is False
 
 
 class TestRerankerInit:
@@ -116,3 +131,34 @@ class TestRerankerInit:
     def test_lazy_model_loading(self):
         reranker = CrossEncoderReranker()
         assert reranker._model is None
+
+    def test_auto_device_resolves_to_cpu_when_cuda_unavailable(self):
+        with patch("src.rag.reranker.torch.cuda.is_available", return_value=False):
+            reranker = CrossEncoderReranker()
+
+        assert reranker.device == "auto"
+        assert reranker.resolved_device == "cpu"
+
+    def test_auto_device_resolves_to_cuda_when_available(self):
+        with patch("src.rag.reranker.torch.cuda.is_available", return_value=True):
+            reranker = CrossEncoderReranker()
+
+        assert reranker.resolved_device == "cuda"
+
+    def test_custom_device_is_preserved(self):
+        reranker = CrossEncoderReranker(device="cpu")
+        assert reranker.device == "cpu"
+        assert reranker.resolved_device == "cpu"
+
+    def test_model_loader_passes_resolved_device(self):
+        with patch("src.rag.reranker.CrossEncoder") as mock_cross_encoder:
+            mock_cross_encoder.return_value = MagicMock()
+
+            reranker = CrossEncoderReranker(model_name="custom/model", max_length=256, device="cpu")
+            _ = reranker.model
+
+        mock_cross_encoder.assert_called_once_with(
+            "custom/model",
+            max_length=256,
+            device="cpu",
+        )

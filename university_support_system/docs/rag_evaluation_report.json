@@ -2,14 +2,14 @@
   "metrics": {
     "total_questions": 20,
     "precision_at_1": 0.35,
-    "precision_at_3": 0.6,
-    "precision_at_5": 0.75,
-    "avg_top1_score": 0.7983,
-    "avg_response_ms": 23305.6,
+    "precision_at_3": 0.65,
+    "precision_at_5": 0.85,
+    "avg_top1_score": 0.7885,
+    "avg_response_ms": 30249.8,
     "by_difficulty": {
       "easy": {
         "total": 7,
-        "precision_at_3": 0.5714285714285714
+        "precision_at_3": 0.7142857142857143
       },
       "medium": {
         "total": 9,
@@ -28,42 +28,42 @@
       "expected_topic": "çap",
       "difficulty": "easy",
       "category": "factual",
-      "top1_match": false,
+      "top1_match": true,
       "any_top3_match": true,
       "any_top5_match": true,
       "result_count": 5,
-      "top1_score": 0.9732,
-      "top1_source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
-      "elapsed_ms": 27578.4,
+      "top1_score": 0.7787,
+      "top1_source": "yonerge_cift_anadal_yandal.pdf",
+      "elapsed_ms": 57207.2,
       "details": [
         {
           "rank": 1,
-          "source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
-          "score": 0.9732,
-          "matched": false
-        },
-        {
-          "rank": 2,
           "source": "yonerge_cift_anadal_yandal.pdf",
           "score": 0.7787,
           "matched": true
         },
         {
-          "rank": 3,
-          "source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
+          "rank": 2,
+          "source": "yonerge_cift_anadal_yandal.pdf",
           "score": 0.7026,
-          "matched": false
+          "matched": true
         },
         {
-          "rank": 4,
+          "rank": 3,
           "source": "ÖN LİSANS VE LİSANS YATAY GEÇİŞ YÖNERGESİ.pdf",
           "score": 0.6747,
           "matched": false
         },
         {
-          "rank": 5,
+          "rank": 4,
           "source": "yonerge_cift_anadal_yandal.pdf",
           "score": 0.5578,
+          "matched": true
+        },
+        {
+          "rank": 5,
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.1164,
           "matched": true
         }
       ]
@@ -79,18 +79,18 @@
       "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.8752,
-      "top1_source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
-      "elapsed_ms": 21400.5,
+      "top1_source": "yonerge_cift_anadal_yandal.pdf",
+      "elapsed_ms": 45454.8,
       "details": [
         {
           "rank": 1,
-          "source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
+          "source": "yonerge_cift_anadal_yandal.pdf",
           "score": 0.8752,
           "matched": true
         },
         {
           "rank": 2,
-          "source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
+          "source": "yonerge_cift_anadal_yandal.pdf",
           "score": 0.7784,
           "matched": true
         },
@@ -102,7 +102,7 @@
         },
         {
           "rank": 4,
-          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
           "score": 0.4825,
           "matched": false
         },
@@ -126,7 +126,7 @@
       "result_count": 5,
       "top1_score": 0.717,
       "top1_source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
-      "elapsed_ms": 20736.1,
+      "elapsed_ms": 20223.4,
       "details": [
         {
           "rank": 1,
@@ -136,27 +136,27 @@
         },
         {
           "rank": 2,
-          "source": "ÖNLİSANS, LİSANS VE LİSANSÜSTÜ DÜZEYİNDEKİ PROGRAMLARA ULUSLARARASI ÖĞRENCİ YATAY GEÇİŞ YÖNERGESİ.pdf",
+          "source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
           "score": 0.6965,
-          "matched": false
+          "matched": true
         },
         {
           "rank": 3,
+          "source": "UZAKTAN EĞİTİM TEZSİZ YÜKSEK LİSANS PROGRAMI YÖNERGESİ.pdf",
+          "score": 0.6864,
+          "matched": false
+        },
+        {
+          "rank": 4,
           "source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
           "score": 0.674,
           "matched": true
         },
         {
-          "rank": 4,
+          "rank": 5,
           "source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
           "score": 0.6438,
           "matched": true
-        },
-        {
-          "rank": 5,
-          "source": "ÖNLİSANS, LİSANS VE LİSANSÜSTÜ DÜZEYİNDEKİ PROGRAMLARA ULUSLARARASI ÖĞRENCİ YATAY GEÇİŞ YÖNERGESİ.pdf",
-          "score": 0.5863,
-          "matched": false
         }
       ]
     },
@@ -167,12 +167,12 @@
       "difficulty": "easy",
       "category": "factual",
       "top1_match": false,
-      "any_top3_match": false,
+      "any_top3_match": true,
       "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.9675,
       "top1_source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
-      "elapsed_ms": 24950.0,
+      "elapsed_ms": 29648.4,
       "details": [
         {
           "rank": 1,
@@ -182,9 +182,9 @@
         },
         {
           "rank": 2,
-          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
           "score": 0.8591,
-          "matched": false
+          "matched": true
         },
         {
           "rank": 3,
@@ -218,7 +218,7 @@
       "result_count": 5,
       "top1_score": 0.7785,
       "top1_source": "yonerge_onlisans_lisans_staj.pdf",
-      "elapsed_ms": 24216.4,
+      "elapsed_ms": 31635.9,
       "details": [
         {
           "rank": 1,
@@ -228,7 +228,7 @@
         },
         {
           "rank": 2,
-          "source": "ÖNLİSANS LİSANS ÖĞRETİMİ STAJ YÖNERGESİ.pdf",
+          "source": "yonerge_onlisans_lisans_staj.pdf",
           "score": 0.683,
           "matched": true
         },
@@ -264,7 +264,7 @@
       "result_count": 5,
       "top1_score": 0.9898,
       "top1_source": "TIP FAKÜLTESİ TIP DOKTORLUĞU PROGRAMI.pdf",
-      "elapsed_ms": 26157.7,
+      "elapsed_ms": 26332.9,
       "details": [
         {
           "rank": 1,
@@ -292,7 +292,7 @@
         },
         {
           "rank": 5,
-          "source": "DERS YETERLİLİK SINAVI UYGULAMA YÖNERGESİ.pdf",
+          "source": "yonerge_ders_yeterlilik_sinavi_uygulama.pdf",
           "score": 0.9559,
           "matched": true
         }
@@ -306,11 +306,11 @@
       "category": "factual",
       "top1_match": false,
       "any_top3_match": false,
-      "any_top5_match": false,
+      "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.8532,
       "top1_source": "ÖNLİSANS LİSANS ÖĞRETİMİ STAJ YÖNERGESİ.pdf",
-      "elapsed_ms": 31771.8,
+      "elapsed_ms": 27725.5,
       "details": [
         {
           "rank": 1,
@@ -332,9 +332,9 @@
         },
         {
           "rank": 4,
-          "source": "DİŞ HEKİMLİĞİ FAKÜLTESI LİSANS EĞİTİM-ÖĞRETİM YÖNERGESİ.pdf",
+          "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
           "score": 0.3694,
-          "matched": false
+          "matched": true
         },
         {
           "rank": 5,
@@ -356,7 +356,7 @@
       "result_count": 5,
       "top1_score": 0.6017,
       "top1_source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
-      "elapsed_ms": 26573.8,
+      "elapsed_ms": 30930.4,
       "details": [
         {
           "rank": 1,
@@ -401,12 +401,12 @@
       "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.5215,
-      "top1_source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
-      "elapsed_ms": 19306.6,
+      "top1_source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
+      "elapsed_ms": 23121.9,
       "details": [
         {
           "rank": 1,
-          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
           "score": 0.5215,
           "matched": false
         },
@@ -448,7 +448,7 @@
       "result_count": 5,
       "top1_score": 0.522,
       "top1_source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
-      "elapsed_ms": 17382.1,
+      "elapsed_ms": 32645.2,
       "details": [
         {
           "rank": 1,
@@ -476,7 +476,7 @@
         },
         {
           "rank": 5,
-          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
           "score": 0.0224,
           "matched": false
         }
@@ -494,7 +494,7 @@
       "result_count": 5,
       "top1_score": 0.8255,
       "top1_source": "BAĞIL DEĞERLENDİRME YÖNERGESİ.pdf",
-      "elapsed_ms": 41166.9,
+      "elapsed_ms": 48316.2,
       "details": [
         {
           "rank": 1,
@@ -504,26 +504,26 @@
         },
         {
           "rank": 2,
-          "source": "BAĞIL DEĞERLENDİRME YÖNERGESİ.pdf",
+          "source": "yonerge_bagil_degerlendirme.pdf",
           "score": 0.7611,
           "matched": false
         },
         {
           "rank": 3,
-          "source": "UZAKTAN EĞİTİM TEZSİZ YÜKSEK LİSANS PROGRAMI YÖNERGESİ.pdf",
-          "score": 0.6864,
-          "matched": false
-        },
-        {
-          "rank": 4,
           "source": "YABANCI DİL EĞİTİM-ÖĞRETİMİ YÖNERGESİ.pdf",
           "score": 0.6659,
           "matched": false
         },
         {
-          "rank": 5,
+          "rank": 4,
           "source": "UZAKTAN EĞİTİM TEZSİZ YÜKSEK LİSANS PROGRAMI YÖNERGESİ.pdf",
           "score": 0.5407,
+          "matched": false
+        },
+        {
+          "rank": 5,
+          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ SAMSUN SAĞLIK YÜKSEKOKULU UZAKTAN EBELİK LİSANS TAMAMLAMA PROGRAMI EĞİTİM-ÖĞRETİM VE SINAV YÖNETMELİĞİ.txt",
+          "score": 0.5022,
           "matched": false
         }
       ]
@@ -534,42 +534,42 @@
       "expected_topic": "ders",
       "difficulty": "medium",
       "category": "factual",
-      "top1_match": true,
+      "top1_match": false,
       "any_top3_match": true,
       "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.4089,
-      "top1_source": "yonetmelik_lisansustu_egitim_ogretim.pdf",
-      "elapsed_ms": 27991.9,
+      "top1_source": "ONDOKUZ MAYIS ÜNİVERSİTESİ LİSANSÜSTÜ EĞİTİM VE.pdf",
+      "elapsed_ms": 32713.1,
       "details": [
         {
           "rank": 1,
-          "source": "yonetmelik_lisansustu_egitim_ogretim.pdf",
+          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ LİSANSÜSTÜ EĞİTİM VE.pdf",
           "score": 0.4089,
-          "matched": true
+          "matched": false
         },
         {
           "rank": 2,
-          "source": "TIP FAKÜLTESİ TIP DOKTORLUĞU PROGRAMI.pdf",
-          "score": 0.3974,
-          "matched": false
+          "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+          "score": 0.3922,
+          "matched": true
         },
         {
           "rank": 3,
-          "source": "DİŞ HEKİMLİĞİ FAKÜLTESI LİSANS EĞİTİM-ÖĞRETİM YÖNERGESİ.pdf",
-          "score": 0.3922,
-          "matched": false
-        },
-        {
-          "rank": 4,
           "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
           "score": 0.3084,
           "matched": true
         },
         {
-          "rank": 5,
+          "rank": 4,
           "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
           "score": 0.2871,
+          "matched": false
+        },
+        {
+          "rank": 5,
+          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ LİSANSÜSTÜ EĞİTİM VE.pdf",
+          "score": 0.2683,
           "matched": false
         }
       ]
@@ -580,19 +580,19 @@
       "expected_topic": "öğrenim süresi",
       "difficulty": "medium",
       "category": "factual",
-      "top1_match": true,
+      "top1_match": false,
       "any_top3_match": true,
       "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.9845,
-      "top1_source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
-      "elapsed_ms": 20516.4,
+      "top1_source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
+      "elapsed_ms": 23458.3,
       "details": [
         {
           "rank": 1,
-          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
           "score": 0.9845,
-          "matched": true
+          "matched": false
         },
         {
           "rank": 2,
@@ -602,13 +602,13 @@
         },
         {
           "rank": 3,
-          "source": "DİŞ HEKİMLİĞİ FAKÜLTESI LİSANS EĞİTİM-ÖĞRETİM YÖNERGESİ.pdf",
+          "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
           "score": 0.8041,
-          "matched": false
+          "matched": true
         },
         {
           "rank": 4,
-          "source": "YÜZDE ON BAŞARI DEĞERLENDİRME YÖNERGESİ.pdf",
+          "source": "yonerge_yuzde_on_basari_degerlendirme.pdf",
           "score": 0.7965,
           "matched": false
         },
@@ -632,7 +632,7 @@
       "result_count": 5,
       "top1_score": 0.9879,
       "top1_source": "DİŞ HEKİMLİĞİ FAKÜLTESI LİSANS EĞİTİM-ÖĞRETİM YÖNERGESİ.pdf",
-      "elapsed_ms": 20190.1,
+      "elapsed_ms": 21282.4,
       "details": [
         {
           "rank": 1,
@@ -678,7 +678,7 @@
       "result_count": 5,
       "top1_score": 0.9896,
       "top1_source": "DERS YETERLİK, MUAFİYET VE İNTİBAK YÖNERGESİ.pdf",
-      "elapsed_ms": 19686.0,
+      "elapsed_ms": 22744.3,
       "details": [
         {
           "rank": 1,
@@ -718,19 +718,19 @@
       "expected_topic": "mazeret",
       "difficulty": "medium",
       "category": "factual",
-      "top1_match": false,
+      "top1_match": true,
       "any_top3_match": true,
       "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.9652,
-      "top1_source": "TIP FAKÜLTESİ TIP DOKTORLUĞU PROGRAMI.pdf",
-      "elapsed_ms": 15068.0,
+      "top1_source": "yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf",
+      "elapsed_ms": 17553.6,
       "details": [
         {
           "rank": 1,
-          "source": "TIP FAKÜLTESİ TIP DOKTORLUĞU PROGRAMI.pdf",
+          "source": "yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf",
           "score": 0.9652,
-          "matched": false
+          "matched": true
         },
         {
           "rank": 2,
@@ -746,9 +746,9 @@
         },
         {
           "rank": 4,
-          "source": "DİŞ HEKİMLİĞİ FAKÜLTESI LİSANS EĞİTİM-ÖĞRETİM YÖNERGESİ.pdf",
+          "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
           "score": 0.8127,
-          "matched": false
+          "matched": true
         },
         {
           "rank": 5,
@@ -770,7 +770,7 @@
       "result_count": 5,
       "top1_score": 0.2972,
       "top1_source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
-      "elapsed_ms": 24343.2,
+      "elapsed_ms": 25892.2,
       "details": [
         {
           "rank": 1,
@@ -780,13 +780,13 @@
         },
         {
           "rank": 2,
-          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ SAMSUN SAĞLIK YÜKSEKOKULU EĞİTİM-ÖĞRETİM VE SINAV YÖNETMELİĞİ.txt",
-          "score": 0.1873,
+          "source": "TIP FAKÜLTESİ TIP DOKTORLUĞU PROGRAMI.pdf",
+          "score": 0.2628,
           "matched": false
         },
         {
           "rank": 3,
-          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ SAMSUN SAĞLIK YÜKSEKOKULU EĞİTİM-ÖĞRETİM VE SINAV YÖNETMELİĞİ.txt",
+          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ SAMSUN SAĞLIK YÜKSEKOKULU UZAKTAN EBELİK LİSANS TAMAMLAMA PROGRAMI EĞİTİM-ÖĞRETİM VE SINAV YÖNETMELİĞİ.txt",
           "score": 0.1739,
           "matched": false
         },
@@ -798,9 +798,9 @@
         },
         {
           "rank": 5,
-          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ SAMSUN SAĞLIK YÜKSEKOKULU EĞİTİM-ÖĞRETİM VE SINAV YÖNETMELİĞİ.txt",
-          "score": 0.107,
-          "matched": false
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "score": 0.0648,
+          "matched": true
         }
       ]
     },
@@ -811,28 +811,28 @@
       "difficulty": "hard",
       "category": "factual",
       "top1_match": false,
-      "any_top3_match": false,
-      "any_top5_match": false,
+      "any_top3_match": true,
+      "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.7403,
-      "top1_source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
-      "elapsed_ms": 15252.8,
+      "top1_source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+      "elapsed_ms": 18827.1,
       "details": [
         {
           "rank": 1,
-          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
           "score": 0.7403,
           "matched": false
         },
         {
           "rank": 2,
-          "source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
+          "source": "yonerge_cift_anadal_yandal.pdf",
           "score": 0.7403,
-          "matched": false
+          "matched": true
         },
         {
           "rank": 3,
-          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "source": "ONDOKUZ MAYIS ÜNİVERSİTESİ ÖN LİSANS VE LİSANS.pdf",
           "score": 0.7241,
           "matched": false
         },
@@ -862,7 +862,7 @@
       "result_count": 5,
       "top1_score": 0.9862,
       "top1_source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
-      "elapsed_ms": 15511.2,
+      "elapsed_ms": 19179.0,
       "details": [
         {
           "rank": 1,
@@ -878,9 +878,9 @@
         },
         {
           "rank": 3,
-          "source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
+          "source": "ÖNLİSANS, LİSANS VE LİSANSÜSTÜ DÜZEYİNDEKİ PROGRAMLARA ULUSLARARASI ÖĞRENCİ YATAY GEÇİŞ YÖNERGESİ.pdf",
           "score": 0.9633,
-          "matched": true
+          "matched": false
         },
         {
           "rank": 4,
@@ -903,12 +903,12 @@
       "difficulty": "hard",
       "category": "factual",
       "top1_match": false,
-      "any_top3_match": true,
+      "any_top3_match": false,
       "any_top5_match": true,
       "result_count": 5,
       "top1_score": 0.9802,
       "top1_source": "ÖN LİSANS VE LİSANS AKADEMİK DANIŞMANLIK.pdf",
-      "elapsed_ms": 26311.6,
+      "elapsed_ms": 50104.0,
       "details": [
         {
           "rank": 1,
@@ -918,26 +918,26 @@
         },
         {
           "rank": 2,
-          "source": "yonerge_egitim_komisyonu.pdf",
-          "score": 0.7435,
+          "source": "ÖĞRENCİ KONUKEVİ UYGULAMA YÖNERGESİ.pdf",
+          "score": 0.9359,
           "matched": false
         },
         {
           "rank": 3,
+          "source": "EĞİTİM KOMİSYONU YÖNERGESİ.pdf",
+          "score": 0.7435,
+          "matched": false
+        },
+        {
+          "rank": 4,
           "source": "Öğrenci İşleri Birimi.txt",
           "score": 0.5711,
           "matched": true
         },
         {
-          "rank": 4,
+          "rank": 5,
           "source": "ÖĞRENCİ KONSEYİ YÖNERGESİ.pdf",
           "score": 0.3503,
-          "matched": false
-        },
-        {
-          "rank": 5,
-          "source": "ÇİFT ANA DAL (İKİNCİ LİSANS) VE YAN DAL PROGRAMI.pdf",
-          "score": 0.3134,
           "matched": false
         }
       ]

@@ -11,7 +11,7 @@ Kullanım:
     python scripts/index_documents.py --source "data/raw/student_affairs" --chunk-size 512 --reindex
 
     # Farklı kaynak klasör
-    python scripts/index_documents.py --source "bitirme veriler - öğrenci işleri" --reindex
+    python scripts/index_documents.py --source "data/raw/academic_programs" --reindex
 
     # Test sorgusu ile
     python scripts/index_documents.py --test-query "Ders kaydı nasıl yapılır?"
@@ -25,7 +25,22 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.constants import Department, collection_name_for_department, normalize_department_value
 from src.rag.pipeline import IndexingPipeline
+
+
+def _resolve_collection_name(source_path: Path, explicit_collection: str | None) -> str:
+    """Kaynak klasöre göre koleksiyon adını çözümler."""
+    if explicit_collection:
+        return explicit_collection
+
+    department_values = {department.value: department for department in Department}
+    for part in source_path.resolve().parts:
+        normalized = normalize_department_value(part)
+        if normalized in department_values:
+            return collection_name_for_department(department_values[normalized])
+
+    return collection_name_for_department(Department.STUDENT_AFFAIRS)
 
 
 def main():
@@ -42,8 +57,8 @@ def main():
     parser.add_argument(
         "--source",
         type=str,
-        default="bitirme veriler - öğrenci işleri",
-        help="Kaynak dosya klasörü (varsayılan: bitirme veriler - öğrenci işleri)",
+        default="data/raw/student_affairs",
+        help="Kaynak dosya klasörü (varsayılan: data/raw/student_affairs)",
     )
     parser.add_argument(
         "--chunk-size",
@@ -60,8 +75,8 @@ def main():
     parser.add_argument(
         "--collection",
         type=str,
-        default="student_affairs_docs",
-        help="ChromaDB koleksiyon adı (varsayılan: student_affairs_docs)",
+        default=None,
+        help="ChromaDB koleksiyon adı (boş bırakılırsa kaynak klasörden otomatik çözülür)",
     )
     parser.add_argument(
         "--reindex",
@@ -89,13 +104,15 @@ def main():
         print(f"❌ Klasör bulunamadı: {source_path}")
         sys.exit(1)
 
+    resolved_collection = _resolve_collection_name(source_path, args.collection)
+
     print("=" * 50)
     print("🚀 RAG İndeksleme Pipeline")
     print("=" * 50)
     print(f"   Kaynak:        {source_path}")
     print(f"   Chunk boyutu:  {args.chunk_size}")
     print(f"   Chunk örtüşme: {args.chunk_overlap}")
-    print(f"   Koleksiyon:    {args.collection}")
+    print(f"   Koleksiyon:    {resolved_collection}")
     print(f"   Yeniden oluş:  {'Evet' if args.reindex else 'Hayır'}")
     print("=" * 50)
 

@@ -1,1 +1,1 @@
-"""API modülü - FastAPI gateway."""
+"""API modülü - planlı veya iskelet FastAPI katmanı."""

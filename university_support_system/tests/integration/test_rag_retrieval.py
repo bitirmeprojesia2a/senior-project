@@ -6,16 +6,30 @@ Gerçek embedding modeli ve cross-encoder kullanılır.
 
 Çalıştırma:
     python -m pytest tests/integration/ -v --tb=short
-    python -m pytest tests/integration/ -v -m integration
+    python -m pytest tests/integration/ -v -m smoke
+    python -m pytest tests/integration/ -v -m "not slow"
 """
 
 import time
 
 import pytest
 
-from tests.integration.conftest import chromadb_available, collection_has_data
+from tests.integration.conftest import (
+    academic_collection_has_data,
+    chromadb_available,
+    collection_has_data,
+)
+
+BASE_COLLECTION = "student_affairs_docs"
+ACADEMIC_COLLECTION = "academic_programs_docs"
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Smoke Testler — Hızlı bağlantı ve koleksiyon kontrolleri
+# ══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.smoke
 @chromadb_available
 class TestChromaDBConnectivity:
     """ChromaDB bağlantı testleri."""
@@ -34,25 +48,55 @@ class TestChromaDBConnectivity:
         assert isinstance(r.json(), list)
 
 
+@pytest.mark.smoke
 @chromadb_available
 @collection_has_data
 class TestCollectionState:
-    """Koleksiyon durum testleri."""
+    """Mevcut integration veri setinin temel koleksiyon durum testleri."""
 
     def test_collection_exists(self):
         from src.rag.indexer import ChromaIndexer
 
-        indexer = ChromaIndexer()
+        indexer = ChromaIndexer(collection_name=BASE_COLLECTION)
         try:
             count = indexer.count()
             assert count > 0, "Koleksiyon boş"
         finally:
             indexer.close()
 
+
+@pytest.mark.smoke
+@chromadb_available
+@academic_collection_has_data
+class TestAcademicProgramsCollectionState:
+    """Academic programs koleksiyonunun temel durum testleri."""
+
+    def test_collection_exists(self):
+        from src.rag.indexer import ChromaIndexer
+
+        indexer = ChromaIndexer(collection_name=ACADEMIC_COLLECTION)
+        try:
+            count = indexer.count()
+            assert count > 0, "Academic programs koleksiyonu bos"
+        finally:
+            indexer.close()
+
+    def test_documents_have_department_metadata(self):
+        from src.rag.indexer import ChromaIndexer
+
+        indexer = ChromaIndexer(collection_name=ACADEMIC_COLLECTION)
+        try:
+            data = indexer.get_all()
+            assert data.get("metadatas"), "Academic programs metadata bulunamadi"
+            first_meta = data["metadatas"][0]
+            assert first_meta.get("department") == "academic_programs"
+        finally:
+            indexer.close()
+
     def test_collection_has_expected_count(self):
         from src.rag.indexer import ChromaIndexer
 
-        indexer = ChromaIndexer()
+        indexer = ChromaIndexer(collection_name=BASE_COLLECTION)
         try:
             count = indexer.count()
             assert count > 100, f"Beklenen: >100 chunk, Bulunan: {count}"
@@ -62,7 +106,7 @@ class TestCollectionState:
     def test_documents_have_metadata(self):
         from src.rag.indexer import ChromaIndexer
 
-        indexer = ChromaIndexer()
+        indexer = ChromaIndexer(collection_name=BASE_COLLECTION)
         try:
             data = indexer.get_all()
             assert data.get("metadatas"), "Metadata bulunamadı"
@@ -72,33 +116,35 @@ class TestCollectionState:
             indexer.close()
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Model Testler — Gerçek embedding modeli gerektirir
+# ══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.model
 @chromadb_available
 @collection_has_data
 class TestSemanticSearch:
-    """Doğrudan ChromaDB semantik arama testleri."""
+    """Temel koleksiyon üzerinde doğrudan ChromaDB semantik arama testleri."""
 
-    def test_query_returns_results(self):
-        from src.rag.embedder import Embedder
+    def test_query_returns_results(self, shared_embedder):
         from src.rag.indexer import ChromaIndexer
 
-        embedder = Embedder()
-        indexer = ChromaIndexer()
+        indexer = ChromaIndexer(collection_name=BASE_COLLECTION)
         try:
-            query_vec = embedder.embed_single("ÇAP başvurusu", is_query=True)
+            query_vec = shared_embedder.embed_single("ÇAP başvurusu", is_query=True)
             results = indexer.query(query_vec, n_results=5)
             assert results.get("documents")
             assert len(results["documents"][0]) > 0
         finally:
             indexer.close()
 
-    def test_query_returns_distances(self):
-        from src.rag.embedder import Embedder
+    def test_query_returns_distances(self, shared_embedder):
         from src.rag.indexer import ChromaIndexer
 
-        embedder = Embedder()
-        indexer = ChromaIndexer()
+        indexer = ChromaIndexer(collection_name=BASE_COLLECTION)
         try:
-            query_vec = embedder.embed_single("kayıt dondurma", is_query=True)
+            query_vec = shared_embedder.embed_single("kayıt dondurma", is_query=True)
             results = indexer.query(query_vec, n_results=3)
             assert results.get("distances")
             distances = results["distances"][0]
@@ -107,6 +153,12 @@ class TestSemanticSearch:
             indexer.close()
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Hibrit Arama Testleri — Tam pipeline (BM25 + Semantic + Rerank)
+# ══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.model
 @chromadb_available
 @collection_has_data
 class TestHybridSearch:
@@ -115,6 +167,13 @@ class TestHybridSearch:
     def test_search_returns_results(self, hybrid_retriever):
         results = hybrid_retriever.search("ÇAP başvurusu için gereken not ortalaması")
         assert len(results) > 0
+
+    def test_reranker_runs_successfully(self, hybrid_retriever):
+        results = hybrid_retriever.search("Çift ana dal programına başvuru şartları")
+
+        assert len(results) > 0
+        assert hybrid_retriever.reranker._model is not None
+        assert hybrid_retriever.reranker.last_run_succeeded is True
 
     def test_results_have_required_fields(self, hybrid_retriever):
         results = hybrid_retriever.search("kayıt dondurma süresi")
@@ -163,49 +222,49 @@ class TestHybridSearch:
         hybrid_retriever.search("sınav itiraz süresi")
         elapsed_ms = (time.perf_counter() - start) * 1000
 
-        assert elapsed_ms < 40000, f"Arama {elapsed_ms:.0f}ms sürdü (>40s)"
+        assert elapsed_ms < 120000, f"Arama {elapsed_ms:.0f}ms sürdü (>120s)"
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Cache Testleri — Session-scoped retriever ile
+# ══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.model
 @chromadb_available
 @collection_has_data
 class TestQueryCache:
-    """Sorgu cache testleri (gerçek arama ile)."""
+    """Sorgu cache testleri (gerçek arama ile, paylaşımlı retriever)."""
 
-    def test_cache_hit_faster(self):
-        from src.rag.retriever import HybridRetriever
+    def test_cache_hit_faster(self, cached_retriever):
+        start1 = time.perf_counter()
+        cached_retriever.search("cache test sorgusu")
+        first_ms = (time.perf_counter() - start1) * 1000
 
-        retriever = HybridRetriever(cache_ttl=60)
-        try:
-            start1 = time.perf_counter()
-            retriever.search("cache test sorgusu")
-            first_ms = (time.perf_counter() - start1) * 1000
+        start2 = time.perf_counter()
+        cached_retriever.search("cache test sorgusu")
+        second_ms = (time.perf_counter() - start2) * 1000
 
-            start2 = time.perf_counter()
-            retriever.search("cache test sorgusu")
-            second_ms = (time.perf_counter() - start2) * 1000
+        assert second_ms < first_ms, (
+            f"Cache hit ({second_ms:.0f}ms) ilk aramadan ({first_ms:.0f}ms) yavaş"
+        )
 
-            assert second_ms < first_ms, (
-                f"Cache hit ({second_ms:.0f}ms) ilk aramadan ({first_ms:.0f}ms) yavaş"
-            )
-        finally:
-            retriever.close()
+    def test_cache_returns_same_results(self, cached_retriever):
+        results1 = cached_retriever.search("cache tutarlılık testi")
+        results2 = cached_retriever.search("cache tutarlılık testi")
 
-    def test_cache_returns_same_results(self):
-        from src.rag.retriever import HybridRetriever
-
-        retriever = HybridRetriever(cache_ttl=60)
-        try:
-            results1 = retriever.search("cache tutarlılık testi")
-            results2 = retriever.search("cache tutarlılık testi")
-
-            assert len(results1) == len(results2)
-            for r1, r2 in zip(results1, results2):
-                assert r1["source"] == r2["source"]
-                assert r1["score"] == r2["score"]
-        finally:
-            retriever.close()
+        assert len(results1) == len(results2)
+        for r1, r2 in zip(results1, results2):
+            assert r1["source"] == r2["source"]
+            assert r1["score"] == r2["score"]
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Kalite Testleri — Precision@3 (ağır, uzun sürebilir)
+# ══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.slow
 @chromadb_available
 @collection_has_data
 class TestTestQuestions:

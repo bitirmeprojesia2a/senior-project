@@ -6,13 +6,15 @@ Collection oluşturma, doküman ekleme ve benzerlik sorgusu yapar.
 
 NOT: chromadb Python paketi yerine doğrudan REST API kullanılır.
      Bu sayede ek bağımlılık gerekmez ve her platformda çalışır.
-     ChromaDB 0.6+ multi-tenant API yapısını kullanır.
+     Mevcut repo, docker-compose içinde pinlenen ChromaDB 0.5.23 ile uyumlu REST uçlarını kullanır.
 
 Kullanım:
     from src.rag.indexer import ChromaIndexer
 
     indexer = ChromaIndexer()
-    indexer.create_collection("student_affairs_docs")
+    from src.core.constants import Department, collection_name_for_department
+
+    indexer.create_collection(collection_name_for_department(Department.STUDENT_AFFAIRS))
     indexer.add_documents(chunks, embeddings)
 """
 
@@ -31,19 +33,17 @@ class ChromaIndexer:
     ChromaDB REST API client.
 
     Docker'da çalışan ChromaDB sunucusuna httpx ile bağlanır.
-    ChromaDB 0.6+ multi-tenant API yapısını kullanır.
+    Mevcut uygulama, repo içinde pinli ChromaDB 0.5.23 REST sözleşmesine göre çalışır.
 
     Args:
         base_url: ChromaDB sunucu URL'si. None ise config'den okunur.
         collection_name: Varsayılan koleksiyon adı.
-        tenant: ChromaDB tenant adı.
-        database: ChromaDB database adı.
     """
 
     def __init__(
         self,
         base_url: str | None = None,
-        collection_name: str = "student_affairs_docs",
+        collection_name: str | None = None,
     ):
         self.base_url = base_url or settings.chroma.url
         self.collection_name = collection_name
@@ -60,6 +60,8 @@ class ChromaIndexer:
             Collection ID.
         """
         col_name = name or self.collection_name
+        if not col_name:
+            raise ValueError("Koleksiyon adi belirtilmeli.")
 
         # Önce mevcut mu kontrol et
         try:
@@ -80,7 +82,7 @@ class ChromaIndexer:
             "/api/v1/collections",
             json={
                 "name": col_name,
-                "metadata": {"department": "student_affairs"},
+                "metadata": {"department": self._infer_department_from_collection_name(col_name)},
             },
         )
 
@@ -96,6 +98,8 @@ class ChromaIndexer:
     def delete_collection(self, name: str | None = None) -> bool:
         """Koleksiyonu siler."""
         col_name = name or self.collection_name
+        if not col_name:
+            raise ValueError("Silinecek koleksiyon adi belirtilmeli.")
         try:
             # ChromaDB 0.5.x'te silme işlemi name ile yapılır ve REST path'i /api/v1/collections/{name} şeklindedir
             response = self._client.delete(f"/api/v1/collections/{col_name}")
@@ -111,6 +115,8 @@ class ChromaIndexer:
 
     def get_collection_id(self) -> str:
         """Mevcut koleksiyon ID'sini döndürür, yoksa oluşturur."""
+        if not self.collection_name:
+            raise ValueError("Koleksiyon adi belirtilmeden islem yapilamaz.")
         if self._collection_id is None:
             self.create_collection()
         return self._collection_id  # type: ignore[return-value]
@@ -197,6 +203,13 @@ class ChromaIndexer:
             )
 
         logger.info(f"documents_{operation}", total=total_written, collection=self.collection_name)
+
+    @staticmethod
+    def _infer_department_from_collection_name(collection_name: str) -> str:
+        """Koleksiyon adından departman değerini çıkarır."""
+        if collection_name.endswith("_docs"):
+            return collection_name[:-5]
+        return collection_name
 
     def query(
         self,

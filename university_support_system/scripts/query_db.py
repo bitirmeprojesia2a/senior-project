@@ -9,6 +9,7 @@ E5 modeli kullanıldığında sorguya otomatik "query:" prefix'i eklenir.
 Kullanım:
     python scripts/query_db.py "Ders kaydı nasıl yapılır?"
     python scripts/query_db.py "Kayıt yenileme işlemleri" --top-k 5
+    python scripts/query_db.py "OBS şifremi unuttum" --department it_support
 """
 
 import argparse
@@ -18,6 +19,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.constants import Department, collection_name_for_department, department_values
 from src.rag.embedder import Embedder
 from src.rag.indexer import ChromaIndexer
 
@@ -26,18 +28,35 @@ def main():
     parser = argparse.ArgumentParser(description="ChromaDB'de hızlı semantik arama yapar.")
     parser.add_argument("query", type=str, help="Aranacak soru veya metin")
     parser.add_argument("--top-k", type=int, default=5, help="Döndürülecek sonuç sayısı (varsayılan: 5)")
-    parser.add_argument("--collection", type=str, default="student_affairs_docs", help="Koleksiyon adı")
+    parser.add_argument(
+        "--collection",
+        type=str,
+        default=None,
+        help="Koleksiyon adı (verilmezse departmandan veya varsayılan akıştan çözülür)",
+    )
+    parser.add_argument(
+        "--department",
+        type=str,
+        choices=department_values(),
+        default=None,
+        help="Departman adı (ör: student_affairs, academic_programs, finance, it_support)",
+    )
 
     args = parser.parse_args()
+    collection_name = (
+        args.collection
+        or collection_name_for_department(args.department or Department.STUDENT_AFFAIRS)
+    )
 
     print(f"\n🔍 Aranıyor: '{args.query}'")
     print(f"   Model: E5 (sorgu prefix'i otomatik eklenir)")
+    print(f"   Koleksiyon: {collection_name}")
     print("-" * 50)
 
     try:
         # Sadece embedder ve indexer'ı başlat
         embedder = Embedder()
-        indexer = ChromaIndexer(collection_name=args.collection)
+        indexer = ChromaIndexer(collection_name=collection_name)
 
         # Sorguyu vektöre çevir — is_query=True (E5 prefix eklenir)
         query_vector = embedder.embed_single(args.query, is_query=True)
@@ -70,7 +89,8 @@ def main():
         import traceback
         traceback.print_exc()
     finally:
-        indexer.close()
+        if "indexer" in locals():
+            indexer.close()
 
 
 if __name__ == "__main__":

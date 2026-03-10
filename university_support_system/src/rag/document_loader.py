@@ -21,6 +21,8 @@ from typing import List, Optional
 import pdfplumber
 import structlog
 
+from src.core.constants import known_department_directory_names, normalize_department_value
+
 logger = structlog.get_logger()
 
 
@@ -52,8 +54,154 @@ class DocumentLoader:
 
     SUPPORTED_EXTENSIONS = {".pdf", ".txt"}
 
+    # Bilinen departman klasör isimleri
+    KNOWN_DEPARTMENTS = known_department_directory_names()
+
+    # Dosya adından akademik bölüm tespiti için anahtar kelime eşlemeleri.
+    # Her key bir bölüm kodu, value ise (bölüm_tam_adı, [anahtar_kelimeler]) tuple'ı.
+    # Anahtar kelimeler dosya adının lowercase halinde aranır.
+    BOLUM_KEYWORDS: dict[str, tuple[str, list[str]]] = {
+        "bilgisayar_muhendisligi": (
+            "Bilgisayar Mühendisliği",
+            ["bilgisayar", "bilgi_güv", "siber_güvenlik", "yazılım"],
+        ),
+        "elektrik_elektronik_muhendisligi": (
+            "Elektrik-Elektronik Mühendisliği",
+            ["eem", "elektrik", "elektronik"],
+        ),
+        "makine_muhendisligi": (
+            "Makine Mühendisliği",
+            ["makine", "mbm"],
+        ),
+        "insaat_muhendisligi": (
+            "İnşaat Mühendisliği",
+            ["inşaat", "inş_müh"],
+        ),
+        "endustri_muhendisligi": (
+            "Endüstri Mühendisliği",
+            ["endüstri", "end_454"],
+        ),
+        "cevre_muhendisligi": (
+            "Çevre Mühendisliği",
+            ["çevre_mühendisliği"],
+        ),
+        "kimya_muhendisligi": (
+            "Kimya Mühendisliği",
+            ["kimya_müh", "kimyamuh"],
+        ),
+        "kimya": (
+            "Kimya",
+            ["fef_kimya", "kimya_biyoloji", "kimya_mbg"],
+        ),
+        "biyoloji": (
+            "Biyoloji",
+            ["biyoloji"],
+        ),
+        "fizik": (
+            "Fizik",
+            ["fizik"],
+        ),
+        "matematik": (
+            "Matematik",
+            ["matematik", "mat_bitirme"],
+        ),
+        "istatistik": (
+            "İstatistik",
+            ["istatistik"],
+        ),
+        "tip_fakultesi": (
+            "Tıp Fakültesi",
+            ["tıp_fakültesi", "tip_fakultesi", "tıpta_uzmanlık", "intörn"],
+        ),
+        "dis_hekimligi": (
+            "Diş Hekimliği",
+            ["diş_hekimliği", "dis_hekimligi"],
+        ),
+        "veteriner": (
+            "Veteriner Fakültesi",
+            ["veteriner"],
+        ),
+        "guzel_sanatlar": (
+            "Güzel Sanatlar Fakültesi",
+            ["güzel_sanatlar"],
+        ),
+        "egitim_fakultesi": (
+            "Eğitim Fakültesi",
+            [
+                "sınıf_eğitimi", "okul_öncesi_öğretmenliği",
+                "sosyal_bilgiler_eğitimi", "özel_eğitim",
+                "ingiliz_dili_eğitimi", "pedagojik_formasyon",
+            ],
+        ),
+        "muhendislik_fakultesi": (
+            "Mühendislik Fakültesi",
+            ["mühendislik_fakültesi_ortak", "mühendislik_fakültesi_sınav"],
+        ),
+    }
+
     def __init__(self, min_content_length: int = 50):
         self.min_content_length = min_content_length
+
+    def _detect_department(self, file_path: Path) -> tuple[str, str]:
+        """
+        Dosya yolundan departman ve alt kategori bilgisini çıkarır.
+
+        Yol yapısı: data/raw/{department}/{subcategory}/dosya.pdf
+        Örnek: data/raw/academic_programs/yonergeler_egitim/uzaktan_egitim.pdf
+               → department="academic_programs", subcategory="yonergeler_egitim"
+
+        Returns:
+            (department, subcategory) tuple'ı.
+            Bulunamazsa ("unknown", "genel") döner.
+        """
+        parts = file_path.resolve().parts
+
+        for i, part in enumerate(parts):
+            if part in self.KNOWN_DEPARTMENTS:
+                department = normalize_department_value(part)
+                # Alt kategori: departman klasöründen sonraki ilk klasör
+                if i + 1 < len(parts) - 1:  # -1: dosya adını hariç tut
+                    subcategory = parts[i + 1]
+                else:
+                    subcategory = "genel"
+                return department, subcategory
+
+        return "unknown", "genel"
+
+    def _detect_bolum(self, filename: str) -> tuple[str, str]:
+        """
+        Dosya adından akademik bölümü tespit eder.
+
+        Dosya adının lowercase halinde BOLUM_KEYWORDS'teki anahtar kelimeleri
+        arar. Tek ve net bir eşleşme varsa ilgili bölümü döndürür.
+        Birden fazla farklı bölüm eşleşirse belgeyi genel kabul eder.
+
+        Args:
+            filename: Dosya adı (uzantı dahil).
+
+        Returns:
+            (bolum_kodu, bolum_adi) tuple'ı.
+            Eşleşme yoksa veya birden fazla bölüm eşleşirse
+            ("genel", "Genel") döner.
+        """
+        name_lower = filename.lower()
+        matched_bolumler: list[tuple[str, str]] = []
+
+        for bolum_kodu, (bolum_adi, keywords) in self.BOLUM_KEYWORDS.items():
+            if any(keyword in name_lower for keyword in keywords):
+                matched_bolumler.append((bolum_kodu, bolum_adi))
+
+        if len(matched_bolumler) == 1:
+            return matched_bolumler[0]
+
+        if len(matched_bolumler) > 1:
+            logger.info(
+                "multiple_bolum_matches",
+                filename=filename,
+                matches=[bolum_kodu for bolum_kodu, _ in matched_bolumler],
+            )
+
+        return "genel", "Genel"
 
     def load_file(self, file_path: Path, category: str = "genel") -> Optional[Document]:
         """
@@ -89,11 +237,20 @@ class DocumentLoader:
                 )
                 return None
 
+            # Departman ve alt kategoriyi dosya yolundan otomatik çıkar
+            department, subcategory = self._detect_department(file_path)
+
+            # Akademik bölümü dosya adından tespit et
+            bolum_kodu, bolum_adi = self._detect_bolum(file_path.name)
+
             metadata = {
                 "source": file_path.name,
                 "file_path": str(file_path),
                 "category": category,
-                "department": "student_affairs",
+                "department": department,
+                "subcategory": subcategory,
+                "bolum": bolum_kodu,
+                "bolum_adi": bolum_adi,
                 "file_type": suffix.lstrip("."),
                 "char_count": len(content),
             }
@@ -101,6 +258,9 @@ class DocumentLoader:
             logger.info(
                 "file_loaded",
                 file=file_path.name,
+                department=department,
+                subcategory=subcategory,
+                bolum=bolum_kodu,
                 chars=len(content),
                 words=len(content.split()),
             )

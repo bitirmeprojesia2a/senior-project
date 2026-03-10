@@ -8,9 +8,15 @@ import pytest
 
 from src.core.constants import (
     AgentRole,
+    build_department_routing_descriptions,
     ConfidenceLevel,
+    collection_name_for_department,
     Department,
+    department_values,
+    get_department_config,
     InternalTaskStatus,
+    known_department_directory_names,
+    normalize_department_value,
     Priority,
     RoutingStrategy,
     TaskType,
@@ -25,18 +31,45 @@ class TestDepartmentEnum:
     def test_department_values(self):
         """Tüm departman değerleri doğru tanımlı."""
         assert Department.FINANCE.value == "finance"
-        assert Department.IT.value == "it"
+        assert Department.IT_SUPPORT.value == "it_support"
         assert Department.STUDENT_AFFAIRS.value == "student_affairs"
+        assert Department.ACADEMIC_PROGRAMS.value == "academic_programs"
 
     def test_department_display_names(self):
         """Türkçe görüntüleme adları doğru."""
         assert Department.FINANCE.display_name == "Finans"
-        assert Department.IT.display_name == "Bilgi İşlem"
+        assert Department.IT_SUPPORT.display_name == "Bilgi İşlem"
         assert Department.STUDENT_AFFAIRS.display_name == "Öğrenci İşleri"
+        assert Department.ACADEMIC_PROGRAMS.display_name == "Akademik Programlar"
 
     def test_department_from_string(self):
         """String'den Department oluşturulabilir."""
         assert Department("finance") == Department.FINANCE
+        assert Department("academic_programs") == Department.ACADEMIC_PROGRAMS
+
+    def test_collection_name_for_department(self):
+        """Departmandan koleksiyon adı üretilebilir."""
+        assert collection_name_for_department(Department.STUDENT_AFFAIRS) == "student_affairs_docs"
+        assert collection_name_for_department(Department.ACADEMIC_PROGRAMS) == "academic_programs_docs"
+        assert collection_name_for_department("finance") == "finance_docs"
+        assert collection_name_for_department("it_support") == "it_support_docs"
+
+    def test_normalize_department_value(self):
+        """Departman alias değeri normalize edilebilir."""
+        assert normalize_department_value("it_support") == "it_support"
+        assert normalize_department_value("finance") == "finance"
+
+    def test_department_registry_helpers(self):
+        """Merkezi departman yardımcıları tutarlı çalışır."""
+        assert department_values() == [department.value for department in Department]
+        assert "academic_programs" in known_department_directory_names()
+        assert get_department_config(Department.FINANCE).display_name == "Finans"
+
+    def test_routing_descriptions_are_generated_from_registry(self):
+        """Prompt açıklamaları merkezden üretilir."""
+        descriptions = build_department_routing_descriptions()
+        assert any('"finance"' in line for line in descriptions)
+        assert any('"academic_programs"' in line for line in descriptions)
 
 
 class TestInternalTaskStatusEnum:

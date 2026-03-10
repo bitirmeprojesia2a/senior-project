@@ -5,16 +5,20 @@ BM25 tokenizer, deduplication, source relevance ve HybridRetriever mantığını
 Ağır bağımlılıklar (ChromaDB, Embedder, CrossEncoder) mock'lanır.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 import pytest
 from langchain_core.documents import Document
 
+from src.core.constants import Department
 from src.rag.retriever import (
     OFF_TOPIC_PENALTY,
+    HybridRetriever,
     _QueryCache,
     _apply_source_relevance,
     _detect_query_topic,
+    _plan_search_departments,
+    _score_departments,
     turkish_bm25_preprocess,
 )
 
@@ -278,3 +282,151 @@ class TestQueryCache:
         cache.put("q2::5", [{"score": 0.7}])
         assert cache.get("q1::5")[0]["score"] == 0.9
         assert cache.get("q2::5")[0]["score"] == 0.7
+
+
+class TestDepartmentPlanning:
+    """Retriever departman planlama testleri."""
+
+    def test_score_departments_finance_query(self):
+        scores = _score_departments("Harç ödeme dekontumu nasıl alırım?")
+        assert scores[Department.FINANCE] > 0
+        assert scores[Department.FINANCE] >= scores[Department.IT_SUPPORT]
+
+    def test_score_departments_academic_programs_query(self):
+        scores = _score_departments("Müfredat ve ders planı nerede yayınlanır?")
+        assert scores[Department.ACADEMIC_PROGRAMS] > 0
+
+    def test_plan_search_departments_with_explicit_department(self):
+        primary, fallback = _plan_search_departments("rastgele sorgu", Department.IT_SUPPORT)
+        assert primary == [Department.IT_SUPPORT]
+        assert fallback == []
+
+
+class TestHybridRetrieverDepartmentSearch:
+    """HybridRetriever koleksiyon planlama testleri."""
+
+    @staticmethod
+    def _make_candidate(source: str, score: float = 0.9) -> dict:
+        return {
+            "content": f"{source} icin test icerigi",
+            "source": source,
+            "category": "genel",
+            "score": score,
+            "metadata": {"source": source, "category": "genel"},
+        }
+
+    def _make_retriever(self) -> HybridRetriever:
+        retriever = object.__new__(HybridRetriever)
+        retriever.k = 5
+        retriever.min_score = 0.0
+        retriever.query_preprocessor = MagicMock()
+        retriever.query_preprocessor.preprocess.side_effect = lambda query: query
+        retriever.query_preprocessor.detect_query_type.return_value = "general"
+        retriever.reranker = MagicMock()
+        retriever.reranker.rerank.side_effect = lambda query, candidates, top_k: candidates[:top_k]
+        retriever._cache = _QueryCache(ttl=300)
+        return retriever
+
+    def test_search_uses_only_explicit_department_collection(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._search_collection_candidates = MagicMock(
+            return_value=[self._make_candidate("it_support_yonerge.pdf")]
+        )
+
+        results = HybridRetriever.search(
+            retriever,
+            "OBS sifremi nasil sifirlarim?",
+            department=Department.IT_SUPPORT,
+        )
+
+        assert len(results) == 1
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("it_support_docs", "OBS sifremi nasil sifirlarim?")
+        ]
+
+    def test_search_uses_fallback_collections_when_primary_is_empty(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._search_collection_candidates = MagicMock(
+            side_effect=[
+                [],
+                [],
+                [self._make_candidate("harc_duyurusu.pdf")],
+                [],
+            ]
+        )
+
+        with patch(
+            "src.rag.retriever._plan_search_departments",
+            return_value=(
+                [Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS],
+                [Department.FINANCE, Department.IT_SUPPORT],
+            ),
+        ):
+            results = HybridRetriever.search(retriever, "Belirsiz bir sorgu")
+
+        assert len(results) == 1
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("student_affairs_docs", "Belirsiz bir sorgu"),
+            call("academic_programs_docs", "Belirsiz bir sorgu"),
+            call("finance_docs", "Belirsiz bir sorgu"),
+            call("it_support_docs", "Belirsiz bir sorgu"),
+        ]
+
+    def test_search_cache_key_depends_on_department_plan(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._search_collection_candidates = MagicMock(
+            side_effect=[
+                [self._make_candidate("finans_kaynak.pdf")],
+                [self._make_candidate("akademik_program.pdf")],
+            ]
+        )
+
+        finance_results = HybridRetriever.search(
+            retriever,
+            "Ayni soru",
+            department=Department.FINANCE,
+        )
+        academic_results = HybridRetriever.search(
+            retriever,
+            "Ayni soru",
+            department=Department.ACADEMIC_PROGRAMS,
+        )
+
+        assert finance_results[0]["source"] == "finans_kaynak.pdf"
+        assert academic_results[0]["source"] == "akademik_program.pdf"
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("finance_docs", "Ayni soru"),
+            call("academic_programs_docs", "Ayni soru"),
+        ]
+
+    def test_search_uses_explicit_constructor_collection(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = "academic_programs_docs"
+        retriever._search_collection_candidates = MagicMock(
+            return_value=[self._make_candidate("mufredat_belgesi.pdf")]
+        )
+
+        results = HybridRetriever.search(retriever, "Rastgele bir soru")
+
+        assert len(results) == 1
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("academic_programs_docs", "Rastgele bir soru")
+        ]
+
+
+class TestDepartmentPlanningFallbacks:
+    """Retriever fallback planlama testleri."""
+
+    def test_plan_search_departments_without_signal(self):
+        primary, fallback = _plan_search_departments("Merhaba bugün nasılsın?")
+        assert primary == list(Department)
+        assert fallback == []
+
+    def test_plan_search_departments_with_close_scores(self):
+        primary, fallback = _plan_search_departments("ÇAP ve müfredat koşulları nelerdir?")
+        assert Department.STUDENT_AFFAIRS in primary
+        assert Department.ACADEMIC_PROGRAMS in primary
+        assert fallback == []

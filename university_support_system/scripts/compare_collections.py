@@ -6,6 +6,7 @@ Aynı soruyu farklı chunk boyutlarıyla oluşturulmuş koleksiyonlarda arar.
 
 Kullanım:
     python scripts/compare_collections.py "Kayıt dondurma nasıl yapılır"
+    python scripts/compare_collections.py "Müfredat nedir?" --department academic_programs
 """
 
 import argparse
@@ -15,22 +16,51 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.constants import Department, collection_name_for_department, department_values
 from src.rag.embedder import Embedder
 from src.rag.indexer import ChromaIndexer
+
+
+def _build_collection_family(base_collection: str) -> list[str]:
+    """Aynı veri ailesine ait varyant koleksiyon adlarını üretir."""
+    return [
+        f"{base_collection}_256",
+        base_collection,
+        f"{base_collection}_1024",
+    ]
+
 
 def main():
     parser = argparse.ArgumentParser(description="Farklı koleksiyonlardaki arama sonuçlarını karşılaştırır.")
     parser.add_argument("query", type=str, help="Aranacak soru")
-    
+    parser.add_argument(
+        "--department",
+        type=str,
+        choices=department_values(),
+        default=None,
+        help="Baz koleksiyonu departmandan üret (ör: student_affairs, academic_programs)",
+    )
+    parser.add_argument(
+        "--collection-base",
+        type=str,
+        default=None,
+        help="Karşılaştırılacak baz koleksiyon adı (ör: student_affairs_docs)",
+    )
+
     args = parser.parse_args()
-    
-    collections = [
-        "student_affairs_docs_256",
-        "student_affairs_docs",  # Bu 512 olan
-        "student_affairs_docs_1024"
-    ]
+
+    base_collection = (
+        args.collection_base
+        or (
+            collection_name_for_department(args.department)
+            if args.department
+            else collection_name_for_department(Department.STUDENT_AFFAIRS)
+        )
+    )
+    collections = _build_collection_family(base_collection)
 
     print(f"\n🔍 Aranıyor: '{args.query}'")
+    print(f"📚 Baz koleksiyon: {base_collection}")
     print("=" * 70)
 
     try:

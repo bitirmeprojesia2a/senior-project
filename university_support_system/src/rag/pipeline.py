@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional
 from tqdm import tqdm
 import structlog
 
+from src.core.constants import Department, collection_name_for_department, normalize_department_value
 from src.rag.document_loader import DocumentLoader
 from src.rag.text_preprocessor import TextPreprocessor
 from src.rag.chunker import TextChunker, Chunk
@@ -49,10 +50,11 @@ class IndexingPipeline:
         self,
         chunk_size: int = 1024,
         chunk_overlap: int = 128,
-        collection_name: str = "student_affairs_docs",
+        collection_name: str | None = None,
         embedding_model: str | None = None,
         chroma_url: str | None = None,
     ):
+        self._explicit_collection_name = collection_name
         self.loader = DocumentLoader()
         self.preprocessor = TextPreprocessor()
         self.chunker = TextChunker(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
@@ -78,6 +80,7 @@ class IndexingPipeline:
             İndeksleme istatistikleri.
         """
         source_dir = Path(source_dir)
+        self.indexer.collection_name = self._resolve_collection_name(source_dir)
         logger.info("pipeline_start", source=str(source_dir), reindex=reindex)
 
         # 1. Koleksiyon hazırlığı
@@ -184,6 +187,25 @@ class IndexingPipeline:
 
         logger.info("pipeline_complete", **stats)
         return stats
+
+    def _resolve_collection_name(self, source_dir: Path) -> str:
+        """Kaynak klasöre göre kullanılacak koleksiyon adını belirler."""
+        if self._explicit_collection_name:
+            return self._explicit_collection_name
+        department = self._detect_department_from_source_dir(source_dir)
+        return collection_name_for_department(department)
+
+    @staticmethod
+    def _detect_department_from_source_dir(source_dir: Path) -> Department:
+        """Kaynak klasör yolundan ana departmanı tespit eder."""
+        department_values = {department.value: department for department in Department}
+        for part in source_dir.resolve().parts:
+            normalized = normalize_department_value(part)
+            if normalized in department_values:
+                return department_values[normalized]
+        raise ValueError(
+            f"Kaynak klasor yolundan resmi departman tespit edilemedi: {source_dir}"
+        )
 
     def test_query(self, query: str, n_results: int = 3) -> Dict[str, Any]:
         """

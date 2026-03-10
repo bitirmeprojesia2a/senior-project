@@ -11,23 +11,23 @@ help: ## Kullanılabilir komutları listeler
 	@echo.
 	@echo   Kullanilabilir Komutlar:
 	@echo   ──────────────────────────────────────
-	@echo   make setup        - Ilk kurulum (venv + bagimliliklar)
-	@echo   make install      - Bagimliliklari kur
+	@echo   make setup        - Ilk kurulum (.env dahil)
+	@echo   make install      - Gelistirme bagimliliklarini kur
 	@echo   make test         - Tum testleri calistir
-	@echo   make test-unit    - Sadece unit testleri calistir
-	@echo   make test-cov     - Coverage ile testleri calistir
+	@echo   make test-unit    - Unit testleri calistir
+	@echo   make test-cov     - Coverage raporuyla testleri calistir
 	@echo   make lint         - Kod kalitesi kontrolu
 	@echo   make format       - Kodu formatla
 	@echo   make db-migrate   - Veritabani migration uygula
 	@echo   make db-revision  - Yeni migration dosyasi olustur
-	@echo   make seed         - Test verisi yukle
-	@echo   make docker-up    - Docker servisleri baslat
-	@echo   make docker-down  - Docker servisleri durdur
+	@echo   make seed         - Sentetik ogrenci verisi yukle
+	@echo   make docker-up    - Altyapi servislerini baslat
+	@echo   make docker-down  - Altyapi servislerini durdur
 	@echo   make clean        - Gecici dosyalari temizle
 	@echo.
 
 # ── Kurulum ─────────────────────────────────────
-setup: ## İlk kurulum
+setup: ## İlk kurulum (.env dahil)
 	python -m venv venv
 	venv\Scripts\activate && pip install -r requirements-dev.txt
 	copy .env.example .env
@@ -43,13 +43,13 @@ install-prod: ## Sadece runtime bağımlılıkları kur
 test: ## Tüm testleri çalıştır
 	python -m pytest tests/ -v --tb=short
 
-test-unit: ## Sadece unit testleri çalıştır
+test-unit: ## Unit testleri çalıştır
 	python -m pytest tests/unit/ -v --tb=short
 
 test-integration: ## Entegrasyon testlerini çalıştır (ChromaDB gerekli)
 	python -m pytest tests/integration/ -v --tb=short
 
-evaluate: ## RAG değerlendirme raporu üret (ChromaDB gerekli)
+evaluate: ## RAG kalite raporu üret (ChromaDB gerekli)
 	python scripts/evaluate_rag.py
 
 test-cov: ## Coverage ile testleri çalıştır
@@ -74,14 +74,14 @@ db-downgrade: ## Son migration'ı geri al
 db-revision: ## Yeni migration dosyası oluştur (MSG="açıklama" ile kullan)
 	python -m alembic revision --autogenerate -m "$(MSG)"
 
-seed: ## Test verisi yükle
-	python scripts/seed_data.py
+seed: ## Sentetik öğrenci verisi yükle
+	python scripts/seed_synthetic_data.py
 
 # ── Docker ──────────────────────────────────────
-docker-up: ## Docker servisleri başlat
+docker-up: ## Altyapı servislerini başlat
 	docker compose up -d
 
-docker-down: ## Docker servisleri durdur
+docker-down: ## Altyapı servislerini durdur
 	docker compose down
 
 docker-logs: ## Docker loglarını göster

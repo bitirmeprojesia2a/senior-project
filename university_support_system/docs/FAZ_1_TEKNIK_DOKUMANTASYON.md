@@ -529,7 +529,7 @@ Her indeksleme sonrası `data/metadata/doc_registry.json` dosyası otomatik olar
 ```json
 {
   "generated_at": "2026-02-28T18:30:00+00:00",
-  "source_dir": "bitirme veriler - öğrenci işleri",
+  "source_dir": "data/raw/student_affairs",
   "total_documents": 198,
   "total_chunks": 5303,
   "embedding_model": "BAAI/bge-m3",
@@ -607,7 +607,7 @@ Son indeksleme sonuçları (28 Şubat 2026):
 | Maksimum chunk boyutu | ~1100 karakter |
 | Embedding modeli | BAAI/bge-m3 |
 | Vektör boyutu | 1024 |
-| ChromaDB koleksiyon | `student_affairs_docs` |
+| ChromaDB koleksiyon | `student_affairs_docs` (güncel mimaride departman bazlı dinamik koleksiyonlardan yalnızca biri) |
 
 ---
 
@@ -623,10 +623,10 @@ Son indeksleme sonuçları (28 Şubat 2026):
 | Coverage | pytest-cov 6.0.0 |
 | Test Veritabanı | SQLite in-memory (her test izole) |
 
-**Son Çalıştırma:** 28 Şubat 2026 — **149/149 unit test geçti** ✅ (48.19 saniye)
+**Son Çalıştırma:** 8 Mart 2026 — **206/206 unit test geçti** ✅
 
 ```
-==================== 149 passed in 48.19s ====================
+==================== 206 passed ====================
 ```
 
 ### 7.2 Test Dosyaları Özeti
@@ -655,8 +655,8 @@ Son indeksleme sonuçları (28 Şubat 2026):
 | | `TestSemanticSearch` | 2 | Koleksiyon mevcut | ChromaDB direkt sorgu, mesafe doğrulama |
 | | `TestHybridSearch` | 7 | Koleksiyon mevcut | Tam pipeline, kaynak doğruluğu, sıralama, performans |
 | | `TestQueryCache` | 2 | Koleksiyon mevcut | Cache hit hızı, tutarlılık |
-| | `TestTestQuestions` | 1 | Koleksiyon mevcut | 20 soruluk Precision@3 ≥ %70 hedefi |
-| **Toplam** | | **17** | | **ChromaDB yoksa otomatik atlanır** |
+| | `TestTestQuestions` | 1 | Koleksiyon mevcut | Integration fixture'ının kullandığı 20 soruluk `student_affairs` alt kümesinde Precision@3 ≥ %70 hedefi |
+| **Toplam** | | **18** | | **ChromaDB yoksa otomatik atlanır** |
 
 > **Not:** Unit testler Docker servisi **olmadan** çalışır (tüm ağır bağımlılıklar mock'ludur). Integration testler ise ChromaDB'nin çalışıyor ve indekslenmiş olmasını gerektirir; erişilemezse `pytest.mark.skipif` ile atlanır.
 
@@ -916,7 +916,7 @@ Document Loader, Text Preprocessor ve TextChunker modüllerini test eder. Dosya 
 
 ---
 
-#### 7.3.6 `test_rag_retrieval.py` — Integration Testleri (17 test, ChromaDB gerekli)
+#### 7.3.6 `test_rag_retrieval.py` — Integration Testleri (20 test, ChromaDB gerekli)
 
 ChromaDB'nin çalışıyor ve indekslenmiş olmasını gerektirir. Gerçek embedding modeli ve cross-encoder kullanılır. ChromaDB erişilemezse tüm testler otomatik atlanır.
 
@@ -945,7 +945,7 @@ ChromaDB'nin çalışıyor ve indekslenmiş olmasını gerektirir. Gerçek embed
 | `test_cap_query_returns_cap_source` | ÇAP sorusu ÇAP kaynağı döndürür | Top-3'te ÇAP kaynağı |
 | `test_yatay_gecis_query` | Yatay geçiş sorusu doğru kaynak döndürür | Top-3'te yatay geçiş kaynağı |
 | `test_top_k_parameter` | `top_k` parametresi çalışır | `top_k=3` → max 3 sonuç |
-| `test_performance_under_threshold` | Yanıt süresi 10s altında | `elapsed_ms < 10000` |
+| `test_performance_under_threshold` | Mevcut performans sınırı 40s altında | `elapsed_ms < 40000` |
 
 **TestQueryCache** — Canlı Cache Testleri (2 test)
 
@@ -958,7 +958,7 @@ ChromaDB'nin çalışıyor ve indekslenmiş olmasını gerektirir. Gerçek embed
 
 | Test | Açıklama | Doğrulanan Davranış |
 |------|----------|---------------------|
-| `test_at_least_70_percent_precision_at_3` | 20 soruluk test setinde Precision@3 ≥ %70 | `correct / total >= 0.70` |
+| `test_at_least_70_percent_precision_at_3` | Integration fixture'ının sağladığı `student_affairs` alt kümesinde Precision@3 ≥ %70 | `correct / total >= 0.70` |
 
 ---
 
@@ -1137,7 +1137,7 @@ venv\Scripts\python.exe scripts\evaluate_rag.py --no-cache
 - Ortalama yanıt süresi (ms)
 - Başarısız sorgular ve nedenleri
 
-**Test Soruları:** `data/test/rag_test_questions.json` — 20 soru, 3 zorluk seviyesi, 2 kategori (factual/procedural), beklenen kaynak kalıpları.
+**Test Soruları:** `data/test/rag_test_questions.json` — departman etiketli ortak soru havuzu. Güncel durumda 30 soru içerir: 20 `student_affairs`, 10 `academic_programs`.
 
 ### 9.5 Integration Testler
 
@@ -1185,7 +1185,7 @@ venv\Scripts\python.exe -m pytest tests/integration/ -v --tb=short
 | `src/core/config.py` | Güncellendi | RerankerSettings eklendi, EmbeddingSettings güncellendi, min_similarity=0.0 |
 | `scripts/test_hybrid_search.py` | Güncellendi | v3 başlığı, `--full` parametresi, karakter sayısı gösterimi |
 | `scripts/evaluate_rag.py` | Yeni Dosya | Otomatik RAG değerlendirme — Precision@k, rapor üretimi |
-| `data/test/rag_test_questions.json` | Yeni Dosya | 20 soruluk standart test seti (zorluk, kategori, beklenen kaynaklar) |
+| `data/test/rag_test_questions.json` | Güncellendi | Departman etiketli ortak test havuzu (20 `student_affairs`, 10 `academic_programs`) |
 | `.env.example` | Güncellendi | Güncel model adları, RAG parametreleri, Reranker ayarları |
 | `pyproject.toml` | Güncellendi | Integration test marker tanımı |
 | `Makefile` | Güncellendi | `evaluate` komutu eklendi |
@@ -1195,7 +1195,7 @@ venv\Scripts\python.exe -m pytest tests/integration/ -v --tb=short
 | `tests/unit/test_retriever.py` | Yeni Dosya | 25 test — BM25, konu tespiti, source relevance, dedup, cache |
 | `tests/unit/test_rag_pipeline.py` | Güncellendi | 29 test — 5 yeni hash ID üretimi testi eklendi |
 | `tests/integration/conftest.py` | Yeni Dosya | ChromaDB erişilebilirlik kontrolü, session-scoped fixture'lar |
-| `tests/integration/test_rag_retrieval.py` | Yeni Dosya | 17 test — bağlantı, koleksiyon, hibrit arama, cache, Precision@3 |
+| `tests/integration/test_rag_retrieval.py` | Güncellendi | 20 test — bağlantı, koleksiyon, hibrit arama, reranker doğrulaması, cache, Precision@3 ve ek smoke kapsamı |
 
 ---
 
@@ -1211,3 +1211,55 @@ venv\Scripts\python.exe -m pytest tests/integration/ -v --tb=short
 ---
 
 *Bu doküman, projenin FAZ 1 kapsamındaki tüm teknik çalışmaları yansıtmaktadır. FAZ 2 tamamlandığında güncellenecektir.*
+
+---
+
+## 13. MART 2026 SONRASI GUNCELLEME NOTLARI
+
+Bu bölüm, FAZ 1 tamamlandıktan sonra RAG ve test katmanında yapılan güncellemeleri belgelemek için eklenmiştir.
+
+### 13.1 Çok Departmanlı RAG Genişlemesi
+
+* `academic_programs` resmi departman olarak çekirdek sözleşmeye eklendi.
+* `it` adı veri klasörleri ve koleksiyonlarla hizalanarak `it_support` olarak standartlaştırıldı.
+* Koleksiyonlar artık ana departman bazlı çözülür:
+  * `student_affairs_docs`
+  * `academic_programs_docs`
+  * `finance_docs`
+  * `it_support_docs`
+* `document_loader.py` tarafında `academic_programs` belgeleri için `bolum` ve `bolum_adi` metadata alanları üretilir.
+* Bir belge birden fazla bölüme işaret ediyorsa bölüm metadata'sı `genel` olarak atanır.
+
+### 13.2 Dinamik Script ve Pipeline Akışı
+
+* `scripts/index_documents.py` kaynak klasöre göre koleksiyon adını dinamik çözebilir.
+* `scripts/query_db.py`, `scripts/test_hybrid_search.py`, `scripts/compare_collections.py` ve `scripts/evaluate_rag.py` departman veya koleksiyon parametreleriyle yeni çok koleksiyonlu yapıyı kullanabilir.
+* `evaluate_rag.py` artık soru havuzunu `department` alanına göre filtreleyebilir.
+
+### 13.3 Test Envanteri ve Marker Yapısı
+
+* Güncel test envanteri: **206 unit test**, **20 integration test**.
+* `tests/integration/test_rag_retrieval.py` dosyası `smoke`, `model` ve `slow` marker'ları ile ayrıştırılmıştır.
+* `shared_embedder`, `hybrid_retriever` ve `cached_retriever` gibi session-scoped fixture'lar integration testlerde tekrar yükleme maliyetini azaltmak için kullanılır.
+* Reranker'ın gerçekten çalıştığını doğrulayan `test_reranker_runs_successfully` testi eklenmiştir.
+* Reranker tarafında son çalışmanın başarılı olup olmadığını izleyen `last_run_succeeded` alanı testlerde kullanılmaktadır.
+
+### 13.4 Değerlendirme Veri Seti
+
+* `data/test/rag_test_questions.json` artık tek departmanlı değil, departman etiketli ortak soru havuzudur.
+* Güncel soru havuzu:
+  * 20 soru `student_affairs`
+  * 10 soru `academic_programs`
+* Integration fixture'ları şimdilik yalnızca `student_affairs` alt kümesini kullanır.
+
+### 13.5 GPU Hazırlığı
+
+* `embedder.py` ve `reranker.py` tarafına `auto | cpu | cuda` cihaz seçimi eklenmiştir.
+* `config.py` içinde `EMBEDDING_DEVICE` ve `RERANKER_DEVICE` ile merkezi cihaz yönetimi sağlanır.
+* CUDA destekli `torch` kuruluysa `auto` modu GPU'yu seçer; aksi halde CPU'ya düşer.
+
+### 13.6 Açık Teknik Borçlar
+
+* Departman display adı, routing açıklaması, keyword kümesi ve kaynak klasör bilgisini tek yerde toplayan merkezi kayıt yapısı eklenmiştir; yeni departman ekleme maliyeti önceki duruma göre azalmıştır.
+* Buna rağmen yeni departman için gerçek doküman verisi, soru havuzu ve integration kapsamı hâlâ ayrıca genişletilmelidir.
+* RAG kalite ölçümünde dosya adı kalıplarına bağımlılık tamamen kaldırılmamıştır.

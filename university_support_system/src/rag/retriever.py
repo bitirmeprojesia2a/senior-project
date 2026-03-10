@@ -13,7 +13,11 @@ v3.0 Degisiklikler:
 Kullanim:
     from src.rag.retriever import HybridRetriever
 
-    retriever = HybridRetriever(collection_name="student_affairs_docs")
+    from src.core.constants import Department, collection_name_for_department
+
+    retriever = HybridRetriever(
+        collection_name=collection_name_for_department(Department.STUDENT_AFFAIRS)
+    )
     results = retriever.search("Cift anadal basvurusu nasil yapilir?")
 """
 
@@ -29,6 +33,12 @@ from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 
 from src.core.config import settings
+from src.core.constants import (
+    Department,
+    collection_name_for_department,
+    get_department_config,
+    normalize_department_value,
+)
 from src.rag.indexer import ChromaIndexer
 from src.rag.embedder import Embedder
 from src.rag.query_preprocessor import QueryPreprocessor
@@ -119,6 +129,11 @@ _TOPIC_SOURCE_PATTERNS: Dict[str, List[str]] = {
 # Uzun kalıplar önce eşleşmeli (örn. "çift ana dal" > "çap")
 _TOPIC_KEYS_BY_LENGTH = sorted(_TOPIC_SOURCE_PATTERNS.keys(), key=len, reverse=True)
 
+_DEPARTMENT_KEYWORDS: Dict[Department, List[str]] = {
+    department: list(get_department_config(department).keywords)
+    for department in Department
+}
+
 
 def _detect_query_topic(query: str) -> Optional[str]:
     """Sorgudaki ana konu anahtar kelimesini tespit eder."""
@@ -127,6 +142,43 @@ def _detect_query_topic(query: str) -> Optional[str]:
         if topic in q:
             return topic
     return None
+
+
+def _score_departments(query: str) -> Dict[Department, int]:
+    """Sorgu için departman bazlı anahtar kelime skoru üretir."""
+    q = _turkish_lower(query)
+    scores: Dict[Department, int] = {}
+    for department, keywords in _DEPARTMENT_KEYWORDS.items():
+        score = sum(1 for keyword in keywords if _turkish_lower(keyword) in q)
+        scores[department] = score
+    return scores
+
+
+def _plan_search_departments(
+    query: str,
+    explicit_department: Department | str | None = None,
+) -> tuple[List[Department], List[Department]]:
+    """Sorgu için birincil ve fallback departman planını belirler."""
+    if explicit_department is not None:
+        normalized = explicit_department if isinstance(explicit_department, Department) else normalize_department_value(explicit_department)
+        department = normalized if isinstance(normalized, Department) else Department(normalized)
+        return [department], []
+
+    scores = _score_departments(query)
+    ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    top_department, top_score = ranked[0]
+    second_department, second_score = ranked[1]
+
+    if top_score == 0:
+        return [department for department, _ in ranked], []
+
+    if second_score > 0 and second_score >= top_score - 1:
+        primary = [top_department, second_department]
+        fallback = [department for department, score in ranked[2:] if score > 0]
+        return primary, fallback
+
+    fallback = [second_department] if second_score > 0 else []
+    return [top_department], fallback
 
 
 def _apply_source_relevance(
@@ -258,7 +310,7 @@ class HybridRetriever:
 
     def __init__(
         self,
-        collection_name: str = "student_affairs_docs",
+        collection_name: str | None = None,
         k: int = 5,
         bm25_weight: float = 0.5,
         chroma_weight: float = 0.5,
@@ -275,26 +327,36 @@ class HybridRetriever:
         self.query_preprocessor = QueryPreprocessor(
             enable_expansion=enable_query_expansion
         )
-        self.indexer = ChromaIndexer(collection_name=collection_name)
         self.embedder = Embedder()
         self.reranker = CrossEncoderReranker()
 
-        self._ensemble: Optional[EnsembleRetriever] = None
-        self._bm25_doc_count = 0
+        self._indexers: Dict[str, ChromaIndexer] = {}
+        self._ensembles: Dict[str, EnsembleRetriever] = {}
+        self._bm25_doc_counts: Dict[str, int] = {}
         self._cache = _QueryCache(ttl=cache_ttl)
 
-    def _ensure_ensemble(self) -> EnsembleRetriever:
-        """Ensemble retriever'ı tembel (lazy) olarak başlatır."""
-        if self._ensemble is not None:
-            return self._ensemble
+    def _get_indexer(self, collection_name: str) -> ChromaIndexer:
+        """Koleksiyon için indexer örneğini döndürür."""
+        indexer = self._indexers.get(collection_name)
+        if indexer is None:
+            indexer = ChromaIndexer(collection_name=collection_name)
+            self._indexers[collection_name] = indexer
+        return indexer
 
-        logger.info("building_hybrid_retriever", collection=self.collection_name)
+    def _ensure_ensemble(self, collection_name: str) -> EnsembleRetriever:
+        """Ensemble retriever'ı tembel (lazy) olarak başlatır."""
+        ensemble = self._ensembles.get(collection_name)
+        if ensemble is not None:
+            return ensemble
+
+        logger.info("building_hybrid_retriever", collection=collection_name)
 
         internal_k = self.k * self.OVERSAMPLE_FACTOR
+        indexer = self._get_indexer(collection_name)
 
         # 1. Chroma Retriever (Semantic)
         chroma_retriever = ChromaRestRetriever(
-            indexer=self.indexer, embedder=self.embedder, k=internal_k
+            indexer=indexer, embedder=self.embedder, k=internal_k
         )
 
         # 2. BM25 hazırlık — page_content ORİJİNAL metin olmalı
@@ -302,7 +364,7 @@ class HybridRetriever:
         #    Boylece EnsembleRetriever dedup'i dogru calisir cunku
         #    BM25 ve ChromaDB ayni page_content'e sahip olur.
         logger.info("fetching_data_for_bm25_index")
-        all_data = self.indexer.get_all()
+        all_data = indexer.get_all()
 
         documents: List[Document] = []
         if all_data.get("documents"):
@@ -314,7 +376,7 @@ class HybridRetriever:
                     Document(page_content=text, metadata=meta)
                 )
 
-        self._bm25_doc_count = len(documents)
+        self._bm25_doc_counts[collection_name] = len(documents)
 
         # 3. BM25 — Türkçe tokenizer ile
         logger.info("initializing_bm25_engine", total_docs=len(documents))
@@ -333,73 +395,26 @@ class HybridRetriever:
             bm25_retriever.k = internal_k
 
         # 4. Ensemble (RRF Fusion)
-        self._ensemble = EnsembleRetriever(
+        ensemble = EnsembleRetriever(
             retrievers=[bm25_retriever, chroma_retriever],
             weights=[self.bm25_weight, self.chroma_weight],
         )
+        self._ensembles[collection_name] = ensemble
 
         logger.info(
             "hybrid_retriever_ready",
-            bm25_docs=self._bm25_doc_count,
+            bm25_docs=self._bm25_doc_counts[collection_name],
             bm25_weight=self.bm25_weight,
             chroma_weight=self.chroma_weight,
+            collection=collection_name,
         )
-        return self._ensemble
+        return ensemble
 
-    def search(
-        self,
-        query: str,
-        top_k: int | None = None,
-    ) -> List[Dict[str, Any]]:
-        """
-        Hibrit arama: Ön İşleme → BM25 + Vektör → RRF → Re-rank.
-
-        Args:
-            query: Kullanıcının sorusu.
-            top_k: Döndürülecek sonuç sayısı.
-
-        Returns:
-            Re-rank edilmiş sonuç listesi.
-        """
-        start_time = time.perf_counter()
-        k = top_k or self.k
-
-        # 0. Cache kontrolü
-        cache_key = f"{query}::{k}"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            elapsed_ms = (time.perf_counter() - start_time) * 1000
-            logger.info(
-                "hybrid_search_cache_hit",
-                query=query,
-                results_count=len(cached),
-                elapsed_ms=round(elapsed_ms, 1),
-            )
-            return cached
-
-        # 1. Sorgu on isleme (BM25 + Semantic arama icin)
-        expanded_query = self.query_preprocessor.preprocess(query)
-        query_type = self.query_preprocessor.detect_query_type(query)
-
-        logger.info(
-            "hybrid_search_start",
-            original_query=query,
-            expanded_query=expanded_query,
-            query_type=query_type,
-        )
-
-        try:
-            # 2. Ensemble ile oversampled arama
-            ensemble = self._ensure_ensemble()
-            raw_docs = ensemble.invoke(expanded_query)
-        except Exception:
-            logger.exception("ensemble_search_failed", query=query)
-            return []
-
-        # 3. Deduplicate — aynı belgenin BM25 ve ChromaDB versiyonlarında
-        #    en yüksek similarity_score korunur (BM25'te 0.0, ChromaDB'de gerçek skor)
+    @staticmethod
+    def _deduplicate_candidates(raw_docs: List[Document]) -> List[Dict[str, Any]]:
+        """Aynı içeriğe sahip adayları tekilleştirir."""
         candidates: List[Dict[str, Any]] = []
-        seen_contents: Dict[str, int] = {}  # content_key → candidates index
+        seen_contents: Dict[str, int] = {}
 
         for doc in raw_docs:
             content = doc.page_content
@@ -422,6 +437,98 @@ class HybridRetriever:
                     "metadata": dict(doc.metadata),
                 }
             )
+
+        return candidates
+
+    def _search_collection_candidates(
+        self,
+        collection_name: str,
+        expanded_query: str,
+    ) -> List[Dict[str, Any]]:
+        """Tek koleksiyonda aday belge araması yapar."""
+        try:
+            ensemble = self._ensure_ensemble(collection_name)
+            raw_docs = ensemble.invoke(expanded_query)
+        except Exception:
+            logger.exception("ensemble_search_failed", query=expanded_query, collection=collection_name)
+            return []
+
+        return self._deduplicate_candidates(raw_docs)
+
+    def search(
+        self,
+        query: str,
+        top_k: int | None = None,
+        department: Department | str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Hibrit arama: Ön İşleme → BM25 + Vektör → RRF → Re-rank.
+
+        Args:
+            query: Kullanıcının sorusu.
+            top_k: Döndürülecek sonuç sayısı.
+
+        Returns:
+            Re-rank edilmiş sonuç listesi.
+        """
+        start_time = time.perf_counter()
+        k = top_k or self.k
+        if department is not None:
+            primary_departments, fallback_departments = _plan_search_departments(query, department)
+            primary_collections = [collection_name_for_department(dep) for dep in primary_departments]
+            fallback_collections = [collection_name_for_department(dep) for dep in fallback_departments]
+        elif self.collection_name is not None:
+            primary_collections = [self.collection_name]
+            fallback_collections = []
+        else:
+            primary_departments, fallback_departments = _plan_search_departments(query, department)
+            primary_collections = [collection_name_for_department(dep) for dep in primary_departments]
+            fallback_collections = [collection_name_for_department(dep) for dep in fallback_departments]
+
+        # 0. Cache kontrolü
+        cache_key = f"{query}::{k}::{'|'.join(primary_collections)}::{'|'.join(fallback_collections)}"
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.info(
+                "hybrid_search_cache_hit",
+                query=query,
+                results_count=len(cached),
+                elapsed_ms=round(elapsed_ms, 1),
+            )
+            return cached
+
+        # 1. Sorgu on isleme (BM25 + Semantic arama icin)
+        expanded_query = self.query_preprocessor.preprocess(query)
+        query_type = self.query_preprocessor.detect_query_type(query)
+
+        logger.info(
+            "hybrid_search_start",
+            original_query=query,
+            expanded_query=expanded_query,
+            query_type=query_type,
+            primary_collections=primary_collections,
+            fallback_collections=fallback_collections,
+        )
+
+        # 2. Önce birincil koleksiyonlarda ara
+        candidates: List[Dict[str, Any]] = []
+        for collection_name in primary_collections:
+            candidates.extend(self._search_collection_candidates(collection_name, expanded_query))
+
+        # 3. Sonuç yoksa kontrollü fallback
+        if not candidates and fallback_collections:
+            logger.info("hybrid_search_fallback", query=query, collections=fallback_collections)
+            for collection_name in fallback_collections:
+                candidates.extend(self._search_collection_candidates(collection_name, expanded_query))
+
+        if not candidates:
+            logger.warning("hybrid_search_no_candidates", query=query, collections=primary_collections)
+            return []
+
+        candidates = self._deduplicate_candidates(
+            [Document(page_content=c["content"], metadata={**c["metadata"], "similarity_score": c["score"]}) for c in candidates]
+        )
 
         # 4. Cross-encoder reranking (orijinal sorgu ile — model anlami kavrar)
         results = self.reranker.rerank(query, candidates, top_k=k)
@@ -450,7 +557,11 @@ class HybridRetriever:
 
     def close(self) -> None:
         """Kaynaklari serbest birakir."""
-        self.indexer.close()
+        for indexer in self._indexers.values():
+            indexer.close()
+        self._indexers.clear()
+        self._ensembles.clear()
+        self._bm25_doc_counts.clear()
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -458,7 +569,7 @@ class HybridRetriever:
 # ══════════════════════════════════════════════════════════════════════
 
 def build_hybrid_retriever(
-    collection_name: str = "student_affairs_docs",
+    collection_name: str,
     k: int = 5,
     bm25_weight: float = 0.5,
     chroma_weight: float = 0.5,
@@ -474,4 +585,4 @@ def build_hybrid_retriever(
         bm25_weight=bm25_weight,
         chroma_weight=chroma_weight,
     )
-    return retriever._ensure_ensemble()
+    return retriever._ensure_ensemble(collection_name)

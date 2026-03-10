@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.constants import Department
 from src.rag.document_loader import Document, DocumentLoader
 from src.rag.text_preprocessor import TextPreprocessor
 from src.rag.chunker import Chunk, TextChunker
@@ -34,7 +35,7 @@ class TestDocumentLoader:
         assert "test metnidir" in doc.content
         assert doc.metadata["file_type"] == "txt"
         assert doc.metadata["category"] == "test"
-        assert doc.metadata["department"] == "student_affairs"
+        assert doc.metadata["department"] == "unknown"
 
     def test_load_txt_with_cp1254_encoding(self, tmp_path):
         """Windows Türkçe encoding'li TXT okunabilir."""
@@ -95,6 +96,43 @@ class TestDocumentLoader:
         loader = DocumentLoader()
         docs = loader.load_directory(Path("/nonexistent/path"))
         assert docs == []
+
+    def test_detect_department_from_academic_programs_path(self, tmp_path):
+        """Academic programs klasöründen departman ve alt kategori tespit edilir."""
+        target_dir = tmp_path / "academic_programs" / "yonergeler_egitim"
+        target_dir.mkdir(parents=True)
+        txt_file = target_dir / "bilgisayar_muhendisligi_plan.txt"
+        txt_file.write_text("Bu bir akademik program dokümanıdır. " * 5, encoding="utf-8")
+
+        loader = DocumentLoader(min_content_length=10)
+        doc = loader.load_file(txt_file)
+
+        assert doc is not None
+        assert doc.metadata["department"] == "academic_programs"
+        assert doc.metadata["subcategory"] == "yonergeler_egitim"
+        assert doc.metadata["bolum"] == "bilgisayar_muhendisligi"
+
+    def test_detect_department_from_it_support_path(self, tmp_path):
+        """it_support klasörü resmi it_support departmanına map edilir."""
+        target_dir = tmp_path / "it_support" / "yonergeler"
+        target_dir.mkdir(parents=True)
+        txt_file = target_dir / "obs_sifre_yonergesi.txt"
+        txt_file.write_text("Bu bir bilgi işlem dokümanıdır. " * 5, encoding="utf-8")
+
+        loader = DocumentLoader(min_content_length=10)
+        doc = loader.load_file(txt_file)
+
+        assert doc is not None
+        assert doc.metadata["department"] == "it_support"
+
+    def test_detect_bolum_returns_genel_for_multiple_matches(self):
+        """Birden fazla bölüm eşleşirse belge genel kabul edilir."""
+        loader = DocumentLoader()
+
+        bolum_kodu, bolum_adi = loader._detect_bolum("bilgisayar_makine_ortak_yonerge.txt")
+
+        assert bolum_kodu == "genel"
+        assert bolum_adi == "Genel"
 
 
 class TestDocument:
@@ -286,3 +324,58 @@ class TestContentHashIds:
             [{"source": "doc1.txt"}, {"source": "doc2.txt"}],
         )
         assert ids[0] != ids[1]
+
+
+class TestPipelineCollectionResolution:
+    """Pipeline koleksiyon çözümleme testleri."""
+
+    def test_detect_department_from_source_dir(self, tmp_path):
+        from src.rag.pipeline import IndexingPipeline
+
+        source_dir = tmp_path / "academic_programs" / "yonergeler_egitim"
+        source_dir.mkdir(parents=True)
+
+        department = IndexingPipeline._detect_department_from_source_dir(source_dir)
+
+        assert department == Department.ACADEMIC_PROGRAMS
+
+    def test_detect_department_from_it_support_source_dir(self, tmp_path):
+        from src.rag.pipeline import IndexingPipeline
+
+        source_dir = tmp_path / "it_support" / "yonergeler"
+        source_dir.mkdir(parents=True)
+
+        department = IndexingPipeline._detect_department_from_source_dir(source_dir)
+
+        assert department == Department.IT_SUPPORT
+
+    def test_resolve_collection_name_from_source_dir(self, tmp_path):
+        from src.rag.pipeline import IndexingPipeline
+
+        source_dir = tmp_path / "academic_programs" / "yonergeler_egitim"
+        source_dir.mkdir(parents=True)
+        pipeline = IndexingPipeline()
+
+        collection_name = pipeline._resolve_collection_name(source_dir)
+
+        assert collection_name == "academic_programs_docs"
+
+    def test_detect_department_from_source_dir_raises_for_unknown_path(self, tmp_path):
+        from src.rag.pipeline import IndexingPipeline
+
+        source_dir = tmp_path / "rastgele_klasor"
+        source_dir.mkdir(parents=True)
+
+        with pytest.raises(ValueError):
+            IndexingPipeline._detect_department_from_source_dir(source_dir)
+
+    def test_explicit_collection_name_is_preserved(self, tmp_path):
+        from src.rag.pipeline import IndexingPipeline
+
+        source_dir = tmp_path / "academic_programs" / "yonergeler_egitim"
+        source_dir.mkdir(parents=True)
+        pipeline = IndexingPipeline(collection_name="ozel_koleksiyon")
+
+        collection_name = pipeline._resolve_collection_name(source_dir)
+
+        assert collection_name == "ozel_koleksiyon"

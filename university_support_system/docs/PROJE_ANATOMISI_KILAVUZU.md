@@ -12,10 +12,10 @@ Sistem modüler ve Domain-Driven Design (DDD) prensiplerine uygun tasarlanmışt
 *   `src/core/`: Sistem genelinde kullanılan sabitler, konfigürasyonlar ve tipler.
 *   `src/db/`: Veritabanı bağlantısı, ORM modelleri, Pydantic doğrulama şemaları.
 *   `src/rag/`: Doküman vektörizasyonu, hibrit arama ve LLM'e beslenecek bağlamın çıkarılması.
-*   `src/llm/` *(FAZ 2 Planlı)*: LLM bağlantıları ve prompt şablonları.
-*   `src/agents/` *(FAZ 2 Planlı)*: Spesifik konularda (IT, Öğrenci İşleri) görev yapacak uzman yapay zekalar.
-*   `src/api/` *(FAZ 4 Planlı)*: Dış dünyaya açılan FastAPI gateway.
-*   `src/orchestrators/` *(FAZ 3 Planlı)*: Ajanları yöneten ana beyin sınıfları.
+*   `src/llm/` *(FAZ 2 tamamlandı)*: Ollama / OpenAI istemcileri ve LLM servis katmanı.
+*   `src/agents/` *(iskelet / ileriki faz)*: Spesifik konularda (`finance`, `it_support`, `student_affairs`, `academic_programs`) görev yapacak uzman yapay zekalar için klasör yapısı.
+*   `src/api/` *(iskelet / planlı)*: Dış dünyaya açılacak FastAPI gateway için ayrılmış klasör.
+*   `src/orchestrators/` *(iskelet / planlı)*: Ajanları yönetecek orkestrasyon katmanı için ayrılmış klasör.
 
 Aşağıda, halihazırda kodlanmış ve mimarisi oturtulmuş aktif modüllerin satır satır analizi bulunmaktadır.
 
@@ -30,15 +30,15 @@ Projeye ait ortam (Environment/.env) değişkenlerini doğrulanmış sınıflara
 *   **Algoritma / Tasarım:** Pydantic `BaseSettings` kullanılarak `POSTGRES_`, `REDIS_`, `OLLAMA_` gibi prefix'lerle başlayan çevresel değişkenleri RAM'de önbellekler.
 *   **İlgili Sınıflar:**
     *   `PostgresSettings`: DB host, port, havuz (pool_size=10) sınırları.
-    *   `EmbeddingSettings`: Vektör modelinin (BAAI/bge-m3) boyutunu (1024-D) tutar.
-    *   `RerankerSettings`: Cross-encoder modelini ve batch_size sınırlarını belirler.
+    *   `EmbeddingSettings`: Vektör modelinin (BAAI/bge-m3) boyutunu (1024-D) ve `device` seçimini (`auto`, `cpu`, `cuda`) tutar.
+    *   `RerankerSettings`: Cross-encoder modelini, batch_size sınırlarını ve `device` seçimini belirler.
     *   `RAGSettings`: Chunk_size (1024) ve top_k (5) gibi arama limitlerini barındırır.
     *   `Settings`: En dipteki *Singleton* sınıftır. Tüm projede `from src.core.config import settings` ile tekilleştirilmiş (sadece bir kere initialize edilen) konfigürasyonu dağıtır.
 
 ### 📄 `src/core/constants.py`
 Uygulamada "sihirli stringleri (magic strings)" önlemek için kullanılan `Enum` ve sabit deposu.
 *   **İlgili Enum'lar:**
-    *   `Department`: Olası departman adlarını (FINANCE, IT, STUDENT_AFFAIRS) ve Türkçe karşılıklarını (display_name property) barındırır.
+    *   `Department`: Olası departman adlarını (`FINANCE`, `IT_SUPPORT`, `STUDENT_AFFAIRS`, `ACADEMIC_PROGRAMS`) ve Türkçe karşılıklarını (`display_name`) barındırır.
     *   `TaskType`: LLM veya Kural Motoru bir soruyu incelediğinde bunun "Ders Sorgusu mu (COURSE_QUERY)" yoksa "Harç Sorgusu mu (TUITION_QUERY)" olduğunu belirten labellerdir.
     *   `RoutingStrategy`: Sorgunun nasıl devam edeceğini belirler (DIRECT, CLARIFICATION vb.).
 *   **İlgili Sabitler (Thresholds):** `ROUTING_HIGH_CONFIDENCE_THRESHOLD = 0.7`, `RAG_RESPONSE_TIME_TARGET_MS = 100` gibi kalite ve karar mekanizması eşiklerini metin içinde tutarak kodun modüler olmasını sağlar.
@@ -121,7 +121,7 @@ Sonuçların harmanlandığı orkestratör modülü:
 *   **Source Relevance Penalty:** Yersiz bölümler denk gelirse (örneğin "Yaz okulu" sormuş ama cevap "Kayıt dondurma" yönetmeliğinden geliyorsa) algoritma bu duruma otomatik ceza/düşürme skoru (0.75 vs) verir.
 
 ### 📄 `src/rag/reranker.py` (Vektör Doğrulayıcı)
-*   Toplanan ilk 20 sonuca "gerçekten sorulan soruya cevap olabiliyor mu?" diye çapraz değerlendirme (`seroe/bge-reranker-vround2-m3-turkish-triplet` Cross-Encoder) yaparak sadece en yetkin 5 sonucu RAG'a onaylar.
+*   Toplanan ilk 20 sonuca "gerçekten sorulan soruya cevap olabiliyor mu?" diye çapraz değerlendirme (`seroe/bge-reranker-v2-m3-turkish-triplet` Cross-Encoder) yaparak sadece en yetkin 5 sonucu RAG'a onaylar.
 
 ---
 
@@ -129,3 +129,39 @@ Sonuçların harmanlandığı orkestratör modülü:
 Şu anda kod tabanı; Veritabanı ve Veri İndeksleme konularında State of The Art (SOTA) mimari kullanmaktadır. Solid bağımlılıklara, Lazy Initialization bellek yönetimlerine, Singleton Config nesnelerine, Regex kural algoritmalarına ve DDD dizin anatomisine harfiyen uyulmuştur.
 
 Bundan sonraki fazda (FAZ 2), **`src/llm/`** dizini altına Qwen2.5 bağlantıları kodlanacak ve **`src/agents/`** altında departmanlara yönelik zeka sınıfları tasarlanmaya başlanacaktır.
+---
+
+## MART 2026 EK NOTLARI
+
+Bu kılavuzun ilk yazıldığı tarihten sonra aktif çekirdekte aşağıdaki değişiklikler yapılmıştır:
+
+### 1. Core ve Sözleşmeler
+
+* `Department` artık `FINANCE`, `IT_SUPPORT`, `STUDENT_AFFAIRS` ve `ACADEMIC_PROGRAMS` değerlerini kapsar.
+* `config.py` içindeki `EmbeddingSettings` ve `RerankerSettings` alanlarına `device` desteği eklenmiştir. Geçerli değerler: `auto`, `cpu`, `cuda`.
+* `collection_name_for_department()` yardımcısı ile koleksiyon adları tek noktadan üretilir.
+
+### 2. RAG Katmanı
+
+* `document_loader.py` artık `student_affairs`, `academic_programs`, `finance` ve `it_support` klasörlerini resmi departman kaynakları olarak tanır.
+* `academic_programs` belgelerinde `bolum` ve `bolum_adi` metadata alanları kullanılır. Bir belge birden fazla bölüme işaret ediyorsa `genel` etiketi verilir.
+* `indexer.py`, `pipeline.py` ve `retriever.py` tek bir sabit `student_affairs_docs` koleksiyonuna bağlı değildir. Kaynak klasörü ve departman bilgisi üzerinden `student_affairs_docs`, `academic_programs_docs`, `finance_docs` ve `it_support_docs` gibi koleksiyonlar dinamik kullanılır.
+* `retriever.py` içinde kural tabanlı departman puanlama ve kontrollü fallback mantığı bulunur.
+* `reranker.py` içinde son rerank denemesinin başarılı olup olmadığı `last_run_succeeded` alanı ile izlenebilir.
+
+### 3. Test Katmanı
+
+* Test envanteri güncel durumda 206 unit test ve 20 integration testten oluşur.
+* Integration testler `smoke`, `model` ve `slow` marker'ları ile ayrıştırılmıştır.
+* Reranker'ın gerçekten devreye girdiğini doğrulayan integration assertion eklenmiştir.
+
+### 4. LLM Katmanı
+
+* `prompt_templates.py` içindeki departman yönlendirme prompt'u artık `finance`, `it_support`, `student_affairs` ve `academic_programs` değerlerini içerir.
+* `llm_service.py`, `ollama_client.py` ve `openai_client.py` tarafında health-check, stream ve fallback akışları aktif olarak mevcuttur.
+
+### 5. Teknik Borç / Sonraki İyileştirme
+
+* Yeni departman eklemeyi kolaylaştırmak için merkezi departman kaydı kurulmuştur; display adı, routing açıklaması, keyword kümesi ve kaynak klasör bilgisi artık tek yerde toplanır.
+* Kalan iş, yeni departman eklendiğinde buna ait veri, soru havuzu ve integration kapsamını da aynı disiplinle genişletmektir.
+* Daha ayrıntılı Mart 2026 özeti için `docs/MART_2026_GUNCELLEME_NOTLARI.md` kullanılmalıdır.

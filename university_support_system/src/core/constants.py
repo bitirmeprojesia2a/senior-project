@@ -4,6 +4,10 @@ Uygulama Sabitleri
 Departman isimleri, görev tipleri, yönlendirme stratejileri ve diğer sabitler.
 Enum kullanarak tip güvenliği sağlar.
 
+Not:
+    Bu dosyadaki sabitlerin bir bölümü aktif çekirdekte doğrudan kullanılır.
+    Bir bölümü ise planlı veya kısmi entegrasyon katmanları için hazır tutulur.
+
 NOT: A2A protokolüne ait tipler (TaskState, Message, Artifact vb.)
      resmi a2a-sdk paketinden import edilmelidir.
 
@@ -11,26 +15,102 @@ Kullanım:
     from src.core.constants import Department, TaskType
 """
 
+from dataclasses import dataclass
 from enum import Enum
 
 
 # ── Departmanlar ─────────────────────────────────
 class Department(str, Enum):
-    """Sistem departmanları."""
+    """Mevcut çekirdek sözleşmede tanımlı departmanlar."""
 
     FINANCE = "finance"
-    IT = "it"
+    IT_SUPPORT = "it_support"
     STUDENT_AFFAIRS = "student_affairs"
+    ACADEMIC_PROGRAMS = "academic_programs"
 
     @property
     def display_name(self) -> str:
         """Türkçe görüntüleme adı."""
-        names = {
-            "finance": "Finans",
-            "it": "Bilgi İşlem",
-            "student_affairs": "Öğrenci İşleri",
-        }
-        return names.get(self.value, self.value)
+        return get_department_config(self).display_name
+
+@dataclass(frozen=True)
+class DepartmentConfig:
+    """Departmanın tüm çekirdek tanım bilgisini tek yerde tutar."""
+
+    display_name: str
+    routing_description: str
+    keywords: tuple[str, ...]
+    source_dirs: tuple[str, ...] = ()
+
+
+DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
+    Department.FINANCE: DepartmentConfig(
+        display_name="Finans",
+        routing_description="Harç, burs, yurt ödemeleri, dekont, taksitlendirme ile ilgili sorular.",
+        keywords=("harç", "ucret", "ücret", "burs", "odeme", "ödeme", "dekont", "taksit"),
+    ),
+    Department.IT_SUPPORT: DepartmentConfig(
+        display_name="Bilgi İşlem",
+        routing_description="E-posta şifre sıfırlama, Wi-Fi bağlantısı, sistem hataları, teknik destek.",
+        keywords=("sifre", "şifre", "eposta", "e-posta", "wifi", "wi-fi", "obs", "sistem", "hesap"),
+    ),
+    Department.STUDENT_AFFAIRS: DepartmentConfig(
+        display_name="Öğrenci İşleri",
+        routing_description="Ders kaydı, notlar, yatay/dikey geçiş, diploma, ÇAP, Erasmus işlemleri.",
+        keywords=(
+            "kayit", "kayıt", "not", "transkript", "mezuniyet", "cap", "çap", "erasmus",
+            "yatay", "dikey", "staj", "sinav", "sınav", "itiraz",
+        ),
+    ),
+    Department.ACADEMIC_PROGRAMS: DepartmentConfig(
+        display_name="Akademik Programlar",
+        routing_description="Müfredat, ders içerikleri, bölüm kuralları, akademik takvim.",
+        keywords=("mufredat", "müfredat", "ders icerigi", "ders içeriği", "akts", "takvim", "bolum", "bölüm"),
+    ),
+}
+
+
+DEPARTMENT_ALIASES: dict[str, str] = {}
+
+
+def normalize_department_value(department: Department | str) -> str:
+    """Departman veya alias değerini resmi departman değerine çevirir."""
+    department_value = department.value if isinstance(department, Department) else department
+    return DEPARTMENT_ALIASES.get(department_value, department_value)
+
+
+def get_department_config(department: Department | str) -> DepartmentConfig:
+    """Departman ayarlarını döndürür."""
+    normalized = department if isinstance(department, Department) else Department(normalize_department_value(department))
+    return DEPARTMENT_CONFIGS[normalized]
+
+
+def department_values() -> list[str]:
+    """CLI ve şema seçimleri için resmi departman değerleri."""
+    return [department.value for department in Department]
+
+
+def known_department_directory_names() -> set[str]:
+    """Kaynak klasörlerinde tanınacak departman klasör adları."""
+    names: set[str] = set()
+    for department in Department:
+        config = get_department_config(department)
+        names.add(department.value)
+        names.update(config.source_dirs)
+    return names
+
+
+def build_department_routing_descriptions() -> list[str]:
+    """Prompt üretmek için departman açıklamalarını döndürür."""
+    return [
+        f'- "{department.value}": {get_department_config(department).routing_description}'
+        for department in Department
+    ]
+
+
+def collection_name_for_department(department: Department | str) -> str:
+    """Departman adına göre ChromaDB koleksiyon adını üretir."""
+    return f"{normalize_department_value(department)}_docs"
 
 
 # ── Görev Tipleri ────────────────────────────────
@@ -92,7 +172,7 @@ class ConfidenceLevel(str, Enum):
 
 # ── Ajan Rolleri ─────────────────────────────────
 class AgentRole(str, Enum):
-    """Ajan rolleri."""
+    """Hazır tutulan ajan rolleri."""
 
     MAIN_ORCHESTRATOR = "main_orchestrator"
     DEPARTMENT_ORCHESTRATOR = "department_orchestrator"
@@ -121,11 +201,13 @@ ROUTING_LOW_CONFIDENCE_THRESHOLD = 0.4
 KEYWORD_MATCH_THRESHOLD = 0.6
 
 # Kuyruk ayarları
+# Not: Bu sabitler planlı veya kısmi kuyruk entegrasyonları için korunur.
 QUEUE_MAX_RETRIES = 3
 QUEUE_TTL_SECONDS = 1800  # 30 dakika
 QUEUE_RETRY_DELAYS = [3, 10, 30]  # Kademeli bekleme (saniye)
 
-# Cache ayarları
+# Önbellek ayarları
+# Not: Aktif retrieval önbelleği şu anda retriever içinde in-memory çalışır.
 CACHE_DEFAULT_TTL = 300  # 5 dakika
 CACHE_LLM_RESPONSE_TTL = 300
 
