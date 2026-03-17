@@ -162,10 +162,10 @@ Bu bölüm, FAZ 2 sonrasında LLM katmanında yapılan ek dokümantasyon güncel
 
 * `prompt_templates.py` içindeki `DEPARTMENT_ROUTING_SYSTEM_PROMPT` artık şu departmanları içerir:
   * `finance`
-  * `it_support`
   * `student_affairs`
   * `academic_programs`
 * Bu prompt, çok departmanlı RAG çekirdeği ile uyumlu hale getirilmiştir.
+* `it_support` departmanı FAZ 3 kapsamında kaldırılmış olup prompt güncellenecektir (bkz. FAZ_3_AJAN_MIMARISI.md, Bölüm 11).
 
 ### 8.2 Aktif LLM Yetkinlikleri
 

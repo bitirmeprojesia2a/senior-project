@@ -24,7 +24,6 @@ class Department(str, Enum):
     """Mevcut çekirdek sözleşmede tanımlı departmanlar."""
 
     FINANCE = "finance"
-    IT_SUPPORT = "it_support"
     STUDENT_AFFAIRS = "student_affairs"
     ACADEMIC_PROGRAMS = "academic_programs"
 
@@ -48,11 +47,6 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
         display_name="Finans",
         routing_description="Harç, burs, yurt ödemeleri, dekont, taksitlendirme ile ilgili sorular.",
         keywords=("harç", "ucret", "ücret", "burs", "odeme", "ödeme", "dekont", "taksit"),
-    ),
-    Department.IT_SUPPORT: DepartmentConfig(
-        display_name="Bilgi İşlem",
-        routing_description="E-posta şifre sıfırlama, Wi-Fi bağlantısı, sistem hataları, teknik destek.",
-        keywords=("sifre", "şifre", "eposta", "e-posta", "wifi", "wi-fi", "obs", "sistem", "hesap"),
     ),
     Department.STUDENT_AFFAIRS: DepartmentConfig(
         display_name="Öğrenci İşleri",
@@ -121,11 +115,6 @@ class TaskType(str, Enum):
     TUITION_QUERY = "tuition_query"           # Harç sorgulama
     SCHOLARSHIP_QUERY = "scholarship_query"    # Burs sorgulama
     PAYMENT_QUERY = "payment_query"            # Ödeme sorgulama
-
-    # IT
-    TECH_SUPPORT = "tech_support"              # Teknik destek
-    EMAIL_SUPPORT = "email_support"            # E-posta sorunları
-    ACCOUNT_SUPPORT = "account_support"        # Hesap işlemleri
 
     # Öğrenci İşleri
     COURSE_QUERY = "course_query"              # Ders sorguları

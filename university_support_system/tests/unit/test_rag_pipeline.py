@@ -112,18 +112,18 @@ class TestDocumentLoader:
         assert doc.metadata["subcategory"] == "yonergeler_egitim"
         assert doc.metadata["bolum"] == "bilgisayar_muhendisligi"
 
-    def test_detect_department_from_it_support_path(self, tmp_path):
-        """it_support klasörü resmi it_support departmanına map edilir."""
-        target_dir = tmp_path / "it_support" / "yonergeler"
+    def test_detect_department_from_finance_path(self, tmp_path):
+        """finance klasörü resmi finance departmanına map edilir."""
+        target_dir = tmp_path / "finance" / "yonergeler"
         target_dir.mkdir(parents=True)
-        txt_file = target_dir / "obs_sifre_yonergesi.txt"
-        txt_file.write_text("Bu bir bilgi işlem dokümanıdır. " * 5, encoding="utf-8")
+        txt_file = target_dir / "harc_ucretleri.txt"
+        txt_file.write_text("Bu bir finans dokümanıdır. " * 5, encoding="utf-8")
 
         loader = DocumentLoader(min_content_length=10)
         doc = loader.load_file(txt_file)
 
         assert doc is not None
-        assert doc.metadata["department"] == "it_support"
+        assert doc.metadata["department"] == "finance"
 
     def test_detect_bolum_returns_genel_for_multiple_matches(self):
         """Birden fazla bölüm eşleşirse belge genel kabul edilir."""
@@ -339,15 +339,15 @@ class TestPipelineCollectionResolution:
 
         assert department == Department.ACADEMIC_PROGRAMS
 
-    def test_detect_department_from_it_support_source_dir(self, tmp_path):
+    def test_detect_department_from_finance_source_dir(self, tmp_path):
         from src.rag.pipeline import IndexingPipeline
 
-        source_dir = tmp_path / "it_support" / "yonergeler"
+        source_dir = tmp_path / "finance" / "yonergeler"
         source_dir.mkdir(parents=True)
 
         department = IndexingPipeline._detect_department_from_source_dir(source_dir)
 
-        assert department == Department.IT_SUPPORT
+        assert department == Department.FINANCE
 
     def test_resolve_collection_name_from_source_dir(self, tmp_path):
         from src.rag.pipeline import IndexingPipeline

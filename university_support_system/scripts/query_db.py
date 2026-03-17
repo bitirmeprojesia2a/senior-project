@@ -9,7 +9,7 @@ E5 modeli kullanıldığında sorguya otomatik "query:" prefix'i eklenir.
 Kullanım:
     python scripts/query_db.py "Ders kaydı nasıl yapılır?"
     python scripts/query_db.py "Kayıt yenileme işlemleri" --top-k 5
-    python scripts/query_db.py "OBS şifremi unuttum" --department it_support
+    python scripts/query_db.py "Harç borcum var mı?" --department finance
 """
 
 import argparse
@@ -39,7 +39,7 @@ def main():
         type=str,
         choices=department_values(),
         default=None,
-        help="Departman adı (ör: student_affairs, academic_programs, finance, it_support)",
+        help="Departman adı (ör: student_affairs, academic_programs, finance)",
     )
 
     args = parser.parse_args()

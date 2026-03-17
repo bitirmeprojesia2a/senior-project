@@ -290,15 +290,15 @@ class TestDepartmentPlanning:
     def test_score_departments_finance_query(self):
         scores = _score_departments("Harç ödeme dekontumu nasıl alırım?")
         assert scores[Department.FINANCE] > 0
-        assert scores[Department.FINANCE] >= scores[Department.IT_SUPPORT]
+        assert scores[Department.FINANCE] >= scores[Department.STUDENT_AFFAIRS]
 
     def test_score_departments_academic_programs_query(self):
         scores = _score_departments("Müfredat ve ders planı nerede yayınlanır?")
         assert scores[Department.ACADEMIC_PROGRAMS] > 0
 
     def test_plan_search_departments_with_explicit_department(self):
-        primary, fallback = _plan_search_departments("rastgele sorgu", Department.IT_SUPPORT)
-        assert primary == [Department.IT_SUPPORT]
+        primary, fallback = _plan_search_departments("rastgele sorgu", Department.FINANCE)
+        assert primary == [Department.FINANCE]
         assert fallback == []
 
 
@@ -331,18 +331,18 @@ class TestHybridRetrieverDepartmentSearch:
         retriever = self._make_retriever()
         retriever.collection_name = None
         retriever._search_collection_candidates = MagicMock(
-            return_value=[self._make_candidate("it_support_yonerge.pdf")]
+            return_value=[self._make_candidate("harc_odeme_yonerge.pdf")]
         )
 
         results = HybridRetriever.search(
             retriever,
-            "OBS sifremi nasil sifirlarim?",
-            department=Department.IT_SUPPORT,
+            "Harc borcumu nasil ogrenirim?",
+            department=Department.FINANCE,
         )
 
         assert len(results) == 1
         assert retriever._search_collection_candidates.call_args_list == [
-            call("it_support_docs", "OBS sifremi nasil sifirlarim?")
+            call("finance_docs", "Harc borcumu nasil ogrenirim?")
         ]
 
     def test_search_uses_fallback_collections_when_primary_is_empty(self):
@@ -361,7 +361,7 @@ class TestHybridRetrieverDepartmentSearch:
             "src.rag.retriever._plan_search_departments",
             return_value=(
                 [Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS],
-                [Department.FINANCE, Department.IT_SUPPORT],
+                [Department.FINANCE],
             ),
         ):
             results = HybridRetriever.search(retriever, "Belirsiz bir sorgu")
@@ -371,7 +371,6 @@ class TestHybridRetrieverDepartmentSearch:
             call("student_affairs_docs", "Belirsiz bir sorgu"),
             call("academic_programs_docs", "Belirsiz bir sorgu"),
             call("finance_docs", "Belirsiz bir sorgu"),
-            call("it_support_docs", "Belirsiz bir sorgu"),
         ]
 
     def test_search_cache_key_depends_on_department_plan(self):

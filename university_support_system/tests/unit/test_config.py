@@ -31,14 +31,12 @@ class TestDepartmentEnum:
     def test_department_values(self):
         """Tüm departman değerleri doğru tanımlı."""
         assert Department.FINANCE.value == "finance"
-        assert Department.IT_SUPPORT.value == "it_support"
         assert Department.STUDENT_AFFAIRS.value == "student_affairs"
         assert Department.ACADEMIC_PROGRAMS.value == "academic_programs"
 
     def test_department_display_names(self):
         """Türkçe görüntüleme adları doğru."""
         assert Department.FINANCE.display_name == "Finans"
-        assert Department.IT_SUPPORT.display_name == "Bilgi İşlem"
         assert Department.STUDENT_AFFAIRS.display_name == "Öğrenci İşleri"
         assert Department.ACADEMIC_PROGRAMS.display_name == "Akademik Programlar"
 
@@ -52,12 +50,11 @@ class TestDepartmentEnum:
         assert collection_name_for_department(Department.STUDENT_AFFAIRS) == "student_affairs_docs"
         assert collection_name_for_department(Department.ACADEMIC_PROGRAMS) == "academic_programs_docs"
         assert collection_name_for_department("finance") == "finance_docs"
-        assert collection_name_for_department("it_support") == "it_support_docs"
 
     def test_normalize_department_value(self):
         """Departman alias değeri normalize edilebilir."""
-        assert normalize_department_value("it_support") == "it_support"
         assert normalize_department_value("finance") == "finance"
+        assert normalize_department_value("student_affairs") == "student_affairs"
 
     def test_department_registry_helpers(self):
         """Merkezi departman yardımcıları tutarlı çalışır."""
@@ -91,11 +88,6 @@ class TestTaskTypeEnum:
         """Finans görev tipleri tanımlı."""
         assert TaskType.TUITION_QUERY.value == "tuition_query"
         assert TaskType.SCHOLARSHIP_QUERY.value == "scholarship_query"
-
-    def test_it_task_types(self):
-        """IT görev tipleri tanımlı."""
-        assert TaskType.TECH_SUPPORT.value == "tech_support"
-        assert TaskType.EMAIL_SUPPORT.value == "email_support"
 
     def test_student_task_types(self):
         """Öğrenci işleri görev tipleri tanımlı."""
