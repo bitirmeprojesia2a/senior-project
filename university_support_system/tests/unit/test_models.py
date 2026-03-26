@@ -9,7 +9,7 @@ from datetime import datetime
 
 from sqlalchemy import select
 
-from src.db.models import Student, Tuition, QueryLog, AgentRegistry
+from src.db.models import AgentRegistry, OfficeContact, QueryLog, Student, Tuition
 
 
 class TestStudentModel:
@@ -127,3 +127,25 @@ class TestAgentRegistryModel:
 
         assert agent.id is not None
         assert agent.capabilities["task_types"][0] == "tuition_query"
+
+
+class TestOfficeContactModel:
+    """OfficeContact model tests."""
+
+    async def test_create_office_contact(self, db_session):
+        """Office contact record can be created."""
+        contact = OfficeContact(
+            unit_name="Ders Kayit Ofisi",
+            department="student_affairs",
+            person_name="Ayse Kaya",
+            title="Uzman",
+            phone_ext="7304",
+            email="ayse.kaya@omu.edu.tr",
+            related_agents=["registration_agent", "graduation_agent"],
+            is_active=True,
+        )
+        db_session.add(contact)
+        await db_session.flush()
+
+        assert contact.id is not None
+        assert contact.related_agents[0] == "registration_agent"

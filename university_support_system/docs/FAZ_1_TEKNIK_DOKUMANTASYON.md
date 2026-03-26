@@ -1221,12 +1221,10 @@ Bu bölüm, FAZ 1 tamamlandıktan sonra RAG ve test katmanında yapılan güncel
 ### 13.1 Çok Departmanlı RAG Genişlemesi
 
 * `academic_programs` resmi departman olarak çekirdek sözleşmeye eklendi.
-* `it` adı veri klasörleri ve koleksiyonlarla hizalanarak `it_support` olarak standartlaştırıldı.
 * Koleksiyonlar artık ana departman bazlı çözülür:
   * `student_affairs_docs`
   * `academic_programs_docs`
   * `finance_docs`
-  * `it_support_docs`
 * `document_loader.py` tarafında `academic_programs` belgeleri için `bolum` ve `bolum_adi` metadata alanları üretilir.
 * Bir belge birden fazla bölüme işaret ediyorsa bölüm metadata'sı `genel` olarak atanır.
 
@@ -1234,6 +1232,7 @@ Bu bölüm, FAZ 1 tamamlandıktan sonra RAG ve test katmanında yapılan güncel
 
 * `scripts/index_documents.py` kaynak klasöre göre koleksiyon adını dinamik çözebilir.
 * `scripts/query_db.py`, `scripts/test_hybrid_search.py`, `scripts/compare_collections.py` ve `scripts/evaluate_rag.py` departman veya koleksiyon parametreleriyle yeni çok koleksiyonlu yapıyı kullanabilir.
+* Bu güncel durumda aktif departman kümesi `student_affairs`, `academic_programs` ve `finance` ile sınırlıdır.
 * `evaluate_rag.py` artık soru havuzunu `department` alanına göre filtreleyebilir.
 
 ### 13.3 Test Envanteri ve Marker Yapısı

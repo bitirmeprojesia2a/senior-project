@@ -20,7 +20,7 @@ Projenin gizli şifrelerini ve ince ayarlarını barındıran konfigürasyon yö
 
 ### 1.2. `src/core/constants.py`
 Sistem genelinde kullanılacak kural isimlerini metin (String) kalabalığından kurtarıp, kod yazarken otomatik tamamlanan `Enum` yapılarına (Sabitlere) dönüştürür.
-*   **`Department` (Enum):** FINANCE (Finans), IT_SUPPORT (Bilgi İşlem Desteği), STUDENT_AFFAIRS (Öğrenci İşleri), ACADEMIC_PROGRAMS (Akademik Programlar).
+*   **`Department` (Enum):** FINANCE (Finans), STUDENT_AFFAIRS (Öğrenci İşleri), ACADEMIC_PROGRAMS (Akademik Programlar).
     *   *`display_name` (property):* Enum'un Türkçe görünen adını basar. API'den hata dönerken "Öğrenci İşleri" yazmasını sağlar.
 *   **`TaskType` (Enum):** LLM'e giden sorunun tipini tutar (`COURSE_QUERY`, `TUITION_QUERY` vb.).
 *   **`RoutingStrategy` (Enum):** Gelen sorunun LLM tarafından ne yapılacağını belirler. (Direkt ilgili departmana gönder `DIRECT`, veya ne dediğini anlamadım soruyu netleştir `CLARIFICATION`).
@@ -168,12 +168,11 @@ Bu dokümanın ana gövdesi daha erken bir repo durumunu anlatmaktadır. Güncel
 
 ### 2. Güncel Mimari Değişiklikler
 
-* `Department` artık `finance`, `it_support`, `student_affairs` ve `academic_programs` değerlerini kapsar.
+* `Department` artık `finance`, `student_affairs` ve `academic_programs` değerlerini kapsar.
 * Koleksiyon çözümü dinamik hale getirilmiştir:
   * `student_affairs_docs`
   * `academic_programs_docs`
   * `finance_docs`
-  * `it_support_docs`
 * `academic_programs` belgeleri için `bolum` ve `bolum_adi` metadata alanları üretilir; çoklu eşleşme durumunda `genel` etiketi kullanılır.
 
 ### 3. LLM Katmanı İçin Ek Notlar

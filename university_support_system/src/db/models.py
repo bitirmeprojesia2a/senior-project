@@ -438,7 +438,28 @@ class Announcement(TimestampMixin, Base):
 
 
 # ============================================================
-# 6. AGENTS / TELEMETRY
+# 6. OFFICE CONTACTS
+# ============================================================
+
+
+class OfficeContact(TimestampMixin, Base):
+    """Contact record that can be suggested by specialist agents."""
+
+    __tablename__ = "office_contacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    unit_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    department: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    person_name: Mapped[Optional[str]] = mapped_column(String(120))
+    title: Mapped[Optional[str]] = mapped_column(String(80))
+    phone_ext: Mapped[Optional[str]] = mapped_column(String(20))
+    email: Mapped[Optional[str]] = mapped_column(String(120))
+    related_agents: Mapped[Optional[list[str]]] = mapped_column(JSON)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+# ============================================================
+# 7. AGENTS / TELEMETRY
 # ============================================================
 
 

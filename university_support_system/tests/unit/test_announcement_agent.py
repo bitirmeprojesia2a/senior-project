@@ -1,0 +1,108 @@
+"""Announcement agent testleri."""
+
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import pytest
+
+from src.agents.announcement.agent import AnnouncementAgent
+from src.db.announcements import AnnouncementRecord, extract_announcement_keywords
+
+
+def _build_task(metadata: dict | None = None):
+    return SimpleNamespace(
+        metadata=metadata or {},
+        status=SimpleNamespace(message=None),
+    )
+
+
+@pytest.mark.asyncio
+async def test_announcement_agent_formats_matching_announcements():
+    fetcher = AsyncMock(
+        return_value=[
+            AnnouncementRecord(
+                id=1,
+                title="Cap Basvurulari Acildi",
+                summary="Cap basvurulari 5 Nisan'a kadar aciktir.",
+                original_text=None,
+                source_url="https://omu.edu.tr/duyuru/cap",
+                faculty="Muhendislik Fakultesi",
+                department="academic_programs",
+                published_at=None,
+            ),
+            AnnouncementRecord(
+                id=2,
+                title="Yeni Ders Programi",
+                summary="Bahar donemi ders programi yayinlandi.",
+                original_text=None,
+                source_url=None,
+                faculty=None,
+                department="academic_programs",
+                published_at=None,
+            ),
+        ]
+    )
+    agent = AnnouncementAgent(announcement_fetcher=fetcher)
+
+    response = await agent.handle_task(
+        _build_task(
+            {
+                "query_text": "Cap duyurulari neler?",
+                "department": "academic_programs",
+            }
+        )
+    )
+
+    assert response.success is True
+    assert "Cap Basvurulari Acildi" in response.answer
+    assert "https://omu.edu.tr/duyuru/cap" in response.answer
+    assert len(response.sources) == 2
+    assert response.sources[0].metadata["record_type"] == "announcement"
+    fetcher.assert_awaited_once_with(
+        "Cap duyurulari neler?",
+        department="academic_programs",
+        faculty=None,
+        limit=3,
+    )
+
+
+@pytest.mark.asyncio
+async def test_announcement_agent_returns_empty_state_when_no_announcement_found():
+    fetcher = AsyncMock(return_value=[])
+    agent = AnnouncementAgent(announcement_fetcher=fetcher)
+
+    response = await agent.handle_task(_build_task({"query_text": "Son duyurular neler?"}))
+
+    assert response.success is True
+    assert "aktif duyuru" in response.answer
+    assert response.sources == []
+
+
+def test_extract_announcement_keywords_filters_generic_words():
+    keywords = extract_announcement_keywords("Son CAP duyurulari ve burs duyurulari neler?")
+
+    assert "cap" in keywords
+    assert "burs" in keywords
+    assert "duyurulari" not in keywords
+
+
+@pytest.mark.asyncio
+async def test_announcement_agent_uses_all_departments_when_multiple_departments_exist():
+    fetcher = AsyncMock(return_value=[])
+    agent = AnnouncementAgent(announcement_fetcher=fetcher)
+
+    await agent.handle_task(
+        _build_task(
+            {
+                "query_text": "Yatay gecis ve burs duyurulari neler?",
+                "departments": ["student_affairs", "finance"],
+            }
+        )
+    )
+
+    fetcher.assert_awaited_once_with(
+        "Yatay gecis ve burs duyurulari neler?",
+        department=["student_affairs", "finance"],
+        faculty=None,
+        limit=3,
+    )

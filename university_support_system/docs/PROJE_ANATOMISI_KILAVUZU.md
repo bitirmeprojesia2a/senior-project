@@ -13,9 +13,9 @@ Sistem modüler ve Domain-Driven Design (DDD) prensiplerine uygun tasarlanmışt
 *   `src/db/`: Veritabanı bağlantısı, ORM modelleri, Pydantic doğrulama şemaları.
 *   `src/rag/`: Doküman vektörizasyonu, hibrit arama ve LLM'e beslenecek bağlamın çıkarılması.
 *   `src/llm/` *(FAZ 2 tamamlandı)*: Ollama / OpenAI istemcileri ve LLM servis katmanı.
-*   `src/agents/` *(iskelet / ileriki faz)*: Spesifik konularda (`finance`, `it_support`, `student_affairs`, `academic_programs`) görev yapacak uzman yapay zekalar için klasör yapısı.
+*   `src/agents/` *(temel iskelet aktif)*: Spesifik konularda (`finance`, `student_affairs`, `academic_programs`) görev yapan uzman ajan tabanları ve ilk ajan implementasyonları.
 *   `src/api/` *(iskelet / planlı)*: Dış dünyaya açılacak FastAPI gateway için ayrılmış klasör.
-*   `src/orchestrators/` *(iskelet / planlı)*: Ajanları yönetecek orkestrasyon katmanı için ayrılmış klasör.
+*   `src/orchestrators/` *(temel iskelet aktif)*: Ajanları yöneten departman orkestratörleri ve ana orkestratör katmanı.
 
 Aşağıda, halihazırda kodlanmış ve mimarisi oturtulmuş aktif modüllerin satır satır analizi bulunmaktadır.
 
@@ -38,7 +38,7 @@ Projeye ait ortam (Environment/.env) değişkenlerini doğrulanmış sınıflara
 ### 📄 `src/core/constants.py`
 Uygulamada "sihirli stringleri (magic strings)" önlemek için kullanılan `Enum` ve sabit deposu.
 *   **İlgili Enum'lar:**
-    *   `Department`: Olası departman adlarını (`FINANCE`, `IT_SUPPORT`, `STUDENT_AFFAIRS`, `ACADEMIC_PROGRAMS`) ve Türkçe karşılıklarını (`display_name`) barındırır.
+    *   `Department`: Olası departman adlarını (`FINANCE`, `STUDENT_AFFAIRS`, `ACADEMIC_PROGRAMS`) ve Türkçe karşılıklarını (`display_name`) barındırır.
     *   `TaskType`: LLM veya Kural Motoru bir soruyu incelediğinde bunun "Ders Sorgusu mu (COURSE_QUERY)" yoksa "Harç Sorgusu mu (TUITION_QUERY)" olduğunu belirten labellerdir.
     *   `RoutingStrategy`: Sorgunun nasıl devam edeceğini belirler (DIRECT, CLARIFICATION vb.).
 *   **İlgili Sabitler (Thresholds):** `ROUTING_HIGH_CONFIDENCE_THRESHOLD = 0.7`, `RAG_RESPONSE_TIME_TARGET_MS = 100` gibi kalite ve karar mekanizması eşiklerini metin içinde tutarak kodun modüler olmasını sağlar.
@@ -137,15 +137,15 @@ Bu kılavuzun ilk yazıldığı tarihten sonra aktif çekirdekte aşağıdaki de
 
 ### 1. Core ve Sözleşmeler
 
-* `Department` artık `FINANCE`, `IT_SUPPORT`, `STUDENT_AFFAIRS` ve `ACADEMIC_PROGRAMS` değerlerini kapsar.
+* `Department` artık `FINANCE`, `STUDENT_AFFAIRS` ve `ACADEMIC_PROGRAMS` değerlerini kapsar.
 * `config.py` içindeki `EmbeddingSettings` ve `RerankerSettings` alanlarına `device` desteği eklenmiştir. Geçerli değerler: `auto`, `cpu`, `cuda`.
 * `collection_name_for_department()` yardımcısı ile koleksiyon adları tek noktadan üretilir.
 
 ### 2. RAG Katmanı
 
-* `document_loader.py` artık `student_affairs`, `academic_programs`, `finance` ve `it_support` klasörlerini resmi departman kaynakları olarak tanır.
+* `document_loader.py` artık `student_affairs`, `academic_programs` ve `finance` klasörlerini resmi departman kaynakları olarak tanır.
 * `academic_programs` belgelerinde `bolum` ve `bolum_adi` metadata alanları kullanılır. Bir belge birden fazla bölüme işaret ediyorsa `genel` etiketi verilir.
-* `indexer.py`, `pipeline.py` ve `retriever.py` tek bir sabit `student_affairs_docs` koleksiyonuna bağlı değildir. Kaynak klasörü ve departman bilgisi üzerinden `student_affairs_docs`, `academic_programs_docs`, `finance_docs` ve `it_support_docs` gibi koleksiyonlar dinamik kullanılır.
+* `indexer.py`, `pipeline.py` ve `retriever.py` tek bir sabit `student_affairs_docs` koleksiyonuna bağlı değildir. Kaynak klasörü ve departman bilgisi üzerinden `student_affairs_docs`, `academic_programs_docs` ve `finance_docs` gibi koleksiyonlar dinamik kullanılır.
 * `retriever.py` içinde kural tabanlı departman puanlama ve kontrollü fallback mantığı bulunur.
 * `reranker.py` içinde son rerank denemesinin başarılı olup olmadığı `last_run_succeeded` alanı ile izlenebilir.
 
@@ -157,7 +157,7 @@ Bu kılavuzun ilk yazıldığı tarihten sonra aktif çekirdekte aşağıdaki de
 
 ### 4. LLM Katmanı
 
-* `prompt_templates.py` içindeki departman yönlendirme prompt'u artık `finance`, `it_support`, `student_affairs` ve `academic_programs` değerlerini içerir.
+* `prompt_templates.py` içindeki departman yönlendirme prompt'u artık `finance`, `student_affairs` ve `academic_programs` değerlerini içerir.
 * `llm_service.py`, `ollama_client.py` ve `openai_client.py` tarafında health-check, stream ve fallback akışları aktif olarak mevcuttur.
 
 ### 5. Teknik Borç / Sonraki İyileştirme

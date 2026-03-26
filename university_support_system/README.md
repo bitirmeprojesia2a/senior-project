@@ -25,20 +25,21 @@ Bu repo, üniversite destek senaryoları için geliştirilen sistemin çekirdek 
 
 ### Mart 2026 Güncellemesi
 
-- **Çok departmanlı RAG çekirdeği:** `academic_programs` resmi departman olarak sisteme eklendi. `it` adı da veri klasörleriyle hizalanarak `it_support` olarak standartlaştırıldı.
-- **Dinamik koleksiyon çözümü:** İndeksleme ve sorgulama hattı artık tek bir sabit koleksiyona bağlı değil. `student_affairs_docs`, `academic_programs_docs`, `finance_docs` ve `it_support_docs` ana departman bazlı koleksiyonlar olarak ele alınır.
+- **Çok departmanlı RAG çekirdeği:** `academic_programs` resmi departman olarak sisteme eklendi. Aktif çekirdek şu anda `student_affairs`, `academic_programs` ve `finance` departmanlarıyla çalışır.
+- **Dinamik koleksiyon çözümü:** İndeksleme ve sorgulama hattı artık tek bir sabit koleksiyona bağlı değil. `student_affairs_docs`, `academic_programs_docs` ve `finance_docs` ana departman bazlı koleksiyonlar olarak ele alınır.
 - **Metadata iyileştirmesi:** `academic_programs` belgelerinde bölüm (`bolum`) bilgisi metadata olarak tutulur; bir belge birden fazla bölüme işaret ediyorsa `genel` etiketi kullanılır.
 - **Script hizalama:** `index_documents.py`, `query_db.py`, `test_hybrid_search.py`, `compare_collections.py` ve `evaluate_rag.py` scriptleri departman/koleksiyon farkındalıklı hale getirildi.
 - **Merkezi departman kaydı:** Departman display adı, routing açıklaması, keyword kümesi ve kaynak klasör bilgisi `src/core/constants.py` içinde tek yerde toplanarak yeni departman ekleme maliyeti düşürüldü.
 - **Test stratejisi güncellemesi:** Integration testler `smoke`, `model` ve `slow` marker'ları ile ayrıldı. Reranker'ın gerçekten devreye girip girmediğini doğrulayan ek test eklendi.
 - **GPU hazırlığı:** Embedding ve reranker tarafına `auto | cpu | cuda` cihaz seçimi eklendi. CUDA destekli `torch` ile birlikte `auto` modu GPU kullanabilir.
+- **OTP/session auth akışı:** `/auth/request-otp`, `/auth/verify-otp`, `/auth/resolve` ve `/auth/logout` endpoint'leri eklendi. `/query` ve `/a2a/dispatch` artık `session_token` veya `slack_user_id` üzerinden kimlik bağlamı çözebilir.
 
 Ayrıntılı değişiklik özeti ve güncel teknik durum için: `docs/MART_2026_GUNCELLEME_NOTLARI.md`
 
 ### Repo İçinde Henüz Tamamlanmamış Alanlar
 
-- **Çoklu ajan orkestrasyonu:** klasör yapısı mevcut, implementasyon çekirdeği henüz tamamlanmamış
-- **FastAPI geçidi:** bağımlılıklar tanımlı, çalıştırılabilir uygulama girişi henüz yok
+- **Çoklu ajan orkestrasyonu:** temel A2A yardımcıları, uzman ajan tabanı, departman orkestratörleri ve ana orkestratör iskeleti kodlandı
+- **FastAPI giriş yüzeyi:** `src.api.main:app` altında sağlık, sorgu, ajan listesi ve iç A2A dispatch endpoint'leri eklendi
 - **Slack entegrasyonu:** paket ve klasör iskeleti mevcut, aktif entegrasyon yok
 - **Redis kuyruk/önbellek:** bağımlılık ve ayarlar mevcut, aktif retrieval cache in-memory çalışıyor
 
@@ -75,9 +76,9 @@ Yanıt + kaynaklar
 | LLM | Qwen2.5:7B (Ollama) | Aktif |
 | Gömme Modeli | BAAI/bge-m3 | Aktif |
 | Reranker | seroe/bge-reranker-v2-m3-turkish-triplet | Aktif |
-| Web Framework | FastAPI | Bağımlılık var, uygulama girişi henüz yok |
+| Web Framework | FastAPI | Aktif API giriş yüzeyi mevcut |
 | Kuyruk/Önbellek | Redis 7 | Ayarlar var, aktif kullanım sınırlı |
-| Protokoller | A2A + MCP | Hedef mimari / kısmi iskelet |
+| Protokoller | A2A + MCP | A2A yardımcıları ve orkestratör iskeleti aktif, tam ağ entegrasyonu sonraki faz |
 | Kullanıcı Arayüzü | Slack Bot | Planlı / iskelet |
 | Konteyner | Docker Compose | Aktif |
 
@@ -127,11 +128,14 @@ python scripts/test_hybrid_search.py "ÇAP başvurusu için gereken not ortalama
 
 # 11. RAG değerlendirme raporu
 python scripts/evaluate_rag.py
+
+# 12. API'yi çalıştır
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 > GPU kullanacaksanız `EMBEDDING_DEVICE` ve `RERANKER_DEVICE` ayarlarını `cuda` veya `auto` olarak bırakabilirsiniz. Bunun çalışması için kurulu `torch` paketinin CUDA destekli olması gerekir.
 
-> Not: Bu repo içinde şu an çalıştırılabilir bir `src.api.main:app` girişi bulunmamaktadır. API ve Slack katmanları ileriki fazlar için iskelet düzeyindedir.
+> Not: Bu repo içinde artık çalıştırılabilir bir `src.api.main:app` girişi vardır. Slack katmanı halen sonraki faz için iskelet düzeyindedir.
 
 > Detaylı kurulum rehberi için: [`docs/KURULUM_VE_CALISTIRMA.md`](docs/KURULUM_VE_CALISTIRMA.md)
 
@@ -144,10 +148,10 @@ university_support_system/
 |   |-- llm/               # Aktif LLM istemcileri ve servis katmanı
 |   |-- db/                # Aktif veritabanı katmanı
 |   |-- core/              # Aktif konfigürasyon ve sabitler
-|   |-- routing/           # Kısmi şema / yönlendirme tipleri
-|   |-- agents/            # İskelet
-|   |-- orchestrators/     # İskelet
-|   |-- api/               # İskelet
+|   |-- routing/           # Aktif DepartmentRouter
+|   |-- agents/            # Temel uzman ajan iskeleti
+|   |-- orchestrators/     # Temel ana/departman orkestratörleri
+|   |-- api/               # Aktif FastAPI giriş yüzeyi
 |   |-- slack/             # İskelet
 |   |-- security/          # İskelet
 |   |-- queue/             # İskelet

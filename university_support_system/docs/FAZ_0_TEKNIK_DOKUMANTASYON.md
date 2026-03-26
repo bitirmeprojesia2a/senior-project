@@ -30,7 +30,7 @@ Bu doküman, projenin kuruluş fazında (FAZ 0) gerçekleştirilen **tüm** tekn
 
 ---
 
-> Ek Not (Mart 2026): Bu dokümandaki bazı klasör ağacı örnekleri tarihsel FAZ 0 taslağını yansıtır. Güncel departman isimleri ve kaynak klasörleri `finance`, `it_support`, `student_affairs` ve `academic_programs` olarak okunmalıdır.
+> Ek Not (Mart 2026): Bu dokümandaki bazı klasör ağacı örnekleri tarihsel FAZ 0 taslağını yansıtır. Güncel aktif departmanlar `finance`, `student_affairs` ve `academic_programs` olarak okunmalıdır.
 
 ## 2. Prototipten Nihai Sisteme Geçiş Kararları
 
@@ -86,7 +86,7 @@ university_support_system/
 │       ├── test_models.py         # 7 test
 │       ├── test_schemas.py        # 15 test
 │       └── test_connection.py     # 8 test
-├── data/raw/{finance,it_support,student_affairs,academic_programs}/
+├── data/raw/{finance,student_affairs,academic_programs}/
 ├── migrations/                    # Alembic
 ├── docker-compose.yml
 ├── requirements.txt               # Runtime paketler (pinlenmiş sürümler)
@@ -210,21 +210,19 @@ Tüm sabit değerler Python `Enum` sınıfları olarak tanımlanmıştır. `str,
 ```python
 class Department(str, Enum):
     FINANCE = "finance"              # Finans departmanı
-    IT_SUPPORT = "it_support"        # Bilgi İşlem desteği
     STUDENT_AFFAIRS = "student_affairs"  # Öğrenci İşleri departmanı
     ACADEMIC_PROGRAMS = "academic_programs"  # Akademik Programlar
 ```
 
-> Not: Güncel çekirdek `Department` enum'u `finance`, `it_support`, `student_affairs` ve `academic_programs` değerlerini içerir.
+> Not: Güncel çekirdek `Department` enum'u `finance`, `student_affairs` ve `academic_programs` değerlerini içerir.
 
 `display_name` property'si ile Türkçe görüntüleme adı döndürülür: `Department.FINANCE.display_name → "Finans"`.
 
-#### TaskType — Görev Tipleri (12 tip)
+#### TaskType — Görev Tipleri (9 tip)
 
 | Departman | Görev Tipleri |
 |-----------|--------------|
 | Finans | `tuition_query` (harç), `scholarship_query` (burs), `payment_query` (ödeme) |
-| IT Support | `tech_support` (teknik), `email_support` (e-posta), `account_support` (hesap) |
 | Öğrenci İşleri | `course_query` (ders), `registration_query` (kayıt), `academic_query` (akademik) |
 | Genel | `procedure_query` (RAG), `data_query` (SQL), `hybrid_query` (RAG+SQL) |
 
@@ -867,7 +865,7 @@ config.set_main_option("sqlalchemy.url", settings.postgres.sync_url)
 
 | Dosya | Test Sayısı | Kapsam |
 |-------|:----------:|--------|
-| `test_config.py` | 10 | Department enum değerleri ve display_name, InternalTaskStatus tüm durumları, TaskType alt tipleri (finance, it_support, student_affairs), Priority sıralaması, güven eşik değerleri |
+| `test_config.py` | 10 | Department enum değerleri ve display_name, InternalTaskStatus tüm durumları, TaskType alt tipleri (finance, student_affairs, academic_programs), Priority sıralaması, güven eşik değerleri |
 | `test_connection.py` | 8 | Engine başlangıçta None, init_engine ile oluşturma, session factory oluşturma, session commit/rollback/dispose, SQLite izolasyonu |
 | `test_models.py` | 7 | Student oluşturma ve varsayılan değerler, Tuition ilişkileri, QueryLog JSONB (`query_metadata`) alanları, AgentRegistry capabilities, `__repr__` metodu |
 | `test_schemas.py` | 15 | RAGQuery validasyon (boş/uzun sorgu red, custom top_k), RAGResult oluşturma, RoutingResult çoklu departman, DepartmentResponse varsayılanlar, UserQueryRequest user_id, HealthCheck timestamp |
@@ -1083,14 +1081,13 @@ Bu doküman Faz 0 çekirdeğini anlatsa da, aşağıdaki maddeler mevcut repo du
 
 ### 16.1 Güncel Departman Sözleşmesi
 
-Mevcut çekirdek `Department` sözleşmesi artık dört ana departman içerir:
+Mevcut çekirdek `Department` sözleşmesi artık üç ana departman içerir:
 
 * `finance`
-* `it_support`
 * `student_affairs`
 * `academic_programs`
 
-Daha önce belgede geçen `it` değeri veri klasörü, metadata ve koleksiyon isimleriyle hizalanarak `it_support` olarak standartlaştırılmıştır.
+`it_support` bu tarihsel faz notlarında bir dönem düşünülmüş olsa da, mevcut aktif çekirdeğe dahil değildir.
 
 ### 16.2 Dinamik Koleksiyon Yapısı
 
@@ -1099,14 +1096,12 @@ RAG çekirdeği artık tek bir sabit koleksiyona bağlı değildir. Koleksiyonla
 * `student_affairs_docs`
 * `academic_programs_docs`
 * `finance_docs`
-* `it_support_docs`
 
 Kaynak klasör ile koleksiyon adı arasındaki ilişki şu şekilde çalışır:
 
 * `data/raw/student_affairs` -> `student_affairs_docs`
 * `data/raw/academic_programs` -> `academic_programs_docs`
 * `data/raw/finance` -> `finance_docs`
-* `data/raw/it_support` -> `it_support_docs`
 
 ### 16.3 Doküman Metadata Genişlemesi
 

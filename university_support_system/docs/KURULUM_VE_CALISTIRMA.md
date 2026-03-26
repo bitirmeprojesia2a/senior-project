@@ -1,7 +1,7 @@
 # Kurulum ve Çalıştırma Rehberi
 
 **Proje:** Üniversite Kurumsal Destek Sistemi  
-**Güncellenme Tarihi:** 28 Şubat 2026  
+**Güncellenme Tarihi:** 26 Mart 2026  
 **Python Sürümü:** 3.11+  
 **İşletim Sistemi:** Windows 10/11 (Linux/macOS uyumlu notlar dahil)
 
@@ -282,6 +282,8 @@ Değiştirmek isteyebileceğiniz alanlar:
 | `EMBEDDING_MODEL` | `BAAI/bge-m3` | Farklı embedding modeli kullanacaksanız |
 | `EMBEDDING_DEVICE` | `auto` | Embedding için `auto`, `cpu` veya `cuda` seçmek isterseniz |
 | `RERANKER_DEVICE` | `auto` | Reranker için `auto`, `cpu` veya `cuda` seçmek isterseniz |
+| `AUTH_OTP_TTL_MINUTES` | `10` | OTP süresini değiştirmek isterseniz |
+| `AUTH_SESSION_TTL_HOURS` | `12` | Doğrulama oturum süresini değiştirmek isterseniz |
 | `SLACK_BOT_TOKEN` | *(boş)* | Slack entegrasyonu için gerekli |
 
 ### 5.3 Konfigürasyon Doğrulama
@@ -484,7 +486,6 @@ python scripts/index_documents.py --reindex
 - `data/raw/student_affairs` → `student_affairs_docs`
 - `data/raw/academic_programs` → `academic_programs_docs`
 - `data/raw/finance` → `finance_docs`
-- `data/raw/it_support` → `it_support_docs`
 
 İsterseniz bu çözümü override ederek `--collection` ile özel bir koleksiyon adı da verebilirsiniz.
 
@@ -664,7 +665,7 @@ python scripts/test_hybrid_search.py "ÇAP başvurusu için gereken not ortalama
 
 ```powershell
 python scripts/test_hybrid_search.py "Müfredat nedir?" --department academic_programs
-python scripts/query_db.py "OBS şifremi unuttum" --department it_support
+python scripts/query_db.py "Harç dekontumu nasıl alırım?" --department finance
 python scripts/evaluate_rag.py --department academic_programs
 ```
 
@@ -769,11 +770,13 @@ docker exec uni_postgres psql -U postgres -d university_support -c "SELECT id, s
 
 ## 12. Uygulamayı Başlatma
 
-> **Not:** FAZ 2 (LLM entegrasyonu) tamamlanmıştır. Ancak mevcut repo içinde çalıştırılabilir bir FastAPI uygulama girişi henüz bulunmamaktadır. `src/api/`, `src/slack/` ve benzeri klasörler şu an iskelet durumundadır.
+> **Not:** FAZ 2 (LLM entegrasyonu) tamamlanmıştır. Mevcut repo içinde artık çalıştırılabilir bir FastAPI uygulama girişi vardır: `src.api.main:app`. `src/slack/` ve benzeri bazı yüzeyler hâlâ iskelet durumundadır.
 
 ### 12.1 Mevcut Repo İçin Çalıştırılabilir Akış
 
 ```powershell
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
 python scripts/index_documents.py --reindex
 python -m pytest tests/unit/ -v --tb=short
 python -m pytest tests/integration/ -v --tb=short
@@ -975,6 +978,15 @@ Tüm konfigürasyon `src/core/config.py` içinde Pydantic Settings v2 ile tanım
 | `RERANKER_MAX_LENGTH` | `512` | Maksimum token uzunluğu |
 | `RERANKER_BATCH_SIZE` | `16` | Batch boyutu |
 
+### Auth / OTP
+
+| Değişken | Varsayılan | Açıklama |
+|----------|------------|----------|
+| `AUTH_OTP_LENGTH` | `6` | Üretilecek OTP kodu uzunluğu |
+| `AUTH_OTP_TTL_MINUTES` | `10` | OTP geçerlilik süresi |
+| `AUTH_MAX_FAILED_ATTEMPTS` | `5` | Başarısız deneme üst sınırı |
+| `AUTH_SESSION_TTL_HOURS` | `12` | Doğrulama oturumu süresi |
+
 ### RAG Pipeline
 
 | Değişken | Varsayılan | Açıklama |
@@ -1063,6 +1075,6 @@ python scripts/evaluate_rag.py
 
 ---
 
-*Bu rehber, projenin mevcut durumunu (FAZ 0 + FAZ 1 + FAZ 2 çekirdeği tamamlanmış) yansıtmaktadır. API gateway, Slack bot ve çok ajanlı orkestrasyon katmanları bu repo içinde henüz iskelet seviyesindedir.*
+*Bu rehber, projenin mevcut durumunu (FAZ 0 + FAZ 1 + FAZ 2 çekirdeği tamamlanmış, FAZ 3 için temel A2A/ajan/API iskeleti eklenmiş) yansıtmaktadır. Slack bot katmanı halen iskelet seviyesindedir.*
 
 > Ek güncelleme: 8 Mart 2026 itibarıyla çok departmanlı koleksiyon yapısı, `EMBEDDING_DEVICE` / `RERANKER_DEVICE` ile cihaz seçimi, güncel test envanteri ve `academic_programs` akışı bu rehbere işlenmiştir. Üst başlıktaki tarih tarihsel kaldıysa güncel teknik durum için `docs/MART_2026_GUNCELLEME_NOTLARI.md` de birlikte okunmalıdır.

@@ -6,17 +6,16 @@ Bu dokuman, proje uzerinde Mart 2026 boyunca yapilan guncellemeleri, dogrulamala
 
 ### 1.1 Departman Sozlesmesi
 
-Aktif cekirdek artik dort ana departman tanir:
+Aktif cekirdek artik uc ana departman tanir:
 
 * `finance`
-* `it_support`
 * `student_affairs`
 * `academic_programs`
 
-Bu noktada onemli standardizasyon:
+Bu noktada onemli durum:
 
-* Eski `it` ismi, veri klasorleri ve koleksiyonlarla uyumlu olacak sekilde `it_support` olarak standartlastirildi.
 * `academic_programs` artik yalnizca prompt veya loader seviyesinde degil, cekirdek sozlesmenin parcasi olarak ele alinmaktadir.
+* `it_support` onceki denemelerden kalan tarihsel bir departman adidir; mevcut aktif cekirdek sozlesme ve veri kaynaklari bu departmani kapsamaz.
 
 Mart 2026 sonundaki ek iyilestirme ile departman tanimi yalnizca enum seviyesinde degil, merkezi bir departman kaydi uzerinden de yonetilmektedir. Bu kayit:
 
@@ -34,14 +33,12 @@ RAG tarafi tek bir sabit koleksiyona bagli degildir. Koleksiyonlar ana departman
 * `student_affairs_docs`
 * `academic_programs_docs`
 * `finance_docs`
-* `it_support_docs`
 
 Kaynak klasor -> koleksiyon eslemesi:
 
 * `data/raw/student_affairs` -> `student_affairs_docs`
 * `data/raw/academic_programs` -> `academic_programs_docs`
 * `data/raw/finance` -> `finance_docs`
-* `data/raw/it_support` -> `it_support_docs`
 
 Bu dinamik yapi su alanlara yansitilmistir:
 
@@ -134,14 +131,45 @@ Aktif yetenekler:
 `prompt_templates.py` icindeki departman yonlendirme prompt'u guncel cekirdekle hizalanmistir:
 
 * `finance`
-* `it_support`
 * `student_affairs`
 * `academic_programs`
 
 Not:
 
-* LLM katmani hazirdir, ancak aktif retrieval secimi yalnizca LLM'e bagimli olacak sekilde zorlanmamistir.
-* Mevcut repo yuzeyinde retrieval planlamasinin onemli bir kismi halen kural tabanli ve deterministik kalir.
+* LLM katmani artik yalnizca istemci/servis seviyesinde degil, `src/routing/router.py` uzerinden aktif routing akisinin parcasi haline gelmistir.
+* Belirsiz sorgularda `DepartmentRouter`, kural tabanli skorlamadan sonra `LLMService` ile JSON tabanli yonlendirme fallback'i kullanabilir.
+* Buna ragmen aktif retrieval secimi halen yalnizca LLM'e bagimli olacak sekilde zorlanmaz; kural tabanli ve deterministik katman korunur.
+
+## 3.3 A2A ve Ajan Iskeleti
+
+FAZ 3 kapsaminda daha once yalnizca dokumanda duran cok ajanli tasarim icin temel kod iskeleti eklenmistir:
+
+* `src/a2a/helpers.py`
+  * `a2a-sdk` tipleri ile `Task`, `Message`, `Artifact` ve `AgentCard` uretimi
+* `src/agents/base.py`
+  * uzman ajanlar icin ortak taban sinifi
+* `src/agents/student/agents.py`
+  * `registration_agent`, `graduation_agent`, `internship_agent`, `student_life_agent`
+* `src/agents/academic/agents.py`
+  * `curriculum_agent`, `regulation_agent`, `international_agent`
+* `src/agents/finance/agents.py`
+  * `tuition_agent`, `scholarship_agent`
+* `src/agents/announcement/agent.py`
+  * `announcements` tablosundan aktif duyurulari okuyabilen `announcement_agent`
+* `src/orchestrators/main.py`
+  * normal departman yanitlarina ilgili duyurulari ekleyebilen ana orkestrator akisi
+* `src/orchestrators/department.py`
+  * departman orkestrator iskeleti
+* `src/orchestrators/main.py`
+  * router ile departman orkestratorlerini birlestiren ana orkestrator
+* `src/api/main.py`
+  * FastAPI giris noktasi
+  * `/health`, `/query`, `/agents` ve uygulama ici `/a2a/dispatch` endpoint'leri
+
+Not:
+
+* Bu ilk iskelet, aktif olarak `student_affairs`, `academic_programs` ve `finance` departmanlarina odaklanir.
+* `it_support` ajani veya departman orkestratoru bu asamada aktif kod yoluna dahil edilmemistir.
 
 ## 4. GPU Hazirligi ve Model Dogrulama
 
@@ -193,6 +221,45 @@ Calisma notlari:
 * Hedefe yonelik reranker integration testi gecmistir.
 * Integration smoke katmaninda `academic_programs_docs` mevcutsa bu koleksiyon icin de temel durum dogrulamasi yapilabilir.
 * Daha agir integration testleri halen CPU/GPU yukleme, embedding, BM25 hazirligi ve koleksiyon tarama maliyeti nedeniyle gunluk dongude pahali olabilir.
+* Yeni router, A2A helper ve orchestrator katmanlari icin ek unit testler eklendi:
+  * `tests/unit/test_router.py`
+  * `tests/unit/test_a2a_helpers.py`
+  * `tests/unit/test_orchestrators.py`
+
+## 6. Telemetry Entegrasyonu
+
+Mart 2026 sonundaki ek entegrasyonlarla birlikte telemetry katmani uygulama akisina baglanmistir:
+
+* `src/db/telemetry.py`
+  * `QueryLog` ve `AgentTask` yazimi icin yardimci servis eklendi
+* `src/orchestrators/main.py`
+  * ana sorgular icin `QueryLog` kaydi olusturur ve sonuc durumunu gunceller
+* `src/orchestrators/department.py`
+  * uzman ajan cagrisini `AgentTask` kaydi ile izleyebilir
+
+Bu kayitlar "en iyi caba" mantigiyla yazilir:
+
+* veritabani erisimi varsa telemetry kalici olarak kaydedilir
+* telemetry yazimi hata verirse kullanici sorgu akisi bozulmaz
+
+## 7. Kisisel Veri Sorgulari
+
+Mart 2026 sonundaki sonraki adimlardan biri olarak bazi uzman ajanlar yalnizca RAG uzerinden degil, kimligi dogrulanmis kullanicilar icin dogrudan veritabani uzerinden de cevap uretebilir hale getirilmistir:
+
+* `tuition_agent`
+  * ogrencinin guncel harc, odeme ve borc ozetini DB'den okuyabilir
+* `scholarship_agent`
+  * ogrencinin aktif burs ve son burs basvurusu bilgisini DB'den okuyabilir
+* `graduation_agent`
+  * ogrencinin GNO, kredi ve son ders ozetini DB'den okuyabilir
+
+Bu akista genel/prosedurel sorular yine mevcut RAG + LLM yolunda kalir. DB yolu yalnizca:
+
+* `student_id` mevcutsa
+* `is_authenticated = true` ise
+* sorgu kisisel veri sinifina giriyorsa
+
+aktif olur.
 
 Bu nedenle repo icinde ayrismis bir test stratejisi belgelenmistir:
 
@@ -200,7 +267,55 @@ Bu nedenle repo icinde ayrismis bir test stratejisi belgelenmistir:
 * `model`
 * `slow`
 
-## 6. Dokumantasyon Temizligi
+## 8. OTP ve Session Auth Akisi
+
+Mart 2026 sonundaki sonraki altyapi adimlarindan biri olarak mevcut `otp_codes`,
+`verification_sessions` ve `slack_student_mapping` tablolarini kullanan gercek bir
+auth servisi eklenmistir:
+
+* `src/db/auth.py`
+  * OTP olusturma
+  * OTP dogrulama
+  * session token uretimi
+  * Slack kullanicisi ile ogrenci eslemesi
+  * aktif oturumu token veya `slack_user_id` ile cozumleme
+* `src/api/main.py`
+  * `POST /auth/request-otp`
+  * `POST /auth/verify-otp`
+  * `POST /auth/resolve`
+  * `POST /auth/logout`
+
+Bu degisiklikle birlikte `/query` ve `/a2a/dispatch` endpoint'leri artik:
+
+* dogrudan `student_id` + `is_authenticated` alabilir
+* veya `session_token` ile kimlik baglamini otomatik cozumleyebilir
+* veya aktif Slack eslemesi varsa `slack_user_id` uzerinden kullaniciyi tanuyabilir
+
+Not:
+
+* e-posta gonderimi su an `email_stub` modunda tutulmustur
+* gelistirme modunda OTP preview kodu API yanitina eklenebilir
+* gercek SMTP/kurumsal posta entegrasyonu sonraki fazdir
+
+Ek olarak auth payload modelleri tekrar sadece API dosyasinda tutulmayip
+`src/db/schemas.py` icinde ortak semalara alinmistir. Boylece auth ve query
+istek/yanit modelleri tek yerde toplanmistir.
+
+## 9. Office Contact Hazirligi
+
+Agent fazina gecmeden once iletisim/ofis onerisi icin asgari altyapi
+hazirlanmistir:
+
+* `office_contacts` ORM modeli eklendi
+* `src/db/office_contacts.py`
+  * departman bazli iletisim kaydi getirme
+  * ajan bazli filtreleme
+  * API/uygulama katmani icin duzlestirilmis payload uretimi
+
+Bu adim simdilik agent cevaplarina baglanmamistir; ancak uzman ajanlar
+iletisim bilgisi sunmaya basladiginda kullanilacak veri zemini hazirdir.
+
+## 10. Dokumantasyon Temizligi
 
 Su belgeler Mart 2026 guncel duruma gore revize edilmistir:
 
@@ -212,7 +327,7 @@ Su belgeler Mart 2026 guncel duruma gore revize edilmistir:
 
 Bazi eski belgelerde tarihsel baglam korunurken, bu belge onlari tamamlayan ve yer yer override eden bir merkez not olarak eklenmistir.
 
-## 7. Mevcut Guclu Yonler
+## 11. Mevcut Guclu Yonler
 
 * RAG cekirdegi moduler ve ayri sorumluluklara bolunmus durumda.
 * Dinamik departman ve koleksiyon yapisi tek-koleksiyon bagimliligini azaltmis durumda.
@@ -220,24 +335,24 @@ Bazi eski belgelerde tarihsel baglam korunurken, bu belge onlari tamamlayan ve y
 * GPU hazirligi kod ve ortam seviyesinde dogrulanmis durumda.
 * Test katmani ozellikle unit seviyede guclu.
 
-## 8. Kalan Teknik Borclar
+## 12. Kalan Teknik Borclar
 
-### 8.1 Yapi
+### 12.1 Yapi
 
 * Merkezi departman kaydi sayesinde departman taniminin cekirdek kod yuzeyine yayilmasi daha kontrollu hale gelmistir.
 * Buna ragmen yeni departman icin veri klasoru, soru havuzu ve integration kapsamini genisletme ihtiyaci devam eder.
 
-### 8.2 RAG Degerlendirme Metodu
+### 12.2 RAG Degerlendirme Metodu
 
 * Degerlendirme tarafinda dosya adi heuristiklerine dayali kisimlar halen vardir.
 * Icerik tabanli veya daha saglam etiketli bir olcum modeli gelecekte daha dogru olur.
 
-### 8.3 Test Stratejisi
+### 12.3 Test Stratejisi
 
 * Agir integration testleri gunluk gelistirme akisinda pahali kalabilir.
 * Daha net smoke/model/slow ayrimi ve buna uygun komutlar uzun vadede repo ergonomisini iyilestirir.
 
-## 9. Not Edilen Gelecek Iyilestirme
+## 13. Not Edilen Gelecek Iyilestirme
 
 Ozellikle not dusulen sonraki teknik hedef:
 
@@ -245,3 +360,38 @@ Ozellikle not dusulen sonraki teknik hedef:
 * Eklenen departmanin tum kod parcalarinda tutarli sekilde taninmasini surdurmek
 
 Bu madde mevcut backlog icinde halen onemli bir mimari ergonomi adayidir.
+
+## 14. Son Review Notlari
+
+Bugun eklenen LLM/A2A/announcement/kisisel veri akislarinin tekrar gozden gecirilmesi sirasinda sonraya birakilan teknik not:
+
+* kisisel veri snapshot sorgularinda "en guncel kayit" secimi su an agirlikli olarak `id desc` ile yapilmaktadir; donem veya tarih bazli secim daha saglam olur
+
+## 13. Agent Tasarimina Gecerken Notlar
+
+Agent tasarimi fazina gecildiginde asagidaki ilkeler korunmalidir:
+
+* her agent icin gorev siniri net olmali; "hangi sorgu kime ait" belirsiz kalmamali
+* genel RAG cevaplari ile kisisel DB cevaplari ayni agent icinde bile ayrik ve acik dallarda tutulmali
+* kimlik dogrulama gerektiren akislar acikca isaretlenmeli; sessiz veri sizmasi riski olmamali
+* ortak davranislar taban sinifta veya yardimci servislerde kalmali; agentlar arasinda tekrar eden kod buyumemeli
+* cross-agent yonlendirme yalnizca kurali net olan durumlarda kullanilmali; aksi halde agent sinirlari bulaniklasir
+* announcement, telemetry ve benzeri ortak yardimci akislar agentlara daginik sekilde kopyalanmamali
+* her agent icin cevap kaynagi acik olmali: RAG, DB veya hibrit
+* yeni agent ekleme merkezi departman kaydi ve mevcut iskelet uzerinden yapilmali; daginik entegrasyon noktalarina geri donulmemeli
+* fallback agent kullanimi gecici destek olarak kalmali; asil gorev dagilimi gercek uzman ajanlar uzerine kurulmalidir
+* test stratejisi agent tasarimi ile birlikte dusunulmeli; her yeni agent en az temel unit test korumasi ile gelmelidir
+
+## 14. A2A Uygulama Seviyesi Notu
+
+Mart 2026 sonundaki mevcut durum:
+
+* A2A yardimci tipleri ve gorev akisi uygulama icinde aktif olarak kullanilmaktadir
+* departman orkestratorleri ve ana orkestrator A2A task modeli uzerinden haberlesir
+* API tarafinda `/a2a/dispatch` endpoint'i ile uygulama ici dispatch yuzeyi vardir
+* ancak bu yapi tam dagitik, ayri process veya ayri servisler halinde calisan bir dis A2A agi degildir
+
+Bu nedenle bugun icin dogru ifade:
+
+* "uygulama ici A2A iskeleti ve dispatch akisi eklendi"
+* "tam dagitik A2A servislesmesi daha sonraki faza birakildi"

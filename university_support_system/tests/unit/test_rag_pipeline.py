@@ -5,6 +5,8 @@ Document loader, text preprocessor, chunker ve embedder testleri.
 ChromaDB testleri mock httpx client ile yapılır.
 """
 
+import shutil
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +16,18 @@ from src.core.constants import Department
 from src.rag.document_loader import Document, DocumentLoader
 from src.rag.text_preprocessor import TextPreprocessor
 from src.rag.chunker import Chunk, TextChunker
+
+
+@pytest.fixture
+def tmp_path():
+    """Windows temp izin sorunlarını aşmak için repo içi geçici dizin üretir."""
+    base_dir = Path(".codex_pytest_tmp")
+    base_dir.mkdir(exist_ok=True)
+    temp_dir = Path(tempfile.mkdtemp(prefix="rag-pipeline-", dir=base_dir))
+    try:
+        yield temp_dir
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # ═══════════════════════════════════════════════════

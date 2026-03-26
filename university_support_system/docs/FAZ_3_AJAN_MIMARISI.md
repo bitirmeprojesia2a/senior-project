@@ -3,7 +3,7 @@
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 17 Mart 2026  
 **Hazırlayan:** Geliştirme Ekibi  
-**Durum:** 🔄 Tasarım Tamamlandı — Kodlama Aşamasına Hazır  
+**Durum:** 🔄 Tasarım Tamamlandı — Temel İskelet Kodlandı  
 
 ---
 
@@ -748,5 +748,57 @@ FAZ 3 implementasyonu için önerilen sıra:
 
 ---
 
-*Bu doküman FAZ 3 tasarım sürecinde alınan tüm mimari kararları yansıtmaktadır.*  
-*Son güncelleme: 17 Mart 2026*
+## 12. 25 Mart 2026 Uygulama Durumu
+
+Bu dokümandaki tasarımın tamamı henüz ürün seviyesinde bitirilmemiş olsa da aşağıdaki temel iskelet kodlanmıştır:
+
+* `src/a2a/helpers.py`
+  * `a2a-sdk` tipleri ile `Task`, `Message`, `Artifact` ve `AgentCard` üretimi için yardımcı katman
+* `src/agents/base.py`
+  * uzman ajanlar için ortak taban sınıf
+  * RAG + LLM ile temel cevap üretim akışı
+* `src/agents/student/agents.py`
+  * `registration_agent`
+  * `graduation_agent`
+  * `internship_agent`
+  * `student_life_agent`
+* `src/agents/academic/agents.py`
+  * `curriculum_agent`
+  * `regulation_agent`
+  * `international_agent`
+* `src/agents/finance/agents.py`
+  * `tuition_agent`
+  * `scholarship_agent`
+* `src/agents/announcement/agent.py`
+  * `announcements` tablosundan aktif duyurulari okuyabilen temel `announcement_agent`
+* `src/orchestrators/department.py`
+  * departman orkestratör iskeleti
+* `src/orchestrators/main.py`
+  * `DepartmentRouter` ile yönlendirme yapan ana orkestratör iskeleti
+* `src/db/auth.py`
+  * `otp_codes`, `verification_sessions` ve `slack_student_mapping` tablolarını kullanan OTP/session auth servisi
+* `src/api/main.py`
+  * temel FastAPI giriş yüzeyi
+  * `POST /auth/request-otp`
+  * `POST /auth/verify-otp`
+  * `POST /auth/resolve`
+  * `POST /auth/logout`
+  * `POST /query`
+  * `POST /a2a/dispatch`
+
+Mevcut durumun sınırları:
+
+* uzman ajanlar şu an ağırlıklı olarak genel RAG + LLM tabanı üzerinde çalışır
+* kişisel veri/DB sorgulari halen parcali durumdadir
+* `announcement_agent` artik `announcements` tablosundan okuma yapar; scraping ve periyodik doldurma akisi ise sonraki fazdir
+* OTP/session auth aktif olsa da e-posta gönderimi şu an `email_stub` seviyesindedir; gerçek SMTP veya kurumsal posta entegrasyonu sonraki fazdır
+* A2A ağ iletişimi değil, önce yerel tipler ve görev akışı iskeleti kurulmuştur
+* Slack yüzeyi halen sonraki adım kapsamındadır
+* `src/api/main.py` katmanı ana orkestratör, iç A2A dispatch ve auth session çözümlemesini uygulama içinde kullanır
+
+Bu nedenle FAZ 3 şu anda "tasarım + çalışan temel uygulama iskeleti" seviyesindedir.
+
+---
+
+*Bu doküman FAZ 3 tasarım sürecinde alınan tüm mimari kararları ve temel iskelet uygulamasını yansıtmaktadır.*  
+*Son güncelleme: 25 Mart 2026*

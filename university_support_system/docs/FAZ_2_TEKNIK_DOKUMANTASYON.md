@@ -160,12 +160,12 @@ Bu bölüm, FAZ 2 sonrasında LLM katmanında yapılan ek dokümantasyon güncel
 
 ### 8.1 Prompt ve Departman Uyumu
 
-* `prompt_templates.py` içindeki `DEPARTMENT_ROUTING_SYSTEM_PROMPT` artık şu departmanları içerir:
+* `prompt_templates.py` içindeki `DEPARTMENT_ROUTING_SYSTEM_PROMPT` artık şu aktif departmanları içerir:
   * `finance`
   * `student_affairs`
   * `academic_programs`
 * Bu prompt, çok departmanlı RAG çekirdeği ile uyumlu hale getirilmiştir.
-* `it_support` departmanı FAZ 3 kapsamında kaldırılmış olup prompt güncellenecektir (bkz. FAZ_3_AJAN_MIMARISI.md, Bölüm 11).
+* Prompt listesi merkezi departman kaydından üretildiği için yeni aktif departmanlar eklendiğinde tek noktadan güncellenebilir.
 
 ### 8.2 Aktif LLM Yetkinlikleri
 
@@ -182,6 +182,7 @@ LLM tabanı aktif ve kullanılabilir durumdadır; ancak mevcut repo çalışma y
 
 * LLM katmanı hazırdır
 * departman yönlendirme prompt'u mevcuttur
+* aktif yönlendirme akışında artık `src/routing/router.py` içindeki `DepartmentRouter` kullanılabilir durumdadır
 * fakat aktif retrieval seçiminde yalnızca LLM'e bağımlı bir routing zorunlu değildir
 
 Bu tercih, sistemin yerel çalışabilirliğini ve deterministik davranışını korumak için yapılmıştır.
@@ -190,3 +191,12 @@ Bu tercih, sistemin yerel çalışabilirliğini ve deterministik davranışını
 
 * Health check, fallback ve streaming akışları kodda mevcuttur ve bu dokümanda artık açıkça belirtilmiştir.
 * Departman yönlendirme prompt'u artık merkezi departman kaydından üretilebilir durumdadır; yeni departman eklerken prompt ve çekirdek sözleşme uyumsuzluğu riski azaltılmıştır.
+
+### 8.5 25 Mart 2026 Ek Durum
+
+LLM entegrasyonunda daha önce eksik kalan "servis hazır ama sistemde aktif kullanım yüzeyi yok" boşluğu kısmen kapatılmıştır:
+
+* `src/routing/router.py` altında `DepartmentRouter` eklendi
+* router önce kural tabanlı skor üretir, belirsiz durumda `LLMService` ile JSON tabanlı yönlendirme fallback'i kullanır
+* çıktı `RoutingResult` şeması ile uyumludur
+* bu katman `tests/unit/test_router.py` ile test altına alınmıştır

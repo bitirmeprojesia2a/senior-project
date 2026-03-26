@@ -32,7 +32,7 @@ ChromaDB veritabanı dosyaları (koleksiyonlar, vektörler ve SQLite dosyaları)
 
 Sistem yeni bir PDF sisteme eklendiğinde veya bir arama yapıldığında şu döngüyü işletir:
 1. [get_collection_id()](file:///c:/Users/%C3%96MER%20FARUK%20DER%C4%B0N/Desktop/bitirme%20projesi/university_support_system/university_support_system/src/rag/indexer.py#112-117) çağrılır.
-2. ChromaDB'ye sorgunun veya indeksleme kaynağının bağlı olduğu departmana ait koleksiyonun olup olmadığı sorulur. Örnekler: *"student_affairs_docs"*, *"academic_programs_docs"*, *"finance_docs"*, *"it_support_docs"*.
+2. ChromaDB'ye sorgunun veya indeksleme kaynağının bağlı olduğu departmana ait koleksiyonun olup olmadığı sorulur. Güncel örnekler: *"student_affairs_docs"*, *"academic_programs_docs"*, *"finance_docs"*.
 3. Eğer koleksiyon henüz yoksa [create_collection()](file:///c:/Users/%C3%96MER%20FARUK%20DER%C4%B0N/Desktop/bitirme%20projesi/university_support_system/university_support_system/src/rag/indexer.py#55-95) devreye girer, POST isteğiyle yeni bir koleksiyon oluşturur ve ID'sini döner.
 4. Bu aşamadan sonra tüm okuma/yazma işlemleri bu Koleksiyon ID'si üzerinden (*Multi-tenant yapı*) gerçekleşir.
 
