@@ -73,7 +73,7 @@ Yanıt + kaynaklar
 | Dil | Python 3.11+ | Aktif |
 | Veritabanı | PostgreSQL 15 | Aktif |
 | Vektör DB | ChromaDB | Aktif |
-| LLM | Qwen2.5:7B (Ollama) | Aktif |
+| LLM | Qwen2.5:7B + Qwen2.5:3B (Ollama) | Aktif |
 | Gömme Modeli | BAAI/bge-m3 | Aktif |
 | Reranker | seroe/bge-reranker-v2-m3-turkish-triplet | Aktif |
 | Web Framework | FastAPI | Aktif API giriş yüzeyi mevcut |
@@ -109,10 +109,13 @@ docker compose up -d
 # 5. Veritabanı migration
 python -m alembic upgrade head
 
-# 6. AI modellerini indir (opsiyonel - ilk kullanımda otomatik iner)
+# 6. AI modellerini indir (embedding/reranker ilk kullanımda cache'e iner)
 python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
 python -c "from sentence_transformers import CrossEncoder; CrossEncoder('seroe/bge-reranker-v2-m3-turkish-triplet', max_length=512)"
-docker exec uni_ollama ollama pull qwen2.5:7b
+
+# Ollama container açılışta OLLAMA_PRELOAD_MODELS içindeki modelleri otomatik çeker.
+# Varsayılan: qwen2.5:7b + qwen2.5:3b
+docker exec uni_ollama ollama list
 
 # 7. RAG indeksleme
 python scripts/index_documents.py --reindex
@@ -134,6 +137,8 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 > GPU kullanacaksanız `EMBEDDING_DEVICE` ve `RERANKER_DEVICE` ayarlarını `cuda` veya `auto` olarak bırakabilirsiniz. Bunun çalışması için kurulu `torch` paketinin CUDA destekli olması gerekir.
+
+> LLM model seçimi artık rol bazlı ayarlanabilir. Varsayılan balanslı yapıda router `qwen2.5:3b`, uzman sentez ve ana sentez ise `qwen2.5:7b` kullanır. Tüm akışı hızlı moda almak için `.env` içinde `LLM_PROFILE=fast`, kalite odaklı yapmak için `LLM_PROFILE=quality` kullanabilirsiniz.
 
 > Not: Bu repo içinde artık çalıştırılabilir bir `src.api.main:app` girişi vardır. Slack katmanı halen sonraki faz için iskelet düzeyindedir.
 

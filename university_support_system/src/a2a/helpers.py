@@ -13,6 +13,7 @@ from a2a.types import (
     AgentProvider,
     AgentSkill,
     Artifact,
+    DataPart,
     Message,
     Role,
     Task,
@@ -20,6 +21,11 @@ from a2a.types import (
     TaskStatus,
     TextPart,
 )
+from pydantic import ValidationError
+
+from src.db.schemas import DepartmentResponse
+
+_DEPARTMENT_RESPONSE_SCHEMA = "omu.department_response.v1"
 
 
 @dataclass(frozen=True)
@@ -30,6 +36,12 @@ class A2AQueryPayload:
     context_id: str
     task_type: str | None = None
     student_id: int | None = None
+    student_number: str | None = None
+    student_full_name: str | None = None
+    student_department: str | None = None
+    student_faculty: str | None = None
+    student_type: str | None = None
+    llm_profile: str | None = None
     is_authenticated: bool = False
     routing_reason: str | None = None
     priority: str = "NORMAL"
@@ -40,6 +52,12 @@ class A2AQueryPayload:
             "context_id": self.context_id,
             "task_type": self.task_type,
             "student_id": self.student_id,
+            "student_number": self.student_number,
+            "student_full_name": self.student_full_name,
+            "student_department": self.student_department,
+            "student_faculty": self.student_faculty,
+            "student_type": self.student_type,
+            "llm_profile": self.llm_profile,
             "is_authenticated": self.is_authenticated,
             "routing_reason": self.routing_reason,
             "priority": self.priority,
@@ -106,6 +124,109 @@ def build_query_task(
         status=status,
         metadata=payload.to_metadata(),
     )
+
+
+def build_department_response_task(
+    response: DepartmentResponse,
+    *,
+    request_task: Task,
+    emitter_id: str,
+    emitter_name: str,
+    task_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> Task:
+    """DepartmentResponse nesnesini A2A tamamlanmis task'ine sarar."""
+    response_task_id = task_id or str(uuid4())
+    response_payload = response.model_dump(mode="json")
+    merged_metadata = {
+        "parent_task_id": request_task.id,
+        "emitter_id": emitter_id,
+        "emitter_name": emitter_name,
+        "response_schema": _DEPARTMENT_RESPONSE_SCHEMA,
+    }
+    if metadata:
+        merged_metadata.update(metadata)
+
+    message = build_text_message(
+        response.answer,
+        context_id=request_task.contextId,
+        role=Role.agent,
+        task_id=response_task_id,
+        metadata={
+            "department": response.department.value,
+            "success": response.success,
+            "emitter_id": emitter_id,
+            "emitter_name": emitter_name,
+        },
+    )
+    status = TaskStatus(
+        state=TaskState.completed,
+        message=message,
+        timestamp=datetime.now(UTC).isoformat(),
+    )
+    artifact = build_text_artifact(
+        response.answer,
+        name=f"{response.department.value}_response_text",
+        metadata={
+            "department": response.department.value,
+            "success": response.success,
+            "emitter_id": emitter_id,
+            "emitter_name": emitter_name,
+            "schema": "text/plain",
+        },
+    )
+    structured_artifact = Artifact(
+        artifactId=str(uuid4()),
+        name=f"{response.department.value}_response_data",
+        description="Structured department response payload",
+        extensions=[_DEPARTMENT_RESPONSE_SCHEMA],
+        metadata={
+            "department": response.department.value,
+            "success": response.success,
+            "emitter_id": emitter_id,
+            "emitter_name": emitter_name,
+            "schema": _DEPARTMENT_RESPONSE_SCHEMA,
+        },
+        parts=[
+            DataPart(
+                data=response_payload,
+                metadata={
+                    "schema": _DEPARTMENT_RESPONSE_SCHEMA,
+                    "department": response.department.value,
+                },
+            )
+        ],
+    )
+    return Task(
+        id=response_task_id,
+        contextId=request_task.contextId,
+        status=status,
+        metadata=merged_metadata,
+        artifacts=[artifact, structured_artifact],
+        history=[request_task.status.message, message] if request_task.status.message is not None else [message],
+    )
+
+
+def extract_department_response(task: Task) -> DepartmentResponse | None:
+    """A2A response task artifact veya legacy metadata'sindan DepartmentResponse cikarir."""
+    for artifact in task.artifacts or []:
+        for part in artifact.parts:
+            root = getattr(part, "root", part)
+            data = getattr(root, "data", None)
+            if isinstance(data, dict):
+                metadata = getattr(root, "metadata", {}) or {}
+                schema = metadata.get("schema") or (artifact.metadata or {}).get("schema")
+                if schema in {_DEPARTMENT_RESPONSE_SCHEMA, None}:
+                    try:
+                        return DepartmentResponse.model_validate(data)
+                    except ValidationError:
+                        continue
+
+    metadata = task.metadata or {}
+    payload = metadata.get("department_response")
+    if isinstance(payload, dict):
+        return DepartmentResponse.model_validate(payload)
+    return None
 
 
 def build_agent_card(

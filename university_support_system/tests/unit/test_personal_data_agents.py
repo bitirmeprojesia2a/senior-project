@@ -2,9 +2,12 @@
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
+from src.a2a import extract_department_response
+from src.agents.base import BaseSpecialistAgent
 from src.agents.finance.agents import ScholarshipAgent, TuitionAgent
 from src.agents.student.agents import GraduationAgent
 from src.core.constants import Department
@@ -12,6 +15,8 @@ from src.core.constants import Department
 
 def _build_task(query_text: str, *, student_id: int | None, is_authenticated: bool):
     return SimpleNamespace(
+        id=f"test-task-{uuid4()}",
+        contextId="test-context",
         metadata={
             "query_text": query_text,
             "student_id": student_id,
@@ -19,6 +24,20 @@ def _build_task(query_text: str, *, student_id: int | None, is_authenticated: bo
         },
         status=SimpleNamespace(message=None),
     )
+
+
+@pytest.fixture(autouse=True)
+def _unwrap_a2a_responses(monkeypatch):
+    """A2A handle_task kontratini mevcut DepartmentResponse beklentisine uyarlar."""
+
+    original_handle_task = BaseSpecialistAgent.handle_task
+
+    async def _wrapped_handle_task(self, task):
+        result = await original_handle_task(self, task)
+        extracted = extract_department_response(result)
+        return extracted or result
+
+    monkeypatch.setattr(BaseSpecialistAgent, "handle_task", _wrapped_handle_task)
 
 
 @pytest.mark.asyncio
@@ -85,7 +104,8 @@ async def test_scholarship_agent_uses_db_snapshot_for_authenticated_personal_que
             },
         }
     )
-    agent = ScholarshipAgent(scholarship_fetcher=fetcher)
+    eligibility_fetcher = AsyncMock(return_value=[])
+    agent = ScholarshipAgent(scholarship_fetcher=fetcher, eligibility_fetcher=eligibility_fetcher)
 
     response = await agent.handle_task(
         _build_task("Burs durumum ne?", student_id=8, is_authenticated=True)
@@ -95,6 +115,7 @@ async def test_scholarship_agent_uses_db_snapshot_for_authenticated_personal_que
     assert "Yemek Bursu" in response.answer
     assert "Guncel GNO: 3.40" in response.answer
     fetcher.assert_awaited_once_with(8)
+    eligibility_fetcher.assert_awaited_once_with(3.4)
 
 
 @pytest.mark.asyncio

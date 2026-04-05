@@ -1,4 +1,4 @@
-# ── Python ──────────────────────────────────────
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -10,25 +10,25 @@ eggs/
 *.egg
 .Python
 
-# ── Virtual Environment ────────────────────────
+# Virtual Environment
 venv/
 .venv/
 env/
 ENV/
 
-# ── Ortam Değişkenleri ─────────────────────────
+# Environment Variables
 .env
 .env.local
 .env.production
 
-# ── IDE ─────────────────────────────────────────
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# ── Test & Coverage ────────────────────────────
+# Test & Coverage
 htmlcov/
 .coverage
 .coverage.*
@@ -38,23 +38,24 @@ htmlcov/
 .pytest-tmp/
 .pytest_tmp/
 .codex_pytest_tmp/
+tests/live_test_results_*.json
+tests/live_test_profile_*.json
 
-# ── Docker ──────────────────────────────────────
-# Volume verileri (lokal geliştirme)
+# Docker
 
-# ── Veritabanı ──────────────────────────────────
+# Database
 *.db
 *.sqlite3
 
-# ── ChromaDB Lokal ──────────────────────────────
+# ChromaDB Local
 chroma_db/
 
-# ── Model Dosyaları ─────────────────────────────
+# Model Files
 *.bin
 *.safetensors
 models/
 
-# ── Geçici Dosyalar ────────────────────────────
+# Temporary Files
 *.log
 *.tmp
 tmp/
@@ -62,7 +63,7 @@ temp/
 temp_*.txt
 debug_*.py
 
-# ── OS ──────────────────────────────────────────
+# OS
 .DS_Store
 Thumbs.db
 desktop.ini

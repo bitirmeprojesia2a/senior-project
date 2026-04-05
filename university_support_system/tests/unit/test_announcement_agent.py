@@ -2,15 +2,19 @@
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
 from src.agents.announcement.agent import AnnouncementAgent
+from src.a2a.helpers import extract_department_response
 from src.db.announcements import AnnouncementRecord, extract_announcement_keywords
 
 
 def _build_task(metadata: dict | None = None):
     return SimpleNamespace(
+        id=f"task-{uuid4()}",
+        contextId="ctx-announcement-test",
         metadata=metadata or {},
         status=SimpleNamespace(message=None),
     )
@@ -44,7 +48,7 @@ async def test_announcement_agent_formats_matching_announcements():
     )
     agent = AnnouncementAgent(announcement_fetcher=fetcher)
 
-    response = await agent.handle_task(
+    response_task = await agent.handle_task(
         _build_task(
             {
                 "query_text": "Cap duyurulari neler?",
@@ -52,7 +56,9 @@ async def test_announcement_agent_formats_matching_announcements():
             }
         )
     )
+    response = extract_department_response(response_task)
 
+    assert response is not None
     assert response.success is True
     assert "Cap Basvurulari Acildi" in response.answer
     assert "https://omu.edu.tr/duyuru/cap" in response.answer
@@ -71,8 +77,10 @@ async def test_announcement_agent_returns_empty_state_when_no_announcement_found
     fetcher = AsyncMock(return_value=[])
     agent = AnnouncementAgent(announcement_fetcher=fetcher)
 
-    response = await agent.handle_task(_build_task({"query_text": "Son duyurular neler?"}))
+    response_task = await agent.handle_task(_build_task({"query_text": "Son duyurular neler?"}))
+    response = extract_department_response(response_task)
 
+    assert response is not None
     assert response.success is True
     assert "aktif duyuru" in response.answer
     assert response.sources == []

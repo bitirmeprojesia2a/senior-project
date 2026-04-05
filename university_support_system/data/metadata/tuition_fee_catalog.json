@@ -1,0 +1,131 @@
+[
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Mühendislik Fakültesi",
+    "annual_amount": 2397.0,
+    "semester_amount": 1198.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Fen-Edebiyat Fakültesi",
+    "annual_amount": 1759.0,
+    "semester_amount": 879.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Fen Fakültesi",
+    "annual_amount": 1759.0,
+    "semester_amount": 879.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Eğitim Fakültesi",
+    "annual_amount": 1759.0,
+    "semester_amount": 879.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Mimarlık Fakültesi",
+    "annual_amount": 2397.0,
+    "semester_amount": 1198.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Ziraat Fakültesi",
+    "annual_amount": 2397.0,
+    "semester_amount": 1198.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Sağlık Bilimleri Fakültesi",
+    "annual_amount": 1759.0,
+    "semester_amount": 879.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
+    "unit_name": "Meslek Yüksekokulları",
+    "annual_amount": 1179.0,
+    "semester_amount": 589.5,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Mühendislik Fakültesi",
+    "annual_amount": 47000.0,
+    "semester_amount": 23500.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Fen-Edebiyat Fakültesi",
+    "annual_amount": 30500.0,
+    "semester_amount": 15250.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+    "notes": "Fen-Edebiyat benzeri fakulte satiri dokumanda İnsan ve Toplum/Fen olarak ayrismistir; genel tablo kullanimi icin eklendi."
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Fen Fakültesi",
+    "annual_amount": 39000.0,
+    "semester_amount": 19500.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Eğitim Fakültesi",
+    "annual_amount": 30500.0,
+    "semester_amount": 15250.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Mimarlık Fakültesi",
+    "annual_amount": 77000.0,
+    "semester_amount": 38500.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Ziraat Fakültesi",
+    "annual_amount": 47000.0,
+    "semester_amount": 23500.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Sağlık Bilimleri Fakültesi",
+    "annual_amount": 64000.0,
+    "semester_amount": 32000.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Meslek Yüksekokulları",
+    "annual_amount": 26000.0,
+    "semester_amount": 13000.0,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf"
+  }
+]

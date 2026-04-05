@@ -11,10 +11,15 @@ from sqlalchemy import select
 
 from src.core.constants import AgentRole, Department, TaskType
 from src.db.connection import get_session
-from src.db.models import AgentRegistry, AgentTask, QueryLog
+from src.db.support_models import AgentRegistry, AgentTask, QueryLog
 from src.db.schemas import DepartmentResponse, RoutingResult
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow() -> datetime:
+    """Return a timezone-aware UTC timestamp for telemetry records."""
+    return datetime.now(UTC)
 
 
 @dataclass(frozen=True)
@@ -31,6 +36,30 @@ class AgentIdentity:
 class TelemetryService:
     """QueryLog ve AgentTask kayitlarini en iyi caba ile yazar."""
 
+    @staticmethod
+    def _log_best_effort_failure(operation: str, exc: Exception) -> None:
+        """Telemetry yazimi ana urun akisini kirmamali; hatayi sadece kaydet."""
+        logger.warning("%s_failed: %s", operation, exc)
+
+    @staticmethod
+    def _build_agent_task_result(
+        response: DepartmentResponse | None,
+        error_msg: str | None,
+    ) -> tuple[dict[str, Any] | None, str, str | None]:
+        """DepartmentResponse nesnesini telemetry sonucu icin normalize eder."""
+        if response is None:
+            return None, "failed" if error_msg else "completed", error_msg
+
+        result_payload = {
+            "department": response.department.value,
+            "success": response.success,
+            "answer_preview": response.answer[:500],
+            "source_count": len(response.sources),
+        }
+        if not response.success and response.error:
+            return result_payload, "failed", response.error
+        return result_payload, "failed" if error_msg else "completed", error_msg
+
     async def ensure_agent(self, identity: AgentIdentity) -> int | None:
         try:
             async with get_session() as session:
@@ -45,7 +74,7 @@ class TelemetryService:
                         role=identity.role,
                         description=identity.description,
                         is_active=True,
-                        last_heartbeat=datetime.now(UTC),
+                        last_heartbeat=_utcnow(),
                     )
                     session.add(agent)
                     await session.flush()
@@ -54,12 +83,12 @@ class TelemetryService:
                     agent.department = identity.department
                     agent.role = identity.role
                     agent.description = identity.description
-                    agent.last_heartbeat = datetime.now(UTC)
+                    agent.last_heartbeat = _utcnow()
                     await session.flush()
 
                 return int(agent.id)
         except Exception as exc:
-            logger.warning("ensure_agent_failed: %s", exc)
+            self._log_best_effort_failure("ensure_agent", exc)
             return None
 
     async def create_query_log(
@@ -94,7 +123,7 @@ class TelemetryService:
                 await session.flush()
                 return int(query_log.id)
         except Exception as exc:
-            logger.warning("create_query_log_failed: %s", exc)
+            self._log_best_effort_failure("create_query_log", exc)
             return None
 
     async def finalize_query_log(
@@ -124,7 +153,7 @@ class TelemetryService:
                     query_log.departments = departments
                 await session.flush()
         except Exception as exc:
-            logger.warning("finalize_query_log_failed: %s", exc)
+            self._log_best_effort_failure("finalize_query_log", exc)
 
     async def record_agent_task(
         self,
@@ -148,20 +177,11 @@ class TelemetryService:
                 stmt = select(AgentTask).where(AgentTask.task_id == task_id)
                 agent_task = (await session.execute(stmt)).scalar_one_or_none()
 
-                result_payload = None
-                status = "failed" if error_msg else "completed"
-                completed_at = datetime.now(UTC)
-
-                if response is not None:
-                    result_payload = {
-                        "department": response.department.value,
-                        "success": response.success,
-                        "answer_preview": response.answer[:500],
-                        "source_count": len(response.sources),
-                    }
-                    if not response.success and response.error:
-                        error_msg = response.error
-                        status = "failed"
+                result_payload, status, error_msg = self._build_agent_task_result(
+                    response,
+                    error_msg,
+                )
+                completed_at = _utcnow()
 
                 if agent_task is None:
                     agent_task = AgentTask(
@@ -190,7 +210,7 @@ class TelemetryService:
 
                 await session.flush()
         except Exception as exc:
-            logger.warning("record_agent_task_failed: %s", exc)
+            self._log_best_effort_failure("record_agent_task", exc)
 
 
 def build_main_orchestrator_identity() -> AgentIdentity:

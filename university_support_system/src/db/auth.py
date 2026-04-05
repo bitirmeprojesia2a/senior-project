@@ -5,41 +5,23 @@ from __future__ import annotations
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from hashlib import sha256
 from secrets import compare_digest, randbelow, token_urlsafe
 from typing import Callable
 
-from sqlalchemy import Select, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
 from src.db.connection import get_session
-from src.db.models import OTPCode, SlackStudentMapping, Student, VerificationSession
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def _ensure_aware(value: datetime | None) -> datetime | None:
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value
-
-
-def _mask_email(email: str) -> str:
-    local, _, domain = email.partition("@")
-    if len(local) <= 2:
-        masked_local = local[:1] + "*"
-    else:
-        masked_local = local[:2] + "*" * max(1, len(local) - 2)
-    return f"{masked_local}@{domain}" if domain else masked_local
-
-
-def _hash_otp(code: str) -> str:
-    return sha256(code.encode("utf-8")).hexdigest()
+from src.db.auth_queries import (
+    find_latest_otp,
+    find_slack_mapping,
+    find_student_by_number,
+)
+from src.db.auth_utils import ensure_aware, hash_otp, mask_email, utcnow
+from src.db.auth_models import OTPCode, SlackStudentMapping, VerificationSession
+from src.db.student_models import Student
+from src.notifications import EmailService
 
 
 @dataclass(frozen=True)
@@ -49,6 +31,8 @@ class AuthContext:
     student_db_id: int
     student_number: str
     full_name: str
+    student_department: str
+    student_faculty: str
     slack_user_id: str | None
     session_token: str | None
     expires_at: datetime | None
@@ -62,12 +46,14 @@ class AuthService:
         self,
         *,
         session_provider: Callable[[], AbstractAsyncContextManager[AsyncSession]] = get_session,
-        now_provider: Callable[[], datetime] = _utcnow,
+        now_provider: Callable[[], datetime] = utcnow,
         otp_generator: Callable[[int], str] | None = None,
+        email_service: EmailService | None = None,
     ) -> None:
         self._session_provider = session_provider
         self._now_provider = now_provider
         self._otp_generator = otp_generator or self._default_otp_generator
+        self._email_service = email_service or EmailService()
 
     async def request_otp(
         self,
@@ -78,9 +64,24 @@ class AuthService:
         """Ogrenci mevcutsa yeni bir OTP kaydi olusturur."""
 
         async with self._session_provider() as session:
-            student = await self._find_student_by_number(session, student_number)
+            student = await find_student_by_number(session, student_number)
             if student is None:
                 return None
+            if not self._is_current_student(student):
+                return {
+                    "success": False,
+                    "reason": "student_not_active",
+                    "message": "OTP dogrulamasi yalnizca aktif ogrenciler icin kullanilabilir.",
+                }
+            if not self._has_allowed_student_email(student.email):
+                return {
+                    "success": False,
+                    "reason": "invalid_student_email",
+                    "message": (
+                        "Dogrulama kodu gonderebilmem icin ogrenci hesabina ait "
+                        f"@{settings.auth.allowed_student_email_domain} uzantili e-posta kaydi gerekli."
+                    ),
+                }
 
             now = self._now_provider()
             expires_at = now + timedelta(minutes=settings.auth.otp_ttl_minutes)
@@ -97,7 +98,7 @@ class AuthService:
 
             otp_record = OTPCode(
                 student_id=student.id,
-                code_hash=_hash_otp(otp_code),
+                code_hash=hash_otp(otp_code),
                 expires_at=expires_at,
                 used=False,
                 failed_attempts=0,
@@ -105,15 +106,25 @@ class AuthService:
             session.add(otp_record)
             await session.flush()
 
+            await self._email_service.send_otp_email(
+                to_email=student.email,
+                full_name=student.full_name,
+                otp_code=otp_code,
+                expires_in_minutes=settings.auth.otp_ttl_minutes,
+            )
+
             return {
+                "success": True,
                 "student_db_id": student.id,
                 "student_number": student.student_id,
                 "full_name": student.full_name,
-                "masked_email": _mask_email(student.email),
-                "delivery_channel": "email_stub",
+                "student_department": student.department,
+                "student_faculty": student.faculty,
+                "masked_email": mask_email(student.email),
+                "delivery_channel": "email_smtp",
                 "expires_at": expires_at,
                 "slack_user_id": slack_user_id,
-                "otp_preview_code": otp_code if settings.server.debug else None,
+                "otp_preview_code": None,
             }
 
     async def verify_otp(
@@ -126,11 +137,11 @@ class AuthService:
         """OTP'yi dogrular, oturum olusturur ve gerekirse Slack eslemesini kaydeder."""
 
         async with self._session_provider() as session:
-            student = await self._find_student_by_number(session, student_number)
+            student = await find_student_by_number(session, student_number)
             if student is None:
                 return None
 
-            otp_record = await self._find_latest_otp(session, student.id)
+            otp_record = await find_latest_otp(session, student.id)
             if otp_record is None:
                 return {
                     "success": False,
@@ -139,7 +150,7 @@ class AuthService:
                 }
 
             now = self._now_provider()
-            otp_expires_at = _ensure_aware(otp_record.expires_at)
+            otp_expires_at = ensure_aware(otp_record.expires_at)
             if otp_expires_at is not None and otp_expires_at <= now:
                 otp_record.used = True
                 await session.flush()
@@ -149,7 +160,7 @@ class AuthService:
                     "message": "OTP suresi doldu. Lutfen yeni bir kod isteyin.",
                 }
 
-            if not compare_digest(otp_record.code_hash, _hash_otp(otp_code)):
+            if not compare_digest(otp_record.code_hash, hash_otp(otp_code)):
                 otp_record.failed_attempts += 1
                 if otp_record.failed_attempts >= settings.auth.max_failed_attempts:
                     otp_record.used = True
@@ -178,7 +189,7 @@ class AuthService:
             session.add(verification_session)
 
             if slack_user_id:
-                mapping = await self._find_slack_mapping(session, slack_user_id)
+                mapping = await find_slack_mapping(session, slack_user_id)
                 if mapping is None:
                     session.add(
                         SlackStudentMapping(
@@ -199,6 +210,8 @@ class AuthService:
                 "student_db_id": student.id,
                 "student_number": student.student_id,
                 "full_name": student.full_name,
+                "student_department": student.department,
+                "student_faculty": student.faculty,
                 "session_token": session_token,
                 "expires_at": session_expires_at,
                 "slack_user_id": slack_user_id,
@@ -232,9 +245,11 @@ class AuthService:
                     student_db_id=student.id,
                     student_number=student.student_id,
                     full_name=student.full_name,
+                    student_department=student.department,
+                    student_faculty=student.faculty,
                     slack_user_id=session_row.slack_user_id,
                     session_token=session_row.session_token,
-                    expires_at=_ensure_aware(session_row.expires_at),
+                    expires_at=ensure_aware(session_row.expires_at),
                 )
 
             if slack_user_id:
@@ -254,6 +269,8 @@ class AuthService:
                     student_db_id=student.id,
                     student_number=student.student_id,
                     full_name=student.full_name,
+                    student_department=student.department,
+                    student_faculty=student.faculty,
                     slack_user_id=mapping.slack_user_id,
                     session_token=None,
                     expires_at=None,
@@ -279,34 +296,11 @@ class AuthService:
         return "".join(digits)
 
     @staticmethod
-    async def _find_student_by_number(session: AsyncSession, student_number: str) -> Student | None:
-        result = await session.execute(
-            select(Student).where(Student.student_id == student_number)
-        )
-        return result.scalar_one_or_none()
+    def _is_current_student(student: Student) -> bool:
+        return student.registration_status == "active"
 
     @staticmethod
-    async def _find_slack_mapping(
-        session: AsyncSession,
-        slack_user_id: str,
-    ) -> SlackStudentMapping | None:
-        result = await session.execute(
-            select(SlackStudentMapping).where(
-                SlackStudentMapping.slack_user_id == slack_user_id
-            )
-        )
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def _find_latest_otp(session: AsyncSession, student_db_id: int) -> OTPCode | None:
-        query: Select[tuple[OTPCode]] = (
-            select(OTPCode)
-            .where(
-                OTPCode.student_id == student_db_id,
-                OTPCode.used.is_(False),
-            )
-            .order_by(OTPCode.id.desc())
-            .limit(1)
-        )
-        result = await session.execute(query)
-        return result.scalar_one_or_none()
+    def _has_allowed_student_email(email: str) -> bool:
+        domain = email.partition("@")[2].lower()
+        allowed = settings.auth.allowed_student_email_domain.lower()
+        return domain == allowed

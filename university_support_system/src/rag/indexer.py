@@ -109,7 +109,7 @@ class ChromaIndexer:
                 return True
             logger.warning("collection_delete_failed", name=col_name, status=response.status_code)
             return False
-        except Exception as e:
+        except httpx.HTTPError as e:
             logger.warning("collection_not_found", name=col_name, error=str(e))
             return False
 
@@ -293,5 +293,5 @@ class ChromaIndexer:
         try:
             response = self._client.get("/api/v1/heartbeat")
             return response.status_code == 200
-        except Exception:
+        except httpx.HTTPError:
             return False

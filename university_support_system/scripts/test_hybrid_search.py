@@ -18,8 +18,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.console import configure_utf8_stdio
 from src.core.constants import department_values
 from src.rag.retriever import HybridRetriever
+
+configure_utf8_stdio()
 
 
 def main():

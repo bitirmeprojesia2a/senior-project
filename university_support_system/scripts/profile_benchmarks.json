@@ -1,0 +1,357 @@
+{
+  "core": {
+    "display_name": "Benchmark - Profiling Core",
+    "description": "Temel departmanlar, paralel akis, clarification, duyuru ve auth kapisini temsil eden kucuk benchmark seti.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "student_affairs,finance",
+        "amac": "Router timeout, paralel departman dispatch, finance retrieval ve student_affairs cevabini birlikte olcer."
+      },
+      {
+        "soru": "Ders kaydi ne zaman basliyor?",
+        "beklenen_dept": "student_affairs",
+        "amac": "Saf student_affairs akisinda retrieval ihtiyaci ve takvim cevabini olcer."
+      },
+      {
+        "soru": "BIL104 dersinin on kosulu nedir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Ders kodu tespiti, curriculum path ve prerequisite davranisini olcer."
+      },
+      {
+        "soru": "1. yariyil dersleri nelerdir?",
+        "beklenen_dept": "clarification",
+        "amac": "Bolum baglami gerektiren akademik sorularda clarification davranisini olcer."
+      },
+      {
+        "soru": "Devam zorunlulugu var mi?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Yonetmelik temelli akademik cevaplarda retrieval kalitesini ve sureyi olcer."
+      },
+      {
+        "soru": "Erasmus programina nasil basvururum?",
+        "beklenen_dept": "academic_programs",
+        "amac": "International agent / academic programs tarafindaki prosedur sorularini olcer."
+      },
+      {
+        "soru": "Guncel duyurular nelerdir?",
+        "beklenen_dept": "announcement",
+        "amac": "Announcement ozel yolunu ve duyuru sorgularindaki davranisi olcer."
+      },
+      {
+        "soru": "CAP basvurusu nasil yapilir?",
+        "beklenen_dept": "student_affairs,academic_programs",
+        "amac": "Paralel akademik + ogrenci isleri senaryosunu olcer."
+      },
+      {
+        "soru": "Harc borcum ne kadar?",
+        "beklenen_dept": "finance",
+        "auth": true,
+        "amac": "OTP kapisi gerektiren kisisel finance sorusunun hizli engel davranisini olcer."
+      },
+      {
+        "soru": "Not ortalamam kac?",
+        "beklenen_dept": "student_affairs",
+        "auth": true,
+        "amac": "OTP kapisi gerektiren kisisel akademik sorunun hizli engel davranisini olcer."
+      }
+    ]
+  },
+  "onboarding_prompt": {
+    "display_name": "Benchmark - Onboarding Prompt",
+    "description": "Profil bilgisi girilmeden API akisinin once onboarding istemesini olcer.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "clarification",
+        "amac": "Ilk sorguda profil toplama mesaji donmesini olcer."
+      },
+      {
+        "soru": "1. yariyil dersleri nelerdir?",
+        "beklenen_dept": "clarification",
+        "amac": "Bolum/uyruk bilinmeden once onboarding istemesini olcer."
+      }
+    ]
+  },
+  "profile_context": {
+    "display_name": "Benchmark - Profile Context",
+    "description": "API uzerinden profil baglami verildiginde bolum, fakulte ve ogrenci tipi bilgisinin kullanilmasini olcer.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "student_affairs,finance",
+        "amac": "Ogrenci tipi ve fakulte bilgisi ile daha isabetli finance cevabini olcer."
+      },
+      {
+        "soru": "1. yariyil dersleri nelerdir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Profildeki bolum bilgisi ile clarification yerine akademik cevap uretilmesini olcer."
+      },
+      {
+        "soru": "CAP basvurusu nasil yapilir?",
+        "beklenen_dept": "student_affairs,academic_programs",
+        "amac": "Profil baglamiyla coklu departman cevabinin daha temiz olmasini olcer."
+      }
+    ]
+  },
+  "demo_onboarding": {
+    "display_name": "Demo - Onboarding",
+    "description": "Hizli demo icin profili olmayan kullanicida once onboarding davranisini gosterir.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "clarification",
+        "amac": "Sistem once profil topluyor mu?"
+      },
+      {
+        "soru": "1. yariyil dersleri nelerdir?",
+        "beklenen_dept": "clarification",
+        "amac": "Bolum baglami yoksa soru geri donduruluyor mu?"
+      }
+    ]
+  },
+  "demo_showcase_turk": {
+    "display_name": "Demo - Showcase Turk Ogrenci",
+    "description": "Yarin sunum icin en gosterilebilir Turk ogrenci senaryolari.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "student_affairs,finance",
+        "amac": "VT tabanli ucret + kayit donemi cevabi"
+      },
+      {
+        "soru": "1. yariyil dersleri nelerdir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Profil baglami ile ders listesinin gelmesi"
+      },
+      {
+        "soru": "BIL104 dersinin on kosulu nedir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Koddan on kosul yakalama"
+      },
+      {
+        "soru": "CAP basvurusu nasil yapilir?",
+        "beklenen_dept": "student_affairs,academic_programs",
+        "amac": "Coklu departman + final sentez"
+      },
+      {
+        "soru": "Guncel duyurular nelerdir?",
+        "beklenen_dept": "announcement",
+        "amac": "Duyuru yolunu gostermek"
+      },
+      {
+        "soru": "Harc borcum ne kadar?",
+        "beklenen_dept": "finance",
+        "auth": true,
+        "amac": "Auth gerektiren finans sorusunu gostermek"
+      },
+      {
+        "soru": "Not ortalamam kac?",
+        "beklenen_dept": "student_affairs",
+        "auth": true,
+        "amac": "Auth gerektiren akademik soruyu gostermek"
+      },
+      {
+        "soru": "Merhaba",
+        "beklenen_dept": "clarification",
+        "amac": "Bos/selamlama davranisini gostermek"
+      }
+    ]
+  },
+  "demo_showcase_stable_turk": {
+    "display_name": "Demo - Stable Turk Ogrenci",
+    "description": "Sunumda daha guvenli gostermek icin agirlikli olarak VT ve deterministic akislari kullanan set.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "student_affairs,finance",
+        "amac": "VT tabanli ucret + kayit donemi cevabi"
+      },
+      {
+        "soru": "1. yariyil dersleri nelerdir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Profil baglami ile ders listesinin gelmesi"
+      },
+      {
+        "soru": "BIL104 dersinin on kosulu nedir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Koddan on kosul yakalama"
+      },
+      {
+        "soru": "Guncel duyurular nelerdir?",
+        "beklenen_dept": "announcement",
+        "amac": "Duyuru yolunu gostermek"
+      },
+      {
+        "soru": "Harc borcum ne kadar?",
+        "beklenen_dept": "finance",
+        "auth": true,
+        "amac": "Auth gerektiren finans sorusunu gostermek"
+      },
+      {
+        "soru": "Not ortalamam kac?",
+        "beklenen_dept": "student_affairs",
+        "auth": true,
+        "amac": "Auth gerektiren akademik soruyu gostermek"
+      }
+    ]
+  },
+  "demo_showcase_broad_turk": {
+    "display_name": "Demo - Broad Turk Ogrenci",
+    "description": "Kisa demoya gore daha cesitli, farkli ajan ve akis tiplerini gosteren genis Turk ogrenci seti.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "student_affairs,finance",
+        "amac": "VT tabanli ucret + kayit donemi cevabi"
+      },
+      {
+        "soru": "Ders kaydi ne zaman basliyor?",
+        "beklenen_dept": "student_affairs",
+        "amac": "Saf kayit ve takvim akisini gostermek"
+      },
+      {
+        "soru": "1. yariyil dersleri nelerdir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Profil baglami ile ders listesinin gelmesi"
+      },
+      {
+        "soru": "BIL104 dersinin on kosulu nedir?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Koddan on kosul yakalama"
+      },
+      {
+        "soru": "Devam zorunlulugu var mi?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Yonetmelik tabanli akademik cevap"
+      },
+      {
+        "soru": "Staj basvurusu nasil yapilir?",
+        "beklenen_dept": "student_affairs",
+        "amac": "Staj ajani ve prosedur akisini gostermek"
+      },
+      {
+        "soru": "Mezun olmak icin kac AKTS gerekir?",
+        "beklenen_dept": "student_affairs",
+        "amac": "Mezuniyet ve akademik durum mantigini gostermek"
+      },
+      {
+        "soru": "Burs basvurusu ne zaman?",
+        "beklenen_dept": "finance",
+        "amac": "Burs ve finans akislarini gostermek"
+      },
+      {
+        "soru": "Guncel duyurular nelerdir?",
+        "beklenen_dept": "announcement",
+        "amac": "Duyuru yolunu gostermek"
+      },
+      {
+        "soru": "Harc borcum ne kadar?",
+        "beklenen_dept": "finance",
+        "auth": true,
+        "amac": "Auth gerektiren finans sorusunu gostermek"
+      },
+      {
+        "soru": "Not ortalamam kac?",
+        "beklenen_dept": "student_affairs",
+        "auth": true,
+        "amac": "Auth gerektiren akademik soruyu gostermek"
+      }
+    ]
+  },
+  "demo_showcase_llm_turk": {
+    "display_name": "Demo - LLM Turk Ogrenci",
+    "description": "Sunumda uretilmis sentez ve coklu departman akisini gostermek icin daha riskli fakat etkileyici set.",
+    "questions": [
+      {
+        "soru": "CAP basvurusu nasil yapilir?",
+        "beklenen_dept": "student_affairs,academic_programs",
+        "amac": "Coklu departman + final sentez"
+      },
+      {
+        "soru": "Erasmus programina nasil basvururum?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Prosedur tabanli daha serbest cevap"
+      }
+    ]
+  },
+  "demo_followup_turk": {
+    "display_name": "Demo - Follow-up Turk Ogrenci",
+    "description": "Ayni context icinde follow-up sorularin onceki tur baglami ile cozulmesini gosteren set.",
+    "shared_context": true,
+    "questions": [
+      {
+        "soru": "CAP basvurusu nasil yapilir?",
+        "beklenen_dept": "student_affairs,academic_programs",
+        "amac": "Ilk turda aktif konuyu ve ilgili departmanlari olusturur."
+      },
+      {
+        "soru": "Peki tarihleri ne zaman?",
+        "beklenen_dept": "student_affairs,academic_programs",
+        "amac": "Follow-up sorunun onceki CAP baglami ile cozulmesini gosterir."
+      },
+      {
+        "soru": "Erasmus programina nasil basvururum?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Yeni bir konuyla aktif topic degisiminin oldugunu gosterir."
+      },
+      {
+        "soru": "Gerekli belgeler neler?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Ikinci follow-up sorunun Erasmus baglami ile tamamlanmasini gosterir."
+      }
+    ]
+  },
+  "demo_showcase_international": {
+    "display_name": "Demo - Showcase Uluslararasi Ogrenci",
+    "description": "Uluslararasi ogrenci baglami ile farkli cevap uretilmesini gosteren set.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "student_affairs,finance",
+        "amac": "Uluslararasi ucretin farkli gelmesi"
+      },
+      {
+        "soru": "Erasmus programina nasil basvururum?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Uluslararasi / prosedur akislarini gostermek"
+      },
+      {
+        "soru": "Guncel duyurular nelerdir?",
+        "beklenen_dept": "announcement",
+        "amac": "Duyuru yolunu uluslararasi profilde de gostermek"
+      }
+    ]
+  },
+  "demo_showcase_broad_international": {
+    "display_name": "Demo - Broad Uluslararasi Ogrenci",
+    "description": "Uluslararasi ogrenci baglaminda farkli veri kaynaklari ve prosedur akislarini birlikte gosteren genis set.",
+    "questions": [
+      {
+        "soru": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        "beklenen_dept": "student_affairs,finance",
+        "amac": "Uluslararasi ucretin farkli gelmesi"
+      },
+      {
+        "soru": "Erasmus programina nasil basvururum?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Uluslararasi/prosedur akislarini gostermek"
+      },
+      {
+        "soru": "Devam zorunlulugu var mi?",
+        "beklenen_dept": "academic_programs",
+        "amac": "Yonetmelik tabanli akademik cevap"
+      },
+      {
+        "soru": "Guncel duyurular nelerdir?",
+        "beklenen_dept": "announcement",
+        "amac": "Duyuru yolunu gostermek"
+      },
+      {
+        "soru": "Burs basvurusu ne zaman?",
+        "beklenen_dept": "finance",
+        "amac": "Uluslararasi ogrenci baglaminda finans akislarini gostermek"
+      }
+    ]
+  }
+}

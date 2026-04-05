@@ -2,7 +2,16 @@
 
 from a2a.types import Role, TaskState
 
-from src.a2a import A2AQueryPayload, build_agent_card, build_query_task, build_text_message
+from src.a2a import (
+    A2AQueryPayload,
+    build_agent_card,
+    build_department_response_task,
+    build_query_task,
+    build_text_message,
+    extract_department_response,
+)
+from src.core.constants import Department
+from src.db.schemas import DepartmentResponse
 
 
 def test_build_text_message_creates_user_message():
@@ -41,3 +50,35 @@ def test_build_agent_card_creates_skillful_card():
 
     assert card.name == "Registration Agent"
     assert card.url.endswith("registration_agent")
+
+
+def test_department_response_task_uses_data_artifact_and_can_be_extracted():
+    request_task = build_query_task(
+        A2AQueryPayload(
+            query_text="Kayit yenileme ucreti ne kadar?",
+            context_id="ctx-3",
+        )
+    )
+    response = DepartmentResponse(
+        department=Department.FINANCE,
+        answer="Yillik ucret 2.397,00 TL.",
+        success=True,
+        sources=[],
+    )
+
+    task = build_department_response_task(
+        response,
+        request_task=request_task,
+        emitter_id="tuition_agent",
+        emitter_name="Tuition Agent",
+    )
+
+    assert task.metadata["parent_task_id"] == request_task.id
+    assert "department_response" not in (task.metadata or {})
+    assert len(task.artifacts or []) == 2
+
+    extracted = extract_department_response(task)
+
+    assert extracted is not None
+    assert extracted.department == Department.FINANCE
+    assert extracted.answer == "Yillik ucret 2.397,00 TL."

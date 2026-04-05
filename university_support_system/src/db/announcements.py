@@ -10,7 +10,7 @@ from sqlalchemy import Select, desc, or_, select
 
 from src.core.constants import Department
 from src.db.connection import get_session
-from src.db.models import Announcement
+from src.db.support_models import Announcement
 
 _ANNOUNCEMENT_STOPWORDS = {
     "acaba",

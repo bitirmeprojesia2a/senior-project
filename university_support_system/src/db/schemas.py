@@ -78,6 +78,12 @@ class AuthenticatedUserQueryRequest(UserQueryRequest):
     """Kimlik baglamini da tasiyabilen kullanici sorgusu semasi."""
 
     student_id: Optional[int] = Field(None, description="Dogrulanmis ogrenci veritabani kimligi")
+    full_name: Optional[str] = Field(None, description="Kullanicinin ad soyad bilgisi")
+    student_number: Optional[str] = Field(None, description="Kullanicinin ogrenci numarasi")
+    student_department: Optional[str] = Field(None, description="Ogrencinin bolum veya program bilgisi")
+    student_faculty: Optional[str] = Field(None, description="Ogrencinin fakulte bilgisi")
+    student_type: Optional[str] = Field(None, description="Ogrenci tipi veya uyruk bilgisi")
+    llm_profile: Optional[str] = Field(None, description="LLM profil tercihi: fast, balanced veya quality")
     is_authenticated: bool = Field(False, description="Kimlik dogrulama durumu")
     session_token: Optional[str] = Field(None, description="Dogrulama oturum anahtari")
     slack_user_id: Optional[str] = Field(None, description="Slack kullanici kimligi")
@@ -105,6 +111,7 @@ class OTPRequestResponse(BaseModel):
 
     success: bool
     message: str
+    reason: Optional[str] = None
     student_number: Optional[str] = None
     masked_email: Optional[str] = None
     expires_at: Optional[str] = None
@@ -128,6 +135,8 @@ class OTPVerifyResponse(BaseModel):
     student_id: Optional[int] = None
     student_number: Optional[str] = None
     full_name: Optional[str] = None
+    student_department: Optional[str] = None
+    student_faculty: Optional[str] = None
     is_authenticated: bool = False
     session_token: Optional[str] = None
     expires_at: Optional[str] = None
@@ -147,6 +156,8 @@ class AuthResolveResponse(BaseModel):
     student_id: Optional[int] = None
     student_number: Optional[str] = None
     full_name: Optional[str] = None
+    student_department: Optional[str] = None
+    student_faculty: Optional[str] = None
     slack_user_id: Optional[str] = None
     session_token: Optional[str] = None
     expires_at: Optional[str] = None

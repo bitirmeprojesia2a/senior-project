@@ -16,9 +16,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.console import configure_utf8_stdio
 from src.core.constants import Department, collection_name_for_department, department_values
 from src.rag.embedder import Embedder
 from src.rag.indexer import ChromaIndexer
+
+configure_utf8_stdio()
 
 
 def _build_collection_family(base_collection: str) -> list[str]:

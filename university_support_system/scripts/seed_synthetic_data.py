@@ -1,5 +1,6 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
+import json
 import sys
 
 from sqlalchemy import create_engine, select
@@ -10,11 +11,12 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from src.core.console import configure_utf8_stdio
 from src.core.config import settings
+from src.core.text_normalization import collapse_whitespace, normalize_text
 from src.db.models import (
     AvailableScholarship,
     Course,
-    CoursePrerequisite,
     CourseRegistrationPeriod,
     Installment,
     Payment,
@@ -23,19 +25,153 @@ from src.db.models import (
     Student,
     StudentCourse,
     Tuition,
+    TuitionFeeCatalog,
 )
+
+configure_utf8_stdio()
 
 
 engine = create_engine(settings.postgres.sync_url, future=True)
+
+_REGISTRATION_PERIODS_FILE = ROOT_DIR / "data" / "metadata" / "registration_periods.json"
+_TUITION_FEE_CATALOG_FILE = ROOT_DIR / "data" / "metadata" / "tuition_fee_catalog.json"
+
+
+_REGISTRATION_PERIOD_FIXTURES = (
+    {
+        "semester": "2025-Güz",
+        "start_date": datetime(2025, 8, 26, tzinfo=timezone.utc),
+        "end_date": datetime(2025, 9, 6, tzinfo=timezone.utc),
+        "is_active": False,
+    },
+    {
+        "semester": "2026-Bahar",
+        "start_date": datetime(2026, 2, 10, tzinfo=timezone.utc),
+        "end_date": datetime(2026, 2, 21, tzinfo=timezone.utc),
+        "is_active": True,
+    },
+)
+
+
+def _sync_registration_periods(session: Session) -> None:
+    """Kayit donemi verilerini her calistirmada guncel tutar."""
+
+    if not _REGISTRATION_PERIODS_FILE.exists():
+        return
+
+    payload = json.loads(_REGISTRATION_PERIODS_FILE.read_text(encoding="utf-8"))
+    fixtures = [
+        {
+            "semester": item["semester"],
+            "start_date": datetime.fromisoformat(item["start_date"]),
+            "end_date": datetime.fromisoformat(item["end_date"]),
+            "is_active": bool(item.get("is_active", False)),
+        }
+        for item in payload
+    ]
+
+    existing = {
+        period.semester: period
+        for period in session.scalars(select(CourseRegistrationPeriod)).all()
+    }
+    expected_semesters = {fixture["semester"] for fixture in fixtures}
+
+    for fixture in fixtures:
+        period = existing.get(fixture["semester"])
+        if period is None:
+            session.add(CourseRegistrationPeriod(**fixture))
+            continue
+
+        period.start_date = fixture["start_date"]
+        period.end_date = fixture["end_date"]
+        period.is_active = fixture["is_active"]
+
+    for semester, period in existing.items():
+        if semester not in expected_semesters:
+            session.delete(period)
+
+
+def _normalize_unit_name(value: str | None) -> str:
+    normalized = normalize_text(collapse_whitespace(value))
+    replacements = {
+        "fak.": "fakultesi",
+        "fak ": "fakultesi ",
+        "meslekyuksekokulu": "meslek yuksekokulu",
+        "yuksek okulu": "yuksekokulu",
+    }
+    for source, target in replacements.items():
+        normalized = normalized.replace(source, target)
+    return " ".join(normalized.split())
+
+
+def _sync_tuition_fee_catalog(session: Session) -> None:
+    """Ogrenim ucreti tablosunu JSON kaynaktan senkronize eder."""
+
+    if not _TUITION_FEE_CATALOG_FILE.exists():
+        return
+
+    payload = json.loads(_TUITION_FEE_CATALOG_FILE.read_text(encoding="utf-8"))
+    fixtures = []
+    for item in payload:
+        fixtures.append(
+            {
+                "academic_year": item["academic_year"],
+                "student_type": normalize_text(item["student_type"]),
+                "unit_name": item["unit_name"],
+                "normalized_unit_name": _normalize_unit_name(item["unit_name"]),
+                "annual_amount": float(item["annual_amount"]),
+                "semester_amount": (
+                    float(item["semester_amount"])
+                    if item.get("semester_amount") is not None
+                    else None
+                ),
+                "currency": item.get("currency", "TRY"),
+                "source_document": item.get("source_document"),
+                "notes": item.get("notes"),
+                "is_active": bool(item.get("is_active", True)),
+            }
+        )
+
+    existing = {
+        (entry.academic_year, entry.student_type, entry.normalized_unit_name): entry
+        for entry in session.scalars(select(TuitionFeeCatalog)).all()
+    }
+    expected_keys = {
+        (fixture["academic_year"], fixture["student_type"], fixture["normalized_unit_name"])
+        for fixture in fixtures
+    }
+
+    for fixture in fixtures:
+        key = (fixture["academic_year"], fixture["student_type"], fixture["normalized_unit_name"])
+        row = existing.get(key)
+        if row is None:
+            session.add(TuitionFeeCatalog(**fixture))
+            continue
+
+        row.unit_name = fixture["unit_name"]
+        row.annual_amount = fixture["annual_amount"]
+        row.semester_amount = fixture["semester_amount"]
+        row.currency = fixture["currency"]
+        row.source_document = fixture["source_document"]
+        row.notes = fixture["notes"]
+        row.is_active = fixture["is_active"]
+
+    for key, row in existing.items():
+        if key not in expected_keys:
+            session.delete(row)
 
 
 def seed_synthetic_data(session: Session) -> None:
     """Insert synthetic, student-focused test data if tables are empty."""
 
+    _sync_registration_periods(session)
+    _sync_tuition_fee_catalog(session)
+
     has_any_student = session.scalar(select(Student.id).limit(1)) is not None
     has_any_course = session.scalar(select(Course.id).limit(1)) is not None
 
     if has_any_student or has_any_course:
+        session.commit()
         print("Synthetic seed skipped: students or courses already contain data.")
         return
 
@@ -228,50 +364,29 @@ def seed_synthetic_data(session: Session) -> None:
             semester="3",
             instructor="Dr. Öğr. Üyesi John Smith",
         ),
-        # Mühendislik
-        Course(
-            course_code="CSE101",
-            course_name="Programlamaya Giriş",
-            credits=5,
-            department="Bilgisayar Mühendisliği",
-            semester="1",
-            instructor="Dr. Öğr. Üyesi Canan Kılıç",
-        ),
-        Course(
-            course_code="CSE301",
-            course_name="Veritabanı Sistemleri",
-            credits=5,
-            department="Bilgisayar Mühendisliği",
-            semester="5",
-            instructor="Doç. Dr. Murat Aslan",
-        ),
-        Course(
-            course_code="EEE202",
-            course_name="Devre Analizi",
-            credits=4,
-            department="Elektrik-Elektronik Mühendisliği",
-            semester="4",
-            instructor="Prof. Dr. Cemal Akın",
-        ),
+        # Muhendislik dersleri artik seed_curriculum_data.py ile yukleniyor.
+        # Burada sadece diger fakultelerin sentetik dersleri kaliyor.
     ]
     session.add_all(courses)
     session.flush()
     courses_by_code = {c.course_code: c for c in courses}
 
-    # Example prerequisite: CSE101 is prerequisite for CSE301
-    prereq = CoursePrerequisite(
-        course_id=courses_by_code["CSE301"].id,
-        prerequisite_id=courses_by_code["CSE101"].id,
-    )
-    session.add(prereq)
-
     # ---------- 3) STUDENT–COURSE ENROLLMENTS ----------
+    # Tuba icin gercek Bil. Muh. derslerini cek (seed_curriculum_data ile yuklenmis olmali)
+    bil_courses: dict[str, Course] = {}
+    for code in ("BIL101", "BIL103", "BIL104", "BIL108", "BIL123", "BIL203",
+                 "BIL215", "BIL204", "BIL212", "BIL305", "BIL309", "BIL313",
+                 "TBMAT111", "TBMAT112", "TBFIZ121", "TBFIZ122"):
+        c = session.scalar(select(Course).where(Course.course_code == code))
+        if c is not None:
+            bil_courses[code] = c
+
     enrollments = [
-        # Ayşe – one completed, one current course
+        # Ayse – one completed, one current course
         StudentCourse(
             student_id=students_by_code["20210001"].id,
             course_id=courses_by_code["EGT101"].id,
-            semester="2023-Güz",
+            semester="2023-Guz",
             grade="AA",
             status="completed",
         ),
@@ -282,26 +397,11 @@ def seed_synthetic_data(session: Session) -> None:
             grade=None,
             status="enrolled",
         ),
-        # Tuba – CSE101 completed, CSE301 currently enrolled
-        StudentCourse(
-            student_id=students_by_code["20210090"].id,
-            course_id=courses_by_code["CSE101"].id,
-            semester="2023-Güz",
-            grade="BA",
-            status="completed",
-        ),
-        StudentCourse(
-            student_id=students_by_code["20210090"].id,
-            course_id=courses_by_code["CSE301"].id,
-            semester="2026-Bahar",
-            grade=None,
-            status="enrolled",
-        ),
         # Can – one completed, one failed
         StudentCourse(
             student_id=students_by_code["20210045"].id,
             course_id=courses_by_code["MAT201"].id,
-            semester="2024-Güz",
+            semester="2024-Guz",
             grade="CB",
             status="completed",
         ),
@@ -313,26 +413,33 @@ def seed_synthetic_data(session: Session) -> None:
             status="failed",
         ),
     ]
+
+    # Tuba (Bil. Muh. 4. sinif) - gercek mufredat dersleri
+    if bil_courses:
+        tuba_id = students_by_code["20210090"].id
+        tuba_completed = [
+            ("BIL101", "2021-Guz",  "BA"), ("BIL103", "2021-Guz",  "AA"),
+            ("TBMAT111","2021-Guz",  "BB"), ("TBFIZ121","2021-Guz",  "CB"),
+            ("BIL123",  "2021-Guz",  "BA"), ("BIL108",  "2022-Bahar","BB"),
+            ("BIL104",  "2022-Bahar","AA"), ("TBMAT112","2022-Bahar","CB"),
+            ("TBFIZ122","2022-Bahar","BB"), ("BIL203",  "2022-Guz",  "BA"),
+            ("BIL215",  "2022-Guz",  "BB"), ("BIL204",  "2023-Bahar","BA"),
+            ("BIL212",  "2023-Bahar","AA"), ("BIL305",  "2023-Guz",  "BB"),
+            ("BIL309",  "2023-Guz",  "BA"), ("BIL313",  "2023-Guz",  "CB"),
+        ]
+        for code, sem, grade in tuba_completed:
+            if code in bil_courses:
+                enrollments.append(StudentCourse(
+                    student_id=tuba_id,
+                    course_id=bil_courses[code].id,
+                    semester=sem,
+                    grade=grade,
+                    status="completed",
+                ))
+
     session.add_all(enrollments)
 
-    # ---------- 4) COURSE REGISTRATION PERIODS ----------
-    periods = [
-        CourseRegistrationPeriod(
-            semester="2026-Bahar",
-            start_date=date(2026, 1, 10),
-            end_date=date(2026, 1, 25),
-            is_active=True,
-        ),
-        CourseRegistrationPeriod(
-            semester="2025-Güz",
-            start_date=date(2025, 8, 26),
-            end_date=date(2025, 9, 6),
-            is_active=False,
-        ),
-    ]
-    session.add_all(periods)
-
-    # ---------- 5) TUITION, PAYMENTS, INSTALLMENTS ----------
+    # ---------- 4) TUITION, PAYMENTS, INSTALLMENTS ----------
     tuitions = [
         # Tuba – partial debt
         Tuition(
@@ -491,4 +598,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

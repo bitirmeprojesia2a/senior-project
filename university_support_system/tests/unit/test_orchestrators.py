@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from src.a2a import A2AQueryPayload, build_department_response_task, build_query_task
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.db.schemas import DepartmentResponse, RAGSource, RoutingResult
 from src.orchestrators.department import DepartmentOrchestrator
@@ -20,25 +21,43 @@ class _FakeAgent:
             name=f"{name.title()} Agent",
             description=f"{name} aciklamasi",
         )
-        self.handle_task = AsyncMock(
-            return_value=DepartmentResponse(
-                department=department,
-                answer=f"{name} yaniti",
-                sources=[],
+
+        async def _handle_task(task):
+            return build_department_response_task(
+                DepartmentResponse(
+                    department=department,
+                    answer=f"{name} yaniti",
+                    sources=[],
+                ),
+                request_task=task,
+                emitter_id=self.agent_id,
+                emitter_name=self.definition.name,
             )
-        )
+
+        self.handle_task = AsyncMock(side_effect=_handle_task)
 
 
 class _FakeDepartmentOrchestrator:
     def __init__(self, department: Department, answer: str):
         self.department = department
-        self.handle = AsyncMock(
-            return_value=DepartmentResponse(
-                department=department,
-                answer=answer,
-                sources=[],
-            )
+        response = DepartmentResponse(
+            department=department,
+            answer=answer,
+            sources=[],
         )
+        self.handle = AsyncMock(
+            return_value=response
+        )
+
+        async def _handle_task(task, *args, **kwargs):
+            return build_department_response_task(
+                response,
+                request_task=task,
+                emitter_id=f"{department.value}_orchestrator",
+                emitter_name=f"{department.value} Orchestrator",
+            )
+
+        self.handle_task = AsyncMock(side_effect=_handle_task)
 
 
 @pytest.mark.asyncio
@@ -144,23 +163,34 @@ async def test_main_orchestrator_appends_related_announcements_when_available():
         "Akademik program cevabi",
     )
     announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
-    announcement_agent.handle_task = AsyncMock(
-        return_value=DepartmentResponse(
-            department=Department.STUDENT_AFFAIRS,
-            answer="Ilgili duyurular:\n1. Cap Basvurulari Acildi",
-            sources=[
-                RAGSource(
-                    content="Cap basvurulari acildi.",
-                    score=1.0,
-                    metadata={"record_type": "announcement"},
-                )
-            ],
+
+    async def _announcement_handle_task(task):
+        return build_department_response_task(
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Ilgili duyurular:\n1. Cap Basvurulari Acildi",
+                sources=[
+                    RAGSource(
+                        content="Cap basvurulari acildi.",
+                        score=1.0,
+                        metadata={"record_type": "announcement"},
+                    )
+                ],
+            ),
+            request_task=task,
+            emitter_id=announcement_agent.agent_id,
+            emitter_name=announcement_agent.definition.name,
         )
-    )
+
+    announcement_agent.handle_task = AsyncMock(side_effect=_announcement_handle_task)
     telemetry = AsyncMock()
     telemetry.create_query_log = AsyncMock(return_value=303)
     telemetry.finalize_query_log = AsyncMock()
     telemetry.record_agent_task = AsyncMock()
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(
+        return_value="Akademik program cevabi\n\nIlgili duyurular:\n1. Cap Basvurulari Acildi"
+    )
 
     orchestrator = MainOrchestrator(
         router=router,
@@ -169,6 +199,7 @@ async def test_main_orchestrator_appends_related_announcements_when_available():
         },
         announcement_agent=announcement_agent,
         telemetry_service=telemetry,
+        llm_service=llm_service,
     )
 
     response = await orchestrator.handle_query("Cap basvurulari ne zaman?", context_id="ctx-announce")
@@ -182,7 +213,7 @@ async def test_main_orchestrator_appends_related_announcements_when_available():
 
 
 @pytest.mark.asyncio
-async def test_main_orchestrator_uses_announcement_fallback_when_no_department_selected():
+async def test_main_orchestrator_returns_clarification_when_no_department_selected():
     router = AsyncMock()
     router.route = AsyncMock(
         return_value=RoutingResult(
@@ -209,7 +240,7 @@ async def test_main_orchestrator_uses_announcement_fallback_when_no_department_s
 
     response = await orchestrator.handle_query("Merhaba", context_id="ctx-4")
 
-    assert response.answer == "announcement yaniti"
-    announcement_agent.handle_task.assert_awaited_once()
-    telemetry.record_agent_task.assert_awaited_once()
-    telemetry.finalize_query_log.assert_awaited_once()
+    assert "belirleyemedim" in response.answer
+    assert "Ogrenci Isleri" in response.answer
+    assert response.departments_involved == []
+    announcement_agent.handle_task.assert_not_awaited()

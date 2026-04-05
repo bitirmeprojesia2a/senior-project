@@ -1,28 +1,13 @@
-"""
-Embedding Uretici — v2
+"""Embedding uretici."""
 
-Metinleri vektor temsillerine donusturur.
-sentence-transformers kutuphanesini kullanir.
+from typing import ClassVar, List
 
-Desteklenen Modeller:
-    - BAAI/bge-m3: 1024-D, 8192 token, dense+sparse, prefix GEREKSIZ
-    - intfloat/multilingual-e5-base: 768-D, 514 token, "query:"/"passage:" prefix GEREKLI
-    - intfloat/multilingual-e5-large: 1024-D, 514 token, "query:"/"passage:" prefix GEREKLI
-
-Kullanim:
-    from src.rag.embedder import Embedder
-
-    embedder = Embedder()
-    vectors = embedder.embed_texts(["Harc borcu", "Ders kaydi"])
-"""
-
-from typing import List
-
-from sentence_transformers import SentenceTransformer
 import structlog
 import torch
+from sentence_transformers import SentenceTransformer
 
 from src.core.config import settings
+from src.core.profiling import profile_stage
 
 logger = structlog.get_logger()
 
@@ -31,17 +16,14 @@ E5_PASSAGE_PREFIX = "passage: "
 
 
 class Embedder:
-    """
-    Metin embedding uretici.
+    """Metin embedding uretici."""
 
-    Model ilk kullanimda yuklenir (lazy init).
-    E5 modelleri icin otomatik prefix eklenir,
-    diger modeller (BGE-M3 vb.) prefix gerektirmez.
+    _MODEL_CACHE: ClassVar[dict[tuple[str, str, bool], SentenceTransformer]] = {}
 
-    Args:
-        model_name: Hugging Face model adi. None ise config'den okunur.
-        batch_size: Toplu embedding uretim boyutu.
-    """
+    @classmethod
+    def clear_model_cache(cls) -> None:
+        """Paylasilan embedding model cache'ini temizler."""
+        cls._MODEL_CACHE.clear()
 
     def __init__(
         self,
@@ -61,7 +43,7 @@ class Embedder:
 
     @staticmethod
     def _resolve_device(device: str) -> str:
-        """İstenen cihazı mevcut ortama göre çözümler."""
+        """Istenen cihazi mevcut ortama gore cozumler."""
         if device == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
         return device
@@ -70,13 +52,43 @@ class Embedder:
     def model(self) -> SentenceTransformer:
         """Model'i lazy olarak yukler."""
         if self._model is None:
+            cache_key = (
+                self.model_name,
+                self.resolved_device,
+                settings.embedding.local_files_only,
+            )
+            cached_model = self._MODEL_CACHE.get(cache_key)
+            if cached_model is not None:
+                self._model = cached_model
+                logger.info(
+                    "embedding_model_cache_hit",
+                    model=self.model_name,
+                    requested_device=self.device,
+                    resolved_device=self.resolved_device,
+                    dimension=self._model.get_sentence_embedding_dimension(),
+                    is_e5=self._is_e5_model,
+                    is_bge=self._is_bge_model,
+                    local_files_only=settings.embedding.local_files_only,
+                )
+                return self._model
+
             logger.info(
                 "loading_embedding_model",
                 model=self.model_name,
                 requested_device=self.device,
                 resolved_device=self.resolved_device,
             )
-            self._model = SentenceTransformer(self.model_name, device=self.resolved_device)
+            with profile_stage(
+                "rag.embedder.load_model",
+                model=self.model_name,
+                device=self.resolved_device,
+            ):
+                self._model = SentenceTransformer(
+                    self.model_name,
+                    device=self.resolved_device,
+                    local_files_only=settings.embedding.local_files_only,
+                )
+                self._MODEL_CACHE[cache_key] = self._model
             logger.info(
                 "embedding_model_loaded",
                 model=self.model_name,
@@ -85,6 +97,7 @@ class Embedder:
                 dimension=self._model.get_sentence_embedding_dimension(),
                 is_e5=self._is_e5_model,
                 is_bge=self._is_bge_model,
+                local_files_only=settings.embedding.local_files_only,
             )
         return self._model
 
@@ -93,20 +106,8 @@ class Embedder:
         """Vektor boyutu."""
         return self.model.get_sentence_embedding_dimension()
 
-    def embed_texts(
-        self, texts: List[str], is_query: bool = False
-    ) -> List[List[float]]:
-        """
-        Metin listesini vektorlere donusturur.
-
-        Args:
-            texts: Metin listesi.
-            is_query: True ise sorgu, False ise belge olarak isler.
-                      (Sadece E5 modelleri icin prefix eklenir)
-
-        Returns:
-            Vektor listesi.
-        """
+    def embed_texts(self, texts: List[str], is_query: bool = False) -> List[List[float]]:
+        """Metin listesini vektorlere donusturur."""
         if not texts:
             return []
 
@@ -122,14 +123,20 @@ class Embedder:
         )
 
         try:
-            embeddings = self.model.encode(
-                texts,
+            with profile_stage(
+                "rag.embedder.encode",
+                count=len(texts),
                 batch_size=self.batch_size,
-                show_progress_bar=len(texts) > self.batch_size,
-                convert_to_numpy=True,
-                normalize_embeddings=True,
-            )
-        except Exception:
+                is_query=is_query,
+            ):
+                embeddings = self.model.encode(
+                    texts,
+                    batch_size=self.batch_size,
+                    show_progress_bar=len(texts) > self.batch_size,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
+                )
+        except (OSError, RuntimeError, ValueError):
             logger.exception("embedding_failed", count=len(texts))
             raise
 
@@ -144,15 +151,6 @@ class Embedder:
         return result
 
     def embed_single(self, text: str, is_query: bool = True) -> List[float]:
-        """
-        Tek bir metni vektore donusturur.
-
-        Args:
-            text: Vektorlenecek metin.
-            is_query: True ise sorgu olarak (varsayilan), False ise belge olarak isler.
-
-        Returns:
-            Vektor (dimension boyutlu float listesi).
-        """
+        """Tek bir metni vektore donusturur."""
         results = self.embed_texts([text], is_query=is_query)
         return results[0] if results else []

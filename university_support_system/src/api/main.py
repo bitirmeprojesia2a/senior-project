@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from typing import Any
 
@@ -9,8 +10,19 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.agents import AnnouncementAgent
+from src.api.query_flow import (
+    build_dispatch_metadata,
+    resolve_dispatch_context,
+    resolve_query_context,
+)
+from src.core.config import settings
 from src.core.constants import Department, TaskType
-from src.db import AuthService
+from src.db import (
+    AuthService,
+    ConversationContextService,
+    ProfileContextService,
+    dispose_engine,
+)
 from src.db.schemas import (
     AuthResolvePayload,
     AuthResolveResponse,
@@ -25,7 +37,9 @@ from src.db.schemas import (
     UserQueryResponse,
 )
 from src.llm.llm_service import LLMService
+from src.notifications import EmailDeliveryError
 from src.orchestrators.main import MainOrchestrator
+from src.rag.warmup import warm_retrieval_resources
 
 
 class A2ADispatchRequest(BaseModel):
@@ -35,7 +49,13 @@ class A2ADispatchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=500, description="Kullanici sorgusu")
     context_id: str | None = Field(default=None, description="Konusma baglam kimligi")
     user_id: str | None = Field(default=None, description="Kullanici kimligi")
+    full_name: str | None = Field(default=None, description="Kullanicinin ad soyad bilgisi")
+    student_number: str | None = Field(default=None, description="Kullanicinin ogrenci numarasi")
     student_id: int | None = Field(default=None, description="Dogrulanmis ogrenci veritabani kimligi")
+    student_department: str | None = Field(default=None, description="Ogrencinin bolum veya program bilgisi")
+    student_faculty: str | None = Field(default=None, description="Ogrencinin fakulte bilgisi")
+    student_type: str | None = Field(default=None, description="Ogrenci tipi veya uyruk bilgisi")
+    llm_profile: str | None = Field(default=None, description="LLM profil tercihi: fast, balanced veya quality")
     is_authenticated: bool = Field(default=False, description="Kimlik dogrulama durumu")
     session_token: str | None = Field(default=None, description="Dogrulama oturum anahtari")
     slack_user_id: str | None = Field(default=None, description="Slack kullanici kimligi")
@@ -62,7 +82,9 @@ class SystemHealthPayload(BaseModel):
 
 @lru_cache
 def get_main_orchestrator() -> MainOrchestrator:
-    return MainOrchestrator()
+    return MainOrchestrator(
+        conversation_service=ConversationContextService(),
+    )
 
 
 @lru_cache
@@ -76,8 +98,13 @@ def get_auth_service() -> AuthService:
 
 
 @lru_cache
+def get_profile_context_service() -> ProfileContextService:
+    return ProfileContextService()
+
+
+@lru_cache
 def get_agent_card_summaries() -> list[AgentCardSummary]:
-    orchestrators = MainOrchestrator()._build_default_orchestrators()
+    orchestrators = get_main_orchestrator().department_orchestrators
     agents = [
         *orchestrators[Department.STUDENT_AFFAIRS].agents.values(),
         orchestrators[Department.STUDENT_AFFAIRS].fallback_agent,
@@ -100,31 +127,17 @@ def get_agent_card_summaries() -> list[AgentCardSummary]:
     return list(unique.values())
 
 
-async def _resolve_auth_inputs(
-    *,
-    student_id: int | None,
-    is_authenticated: bool,
-    session_token: str | None,
-    slack_user_id: str | None,
-    auth_service: AuthService,
-) -> tuple[int | None, bool, str | None]:
-    """Gelen API istegi icin auth baglamini cozumler."""
-
-    if student_id is not None and is_authenticated:
-        return student_id, True, slack_user_id
-
-    if session_token:
-        resolved = await auth_service.resolve_auth_context(session_token=session_token)
-        if resolved is None:
-            raise HTTPException(status_code=401, detail="Gecersiz veya suresi dolmus oturum.")
-        return resolved.student_db_id, True, resolved.slack_user_id or slack_user_id
-
-    if slack_user_id:
-        resolved = await auth_service.resolve_auth_context(slack_user_id=slack_user_id)
-        if resolved is not None:
-            return resolved.student_db_id, True, resolved.slack_user_id
-
-    return student_id, is_authenticated, slack_user_id
+@asynccontextmanager
+async def _app_lifespan(app: FastAPI):
+    _ = app
+    if settings.server.warmup_enabled:
+        get_main_orchestrator()
+        get_llm_service()
+        warm_retrieval_resources()
+    try:
+        yield
+    finally:
+        await dispose_engine()
 
 
 def create_app() -> FastAPI:
@@ -135,6 +148,7 @@ def create_app() -> FastAPI:
             "RAG, LLM, auth, router ve uygulama ici A2A orkestrasyonu uzerinden "
             "universite destek sorgularini cevaplayan API."
         ),
+        lifespan=_app_lifespan,
     )
 
     @app.get("/", tags=["system"])
@@ -175,16 +189,21 @@ def create_app() -> FastAPI:
         payload: OTPRequestPayload,
         auth_service: AuthService = Depends(get_auth_service),
     ) -> OTPRequestResponse:
-        otp_result = await auth_service.request_otp(
-            student_number=payload.student_number,
-            slack_user_id=payload.slack_user_id,
-        )
+        try:
+            otp_result = await auth_service.request_otp(
+                student_number=payload.student_number,
+                slack_user_id=payload.slack_user_id,
+            )
+        except EmailDeliveryError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         if otp_result is None:
             raise HTTPException(status_code=404, detail="Ogrenci numarasi bulunamadi.")
+        if not otp_result.get("success", True):
+            raise HTTPException(status_code=400, detail=otp_result["message"])
 
         return OTPRequestResponse(
             success=True,
-            message="OTP kodu olusturuldu. E-posta gonderimi su an stub modunda.",
+            message="Dogrulama kodu ogrenci e-posta adresinize gonderildi.",
             student_number=otp_result["student_number"],
             masked_email=otp_result["masked_email"],
             expires_at=otp_result["expires_at"].isoformat(),
@@ -213,6 +232,8 @@ def create_app() -> FastAPI:
             student_id=result["student_db_id"],
             student_number=result["student_number"],
             full_name=result["full_name"],
+            student_department=result["student_department"],
+            student_faculty=result["student_faculty"],
             is_authenticated=True,
             session_token=result["session_token"],
             expires_at=result["expires_at"].isoformat(),
@@ -238,6 +259,8 @@ def create_app() -> FastAPI:
             student_id=resolved.student_db_id,
             student_number=resolved.student_number,
             full_name=resolved.full_name,
+            student_department=resolved.student_department,
+            student_faculty=resolved.student_faculty,
             slack_user_id=resolved.slack_user_id,
             session_token=resolved.session_token,
             expires_at=resolved.expires_at.isoformat() if resolved.expires_at else None,
@@ -258,20 +281,28 @@ def create_app() -> FastAPI:
         payload: AuthenticatedUserQueryRequest,
         orchestrator: MainOrchestrator = Depends(get_main_orchestrator),
         auth_service: AuthService = Depends(get_auth_service),
+        profile_service: ProfileContextService = Depends(get_profile_context_service),
     ) -> UserQueryResponse:
-        resolved_student_id, resolved_auth, resolved_slack_user_id = await _resolve_auth_inputs(
-            student_id=payload.student_id,
-            is_authenticated=payload.is_authenticated,
-            session_token=payload.session_token,
-            slack_user_id=payload.slack_user_id,
+        resolution = await resolve_query_context(
+            payload=payload,
             auth_service=auth_service,
+            profile_service=profile_service,
         )
+        if resolution.immediate_response is not None:
+            return resolution.immediate_response
+
         return await orchestrator.handle_query(
             payload.query,
-            context_id=payload.context_id,
-            user_id=payload.user_id or resolved_slack_user_id,
-            student_id=resolved_student_id,
-            is_authenticated=resolved_auth,
+            context_id=resolution.context_id,
+            user_id=payload.user_id or resolution.resolved["slack_user_id"],
+            student_id=resolution.resolved["student_id"],
+            student_number=resolution.resolved["student_number"],
+            student_full_name=resolution.resolved["full_name"],
+            student_department=resolution.resolved["student_department"],
+            student_faculty=resolution.resolved["student_faculty"],
+            student_type=resolution.resolved["student_type"],
+            llm_profile=payload.llm_profile,
+            is_authenticated=resolution.resolved["is_authenticated"],
         )
 
     @app.post("/a2a/dispatch", response_model=DepartmentResponse, tags=["a2a"])
@@ -287,24 +318,16 @@ def create_app() -> FastAPI:
                 detail=f"{payload.department.value} icin aktif departman orkestratoru bulunamadi.",
             )
 
-        resolved_student_id, resolved_auth, resolved_slack_user_id = await _resolve_auth_inputs(
-            student_id=payload.student_id,
-            is_authenticated=payload.is_authenticated,
-            session_token=payload.session_token,
-            slack_user_id=payload.slack_user_id,
+        context_id, resolved = await resolve_dispatch_context(
+            payload=payload,
             auth_service=auth_service,
         )
 
         return await department_orchestrator.handle(
             query_text=payload.query,
-            context_id=payload.context_id or "api-a2a-context",
+            context_id=context_id,
             task_type=payload.task_type,
-            metadata={
-                "user_id": payload.user_id or resolved_slack_user_id,
-                "student_id": resolved_student_id,
-                "is_authenticated": resolved_auth,
-                "routing_reason": "api_a2a_dispatch",
-            },
+            metadata=build_dispatch_metadata(payload=payload, resolved=resolved),
         )
 
     return app

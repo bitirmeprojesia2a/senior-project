@@ -267,8 +267,8 @@ class DocumentLoader:
 
             return Document(content=content, metadata=metadata)
 
-        except Exception as e:
-            logger.error("file_load_error", path=str(file_path), error=str(e))
+        except (OSError, UnicodeError, ValueError) as exc:
+            logger.error("file_load_error", path=str(file_path), error=str(exc))
             return None
 
     def load_directory(
@@ -328,12 +328,17 @@ class DocumentLoader:
     def _load_pdf(self, file_path: Path) -> str:
         """PDF dosyasından metin çıkarır."""
         pages_text: List[str] = []
-
-        with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    pages_text.append(text)
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    text = page.extract_text()
+                    if text:
+                        pages_text.append(text)
+        except Exception as exc:
+            # Bazı PDF'ler bozuk/uyumsuz font sözlükleri yüzünden pdfminer içinde
+            # parse hatası verir. Tek bir dosya yüzünden tüm indeksleme akışını
+            # düşürmek yerine bu dosyayı atlamak için ValueError'a çeviriyoruz.
+            raise ValueError(f"PDF metni çıkarılamadı: {exc}") from exc
 
         return "\n\n".join(pages_text)
 

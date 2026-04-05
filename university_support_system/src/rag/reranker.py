@@ -1,29 +1,13 @@
-"""
-Cross-Encoder Reranker — Turkce icin optimize
+"""Cross-encoder reranker."""
 
-Ensemble retrieval sonuclarini cross-encoder modeli ile yeniden siralar.
-Bi-encoder (embedding) modeller sorgu ve belgeyi bagimsiz vectorize eder,
-cross-encoder ise sorgu-belge ciftini BIRLIKTE degerlendirir — bu nedenle
-cok daha dogru relevanslik puani uretir.
-
-Model: seroe/bge-reranker-v2-m3-turkish-triplet
-  - BAAI/bge-reranker-v2-m3 uzerine Turkce triplet veriyle fine-tune
-  - MAP: 0.79 (val), 0.789 (test)
-
-Kullanim:
-    from src.rag.reranker import CrossEncoderReranker
-
-    reranker = CrossEncoderReranker()
-    reranked = reranker.rerank("soru", candidates, top_k=5)
-"""
-
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 import structlog
-from sentence_transformers import CrossEncoder
 import torch
+from sentence_transformers import CrossEncoder
 
 from src.core.config import settings
+from src.core.profiling import profile_stage
 
 logger = structlog.get_logger()
 
@@ -31,16 +15,14 @@ DEFAULT_RERANKER_MODEL = "seroe/bge-reranker-v2-m3-turkish-triplet"
 
 
 class CrossEncoderReranker:
-    """
-    Cross-encoder tabanli reranker.
+    """Cross-encoder tabanli reranker."""
 
-    Lazy init: model ilk rerank() cagrisinda yuklenir.
+    _MODEL_CACHE: ClassVar[dict[tuple[str, int, str, bool], CrossEncoder]] = {}
 
-    Args:
-        model_name: HuggingFace model adi.
-        max_length: Maksimum token uzunlugu (sorgu + belge).
-        batch_size: Cross-encoder batch boyutu.
-    """
+    @classmethod
+    def clear_model_cache(cls) -> None:
+        """Paylasilan reranker model cache'ini temizler."""
+        cls._MODEL_CACHE.clear()
 
     def __init__(
         self,
@@ -59,7 +41,7 @@ class CrossEncoderReranker:
 
     @staticmethod
     def _resolve_device(device: str) -> str:
-        """İstenen cihazı mevcut ortama göre çözümler."""
+        """Istenen cihazi mevcut ortama gore cozumler."""
         if device == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
         return device
@@ -67,22 +49,48 @@ class CrossEncoderReranker:
     @property
     def model(self) -> CrossEncoder:
         if self._model is None:
+            cache_key = (
+                self.model_name,
+                self.max_length,
+                self.resolved_device,
+                settings.reranker.local_files_only,
+            )
+            cached_model = self._MODEL_CACHE.get(cache_key)
+            if cached_model is not None:
+                self._model = cached_model
+                logger.info(
+                    "reranker_model_cache_hit",
+                    model=self.model_name,
+                    requested_device=self.device,
+                    resolved_device=self.resolved_device,
+                    local_files_only=settings.reranker.local_files_only,
+                )
+                return self._model
+
             logger.info(
                 "loading_reranker_model",
                 model=self.model_name,
                 requested_device=self.device,
                 resolved_device=self.resolved_device,
             )
-            self._model = CrossEncoder(
-                self.model_name,
-                max_length=self.max_length,
+            with profile_stage(
+                "rag.reranker.load_model",
+                model=self.model_name,
                 device=self.resolved_device,
-            )
+            ):
+                self._model = CrossEncoder(
+                    self.model_name,
+                    max_length=self.max_length,
+                    device=self.resolved_device,
+                    local_files_only=settings.reranker.local_files_only,
+                )
+                self._MODEL_CACHE[cache_key] = self._model
             logger.info(
                 "reranker_model_loaded",
                 model=self.model_name,
                 requested_device=self.device,
                 resolved_device=self.resolved_device,
+                local_files_only=settings.reranker.local_files_only,
             )
         return self._model
 
@@ -92,18 +100,7 @@ class CrossEncoderReranker:
         candidates: List[Dict[str, Any]],
         top_k: int = 5,
     ) -> List[Dict[str, Any]]:
-        """
-        Adaylari cross-encoder ile yeniden siralar.
-
-        Args:
-            query: Kullanicinin orijinal sorusu.
-            candidates: Ensemble'dan gelen aday belge listesi.
-                Her dict'te en az "content" anahtari olmali.
-            top_k: Dondurelecek sonuc sayisi.
-
-        Returns:
-            Cross-encoder skoruna gore siralanmis sonuclar.
-        """
+        """Adaylari cross-encoder ile yeniden siralar."""
         if not candidates:
             self.last_run_succeeded = None
             return candidates
@@ -117,12 +114,17 @@ class CrossEncoderReranker:
         )
 
         try:
-            scores = self.model.predict(
-                pairs,
-                batch_size=self.batch_size,
-                show_progress_bar=False,
-            )
-        except Exception:
+            with profile_stage(
+                "rag.reranker.predict",
+                candidate_count=len(candidates),
+                top_k=top_k,
+            ):
+                scores = self.model.predict(
+                    pairs,
+                    batch_size=self.batch_size,
+                    show_progress_bar=False,
+                )
+        except (OSError, RuntimeError, ValueError):
             self.last_run_succeeded = False
             logger.exception("reranking_failed")
             return candidates[:top_k]
@@ -136,9 +138,7 @@ class CrossEncoderReranker:
 
         logger.debug(
             "reranking_complete",
-            top_scores=[
-                (c["source"], c["score"]) for c in candidates[:5]
-            ],
+            top_scores=[(c["source"], c["score"]) for c in candidates[:5]],
         )
 
         return candidates[:top_k]

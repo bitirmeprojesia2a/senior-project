@@ -1,50 +1,29 @@
-"""
-RAG Indeksleme Pipeline — v2
+"""RAG indexing pipeline."""
 
-Tum adimlari birlestirir:
-    1. Dosya yukleme (PDF + TXT)
-    2. Metin temizleme (header/footer, sayfa numaralari, belge kalintilari)
-    3. Chunk'lama (MADDE-aware, madde basligi korunur)
-    4. Embedding uretimi (BAAI/bge-m3, 1024-D)
-    5. ChromaDB'ye indeksleme
-
-Kullanim:
-    from src.rag.pipeline import IndexingPipeline
-
-    pipeline = IndexingPipeline()
-    stats = pipeline.run("data/raw/student_affairs/")
-"""
+from __future__ import annotations
 
 import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from tqdm import tqdm
+import httpx
 import structlog
+from tqdm import tqdm
 
 from src.core.constants import Department, collection_name_for_department, normalize_department_value
-from src.rag.document_loader import DocumentLoader
-from src.rag.text_preprocessor import TextPreprocessor
-from src.rag.chunker import TextChunker, Chunk
+from src.rag.chunker import Chunk, TextChunker
+from src.rag.document_loader import Document, DocumentLoader
 from src.rag.embedder import Embedder
 from src.rag.indexer import ChromaIndexer
+from src.rag.text_preprocessor import TextPreprocessor
 
 logger = structlog.get_logger()
 
 
 class IndexingPipeline:
-    """
-    Doküman indeksleme pipeline'ı.
-
-    Args:
-        chunk_size: Chunk boyutu (karakter). Varsayılan: 1024
-        chunk_overlap: Chunk örtüşme (karakter). Varsayılan: 128
-        collection_name: ChromaDB koleksiyon adı.
-        embedding_model: Embedding modeli. None ise config'den.
-        chroma_url: ChromaDB URL'si. None ise config'den.
-    """
+    """End-to-end document indexing flow for ChromaDB."""
 
     def __init__(
         self,
@@ -68,70 +47,113 @@ class IndexingPipeline:
         self,
         source_dir: str | Path,
         reindex: bool = False,
-    ) -> Dict[str, Any]:
-        """
-        Pipeline'ı çalıştırır.
-
-        Args:
-            source_dir: Kaynak dosyaların klasörü.
-            reindex: True ise mevcut koleksiyonu silip yeniden oluşturur.
-
-        Returns:
-            İndeksleme istatistikleri.
-        """
+    ) -> dict[str, Any]:
+        """Run the indexing pipeline and return summary stats."""
         source_dir = Path(source_dir)
         self.indexer.collection_name = self._resolve_collection_name(source_dir)
         logger.info("pipeline_start", source=str(source_dir), reindex=reindex)
 
-        # 1. Koleksiyon hazırlığı
+        self._prepare_collection(reindex=reindex)
+
+        documents = self._load_documents(source_dir)
+        if not documents:
+            logger.error("no_documents_found", path=str(source_dir))
+            return {"error": "Hic dosya bulunamadi"}
+
+        documents = self._clean_documents(documents)
+        chunks = self._split_chunks(documents)
+        if not chunks:
+            return {"error": "Chunk olusturulamadi"}
+
+        chunk_texts = [chunk.content for chunk in chunks]
+        embeddings = self._generate_embeddings(chunk_texts)
+        if embeddings is None:
+            return {"error": "Embedding uretimi basarisiz"}
+
+        metadatas = [chunk.metadata for chunk in chunks]
+        ids = self._generate_content_hash_ids(chunk_texts, metadatas)
+        total_in_db = self._index_chunks(
+            ids=ids,
+            chunk_texts=chunk_texts,
+            embeddings=embeddings,
+            metadatas=metadatas,
+            reindex=reindex,
+        )
+        if total_in_db is None:
+            return {"error": "ChromaDB indeksleme basarisiz"}
+
+        self._write_doc_registry(source_dir, documents, chunks)
+
+        chunk_stats = self.chunker.get_stats(chunks)
+        stats = self._build_stats(
+            source_dir=source_dir,
+            documents=documents,
+            chunk_stats=chunk_stats,
+            total_in_db=total_in_db,
+        )
+        self._print_report(stats)
+        logger.info("pipeline_complete", **stats)
+        return stats
+
+    def _prepare_collection(self, *, reindex: bool) -> None:
+        """Ensure the target collection exists and is ready."""
         if reindex:
             logger.info("deleting_existing_collection")
             self.indexer.delete_collection()
         self.indexer.create_collection()
 
-        # 2. Dosyaları yükle
-        print("\n📂 Dosyalar yükleniyor...")
+    def _load_documents(self, source_dir: Path) -> list[Document]:
+        """Load raw source documents from disk."""
+        print("\n[1/5] Dosyalar yukleniyor...")
         documents = self.loader.load_directory(source_dir)
-        if not documents:
-            logger.error("no_documents_found", path=str(source_dir))
-            return {"error": "Hiç dosya bulunamadı"}
+        print(f"   OK: {len(documents)} dosya yuklendi")
+        return documents
 
-        print(f"   ✅ {len(documents)} dosya yüklendi")
-
-        # 3. Metin temizleme
-        print("🧹 Metinler temizleniyor...")
+    def _clean_documents(self, documents: list[Document]) -> list[Document]:
+        """Normalize loaded documents and drop empty ones."""
+        print("[2/5] Metinler temizleniyor...")
         for doc in tqdm(documents, desc="   Temizleme"):
             doc.content = self.preprocessor.clean(doc.content)
 
-        # Temizleme sonrası boş olanları filtrele
-        documents = [d for d in documents if d.content.strip()]
-        print(f"   ✅ {len(documents)} dosya temizlendi")
+        cleaned_documents = [doc for doc in documents if doc.content.strip()]
+        print(f"   OK: {len(cleaned_documents)} dosya temizlendi")
+        return cleaned_documents
 
-        # 4. Chunk'lama
-        print("✂️  Chunk'lara ayrılıyor...")
+    def _split_chunks(self, documents: list[Document]) -> list[Chunk]:
+        """Split cleaned documents into chunks."""
+        print("[3/5] Chunk'lara ayriliyor...")
         chunks = self.chunker.split_documents(documents)
         chunk_stats = self.chunker.get_stats(chunks)
-        print(f"   ✅ {chunk_stats['total']} chunk oluşturuldu (ort: {chunk_stats.get('avg_size', 0)} karakter)")
+        print(
+            f"   OK: {chunk_stats['total']} chunk olusturuldu "
+            f"(ort: {chunk_stats.get('avg_size', 0)} karakter)"
+        )
+        return chunks
 
-        if not chunks:
-            return {"error": "Chunk oluşturulamadı"}
-
-        # 5. Embedding üretimi — is_query=False (belge/passage olarak işle)
-        print("🧠 Embedding'ler üretiliyor...")
+    def _generate_embeddings(self, chunk_texts: list[str]) -> list[list[float]] | None:
+        """Generate embeddings for chunks."""
+        print("[4/5] Embedding'ler uretiliyor...")
         print(f"   Model: {self.embedder.model_name}")
-        chunk_texts = [c.content for c in chunks]
         try:
             embeddings = self.embedder.embed_texts(chunk_texts, is_query=False)
-        except Exception:
+        except (OSError, RuntimeError, ValueError):
             logger.exception("embedding_generation_failed")
-            return {"error": "Embedding üretimi başarısız"}
-        print(f"   ✅ {len(embeddings)} vektör üretildi ({self.embedder.dimension} boyut)")
+            return None
 
-        # 6. ChromaDB'ye indeksle (hash tabanlı ID — idempotent)
-        print("💾 ChromaDB'ye indeksleniyor...")
-        metadatas = [c.metadata for c in chunks]
-        ids = self._generate_content_hash_ids(chunk_texts, metadatas)
+        print(f"   OK: {len(embeddings)} vektor uretildi ({self.embedder.dimension} boyut)")
+        return embeddings
 
+    def _index_chunks(
+        self,
+        *,
+        ids: list[str],
+        chunk_texts: list[str],
+        embeddings: list[list[float]],
+        metadatas: list[dict[str, Any]],
+        reindex: bool,
+    ) -> int | None:
+        """Persist chunks to ChromaDB and return total stored chunks."""
+        print("[5/5] ChromaDB'ye indeksleniyor...")
         try:
             if reindex:
                 self.indexer.add_documents(
@@ -147,18 +169,24 @@ class IndexingPipeline:
                     embeddings=embeddings,
                     metadatas=metadatas,
                 )
-        except Exception:
+            total_in_db = self.indexer.count()
+        except httpx.HTTPError:
             logger.exception("indexing_failed")
-            return {"error": "ChromaDB indeksleme başarısız"}
+            return None
 
-        total_in_db = self.indexer.count()
-        print(f"   ✅ {total_in_db} chunk ChromaDB'ye kaydedildi")
+        print(f"   OK: {total_in_db} chunk ChromaDB'ye kaydedildi")
+        return total_in_db
 
-        # 7. Doküman kaydı (doc_registry.json) oluştur
-        self._write_doc_registry(source_dir, documents, chunks)
-
-        # 8. Sonuç raporu
-        stats = {
+    def _build_stats(
+        self,
+        *,
+        source_dir: Path,
+        documents: list[Document],
+        chunk_stats: dict[str, Any],
+        total_in_db: int,
+    ) -> dict[str, Any]:
+        """Build the indexing summary payload."""
+        return {
             "source_dir": str(source_dir),
             "documents_loaded": len(documents),
             "total_chunks": chunk_stats["total"],
@@ -172,24 +200,24 @@ class IndexingPipeline:
             "documents_in_db": total_in_db,
         }
 
+    @staticmethod
+    def _print_report(stats: dict[str, Any]) -> None:
+        """Print a short CLI report."""
         print("\n" + "=" * 50)
-        print("📊 İndeksleme Raporu")
+        print("Indeksleme Raporu")
         print("=" * 50)
-        print(f"   Dosya sayısı:     {stats['documents_loaded']}")
-        print(f"   Chunk sayısı:     {stats['total_chunks']}")
+        print(f"   Dosya sayisi:     {stats['documents_loaded']}")
+        print(f"   Chunk sayisi:     {stats['total_chunks']}")
         print(f"   Ort. chunk:       {stats['avg_chunk_size']} karakter")
         print(f"   Min/Max chunk:    {stats['min_chunk_size']}/{stats['max_chunk_size']}")
         print(f"   Toplam karakter:  {stats['total_characters']:,}")
         print(f"   Embedding modeli: {stats['embedding_model']}")
-        print(f"   Vektör boyutu:    {stats['embedding_dimension']}")
+        print(f"   Vektor boyutu:    {stats['embedding_dimension']}")
         print(f"   ChromaDB'de:      {stats['documents_in_db']} chunk")
         print("=" * 50 + "\n")
 
-        logger.info("pipeline_complete", **stats)
-        return stats
-
     def _resolve_collection_name(self, source_dir: Path) -> str:
-        """Kaynak klasöre göre kullanılacak koleksiyon adını belirler."""
+        """Resolve the collection name from the source path."""
         if self._explicit_collection_name:
             return self._explicit_collection_name
         department = self._detect_department_from_source_dir(source_dir)
@@ -197,30 +225,18 @@ class IndexingPipeline:
 
     @staticmethod
     def _detect_department_from_source_dir(source_dir: Path) -> Department:
-        """Kaynak klasör yolundan ana departmanı tespit eder."""
+        """Infer the top-level department from the source directory."""
         department_values = {department.value: department for department in Department}
         for part in source_dir.resolve().parts:
             normalized = normalize_department_value(part)
             if normalized in department_values:
                 return department_values[normalized]
-        raise ValueError(
-            f"Kaynak klasor yolundan resmi departman tespit edilemedi: {source_dir}"
-        )
+        raise ValueError(f"Kaynak klasor yolundan resmi departman tespit edilemedi: {source_dir}")
 
-    def test_query(self, query: str, n_results: int = 3) -> Dict[str, Any]:
-        """
-        Test sorgusu yapar — pipeline doğru çalışıyor mu kontrol eder.
+    def test_query(self, query: str, n_results: int = 3) -> dict[str, Any]:
+        """Run a simple search sanity check against the indexed collection."""
+        print(f'\nSorgu: "{query}"')
 
-        Args:
-            query: Test sorusu.
-            n_results: Kaç sonuç döndürülsün.
-
-        Returns:
-            Sorgu sonuçları.
-        """
-        print(f"\n🔍 Sorgu: \"{query}\"")
-
-        # E5 modeli ise is_query=True ile sorgu prefix'i eklenir
         query_embedding = self.embedder.embed_single(query, is_query=True)
         results = self.indexer.query(query_embedding, n_results=n_results)
 
@@ -229,27 +245,27 @@ class IndexingPipeline:
             distances = results["distances"][0] if results.get("distances") else []
             metadatas = results["metadatas"][0] if results.get("metadatas") else []
 
-            print(f"   {len(docs)} sonuç bulundu:\n")
-            for i, (doc, dist) in enumerate(zip(docs, distances)):
-                source = metadatas[i].get("source", "?") if i < len(metadatas) else "?"
-                similarity = 1 - dist  # ChromaDB distance → similarity
-                print(f"   [{i+1}] (benzerlik: {similarity:.3f}) [{source}]")
+            print(f"   {len(docs)} sonuc bulundu:\n")
+            for index, (doc, dist) in enumerate(zip(docs, distances), start=1):
+                source = metadatas[index - 1].get("source", "?") if index - 1 < len(metadatas) else "?"
+                similarity = 1 - dist
+                print(f"   [{index}] (benzerlik: {similarity:.3f}) [{source}]")
                 print(f"       {doc[:200]}...")
                 print()
         else:
-            print("   Sonuç bulunamadı.")
+            print("   Sonuc bulunamadi.")
 
         return results
 
     @staticmethod
     def _generate_content_hash_ids(
-        texts: List[str],
-        metadatas: List[Dict[str, Any]],
-    ) -> List[str]:
-        """İçerik + kaynak tabanlı SHA-256 hash ID'leri üretir."""
-        ids = []
-        for i, text in enumerate(texts):
-            source = metadatas[i].get("source", "") if i < len(metadatas) else ""
+        texts: list[str],
+        metadatas: list[dict[str, Any]],
+    ) -> list[str]:
+        """Generate deterministic chunk ids from source and content."""
+        ids: list[str] = []
+        for index, text in enumerate(texts):
+            source = metadatas[index].get("source", "") if index < len(metadatas) else ""
             raw = f"{source}::{text}"
             digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
             ids.append(f"chunk_{digest}")
@@ -258,32 +274,34 @@ class IndexingPipeline:
     def _write_doc_registry(
         self,
         source_dir: Path,
-        documents: list,
-        chunks: list,
+        documents: list[Document],
+        chunks: list[Chunk],
     ) -> None:
-        """İndekslenen dokümanların kaydını data/metadata/doc_registry.json'a yazar."""
+        """Write a registry file for indexed source documents."""
         try:
             registry_dir = Path(__file__).parent.parent.parent / "data" / "metadata"
             registry_dir.mkdir(parents=True, exist_ok=True)
             registry_path = registry_dir / "doc_registry.json"
 
-            chunks_per_source: Dict[str, int] = {}
+            chunks_per_source: dict[str, int] = {}
             for chunk in chunks:
-                src = chunk.metadata.get("source", "bilinmiyor")
-                chunks_per_source[src] = chunks_per_source.get(src, 0) + 1
+                source = chunk.metadata.get("source", "bilinmiyor")
+                chunks_per_source[source] = chunks_per_source.get(source, 0) + 1
 
             doc_entries = []
             for doc in documents:
                 source_name = doc.metadata.get("source", "bilinmiyor")
                 content_hash = hashlib.sha256(doc.content.encode("utf-8")).hexdigest()[:16]
-                doc_entries.append({
-                    "filename": source_name,
-                    "category": doc.metadata.get("category", "genel"),
-                    "file_type": doc.metadata.get("file_type", "unknown"),
-                    "char_count": len(doc.content),
-                    "chunk_count": chunks_per_source.get(source_name, 0),
-                    "content_hash": content_hash,
-                })
+                doc_entries.append(
+                    {
+                        "filename": source_name,
+                        "category": doc.metadata.get("category", "genel"),
+                        "file_type": doc.metadata.get("file_type", "unknown"),
+                        "char_count": len(doc.content),
+                        "chunk_count": chunks_per_source.get(source_name, 0),
+                        "content_hash": content_hash,
+                    }
+                )
 
             registry = {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -299,11 +317,11 @@ class IndexingPipeline:
                 json.dumps(registry, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            print(f"   📋 Doküman kaydı: {registry_path}")
+            print(f"   Dokuman kaydi: {registry_path}")
             logger.info("doc_registry_written", path=str(registry_path))
-        except Exception:
+        except (OSError, TypeError, ValueError):
             logger.exception("doc_registry_write_failed")
 
     def close(self) -> None:
-        """Kaynakları serbest bırakır."""
+        """Release held resources."""
         self.indexer.close()

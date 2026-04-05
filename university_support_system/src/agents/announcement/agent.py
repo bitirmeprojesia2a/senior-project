@@ -10,6 +10,7 @@ from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.core.constants import Department, TaskType
 from src.db.announcements import AnnouncementRecord, fetch_relevant_announcements
 from src.db.schemas import DepartmentResponse, RAGSource
+from src.llm.prompt_templates import ANNOUNCEMENT_AGENT_SYSTEM_PROMPT
 
 
 class AnnouncementAgent(BaseSpecialistAgent):
@@ -30,12 +31,13 @@ class AnnouncementAgent(BaseSpecialistAgent):
                 task_types=(TaskType.PROCEDURE_QUERY,),
                 examples=("Son duyurular neler?",),
                 tags=("announcement", "shared"),
+                system_prompt=ANNOUNCEMENT_AGENT_SYSTEM_PROMPT,
             ),
             **kwargs,
         )
         self._announcement_fetcher = announcement_fetcher or fetch_relevant_announcements
 
-    async def handle_task(self, task: Task) -> DepartmentResponse:
+    async def handle_department_task(self, task: Task) -> DepartmentResponse:
         metadata = task.metadata or {}
         query_text = str(metadata.get("query_text", "")).strip()
         if not query_text:
@@ -50,8 +52,8 @@ class AnnouncementAgent(BaseSpecialistAgent):
 
         if not announcements:
             answer = (
-                "Bu sorgu icin su anda eslesen aktif duyuru bulamadim. "
-                "Daha guncel veya daha spesifik bir ifade ile tekrar deneyebilirsin."
+                "Su anda sistemde kayitli aktif duyuru bulunmuyor. "
+                "Duyuru verileri yuklendiginde en guncel duyurulari dogrudan listeleyebilirim."
             )
             sources: list[RAGSource] = []
         else:

@@ -13,6 +13,9 @@ Gerçek embedding modeli ve cross-encoder kullanılır.
 import time
 
 import pytest
+from huggingface_hub import try_to_load_from_cache
+
+from src.core.config import settings
 
 from tests.integration.conftest import (
     academic_collection_has_data,
@@ -22,6 +25,11 @@ from tests.integration.conftest import (
 
 BASE_COLLECTION = "student_affairs_docs"
 ACADEMIC_COLLECTION = "academic_programs_docs"
+
+
+def _has_local_reranker_cache() -> bool:
+    cached_path = try_to_load_from_cache(settings.reranker.model, "config.json")
+    return cached_path is not None
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -169,6 +177,9 @@ class TestHybridSearch:
         assert len(results) > 0
 
     def test_reranker_runs_successfully(self, hybrid_retriever):
+        if not _has_local_reranker_cache():
+            pytest.skip("Reranker modeli yerel cache'te bulunmuyor; offline ortamda atlandi.")
+
         results = hybrid_retriever.search("Çift ana dal programına başvuru şartları")
 
         assert len(results) > 0

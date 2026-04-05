@@ -24,13 +24,13 @@ class OllamaClient:
 
     def __init__(self):
         self.host = settings.ollama.host
-        self.model = settings.ollama.model
+        self.default_model = settings.ollama.model
         self.timeout = settings.ollama.timeout
         self.generate_url = f"{self.host}/api/generate"
         self.chat_url = f"{self.host}/api/chat"
         self.tags_url = f"{self.host}/api/tags"
 
-    async def get_health(self) -> Dict[str, Any]:
+    async def get_health(self, *, models: list[str] | None = None) -> Dict[str, Any]:
         """
         Ollama ayakta mı ve kullanılacak model yüklü mü kontrol eder.
         """
@@ -40,13 +40,26 @@ class OllamaClient:
                 response.raise_for_status()
                 data = response.json()
                 
-                models = [m.get("name") for m in data.get("models", [])]
-                is_model_loaded = any(self.model in m for m in models)
+                available_models = [
+                    str(model_name)
+                    for model_name in (m.get("name") for m in data.get("models", []))
+                    if model_name
+                ]
+                requested_models = list(dict.fromkeys(model for model in (models or []) if model))
+                if not requested_models:
+                    requested_models = [self.default_model]
+                found_models = {
+                    model: any(model in available for available in available_models)
+                    for model in requested_models
+                }
+                is_model_loaded = found_models.get(self.default_model, False)
                 
                 return {
-                    "status": "healthy" if is_model_loaded else "model_missing",
+                    "status": "healthy" if all(found_models.values()) else "model_missing",
                     "model_found": is_model_loaded,
-                    "available_models": models
+                    "available_models": available_models,
+                    "configured_models": requested_models,
+                    "configured_models_found": found_models,
                 }
         except httpx.RequestError as e:
             return {
@@ -55,13 +68,20 @@ class OllamaClient:
                 "model_found": False
             }
 
-    async def generate(self, prompt: str, system: Optional[str] = None, json_mode: bool = False) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        json_mode: bool = False,
+        *,
+        model: str | None = None,
+    ) -> str:
         """
         Standart meteryal üretimi (/api/generate) yapar.
         Eğer json_mode True ise modelin çıktısını JSON olarak sınırlandırmaya çalışır.
         """
         payload = {
-            "model": self.model,
+            "model": model or self.default_model,
             "prompt": prompt,
             "stream": False,
             "options": {
@@ -89,12 +109,18 @@ class OllamaClient:
         except httpx.RequestError as e:
             raise OllamaClientError(f"Ollama bağlantı hatası: {str(e)}")
 
-    async def generate_stream(self, prompt: str, system: Optional[str] = None) -> AsyncGenerator[str, None]:
+    async def generate_stream(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        *,
+        model: str | None = None,
+    ) -> AsyncGenerator[str, None]:
         """
         Streaming destekli materyal üretimi (Slack / WebUI için).
         """
         payload = {
-            "model": self.model,
+            "model": model or self.default_model,
             "prompt": prompt,
             "stream": True
         }
@@ -114,5 +140,9 @@ class OllamaClient:
                                     yield chunk["response"]
                             except json.JSONDecodeError:
                                 continue
-        except Exception as e:
-            raise OllamaClientError(f"Şelale akışı (streaming) sırasında hata: {str(e)}")
+        except httpx.TimeoutException:
+            raise OllamaClientError(f"Ollama stream yanıt süresi aşıldı ({self.timeout}s).")
+        except httpx.HTTPStatusError as e:
+            raise OllamaClientError(f"Ollama stream HTTP hatası: {e.response.status_code} - {e.response.text}")
+        except httpx.RequestError as e:
+            raise OllamaClientError(f"Ollama stream bağlantı hatası: {str(e)}")

@@ -6,6 +6,7 @@ src/core/constants.py modülünün testleri.
 
 import pytest
 
+from src.core.config import Settings
 from src.core.constants import (
     AgentRole,
     build_department_routing_descriptions,
@@ -114,3 +115,34 @@ class TestRoutingConstants:
         """Eşik değerleri doğru."""
         assert ROUTING_HIGH_CONFIDENCE_THRESHOLD == 0.7
         assert ROUTING_LOW_CONFIDENCE_THRESHOLD == 0.4
+
+
+class TestLLMModelResolution:
+    """Rol bazli model cozumleme kurallari."""
+
+    def test_fast_profile_prefers_secondary_model_for_all_roles(self, monkeypatch):
+        monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:7b")
+        monkeypatch.setenv("OLLAMA_SECONDARY_MODEL", "qwen2.5:3b")
+        monkeypatch.setenv("LLM_PROFILE", "fast")
+
+        test_settings = Settings()
+
+        assert test_settings.resolve_llm_model(role="routing") == "qwen2.5:3b"
+        assert test_settings.resolve_llm_model(role="conversation") == "qwen2.5:3b"
+        assert test_settings.resolve_llm_model(role="global_synthesis") == "qwen2.5:3b"
+
+    def test_balanced_profile_uses_role_overrides_before_primary_model(self, monkeypatch):
+        monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:7b")
+        monkeypatch.setenv("OLLAMA_SECONDARY_MODEL", "qwen2.5:3b")
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_ROUTING_MODEL", "qwen2.5:3b")
+        monkeypatch.setenv("LLM_CONVERSATION_MODEL", "qwen2.5:3b")
+        monkeypatch.setenv("LLM_SPECIALIST_SYNTHESIS_MODEL", "")
+        monkeypatch.setenv("LLM_GLOBAL_SYNTHESIS_MODEL", "")
+
+        test_settings = Settings()
+
+        assert test_settings.resolve_llm_model(role="routing") == "qwen2.5:3b"
+        assert test_settings.resolve_llm_model(role="conversation") == "qwen2.5:3b"
+        assert test_settings.resolve_llm_model(role="specialist_synthesis") == "qwen2.5:7b"
+        assert test_settings.resolve_llm_model(role="global_synthesis") == "qwen2.5:7b"

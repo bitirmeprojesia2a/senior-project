@@ -65,7 +65,7 @@ class OpenAIClient:
                     "status": "healthy",
                     "model_found": True
                 }
-        except Exception as e:
+        except (httpx.HTTPError, OpenAIClientError) as e:
             return {
                 "status": "unhealthy",
                 "reason": "API_ERROR",
@@ -151,5 +151,9 @@ class OpenAIClient:
                                         yield delta["content"]
                             except json.JSONDecodeError:
                                 continue
-        except Exception as e:
-            raise OpenAIClientError(f"OpenAI streaming sırasında hata: {str(e)}")
+        except httpx.TimeoutException:
+            raise OpenAIClientError(f"OpenAI stream yanıt süresi aşıldı ({self.timeout}s).")
+        except httpx.HTTPStatusError as e:
+            raise OpenAIClientError(f"OpenAI stream HTTP hatası ({e.response.status_code}): {e.response.text}")
+        except httpx.RequestError as e:
+            raise OpenAIClientError(f"OpenAI stream bağlantı hatası: {str(e)}")

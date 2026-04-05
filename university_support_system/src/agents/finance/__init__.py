@@ -1,5 +1,6 @@
-"""Finans departmanı ajanları - harç, burs, öğrenim ücreti."""
+"""Finance department agents."""
 
-from src.agents.finance.agents import ScholarshipAgent, TuitionAgent
+from src.agents.finance.scholarship_agent import ScholarshipAgent
+from src.agents.finance.tuition_agent import TuitionAgent
 
 __all__ = ["TuitionAgent", "ScholarshipAgent"]

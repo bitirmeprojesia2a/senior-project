@@ -64,8 +64,14 @@ services:
     restart: unless-stopped
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
+      OLLAMA_SECONDARY_MODEL: ${OLLAMA_SECONDARY_MODEL:-qwen2.5:3b}
+      OLLAMA_PRELOAD_MODELS: ${OLLAMA_PRELOAD_MODELS:-qwen2.5:7b,qwen2.5:3b}
     volumes:
       - ollama_data:/root/.ollama
+      - ./docker/ollama-bootstrap.sh:/usr/local/bin/ollama-bootstrap.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/ollama-bootstrap.sh"]
     # LLM servisi aktif olarak kullanılır. API ve Slack katmanları tamamlanmasa da
     # mevcut LLM istemcileri bu servise bağlanır.
     # GPU desteği için aşağıdaki satırları açın:

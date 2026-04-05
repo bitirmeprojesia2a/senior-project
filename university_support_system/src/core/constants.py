@@ -42,6 +42,12 @@ class DepartmentConfig:
     source_dirs: tuple[str, ...] = ()
 
 
+# Yönlendirme anahtar kelimeleri: aynı soruda birden fazla departman skoru çıkabilir;
+# DepartmentRouter en yüksek skoru ve eşik farkını kullanır; belirsizlikte LLM veya PARALLEL devreye girer.
+# Ayrım mantığı: Öğrenci işleri = idari süreç (kayıt, sınav, staj, not, transkript, mezuniyet…).
+# Akademik programlar = müfredat kuralı (önkoşul, AKTS, yönerge, yarıyıl, seçmeli, ders kodu).
+# "ders" tek başına eklenmedi; "dersler/dersleri" çoğunlukla müfredat/liste bağlamı için kullanılır.
+# "ders kaydı" tipi ifadeler kayıt/kayd ile öğrenci işlerine gider (akademik skor genelde düşük kalır).
 DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
     Department.FINANCE: DepartmentConfig(
         display_name="Finans",
@@ -50,16 +56,32 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
     ),
     Department.STUDENT_AFFAIRS: DepartmentConfig(
         display_name="Öğrenci İşleri",
-        routing_description="Ders kaydı, notlar, yatay/dikey geçiş, diploma, ÇAP, Erasmus işlemleri.",
+        routing_description="Ders kaydı, akademik takvim, notlar, yatay/dikey geçiş, diploma ve staj işlemleri.",
         keywords=(
-            "kayit", "kayıt", "not", "transkript", "mezuniyet", "cap", "çap", "erasmus",
-            "yatay", "dikey", "staj", "sinav", "sınav", "itiraz",
+            "ders kaydi", "ders kaydı", "kayit donemi", "kayıt dönemi", "akademik takvim",
+            "kayit", "kayıt", "kayd", "not", "gno", "transkript", "mezuniyet", "diploma",
+            "bagil", "bağıl", "yaz okulu",
+            "yatay", "dikey", "staj", "sinav", "sınav", "itiraz", "devamsızlık", "devamsizlik",
+            "muafiyet", "intibak",
         ),
     ),
     Department.ACADEMIC_PROGRAMS: DepartmentConfig(
         display_name="Akademik Programlar",
-        routing_description="Müfredat, ders içerikleri, bölüm kuralları, akademik takvim.",
-        keywords=("mufredat", "müfredat", "ders icerigi", "ders içeriği", "akts", "takvim", "bolum", "bölüm"),
+        routing_description="Müfredat, önkoşul, ders planı, AKTS, ÇAP/YAP, Erasmus ve akademik kurallar.",
+        keywords=(
+            "mufredat", "müfredat", "ders icerigi", "ders içeriği",
+            "akts", "ects", "kredi",
+            "onkosul", "önkoşul", "on kosul", "ön koşul", "on sart", "ön şart",
+            "yarimyil", "yarıyıl", "yarim yil",
+            "secmeli", "seçmeli", "teknik", "zorunlu",
+            "dersler", "dersleri",
+            "yonetmelik", "yönetmelik", "yonerge", "yönerge",
+            "politika", "prosedur", "prosedür", "genelge",
+            "cap", "çap", "yandal", "yan dal",
+            "erasmus", "uluslararasi", "uluslararası", "yabanci", "yabancı",
+            "ikamet", "denklik", "tomer", "tömer", "yos", "yös", "kontenjan",
+            "azami", "bütünleme", "butunleme", "devam zorunlulugu", "devam zorunluluğu", "not sistemi",
+        ),
     ),
 }
 
@@ -188,6 +210,10 @@ class Priority(int, Enum):
 ROUTING_HIGH_CONFIDENCE_THRESHOLD = 0.7
 ROUTING_LOW_CONFIDENCE_THRESHOLD = 0.4
 KEYWORD_MATCH_THRESHOLD = 0.6
+
+# RAG direkt yanıt eşikleri (LLM bypass)
+RAG_DIRECT_SCORE_THRESHOLD = 0.45
+RAG_DIRECT_MIN_CONTENT_LEN = 60
 
 # Kuyruk ayarları
 # Not: Bu sabitler planlı veya kısmi kuyruk entegrasyonları için korunur.

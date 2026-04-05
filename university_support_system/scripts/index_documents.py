@@ -25,8 +25,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.core.console import configure_utf8_stdio
 from src.core.constants import Department, collection_name_for_department, normalize_department_value
 from src.rag.pipeline import IndexingPipeline
+
+configure_utf8_stdio()
 
 
 def _resolve_collection_name(source_path: Path, explicit_collection: str | None) -> str:
