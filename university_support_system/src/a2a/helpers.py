@@ -45,6 +45,9 @@ class A2AQueryPayload:
     is_authenticated: bool = False
     routing_reason: str | None = None
     priority: str = "NORMAL"
+    force_llm_synthesis: bool = False
+    query_complexity: str | None = None
+    is_personal_query: bool = False
 
     def to_metadata(self) -> dict[str, Any]:
         return {
@@ -61,6 +64,9 @@ class A2AQueryPayload:
             "is_authenticated": self.is_authenticated,
             "routing_reason": self.routing_reason,
             "priority": self.priority,
+            "force_llm_synthesis": self.force_llm_synthesis,
+            "query_complexity": self.query_complexity,
+            "is_personal_query": self.is_personal_query,
         }
 
 

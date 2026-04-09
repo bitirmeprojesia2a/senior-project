@@ -34,23 +34,22 @@ logger = logging.getLogger(__name__)
 _SHARED_RETRIEVER: HybridRetriever | None = None
 _LLM_SYNTHESIS_TIMEOUT_SECONDS = settings.llm.specialist_synthesis_timeout_seconds
 
-_DIRECT_RAG_RERANKER_THRESHOLD = 0.50
-_DIRECT_RAG_RETRIEVAL_THRESHOLD = 0.65
-
 _CONTACT_REQUEST_KEYWORDS = (
     "iletisim", "iletisim bilgisi", "telefon", "dahili", "e-posta",
     "eposta", "email", "sekreter", "sekreterlik", "ofis", "telefon numarasi",
     "adres", "kime basvurayim", "kimle gorusmeliyim", "birim", "mudurluk",
 )
 
-_DIRECT_RAG_RERANKER_THRESHOLD = 0.50
+_DIRECT_RAG_RERANKER_THRESHOLD = 0.605
 _DIRECT_RAG_RETRIEVAL_THRESHOLD = 0.25
 _SPECIALIST_LLM_CONTEXT_MAX_LEN = 1500
 
-_LLM_SYNTHESIS_MIN_RERANKER_SCORE = 0.08
+_LLM_SYNTHESIS_MIN_RERANKER_SCORE = 0.30
 _LLM_SYNTHESIS_MIN_RETRIEVAL_SCORE = 0.18
 
-_NO_USEFUL_RESULT_RERANKER_CEILING = 0.03
+_NO_USEFUL_RESULT_RERANKER_CEILING = 0.25
+
+_DIRECT_RAG_SCORE_GAP_MIN = 0.01
 
 _FAQ_QUESTION_RE = re.compile(r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$", re.MULTILINE)
 _FAQ_SOURCE_PATTERNS = ("sik_sorulan", "sikca_sorulan", "sss", "faq")
@@ -188,12 +187,14 @@ class BaseSpecialistAgent:
                 with profile_stage("agent.contact_request", agent_id=self.agent_id):
                     return await self._handle_contact_request()
 
+            meta = task.metadata or {}
             retriever = self._get_retriever()
-            source_hints = (task.metadata or {}).get("conversation_source_refs") or []
-            topic_hint = (task.metadata or {}).get("conversation_topic")
-            disable_specialist_llm = bool((task.metadata or {}).get("disable_specialist_llm", False))
-            llm_profile = (task.metadata or {}).get("llm_profile")
-            student_department = (task.metadata or {}).get("student_department")
+            source_hints = meta.get("conversation_source_refs") or []
+            topic_hint = meta.get("conversation_topic")
+            disable_specialist_llm = bool(meta.get("disable_specialist_llm", False))
+            llm_profile = meta.get("llm_profile")
+            student_department = meta.get("student_department")
+            intent_force_llm = bool(meta.get("force_llm_synthesis", False))
             with profile_stage("agent.retriever.search", agent_id=self.agent_id, department=self.department.value):
                 results = retriever.search(
                     query_text,
@@ -210,6 +211,7 @@ class BaseSpecialistAgent:
                 answer, generation_mode = await self._generate_answer(
                     query_text,
                     results,
+                    force_llm=intent_force_llm,
                     allow_llm=not disable_specialist_llm,
                     llm_profile=llm_profile,
                 )
@@ -487,6 +489,19 @@ class BaseSpecialistAgent:
             return None
         if len(content) < RAG_DIRECT_MIN_CONTENT_LEN:
             return None
+
+        if (
+            score_type.strip().lower() == "reranker"
+            and len(results) >= 2
+            and score < direct_threshold + 0.07
+        ):
+            second_score = float(results[1].get("score", 0.0))
+            if (score - second_score) < _DIRECT_RAG_SCORE_GAP_MIN:
+                logger.info(
+                    "direct_rag_skipped_small_gap agent=%s top=%.4f second=%.4f gap=%.4f",
+                    self.agent_id, score, second_score, score - second_score,
+                )
+                return None
 
         if _is_faq_source(source) and query_text:
             content = _extract_relevant_faq_block(content, query_text)

@@ -14,6 +14,12 @@ logger = structlog.get_logger()
 
 DEFAULT_RERANKER_MODEL = "seroe/bge-reranker-v2-m3-turkish-triplet"
 
+# ms-marco-MiniLM-L-6-v2 logit dagilimina gore kalibre sigmoid parametreleri.
+# analyze_reranker_scores.py (40 soru, 400 aday) ciktisina dayanir.
+# shift = tum adaylarin logit medyani, scale = IQR (Q75 - Q25).
+_CALIBRATION_SHIFT = 1.2356
+_CALIBRATION_SCALE = 6.0418
+
 
 class CrossEncoderReranker:
     """Cross-encoder tabanli reranker."""
@@ -133,13 +139,14 @@ class CrossEncoderReranker:
         self.last_run_succeeded = True
 
         for candidate, score in zip(candidates, scores):
-            # Logit skorunu (örn: 5.7 veya -10.2) 0.0 ile 1.0 arasina normalize et (Sigmoid)
-            s_float = float(score)
-            prob = 1.0 / (1.0 + math.exp(-s_float)) if s_float >= 0 else math.exp(s_float) / (1.0 + math.exp(s_float))
+            raw_logit = float(score)
+            adjusted = (raw_logit - _CALIBRATION_SHIFT) / _CALIBRATION_SCALE
+            prob = 1.0 / (1.0 + math.exp(-adjusted)) if adjusted >= 0 else math.exp(adjusted) / (1.0 + math.exp(adjusted))
             reranker_score = round(prob, 4)
-            
+
             metadata = candidate.setdefault("metadata", {})
             metadata["pre_rerank_score"] = round(float(candidate.get("score", 0.0)), 4)
+            metadata["raw_reranker_logit"] = round(raw_logit, 4)
             metadata["reranker_score"] = reranker_score
             metadata["score_type"] = "reranker"
             candidate["score"] = reranker_score

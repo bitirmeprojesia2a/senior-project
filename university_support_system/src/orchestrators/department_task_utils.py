@@ -11,6 +11,9 @@ SPECIALIST_METADATA_PASSTHROUGH_KEYS = (
     "disable_specialist_llm",
     "llm_profile",
     "query_log_id",
+    "force_llm_synthesis",
+    "query_complexity",
+    "is_personal_query",
 )
 
 
@@ -38,19 +41,23 @@ def build_request_task(
     metadata: dict | None,
 ) -> Task:
     """Build the outer department request task."""
+    meta = metadata or {}
     payload = A2AQueryPayload(
         query_text=query_text,
         context_id=context_id,
         task_type=task_type.value if task_type else None,
-        routing_reason=(metadata or {}).get("routing_reason"),
-        is_authenticated=bool((metadata or {}).get("is_authenticated", False)),
-        student_id=(metadata or {}).get("student_id"),
-        student_number=(metadata or {}).get("student_number"),
-        student_full_name=(metadata or {}).get("student_full_name"),
-        student_department=(metadata or {}).get("student_department"),
-        student_faculty=(metadata or {}).get("student_faculty"),
-        student_type=(metadata or {}).get("student_type"),
-        llm_profile=(metadata or {}).get("llm_profile"),
+        routing_reason=meta.get("routing_reason"),
+        is_authenticated=bool(meta.get("is_authenticated", False)),
+        student_id=meta.get("student_id"),
+        student_number=meta.get("student_number"),
+        student_full_name=meta.get("student_full_name"),
+        student_department=meta.get("student_department"),
+        student_faculty=meta.get("student_faculty"),
+        student_type=meta.get("student_type"),
+        llm_profile=meta.get("llm_profile"),
+        force_llm_synthesis=bool(meta.get("force_llm_synthesis", False)),
+        query_complexity=meta.get("query_complexity"),
+        is_personal_query=bool(meta.get("is_personal_query", False)),
     )
     return build_query_task(payload)
 
@@ -76,6 +83,9 @@ def build_specialist_task(
         student_faculty=metadata.get("student_faculty"),
         student_type=metadata.get("student_type"),
         llm_profile=metadata.get("llm_profile"),
+        force_llm_synthesis=bool(metadata.get("force_llm_synthesis", False)),
+        query_complexity=metadata.get("query_complexity"),
+        is_personal_query=bool(metadata.get("is_personal_query", False)),
     )
     task = build_query_task(payload)
     for key in SPECIALIST_METADATA_PASSTHROUGH_KEYS:

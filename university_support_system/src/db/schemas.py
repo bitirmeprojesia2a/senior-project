@@ -6,7 +6,7 @@ dogrulama modellerini tutar.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -43,6 +43,16 @@ class RAGResult(BaseModel):
     response_time_ms: Optional[float] = Field(None, description="Yanit suresi")
 
 
+class IntentAnalysis(BaseModel):
+    """LLM niyet analizi sonucu."""
+
+    complexity: Literal["simple", "complex", "comparison", "process_chain"] = "simple"
+    is_personal: bool = False
+    force_llm_synthesis: bool = False
+    query_type: Literal["factual", "procedural", "comparative", "conditional"] = "factual"
+    reasoning: Optional[str] = None
+
+
 class RoutingResult(BaseModel):
     """Sorgu yonlendirme sonucu."""
 
@@ -52,6 +62,7 @@ class RoutingResult(BaseModel):
     strategy: RoutingStrategy = Field(..., description="Yonlendirme stratejisi")
     reasoning: Optional[str] = Field(None, description="Yonlendirme gerekcesi")
     task_type: Optional[TaskType] = Field(None, description="Belirlenen gorev tipi")
+    intent: Optional[IntentAnalysis] = Field(None, description="LLM niyet analizi sonucu")
 
 
 class DepartmentResponse(BaseModel):

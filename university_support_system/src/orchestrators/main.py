@@ -151,19 +151,24 @@ class MainOrchestrator:
                         update={"task_type": conversation_resolution.task_type_hint}
                     )
                 if profiler is not None:
-                    profiler.set_attribute(
-                        "routing",
-                        {
-                            "departments": [
-                                department.value for department in routing.departments
-                            ],
-                            "strategy": routing.strategy.value,
-                            "task_type": (
-                                routing.task_type.value if routing.task_type else None
-                            ),
-                            "confidence": routing.confidence,
-                        },
-                    )
+                    routing_attrs: dict = {
+                        "departments": [
+                            department.value for department in routing.departments
+                        ],
+                        "strategy": routing.strategy.value,
+                        "task_type": (
+                            routing.task_type.value if routing.task_type else None
+                        ),
+                        "confidence": routing.confidence,
+                    }
+                    if routing.intent is not None:
+                        routing_attrs["intent"] = {
+                            "complexity": routing.intent.complexity,
+                            "is_personal": routing.intent.is_personal,
+                            "force_llm_synthesis": routing.intent.force_llm_synthesis,
+                            "query_type": routing.intent.query_type,
+                        }
+                    profiler.set_attribute("routing", routing_attrs)
                 with profile_stage("main.telemetry.create_query_log"):
                     query_log_id = await self.telemetry_service.create_query_log(
                         query_text=query,
@@ -212,6 +217,7 @@ class MainOrchestrator:
                         full_name=student_full_name,
                     )
 
+                intent = routing.intent
                 metadata = {
                     "original_query": query,
                     "resolved_query": effective_query,
@@ -229,6 +235,9 @@ class MainOrchestrator:
                     "conversation_is_follow_up": conversation_resolution.is_follow_up,
                     "conversation_topic": conversation_resolution.active_topic,
                     "conversation_source_refs": conversation_resolution.source_hints,
+                    "force_llm_synthesis": intent.force_llm_synthesis if intent else False,
+                    "query_complexity": intent.complexity if intent else None,
+                    "is_personal_query": intent.is_personal if intent else False,
                 }
 
                 with profile_stage("main.dispatch_departments"):

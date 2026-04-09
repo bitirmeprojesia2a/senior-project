@@ -25,7 +25,7 @@ sys.path.insert(0, str(project_root))
 
 from src.core.console import configure_utf8_stdio
 from src.rag.retriever import HybridRetriever
-from src.rag.reranker import CrossEncoderReranker
+from src.rag.reranker import CrossEncoderReranker, _CALIBRATION_SHIFT, _CALIBRATION_SCALE
 from src.rag.candidate_utils import deduplicate_candidate_dicts
 
 configure_utf8_stdio()
@@ -78,6 +78,12 @@ def sigmoid(x: float) -> float:
         return 1.0 / (1.0 + math.exp(-x))
     ez = math.exp(x)
     return ez / (1.0 + ez)
+
+
+def calibrated_sigmoid(raw_logit: float) -> float:
+    """reranker.py ile ayni kalibre sigmoid: sigmoid((logit - shift) / scale)."""
+    adjusted = (raw_logit - _CALIBRATION_SHIFT) / _CALIBRATION_SCALE
+    return sigmoid(adjusted)
 
 
 def percentile(values: list[float], p: float) -> float:
@@ -137,12 +143,14 @@ def analyze_single_query(
     for candidate, raw_score in zip(candidates, raw_scores):
         raw_float = round(float(raw_score), 6)
         sig_score = round(sigmoid(raw_float), 6)
+        cal_score = round(calibrated_sigmoid(raw_float), 6)
         results.append({
             "source": candidate.get("source", "?"),
             "content_preview": candidate.get("content", "")[:120].replace("\n", " "),
             "pre_rerank_score": float(candidate.get("metadata", {}).get("pre_rerank_score", 0.0)),
             "raw_reranker_score": raw_float,
             "sigmoid_score": sig_score,
+            "calibrated_score": cal_score,
             "content_length": len(candidate.get("content", "")),
         })
 
@@ -183,12 +191,12 @@ def print_query_results(query: str, results: list[dict[str, Any]], index: int) -
         print("  Sonuc bulunamadi.")
         return
 
-    print(f"  {'#':>3}  {'Ham Skor':>10}  {'Sigmoid':>8}  {'Pre-Rerank':>11}  {'Uzunluk':>8}  Kaynak")
-    print(f"  {'---':>3}  {'--------':>10}  {'-------':>8}  {'----------':>11}  {'-------':>8}  {'------'}")
+    print(f"  {'#':>3}  {'Ham Skor':>10}  {'Kalibre':>8}  {'Sigmoid':>8}  {'Uzunluk':>8}  Kaynak")
+    print(f"  {'---':>3}  {'--------':>10}  {'-------':>8}  {'-------':>8}  {'-------':>8}  {'------'}")
     for i, r in enumerate(results, 1):
         print(
-            f"  {i:3d}  {r['raw_reranker_score']:10.4f}  {r['sigmoid_score']:8.4f}  "
-            f"{r['pre_rerank_score']:11.4f}  {r['content_length']:8d}  {r['source']}"
+            f"  {i:3d}  {r['raw_reranker_score']:10.4f}  {r['calibrated_score']:8.4f}  "
+            f"{r['sigmoid_score']:8.4f}  {r['content_length']:8d}  {r['source']}"
         )
 
 
@@ -233,21 +241,27 @@ def generate_markdown_report(
     query_results: list[dict[str, Any]],
     all_raw_scores: list[float],
     all_sigmoid_scores: list[float],
+    all_calibrated_scores: list[float],
     top1_raw_scores: list[float],
     top1_sigmoid_scores: list[float],
+    top1_calibrated_scores: list[float],
+    reranker_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
 ) -> str:
     """Markdown formatinda rapor uretir."""
     raw_stats = compute_statistics(all_raw_scores)
     sig_stats = compute_statistics(all_sigmoid_scores)
+    cal_stats = compute_statistics(all_calibrated_scores)
     top1_raw_stats = compute_statistics(top1_raw_scores)
     top1_sig_stats = compute_statistics(top1_sigmoid_scores)
+    top1_cal_stats = compute_statistics(top1_calibrated_scores)
     suggestion = suggest_sigmoid_params(raw_stats)
 
     lines = [
         "# Reranker Skor Dagilim Analizi",
         "",
         f"**Tarih:** {time.strftime('%Y-%m-%d %H:%M')}",
-        f"**Model:** seroe/bge-reranker-v2-m3-turkish-triplet",
+        f"**Model:** {reranker_model_name}",
+        f"**Kalibrasyon:** shift={_CALIBRATION_SHIFT}, scale={_CALIBRATION_SCALE}",
         f"**Toplam Soru:** {len(query_results)}",
         f"**Toplam Skor Ornegi:** {len(all_raw_scores)}",
         "",
@@ -255,7 +269,7 @@ def generate_markdown_report(
         "",
         "## Tum Skorlar (Tum Adaylar)",
         "",
-        "### Ham Reranker Skorlari",
+        "### Ham Reranker Skorlari (Logit)",
         "",
         "| Metrik | Deger |",
         "|--------|-------|",
@@ -265,7 +279,17 @@ def generate_markdown_report(
 
     lines.extend([
         "",
-        "### Sigmoid Donusturulmus Skorlar",
+        "### Kalibre Edilmis Skorlar (Runtime)",
+        "",
+        "| Metrik | Deger |",
+        "|--------|-------|",
+    ])
+    for key in ["count", "min", "p10", "p25", "median", "mean", "p75", "p90", "max", "std"]:
+        lines.append(f"| {key} | {cal_stats.get(key, 'N/A')} |")
+
+    lines.extend([
+        "",
+        "### Duz Sigmoid Skorlar (Referans)",
         "",
         "| Metrik | Deger |",
         "|--------|-------|",
@@ -279,7 +303,7 @@ def generate_markdown_report(
         "",
         "## Top-1 Skorlar (Her Sorunun En Iyi Adayi)",
         "",
-        "### Ham Top-1 Skorlari",
+        "### Ham Top-1 Skorlari (Logit)",
         "",
         "| Metrik | Deger |",
         "|--------|-------|",
@@ -289,7 +313,17 @@ def generate_markdown_report(
 
     lines.extend([
         "",
-        "### Sigmoid Top-1 Skorlari",
+        "### Kalibre Top-1 Skorlari (Runtime)",
+        "",
+        "| Metrik | Deger |",
+        "|--------|-------|",
+    ])
+    for key in ["count", "min", "p10", "p25", "median", "mean", "p75", "p90", "max", "std"]:
+        lines.append(f"| {key} | {top1_cal_stats.get(key, 'N/A')} |")
+
+    lines.extend([
+        "",
+        "### Duz Sigmoid Top-1 Skorlari (Referans)",
         "",
         "| Metrik | Deger |",
         "|--------|-------|",
@@ -327,12 +361,12 @@ def generate_markdown_report(
             lines.append("")
             continue
         lines.append("")
-        lines.append("| # | Ham Skor | Sigmoid | Pre-Rerank | Kaynak |")
-        lines.append("|:-:|:--------:|:-------:|:----------:|--------|")
+        lines.append("| # | Ham Skor | Kalibre | Sigmoid | Kaynak |")
+        lines.append("|:-:|:--------:|:-------:|:-------:|--------|")
         for i, r in enumerate(results, 1):
             lines.append(
-                f"| {i} | {r['raw_reranker_score']:.4f} | {r['sigmoid_score']:.4f} | "
-                f"{r['pre_rerank_score']:.4f} | {r['source']} |"
+                f"| {i} | {r['raw_reranker_score']:.4f} | {r['calibrated_score']:.4f} | "
+                f"{r['sigmoid_score']:.4f} | {r['source']} |"
             )
         lines.append("")
 
@@ -405,8 +439,10 @@ def main() -> None:
 
     all_raw_scores: list[float] = []
     all_sigmoid_scores: list[float] = []
+    all_calibrated_scores: list[float] = []
     top1_raw_scores: list[float] = []
     top1_sigmoid_scores: list[float] = []
+    top1_calibrated_scores: list[float] = []
     query_results: list[dict[str, Any]] = []
 
     start_time = time.perf_counter()
@@ -431,10 +467,12 @@ def main() -> None:
         for r in results:
             all_raw_scores.append(r["raw_reranker_score"])
             all_sigmoid_scores.append(r["sigmoid_score"])
+            all_calibrated_scores.append(r["calibrated_score"])
 
         if results:
             top1_raw_scores.append(results[0]["raw_reranker_score"])
             top1_sigmoid_scores.append(results[0]["sigmoid_score"])
+            top1_calibrated_scores.append(results[0]["calibrated_score"])
 
         query_results.append({
             "query": query_text,
@@ -451,13 +489,17 @@ def main() -> None:
 
     raw_stats = compute_statistics(all_raw_scores)
     sig_stats = compute_statistics(all_sigmoid_scores)
+    cal_stats = compute_statistics(all_calibrated_scores)
     top1_raw_stats = compute_statistics(top1_raw_scores)
     top1_sig_stats = compute_statistics(top1_sigmoid_scores)
+    top1_cal_stats = compute_statistics(top1_calibrated_scores)
 
     print_statistics(raw_stats, "Ham Reranker Skorlari (tum adaylar):")
     print_statistics(sig_stats, "Sigmoid Skorlar (tum adaylar):")
+    print_statistics(cal_stats, "Kalibre Skorlar (tum adaylar):")
     print_statistics(top1_raw_stats, "Ham Top-1 Skorlar (her sorunun en iyisi):")
     print_statistics(top1_sig_stats, "Sigmoid Top-1 Skorlar (her sorunun en iyisi):")
+    print_statistics(top1_cal_stats, "Kalibre Top-1 Skorlar (her sorunun en iyisi):")
 
     suggestion = suggest_sigmoid_params(raw_stats)
     if suggestion:
@@ -475,7 +517,9 @@ def main() -> None:
     if args.output:
         report = generate_markdown_report(
             query_results, all_raw_scores, all_sigmoid_scores,
-            top1_raw_scores, top1_sigmoid_scores,
+            all_calibrated_scores,
+            top1_raw_scores, top1_sigmoid_scores, top1_calibrated_scores,
+            reranker_model_name=reranker.model_name,
         )
         output_path = project_root / args.output
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -484,10 +528,17 @@ def main() -> None:
 
         json_path = output_path.with_suffix(".json")
         json_data = {
+            "model": reranker.model_name,
+            "calibration": {
+                "shift": _CALIBRATION_SHIFT,
+                "scale": _CALIBRATION_SCALE,
+            },
             "raw_stats": raw_stats,
             "sigmoid_stats": sig_stats,
+            "calibrated_stats": cal_stats,
             "top1_raw_stats": top1_raw_stats,
             "top1_sigmoid_stats": top1_sig_stats,
+            "top1_calibrated_stats": top1_cal_stats,
             "suggestion": suggestion,
             "queries": query_results,
         }
