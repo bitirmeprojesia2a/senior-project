@@ -7,7 +7,7 @@ from typing import Sequence
 
 from src.core.text_normalization import collapse_whitespace, normalize_text
 
-PERSONAL_KEYWORDS = ("borc", "borcum", "odeme", "taksit", "dekont", "gecmisim")
+PERSONAL_KEYWORDS = ("borc", "borcum", "odeme", "taksit", "dekont", "gecmisim", "odemem", "harcim", "borclu")
 STRUCTURED_FEE_QUERY_KEYWORDS = (
     "ucret",
     "harc",
@@ -15,6 +15,7 @@ STRUCTURED_FEE_QUERY_KEYWORDS = (
     "ogrenim ucreti",
     "kayit yenileme",
     "ne kadar",
+    "tutar",
 )
 PROCEDURAL_SOURCE_ONLY_KEYWORDS = (
     "ucret",
@@ -25,6 +26,8 @@ PROCEDURAL_SOURCE_ONLY_KEYWORDS = (
     "kayit yenileme",
     "ne kadar",
     "ne zaman",
+    "nasil odenir",
+    "nereye yatirilir",
 )
 INTERNATIONAL_QUERY_MARKERS = (
     "uluslararasi",
@@ -33,18 +36,23 @@ INTERNATIONAL_QUERY_MARKERS = (
     "foreign",
     "erasmus",
     "exchange",
+    "mevlana",
+    "farabi",
+    "degisim",
 )
 INTERNATIONAL_SOURCE_MARKERS = (
     "uluslararasi",
     "international",
     "yabanci",
     "foreign",
+    "erasmus",
 )
 DOMESTIC_QUERY_MARKERS = (
     "turk",
     "turk ogrenci",
     "yerli",
     "domestic",
+    "tc vatandasi",
 )
 FEE_AMOUNT_KEYWORDS = (
     "ucret",
@@ -53,6 +61,8 @@ FEE_AMOUNT_KEYWORDS = (
     "katki payi",
     "ogrenim ucreti",
     "kayit yenileme",
+    "tutar",
+    "toplam ucret",
 )
 TUITION_TABLE_SOURCE_MARKERS = (
     "ogrenim_ucret",
@@ -62,6 +72,7 @@ TUITION_TABLE_SOURCE_MARKERS = (
     "ucretleri",
     "tuition",
     "fee",
+    "harc_tablosu",
 )
 UNIT_QUERY_PATTERN = re.compile(
     r"([a-z ]+?(?:fakultesi|yuksekokulu|meslek yuksekokulu|meslekyuksekokulu|enstitusu|konservatuvari))",
@@ -75,9 +86,20 @@ def is_personal_query(query_text: str) -> bool:
     return any(keyword in lowered for keyword in PERSONAL_KEYWORDS)
 
 
+_FEE_POLICY_SIGNALS = (
+    "asarsam", "astiginda", "asinca", "uzarsa", "uzatirsa",
+    "program suresi", "normal sure", "ek sure",
+    "azami sure", "sinir", "donarsa", "dondurursam",
+    "odenmezse", "odemezse", "yatirmazsam",
+    "iade", "muafiyet", "indirim", "afet", "burs",
+)
+
+
 def is_structured_fee_query(query_text: str) -> bool:
     """Return whether the query should prefer structured fee lookup."""
     lowered = normalize_finance_text(query_text)
+    if any(signal in lowered for signal in _FEE_POLICY_SIGNALS):
+        return False
     return any(keyword in lowered for keyword in STRUCTURED_FEE_QUERY_KEYWORDS)
 
 
@@ -139,10 +161,10 @@ def normalize_finance_text(text: str) -> str:
     return normalize_text(text)
 
 
-def compact_source_content(content: str, *, max_len: int = 260) -> str:
+def compact_source_content(content: str, *, max_len: int | None = 260) -> str:
     """Collapse whitespace and shorten long source content."""
     collapsed = re.sub(r"\s+", " ", content).strip()
-    if len(collapsed) > max_len:
+    if max_len is not None and len(collapsed) > max_len:
         return f"{collapsed[: max_len - 3].rstrip()}..."
     return collapsed
 

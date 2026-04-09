@@ -1,5 +1,7 @@
 # FAZ 1 — RAG Pipeline Teknik Dokümantasyonu
 
+> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 1 kaydidir. RAG katmani buyuk olcude aktif kalsa da moduller, koleksiyon stratejisi ve benchmark akislari zaman icinde degismistir. Guncel operasyon bilgisi icin once `README.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` okunmalidir.
+
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 28 Şubat 2026  
 **Doküman Sürümü:** 3.1 (Cache, İdempotent İndeksleme, Değerlendirme Altyapısı)  
@@ -623,7 +625,7 @@ Son indeksleme sonuçları (28 Şubat 2026):
 | Coverage | pytest-cov 6.0.0 |
 | Test Veritabanı | SQLite in-memory (her test izole) |
 
-**Son Çalıştırma:** 8 Mart 2026 — **206/206 unit test geçti** ✅
+**Donemsel Snapshot:** 8 Mart 2026 tarihli kosuda **206/206 unit test geçti** ✅
 
 ```
 ==================== 206 passed ====================
@@ -1206,11 +1208,11 @@ venv\Scripts\python.exe -m pytest tests/integration/ -v --tb=short
 3. **Conversation Memory:** Çok turlu diyalog desteği
 4. ~~**Değerlendirme Framework'ü:** RAGAS metrikleri ile sistematik RAG değerlendirmesi~~ → ✅ Precision@k tabanlı değerlendirme altyapısı kuruldu (`evaluate_rag.py`). RAGAS metrikleri LLM entegrasyonu sonrası eklenecek.
 5. **Ajan Entegrasyonu:** A2A protokolü ile departman ajanlarına bağlantı
-6. **Çoklu Departman Verisi:** Finans ve Bilgi İşlem departmanları için doküman seti
+6. **Coklu Departman Verisi:** Bu belge yazildigi sirada finans ve ek departman genislemeleri hedefleniyordu; bugunku aktif departman seti icin ana dokumanlara bakin.
 
 ---
 
-*Bu doküman, projenin FAZ 1 kapsamındaki tüm teknik çalışmaları yansıtmaktadır. FAZ 2 tamamlandığında güncellenecektir.*
+*Bu belge FAZ 1 doneminin teknik kapanis kaydidir. Sonraki gelismeler icin ana dokuman setine bakin; bu dosya artik sirali faz ilerleyisi mantigiyla guncellenmemektedir.*
 
 ---
 
@@ -1237,7 +1239,7 @@ Bu bölüm, FAZ 1 tamamlandıktan sonra RAG ve test katmanında yapılan güncel
 
 ### 13.3 Test Envanteri ve Marker Yapısı
 
-* Güncel test envanteri: **206 unit test**, **20 integration test**.
+* Bu bolumdeki test sayilari Mart 2026 snapshot'idir: **206 unit test**, **20 integration test**.
 * `tests/integration/test_rag_retrieval.py` dosyası `smoke`, `model` ve `slow` marker'ları ile ayrıştırılmıştır.
 * `shared_embedder`, `hybrid_retriever` ve `cached_retriever` gibi session-scoped fixture'lar integration testlerde tekrar yükleme maliyetini azaltmak için kullanılır.
 * Reranker'ın gerçekten çalıştığını doğrulayan `test_reranker_runs_successfully` testi eklenmiştir.

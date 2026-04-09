@@ -57,6 +57,11 @@ _BOLUM_RE = re.compile(
     re.MULTILINE | re.IGNORECASE,
 )
 
+_FAQ_QUESTION_RE = re.compile(
+    r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$",
+    re.MULTILINE,
+)
+
 # Alt chunklama icin ayiricilar (MADDE ayiricisi haric — zaten split edildi)
 _SUB_SEPARATORS = [
     "\n\n",
@@ -131,6 +136,20 @@ class TextChunker:
             return text[match.start():end_of_line].strip()
         return None
 
+    def _split_by_faq(self, text: str) -> List[Tuple[str, Optional[str], Optional[str]]]:
+        """Split FAQ-style text by question boundaries."""
+        matches = list(_FAQ_QUESTION_RE.finditer(text))
+        if len(matches) < 3:
+            return []
+
+        sections: List[Tuple[str, Optional[str], Optional[str]]] = []
+        for i, match in enumerate(matches):
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+            section = text[match.start():end].strip()
+            if section:
+                sections.append((section, None, None))
+        return sections
+
     def _split_by_madde(self, text: str) -> List[Tuple[str, Optional[str], Optional[str]]]:
         """
         Metni MADDE sinirlarina gore boler.
@@ -141,6 +160,9 @@ class TextChunker:
         matches = list(_MADDE_RE.finditer(text))
 
         if not matches:
+            faq_sections = self._split_by_faq(text)
+            if faq_sections:
+                return faq_sections
             return [(text, None, None)]
 
         sections: List[Tuple[str, Optional[str], Optional[str]]] = []

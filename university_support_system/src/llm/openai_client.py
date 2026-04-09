@@ -1,8 +1,9 @@
 """
-OpenAI (Yedek LLM) İstemcisi
+OpenAI-compatible LLM istemcisi.
 
-Ollama'nın çalışmadığı durumlarda fallback olarak devreye girer.
-Yine zero dependency hedefine uygun olarak REST API üzerinden (httpx ile) implemente edilmiştir.
+OpenAI veya Groq gibi OpenAI-compatible endpoint'lerle calisabilir.
+Yine zero dependency hedefine uygun olarak REST API uzerinden (httpx ile)
+implemente edilmistir.
 """
 
 import json
@@ -14,76 +15,91 @@ from src.core.config import settings
 
 
 class OpenAIClientError(Exception):
-    """OpenAI ile iletişim sırasında oluşan hatalar."""
-    pass
+    """OpenAI-compatible provider ile iletisim sirasinda olusan hatalar."""
+
+    def __init__(self, message: str, *, retryable: bool = False):
+        super().__init__(message)
+        self.retryable = retryable
 
 
 class OpenAIClient:
-    """OpenAI HTTP REST API İstemcisi"""
+    """OpenAI-compatible HTTP REST API istemcisi."""
 
     def __init__(self):
         self.api_key = settings.openai.api_key
         self.model = settings.openai.model
-        self.base_url = "https://api.openai.com/v1"
+        self.base_url = settings.openai.base_url.rstrip("/")
         self.chat_url = f"{self.base_url}/chat/completions"
-        self.timeout = 30.0
+        self.timeout = float(settings.openai.timeout)
+        self.provider_name = settings.openai.provider_name or "openai_compatible"
 
     @property
     def is_available(self) -> bool:
-        """API Key tanımlanmış mı?"""
+        """API key tanimli mi?"""
         return bool(self.api_key)
 
     def _get_headers(self) -> Dict[str, str]:
         if not self.api_key:
-            raise OpenAIClientError("OpenAI API anahtarı (OPENAI_API_KEY) yapılandırılmamış.")
+            raise OpenAIClientError(
+                f"{self.provider_name} API anahtari (OPENAI_API_KEY) yapilandirilmamis."
+            )
         return {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
     async def get_health(self) -> Dict[str, Any]:
         """
-        API bağlantısını kontrol eder.
-        Sadece API key format kontrolü yapar çünkü OpenAI'ın yetkisiz basit bir test endpointi yok.
+        API baglantisini kontrol eder.
+        Basit bir model listesi sorgusu ile key/gecerlilik testi yapar.
         """
         if not self.api_key:
             return {
                 "status": "unhealthy",
                 "reason": "API_KEY_MISSING",
-                "model_found": False
+                "model_found": False,
+                "provider": self.provider_name,
             }
-        
-        # Sadece basit bir model listesi sorgusu ile key geçerliliğini test et
+
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(
                     f"{self.base_url}/models",
-                    headers=self._get_headers()
+                    headers=self._get_headers(),
                 )
                 response.raise_for_status()
                 return {
                     "status": "healthy",
-                    "model_found": True
+                    "model_found": True,
+                    "provider": self.provider_name,
+                    "base_url": self.base_url,
                 }
-        except (httpx.HTTPError, OpenAIClientError) as e:
+        except (httpx.HTTPError, OpenAIClientError) as exc:
             return {
                 "status": "unhealthy",
                 "reason": "API_ERROR",
-                "error": str(e),
-                "model_found": False
+                "error": str(exc),
+                "model_found": False,
+                "provider": self.provider_name,
+                "base_url": self.base_url,
             }
 
-    async def generate(self, prompt: str, system: Optional[str] = None, json_mode: bool = False) -> str:
-        """
-        OpenAI chat completions API'sini kullanarak metin üretir.
-        """
+    async def generate(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        json_mode: bool = False,
+        *,
+        model: str | None = None,
+    ) -> str:
+        """OpenAI-compatible chat completions API kullanarak metin uretir."""
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": self.model,
+            "model": model or self.model,
             "messages": messages,
             "stream": False,
         }
@@ -96,33 +112,58 @@ class OpenAIClient:
                 response = await client.post(
                     self.chat_url,
                     headers=self._get_headers(),
-                    json=payload
+                    json=payload,
                 )
                 response.raise_for_status()
                 data = response.json()
-                
-                if "choices" in data and len(data["choices"]) > 0:
-                    return data["choices"][0]["message"]["content"]
-                return ""
-        except httpx.TimeoutException:
-            raise OpenAIClientError(f"OpenAI yanıt süresi aşıldı ({self.timeout}s).")
-        except httpx.HTTPStatusError as e:
-            error_details = e.response.text
-            raise OpenAIClientError(f"OpenAI HTTP hatası ({e.response.status_code}): {error_details}")
-        except httpx.RequestError as e:
-            raise OpenAIClientError(f"OpenAI bağlantı hatası: {str(e)}")
 
-    async def generate_stream(self, prompt: str, system: Optional[str] = None) -> AsyncGenerator[str, None]:
-        """
-        OpenAI üzerinden streaming ile metin üretir.
-        """
+                choices = data.get("choices") or []
+                if not choices:
+                    raise OpenAIClientError(
+                        f"{self.provider_name} yaniti bos dondu: choices alani yok.",
+                        retryable=False,
+                    )
+
+                content = choices[0].get("message", {}).get("content")
+                if not content or not str(content).strip():
+                    raise OpenAIClientError(
+                        f"{self.provider_name} yaniti bos icerik dondu.",
+                        retryable=False,
+                    )
+                return str(content)
+        except httpx.TimeoutException:
+            raise OpenAIClientError(
+                f"{self.provider_name} yanit suresi asildi ({self.timeout}s).",
+                retryable=True,
+            )
+        except httpx.HTTPStatusError as exc:
+            error_details = exc.response.text
+            retryable = exc.response.status_code == 429 or exc.response.status_code >= 500
+            raise OpenAIClientError(
+                f"{self.provider_name} HTTP hatasi ({exc.response.status_code}): {error_details}",
+                retryable=retryable,
+            )
+        except httpx.RequestError as exc:
+            raise OpenAIClientError(
+                f"{self.provider_name} baglanti hatasi: {str(exc)}",
+                retryable=True,
+            )
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        *,
+        model: str | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """OpenAI-compatible provider uzerinden streaming ile metin uretir."""
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": self.model,
+            "model": model or self.model,
             "messages": messages,
             "stream": True,
         }
@@ -130,30 +171,46 @@ class OpenAIClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 async with client.stream(
-                    "POST", 
-                    self.chat_url, 
-                    headers=self._get_headers(), 
-                    json=payload
+                    "POST",
+                    self.chat_url,
+                    headers=self._get_headers(),
+                    json=payload,
                 ) as response:
                     response.raise_for_status()
-                    
+
                     async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data_str = line[6:]
-                            if data_str.strip() == "[DONE]":
-                                break
-                            
-                            try:
-                                chunk = json.loads(data_str)
-                                if "choices" in chunk and len(chunk["choices"]) > 0:
-                                    delta = chunk["choices"][0].get("delta", {})
-                                    if "content" in delta and delta["content"]:
-                                        yield delta["content"]
-                            except json.JSONDecodeError:
-                                continue
+                        if not line.startswith("data: "):
+                            continue
+
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+
+                        try:
+                            chunk = json.loads(data_str)
+                        except json.JSONDecodeError:
+                            continue
+
+                        choices = chunk.get("choices") or []
+                        if not choices:
+                            continue
+                        delta = choices[0].get("delta", {})
+                        content = delta.get("content")
+                        if content:
+                            yield content
         except httpx.TimeoutException:
-            raise OpenAIClientError(f"OpenAI stream yanıt süresi aşıldı ({self.timeout}s).")
-        except httpx.HTTPStatusError as e:
-            raise OpenAIClientError(f"OpenAI stream HTTP hatası ({e.response.status_code}): {e.response.text}")
-        except httpx.RequestError as e:
-            raise OpenAIClientError(f"OpenAI stream bağlantı hatası: {str(e)}")
+            raise OpenAIClientError(
+                f"{self.provider_name} stream yanit suresi asildi ({self.timeout}s).",
+                retryable=True,
+            )
+        except httpx.HTTPStatusError as exc:
+            retryable = exc.response.status_code == 429 or exc.response.status_code >= 500
+            raise OpenAIClientError(
+                f"{self.provider_name} stream HTTP hatasi ({exc.response.status_code}): {exc.response.text}",
+                retryable=retryable,
+            )
+        except httpx.RequestError as exc:
+            raise OpenAIClientError(
+                f"{self.provider_name} stream baglanti hatasi: {str(exc)}",
+                retryable=True,
+            )

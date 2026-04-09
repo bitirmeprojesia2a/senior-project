@@ -9,21 +9,46 @@ from src.core.query_markers import ACADEMIC_DEPARTMENT_CONTEXT_MARKERS
 from src.core.text_normalization import normalize_text
 
 CAP_OR_YAP_IN_QUERY = re.compile(r"\b(?:çap|cap|yandal|yan\s+dal)\b", re.IGNORECASE)
-ROUTING_PAYMENT_MARKERS: tuple[str, ...] = ("ucret", "harc", "odeme", "taksit", "dekont")
-ROUTING_REGISTRATION_MARKERS: tuple[str, ...] = ("kayit", "kayd", "yenileme", "ders kaydi")
-ROUTING_TIMING_MARKERS: tuple[str, ...] = ("basvuru", "ne zaman", "takvim", "tarih", "surec")
+ROUTING_PAYMENT_MARKERS: tuple[str, ...] = (
+    "ucret", "harc", "odeme", "taksit", "dekont",
+    "katki payi", "borc", "borclu", "iade", "fazla ucret",
+    "ogrenim ucreti", "banka", "havale", "tahsilat",
+)
+ROUTING_REGISTRATION_MARKERS: tuple[str, ...] = (
+    "kayit", "kayd", "yenileme", "ders kaydi",
+    "ders secimi", "ders ekleme", "ders birakma",
+)
+ROUTING_TIMING_MARKERS: tuple[str, ...] = (
+    "basvuru", "ne zaman", "takvim", "tarih", "surec",
+    "son gun", "son tarih", "acildi mi", "basladi mi",
+)
 ROUTING_ACADEMIC_CONTEXT_MARKERS: tuple[str, ...] = ACADEMIC_DEPARTMENT_CONTEXT_MARKERS
 ROUTING_ACADEMIC_CALENDAR_MARKERS: tuple[str, ...] = (
     "akademik takvim",
     "kayit donemi",
     "ders kaydi takvimi",
+    "ders kayit tarihi",
+    "yariyil baslangici",
+    "donem baslangici",
+    "final donemi",
+    "sinav takvimi",
 )
 ROUTING_FORMAL_RULE_MARKERS: tuple[str, ...] = (
     "azami",
+    "azami sure",
+    "azami ogrenim suresi",
     "butunleme",
     "devam zorunlulugu",
+    "devam yuzdesi",
+    "devamsizlik",
     "not sistemi",
     "degerlendirme sistemi",
+    "bagil degerlendirme",
+    "harf notu",
+    "gecme notu",
+    "basari notu",
+    "sinif tekrari",
+    "ders tekrari",
 )
 ROUTING_INTERNATIONAL_MARKERS: tuple[str, ...] = (
     "erasmus",
@@ -33,8 +58,75 @@ ROUTING_INTERNATIONAL_MARKERS: tuple[str, ...] = (
     "denklik",
     "tomer",
     "yos",
+    "exchange",
+    "mevlana",
+    "farabi",
+    "degisim programi",
+    "yabanci ogrenci",
+    "goc idaresi",
 )
-ROUTING_CAP_MARKERS: tuple[str, ...] = ("cap", "cift anadal", "cift ana dal", "yandal", "yan dal")
+ROUTING_CAP_MARKERS: tuple[str, ...] = (
+    "cap", "cift anadal", "cift ana dal", "yandal", "yan dal",
+    "ikinci lisans",
+)
+ROUTING_STUDENT_DOCUMENT_MARKERS: tuple[str, ...] = (
+    "transkript",
+    "ogrenci belgesi",
+    "transkript belgesi",
+    "diploma eki",
+    "not dokumu",
+    "kayit belgesi",
+    "ogrenci durum belgesi",
+    "askerlik belgesi",
+    "tecil belgesi",
+)
+ROUTING_STUDENT_DOCUMENT_REQUEST_MARKERS: tuple[str, ...] = (
+    "belge nasil al",
+    "belgemi nasil al",
+    "belgeyi nasil al",
+    "nereden alabilirim",
+    "belge almak istiyorum",
+    "belge basvurusu",
+)
+ROUTING_STUDENT_SERVICES_MARKERS: tuple[str, ...] = (
+    "sifre",
+    "parola",
+    "ubys",
+    "obs",
+    "ilisik kesme",
+    "kayit dondurma",
+    "donem dondurma",
+    "kayit sildirme",
+    "sifre sifirlama",
+    "giris yapamiyorum",
+)
+ROUTING_SCHOLARSHIP_MARKERS: tuple[str, ...] = (
+    "burs",
+    "scholarship",
+    "yemek bursu",
+    "kismi zamanli",
+    "burs basvurusu",
+    "basari bursu",
+    "ihtiyac bursu",
+)
+ROUTING_INTERNSHIP_MARKERS: tuple[str, ...] = (
+    "staj",
+    "mup",
+    "mesleki uygulama",
+    "sanayi uygulamasi",
+    "bitirme projesi",
+    "zorunlu staj",
+    "staj defteri",
+    "staj sigorta",
+)
+ROUTING_GENERAL_AKTS_MARKERS: tuple[str, ...] = (
+    "mezun olmak icin kac akts gerekir",
+    "mezuniyet icin kac akts gerekir",
+    "toplam akts",
+    "akts gerekli",
+    "kredi gerekli",
+    "mezuniyet kredisi",
+)
 ROUTING_PERSONAL_MARKERS: tuple[str, ...] = (
     "ortalamam",
     "notlarim",
@@ -53,6 +145,9 @@ ROUTING_PERSONAL_MARKERS: tuple[str, ...] = (
     "kredim",
     "kaldi",
     "tamamladim",
+    "kaydim",
+    "not ortalamam",
+    "stajim",
 )
 NORMALIZED_COURSE_CODE_IN_QUERY = re.compile(r"\b[a-z]{2,}\s?\d{3,4}\b", re.IGNORECASE)
 
@@ -104,6 +199,43 @@ def has_international_markers(normalized_text: str) -> bool:
     return contains_any(normalized_text, ROUTING_INTERNATIONAL_MARKERS)
 
 
+def has_student_document_markers(normalized_text: str) -> bool:
+    """Return whether query is clearly about transcript or student document retrieval."""
+    if contains_any(normalized_text, ROUTING_STUDENT_DOCUMENT_MARKERS):
+        return True
+    return "belge" in normalized_text and any(
+        marker in normalized_text for marker in ("ogrenci", "transkript", "diploma")
+    )
+
+
+def has_student_document_request_markers(normalized_text: str) -> bool:
+    """Return whether query explicitly asks how/where to obtain a student document."""
+    return contains_any(normalized_text, ROUTING_STUDENT_DOCUMENT_REQUEST_MARKERS)
+
+
+def has_student_services_markers(normalized_text: str) -> bool:
+    """Return whether query is clearly about password/reset/freeze/withdrawal student services."""
+    return contains_any(normalized_text, ROUTING_STUDENT_SERVICES_MARKERS)
+
+
+def has_scholarship_markers(normalized_text: str) -> bool:
+    """Return whether query is about scholarship-like topics."""
+    return contains_any(normalized_text, ROUTING_SCHOLARSHIP_MARKERS)
+
+
+def has_internship_markers(normalized_text: str) -> bool:
+    """Return whether query is clearly about internship-like procedures."""
+    return contains_any(normalized_text, ROUTING_INTERNSHIP_MARKERS)
+
+
+def has_general_akts_markers(normalized_text: str) -> bool:
+    """Return whether query asks for a program-level AKTS graduation rule."""
+    return ("akts" in normalized_text or "ects" in normalized_text) and contains_any(
+        normalized_text,
+        ROUTING_GENERAL_AKTS_MARKERS,
+    )
+
+
 def looks_like_personal_credit_progress_query(normalized_text: str) -> bool:
     """Return whether query asks about a student's own AKTS/kredi progress."""
     return "tamamladim" in normalized_text and (
@@ -143,8 +275,14 @@ def detect_task_type(query: str, departments: list[Department]) -> TaskType | No
         return TaskType.COURSE_QUERY
 
     if Department.STUDENT_AFFAIRS in departments:
+        if has_internship_markers(normalized_query):
+            return TaskType.PROCEDURE_QUERY
         if any(keyword in normalized_query for keyword in ("kayit", "kayd", "yatay", "dikey", "muafiyet", "intibak", "takvim")):
             return TaskType.REGISTRATION_QUERY
+        if has_student_services_markers(normalized_query):
+            return TaskType.REGISTRATION_QUERY
+        if has_general_akts_markers(normalized_query):
+            return TaskType.ACADEMIC_QUERY
         if any(
             keyword in normalized_query
             for keyword in (

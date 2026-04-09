@@ -20,7 +20,10 @@ from src.llm.prompt_templates import SCHOLARSHIP_AGENT_SYSTEM_PROMPT
 class ScholarshipAgent(BaseSpecialistAgent):
     """Handles scholarship programs and personal scholarship status."""
 
-    _PERSONAL_KEYWORDS = ("bursum", "basvurum", "durumum", "aliyor muyum")
+    _PERSONAL_KEYWORDS = (
+        "basvurum", "durumum", "aliyor muyum", "yatti mi", "odendi mi", "bursum",
+        "burs aliyorum", "burs durumu", "burs kesildimi", "ne zaman yatar",
+    )
 
     def __init__(
         self,

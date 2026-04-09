@@ -52,35 +52,56 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
     Department.FINANCE: DepartmentConfig(
         display_name="Finans",
         routing_description="Harç, burs, yurt ödemeleri, dekont, taksitlendirme ile ilgili sorular.",
-        keywords=("harç", "ucret", "ücret", "burs", "odeme", "ödeme", "dekont", "taksit"),
+        keywords=(
+            "harc", "ucret", "burs", "odeme", "dekont", "taksit",
+            "katki payi", "borc", "borclu",
+            "iade", "ucret iadesi", "fazla ucret",
+            "harc burosu", "yemek bursu", "kismi zamanli",
+            "ogrenim ucreti", "banka", "havale", "tahsilat",
+            "burs basvurusu", "basari bursu", "ihtiyac bursu",
+        ),
     ),
     Department.STUDENT_AFFAIRS: DepartmentConfig(
         display_name="Öğrenci İşleri",
         routing_description="Ders kaydı, akademik takvim, notlar, yatay/dikey geçiş, diploma ve staj işlemleri.",
         keywords=(
-            "ders kaydi", "ders kaydı", "kayit donemi", "kayıt dönemi", "akademik takvim",
-            "kayit", "kayıt", "kayd", "not", "gno", "transkript", "mezuniyet", "diploma",
-            "bagil", "bağıl", "yaz okulu",
-            "yatay", "dikey", "staj", "sinav", "sınav", "itiraz", "devamsızlık", "devamsizlik",
+            "ders kaydi", "kayit donemi", "akademik takvim",
+            "kayit", "kayd", "not", "gno", "transkript", "mezuniyet", "diploma",
+            "ogrenci belgesi", "diploma eki",
+            "bagil", "yaz okulu",
+            "yatay", "dikey", "staj", "sinav", "itiraz", "devamsizlik",
             "muafiyet", "intibak",
+            "ubys", "obs", "sifre", "parola",
+            "ilisik kesme", "kayit dondurma", "donem dondurma", "kayit sildirme",
+            "basarisiz", "ders tekrar",
+            "mazeret", "saglik raporu",
+            "not dokumu", "kayit belgesi",
+            "tecil", "askerlik belgesi", "ogrenci durum belgesi",
+            "ders ekleme", "ders birakma", "ders secimi",
+            "staj defteri", "staj sigorta", "zorunlu staj",
+            "bitirme projesi", "mup", "mesleki uygulama",
         ),
     ),
     Department.ACADEMIC_PROGRAMS: DepartmentConfig(
         display_name="Akademik Programlar",
         routing_description="Müfredat, önkoşul, ders planı, AKTS, ÇAP/YAP, Erasmus ve akademik kurallar.",
         keywords=(
-            "mufredat", "müfredat", "ders icerigi", "ders içeriği",
+            "mufredat", "ders icerigi",
             "akts", "ects", "kredi",
-            "onkosul", "önkoşul", "on kosul", "ön koşul", "on sart", "ön şart",
-            "yarimyil", "yarıyıl", "yarim yil",
-            "secmeli", "seçmeli", "teknik", "zorunlu",
+            "onkosul", "on kosul", "on sart",
+            "yarimyil", "yarim yil",
+            "secmeli", "teknik secmeli", "alan secmeli", "zorunlu",
             "dersler", "dersleri",
-            "yonetmelik", "yönetmelik", "yonerge", "yönerge",
-            "politika", "prosedur", "prosedür", "genelge",
-            "cap", "çap", "yandal", "yan dal",
-            "erasmus", "uluslararasi", "uluslararası", "yabanci", "yabancı",
-            "ikamet", "denklik", "tomer", "tömer", "yos", "yös", "kontenjan",
-            "azami", "bütünleme", "butunleme", "devam zorunlulugu", "devam zorunluluğu", "not sistemi",
+            "yonetmelik", "yonerge",
+            "politika", "prosedur", "genelge",
+            "cap", "yandal", "yan dal", "ikinci lisans",
+            "erasmus", "uluslararasi", "yabanci",
+            "ikamet", "denklik", "tomer", "yos", "kontenjan",
+            "azami", "azami sure", "butunleme",
+            "devam zorunlulugu", "not sistemi",
+            "harf notu", "gecme notu", "basari notu",
+            "mevlana", "farabi", "degisim programi",
+            "ders plani", "ders programi",
         ),
     ),
 }
@@ -230,7 +251,8 @@ CACHE_LLM_RESPONSE_TTL = 300
 RATE_LIMIT_PER_USER_PER_MINUTE = 10
 MAX_QUERY_LENGTH = 500
 
-# Performans hedefleri
-RAG_RESPONSE_TIME_TARGET_MS = 100
+# Performans hedefleri (ms). E2E icin alt bütçeler; kodda zorunlu SLA degildir.
+# RAG: retrieval + rerank; LLM sentez ve ag baglantisi haric tutulabilir.
+RAG_RESPONSE_TIME_TARGET_MS = 4000
 LLM_RESPONSE_TIME_TARGET_MS = 3000
 E2E_RESPONSE_TIME_TARGET_MS = 5000

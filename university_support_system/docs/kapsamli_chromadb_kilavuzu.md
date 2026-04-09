@@ -1,5 +1,7 @@
 # Kapsamlı ChromaDB ve RAG Mimari Kılavuzu
 
+> Durum Notu (Nisan 2026): Bu belge RAG/ChromaDB mimarisinin detayli bir aciklamasidir, ancak yazildigi andan sonra retrieval katmaninda ek yardimci moduller, benchmark akislari ve deployment senaryolari eklendi. Guncel operasyon bilgisi icin once `README.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` okunmalidir.
+
 Bu belge, üniversite destek sisteminin ardındaki "Akıllı Arama" (RAG - Retrieval-Augmented Generation) mekanizmasının tam olarak nasıl yapılandırıldığını detaylandırır. 
 
 Sistem, geleneksel ağır kütüphaneler (`LangChain` vb.) kullanmak yerine tamamen modüler, hafif ve özelleştirilmiş bir yapıda tasarlanmıştır.

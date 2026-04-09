@@ -27,9 +27,11 @@ from src.orchestrators.query_policy import (
     CLARIFICATION_MESSAGE,
     looks_like_announcement_query,
     requires_academic_department_clarification,
+    should_fetch_related_announcements,
     should_use_global_synthesis,
 )
 from src.orchestrators.response_utils import compose_department_answers
+from src.orchestrators.response_utils import filter_low_confidence_responses
 from src.orchestrators.synthesis_utils import (
     build_global_synthesis_prompt,
     responses_need_contact_suggestion,
@@ -268,32 +270,40 @@ class MainOrchestrator:
                         )
                         responses.append(fallback)
                 else:
-                    with profile_stage("main.related_announcements"):
-                        announcement_response = await request_announcement_response(
-                            announcement_agent=self.announcement_agent,
-                            telemetry_service=self.telemetry_service,
-                            query=effective_query,
-                            context_id=context_id,
-                            routing_reason=routing.reasoning,
-                            query_log_id=query_log_id,
-                            task_type=routing.task_type,
-                            departments=[
-                                department.value for department in routing.departments
-                            ],
-                        )
+                    announcement_response = None
+                    if should_fetch_related_announcements(effective_query):
+                        with profile_stage("main.related_announcements"):
+                            announcement_response = await request_announcement_response(
+                                announcement_agent=self.announcement_agent,
+                                telemetry_service=self.telemetry_service,
+                                query=effective_query,
+                                context_id=context_id,
+                                routing_reason=routing.reasoning,
+                                query_log_id=query_log_id,
+                                task_type=routing.task_type,
+                                departments=[
+                                    department.value for department in routing.departments
+                                ],
+                            )
                     if announcement_response is not None and announcement_response.sources:
                         responses.append(announcement_response)
+
+                with profile_stage("main.filter_low_confidence"):
+                    filtered_responses = filter_low_confidence_responses(responses)
+                    filtered_departments = filter_low_confidence_responses(
+                        list(department_responses)
+                    )
 
                 with profile_stage("main.compose_response"):
                     answer = await self._compose_final_answer(
                         query=effective_query,
-                        responses=responses,
+                        responses=filtered_responses,
                         llm_profile=llm_profile,
                     )
                     final_response = self._build_user_query_response(
                         answer=answer,
-                        responses=responses,
-                        department_responses=department_responses,
+                        responses=filtered_responses,
+                        department_responses=filtered_departments,
                         context_id=context_id,
                         start_time=start_time,
                         student_full_name=student_full_name,

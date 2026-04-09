@@ -32,6 +32,7 @@ _SHARED_CURRICULUM_DEPARTMENT_MARKERS = (
     "sosyal secmeli",
 )
 _ELECTIVE_COURSE_TYPES = {"teknik_secmeli", "lab_secmeli", "secmeli_grup", "sosyal_secmeli"}
+_PROGRAM_TOTAL_EXCLUDED_TYPES = {"staj", "mup", "sanayi"}
 _COURSE_CODE_NORMALIZE_MAP = str.maketrans(
     {
         "Ç": "C",
@@ -127,6 +128,24 @@ def _course_to_dict(course: Course) -> dict[str, Any]:
         "elective_group": course.elective_group,
         "instructor": course.instructor,
     }
+
+
+def _course_counts_for_program_total(course: dict[str, Any]) -> bool:
+    """Mezuniyet AKTS toplami icin baz mufredat derslerini sec."""
+    course_type = _normalize_text(course.get("course_type"))
+    course_name = _normalize_text(course.get("course_name"))
+    elective_group = str(course.get("elective_group") or "").strip()
+
+    if course_type in _PROGRAM_TOTAL_EXCLUDED_TYPES:
+        return False
+
+    if course_type in {"teknik_secmeli", "lab_secmeli"} and elective_group:
+        return False
+
+    if course_type == "sosyal_secmeli":
+        return "grup" in course_name or not elective_group
+
+    return True
 
 
 def resolve_course_code(code: str) -> tuple[str, str | None]:
@@ -320,3 +339,62 @@ async def fetch_course_prerequisites(course_code: str) -> dict[str, Any] | None:
                 "prerequisite_groups": groups,
                 "redirected_from": alias_from,
             }
+
+
+async def fetch_program_akts_summary(department: str) -> dict[str, Any] | None:
+    """Bolum/program icin baz mezuniyet AKTS ozetini getir."""
+    normalized_department = _normalize_text(department)
+    if not normalized_department:
+        return None
+
+    async with get_session() as session:
+        try:
+            stmt = (
+                select(Course)
+                .where(Course.curriculum_semester.is_not(None))
+                .order_by(Course.curriculum_semester.asc(), Course.course_code.asc())
+            )
+            courses = (await session.execute(stmt)).scalars().all()
+            payload = [_course_to_dict(course) for course in courses]
+        except (ProgrammingError, DBAPIError) as exc:
+            if not _is_missing_column_error(exc):
+                raise
+            await session.rollback()
+            logger.warning(
+                "program_akts_unavailable_in_legacy_schema",
+                extra={"department": department},
+            )
+            return None
+
+    filtered_courses = [
+        course
+        for course in payload
+        if _should_include_course_for_department(course, normalized_department)
+    ]
+    counted_courses = [
+        course for course in filtered_courses if _course_counts_for_program_total(course)
+    ]
+    if not counted_courses:
+        return None
+
+    semester_totals: dict[int, int] = {}
+    total_akts = 0
+    for course in counted_courses:
+        semester = course.get("curriculum_semester")
+        akts = int(course.get("akts") or course.get("credits") or 0)
+        if semester is None or akts <= 0:
+            continue
+        semester_totals[semester] = semester_totals.get(semester, 0) + akts
+        total_akts += akts
+
+    if not semester_totals:
+        return None
+
+    return {
+        "department": department,
+        "normalized_department": normalized_department,
+        "total_akts": total_akts,
+        "semester_totals": dict(sorted(semester_totals.items())),
+        "excluded_course_types": sorted(_PROGRAM_TOTAL_EXCLUDED_TYPES),
+        "counted_course_count": len(counted_courses),
+    }

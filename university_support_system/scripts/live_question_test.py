@@ -151,19 +151,102 @@ RED = "\033[91m"
 YELLOW = "\033[93m"
 CYAN = "\033[96m"
 RESET = "\033[0m"
+MAGENTA = "\033[95m"
+
+_AUTH_SIGNALS = ("kimlik", "dogrulama", "otp", "tek kullanimlik kod", "giris yap", "oturum")
+_SUSPICIOUS_QUALITY_PATTERNS = (
+    "bilmedigim icin",
+    "bilemedigim icin",
+    "genellikle",
+    "genel olarak bilinen",
+    "genel bilgiler verilebilir",
+    "pek dogru olmaz",
+    "yardimci olur",
+    "not defteri",
+    "lakin",
+    "genel bilgi birikimime",
+    "genel bilgi birikimimden",
+    "tahminim",
+    "tahminimce",
+    "tahminen",
+    "internette arastirdiginizda",
+    "genelde boyle bilinir",
+    "bildigim kadariyla genel",
+)
+_PROMPT_LEAK_PATTERNS = (
+    "sen ondokuz mayis universitesi",
+    "sen ondokuz mayıs universitesi",
+    "uzun zamandir bu konularla",
+    "acik bir bilgi kaynagi bulamadim, ancak",
+    "açık bir bilgi kaynağı bulamadım, ancak",
+    "sayin ogrenci",
+)
+
+_ROLE_RECITATION_PATTERNS = (
+    "harc ve odeme uzmani olarak",
+    "harc ve ödeme uzmanı olarak",
+    "kayit uzmani olarak",
+    "mevzuat uzmani olarak",
+    "uzman asistan olarak",
+    "akademik programlar uzmani olarak",
+)
 
 
 def _dept_match(actual_depts: list[str], expected: str, *, answer: str, source_count: int) -> bool:
     if expected == "announcement":
         lowered = answer.casefold()
-        return source_count > 0 or "duyuru" in lowered or "haber" in lowered
+        return (
+            set(actual_depts) == {"announcement"}
+            or "aktif duyuru bulunmuyor" in lowered
+            or source_count > 0
+        )
     if expected == "herhangi":
         return bool(actual_depts)
     if expected == "clarification":
         return len(actual_depts) == 0
     expected_set = set(expected.split(","))
     actual_set = set(actual_depts)
-    return bool(expected_set & actual_set)
+    return expected_set == actual_set
+
+
+_FOREIGN_LANGUAGE_PATTERNS = (
+    "necesario", "however", "therefore", "furthermore", "moreover",
+    "please note", "in addition", "regarding", "nevertheless",
+    "por favor", "important to note that", "semestre", "financial kaynaklar",
+)
+
+
+def _quality_warnings(*, answer: str, needs_auth: bool, source_count: int) -> list[str]:
+    warnings: list[str] = []
+    lowered = answer.casefold()
+    is_rule_answer = "uretim turu:" in lowered and "- kural" in lowered
+    is_no_announcement_message = "aktif duyuru bulunmuyor" in lowered
+
+    if needs_auth and not any(signal in lowered for signal in _AUTH_SIGNALS):
+        warnings.append("auth_mesaji_zayif")
+
+    if any(pattern in lowered for pattern in _SUSPICIOUS_QUALITY_PATTERNS):
+        warnings.append("uydurma_riski_ifadesi")
+
+    if any(pattern in lowered for pattern in _PROMPT_LEAK_PATTERNS):
+        warnings.append("prompt_sizintisi")
+
+    if any(pattern in lowered for pattern in _FOREIGN_LANGUAGE_PATTERNS):
+        warnings.append("yabanci_dil_karisimi")
+
+    if any(pattern in lowered for pattern in _ROLE_RECITATION_PATTERNS):
+        warnings.append("rol_tekrari")
+
+    if (
+        source_count == 0
+        and "kaynak ozeti:" not in lowered
+        and "veritabani kaydi:" not in lowered
+        and not is_rule_answer
+        and not is_no_announcement_message
+    ):
+        warnings.append("kaynak_seffafligi_yok")
+
+    return warnings
 
 
 def _summarize_profile(snapshot: dict) -> list[dict]:
@@ -310,7 +393,7 @@ async def run_single_question(
 
     start = time.perf_counter()
     profiler = QueryProfiler(label=f"soru_{index}")
-    resolved_context_id = context_id or f"live-test-{index}"
+    resolved_context_id = context_id or f"live-test-{datetime.now().strftime('%H%M%S')}-q{index}"
     try:
         with activate_profiler(profiler):
             if api_client is None:
@@ -320,6 +403,10 @@ async def run_single_question(
                     llm_profile=llm_profile,
                     is_authenticated=False,
                     student_id=None,
+                    student_department=(profile or {}).get("student_department") or None,
+                    student_faculty=(profile or {}).get("student_faculty") or None,
+                    student_type=(profile or {}).get("student_type") or None,
+                    student_full_name=(profile or {}).get("full_name") or None,
                 )
             else:
                 if prime_profile and profile:
@@ -359,13 +446,23 @@ async def run_single_question(
             source_count=len(response.sources),
         )
         answer_text = response.answer
+        kalite_uyarilari = _quality_warnings(
+            answer=answer_text,
+            needs_auth=needs_auth,
+            source_count=len(response.sources),
+        )
+        kalite_dogru = len(kalite_uyarilari) == 0
 
         status = f"{GREEN}OK{RESET}" if dept_match else f"{RED}YANLIS DEPT{RESET}"
+        kalite_status = f"{GREEN}OK{RESET}" if kalite_dogru else f"{MAGENTA}UYARI{RESET}"
 
         print(f"  {BOLD}Durum:{RESET}     {status}")
         print(f"  {BOLD}Departman:{RESET} {depts if depts else '[yok - clarification]'}  (beklenen: {beklenen})")
         print(f"  {BOLD}Sure:{RESET}      {elapsed} ms")
         print(f"  {BOLD}Kaynak:{RESET}    {len(response.sources)} adet")
+        print(f"  {BOLD}Kalite:{RESET}    {kalite_status}")
+        if kalite_uyarilari:
+            print(f"  {BOLD}Uyarilar:{RESET}  {', '.join(kalite_uyarilari)}")
         print(f"  {BOLD}Yanit:{RESET}")
         for line in answer_text.splitlines() or [""]:
             print(f"    {line}")
@@ -384,6 +481,8 @@ async def run_single_question(
             "sure_ms": elapsed,
             "yanit_uzunluk": len(response.answer),
             "kaynak_sayisi": len(response.sources),
+            "kalite_dogru": kalite_dogru,
+            "kalite_uyarilari": kalite_uyarilari,
             "yanit": answer_text,
             "yanit_onizleme": answer_text,
             "profil_toplam_ms": round(profile_snapshot["total_ms"], 3),
@@ -404,6 +503,8 @@ async def run_single_question(
             "sure_ms": elapsed,
             "yanit_uzunluk": 0,
             "kaynak_sayisi": 0,
+            "kalite_dogru": False,
+            "kalite_uyarilari": ["exception"],
             "yanit": "",
             "yanit_onizleme": "",
             "profil_toplam_ms": round(profile_snapshot["total_ms"], 3),
@@ -447,7 +548,7 @@ async def run_category(
             api_client=api_client,
             context_id=question_context_id if api_client is not None else None,
             llm_profile=llm_profile,
-            profile=profile if api_client is not None else None,
+            profile=profile,
             prime_profile=prime_profile_each_question,
         )
         results.append(result)
@@ -461,26 +562,37 @@ def print_summary(all_results: dict[str, list[dict]]):
 
     total = 0
     correct = 0
+    quality_correct = 0
     errors = 0
     total_time = 0.0
 
     for cat, results in all_results.items():
         cat_total = len(results)
         cat_correct = sum(1 for r in results if r["dept_dogru"])
+        cat_quality = sum(1 for r in results if r.get("kalite_dogru"))
         cat_errors = sum(1 for r in results if r["hata"])
         cat_time = sum(r["sure_ms"] for r in results)
 
         total += cat_total
         correct += cat_correct
+        quality_correct += cat_quality
         errors += cat_errors
         total_time += cat_time
 
         pct = round(cat_correct / cat_total * 100) if cat_total else 0
+        quality_pct = round(cat_quality / cat_total * 100) if cat_total else 0
         color = GREEN if pct >= 80 else YELLOW if pct >= 50 else RED
-        print(f"  {cat}: {color}{cat_correct}/{cat_total} ({pct}%){RESET}  |  {round(cat_time)}ms")
+        quality_color = GREEN if quality_pct >= 80 else YELLOW if quality_pct >= 50 else RED
+        print(
+            f"  {cat}: {color}{cat_correct}/{cat_total} ({pct}%){RESET} yonlendirme"
+            f"  |  {quality_color}{cat_quality}/{cat_total} ({quality_pct}%){RESET} kalite"
+            f"  |  {round(cat_time)}ms"
+        )
 
     pct_total = round(correct / total * 100) if total else 0
+    pct_quality_total = round(quality_correct / total * 100) if total else 0
     print(f"\n  {BOLD}TOPLAM: {correct}/{total} ({pct_total}%) dogru yonlendirme{RESET}")
+    print(f"  {BOLD}KALITE: {quality_correct}/{total} ({pct_quality_total}%) temiz cevap{RESET}")
     print(f"  {BOLD}HATA:   {errors} adet{RESET}")
     print(f"  {BOLD}SURE:   {round(total_time)}ms toplam, {round(total_time/total)}ms ortalama{RESET}")
 
@@ -568,7 +680,7 @@ async def main():
         return
 
     if not args.use_api and _collect_profile_args(args):
-        print(f"{YELLOW}Profil argumanlari sadece --use-api modunda kullanilir; bu calistirmada yoksayilacak.{RESET}")
+        print(f"{YELLOW}Profil argumanlari direct modda orchestrator.handle_query'ye aktarilacak.{RESET}")
 
     _configure_test_logging(verbose=args.verbose)
     init_engine(echo=args.verbose)
@@ -642,6 +754,7 @@ async def main():
                 limit=args.limit or None,
                 question_index=args.soru_index or None,
                 llm_profile=args.llm_profile or None,
+                profile=profile,
             )
             all_results[cat_name] = results
 

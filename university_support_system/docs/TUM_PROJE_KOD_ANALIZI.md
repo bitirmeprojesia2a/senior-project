@@ -1,7 +1,10 @@
 # ÜNİVERSİTE KURUMSAL DESTEK SİSTEMİ 
+
+> Durum Notu (Nisan 2026): Bu belge genis kapsamli bir tarihsel kod referansidir. Kod tabani sonradan modulerlestigi icin burada anlatilan bazi dosya dagilimlari ve sorumluluklar bire bir guncel durumu yansitmayabilir. Guncel modul haritasi icin `docs/PROJE_ANATOMISI_KILAVUZU.md` kullanilmalidir.
+
 # KÜLLİYAT: TÜM PROJE KOD ANALİZİ VE METOD REFERANS REHBERİ
 
-Bu devasa referans dosyası, projede bulunan (aktif durumdaki) **her bir sınıfın, her bir metodun ve her bir mimari tasarım kararının** en alt seviyede detaylandırılarak, projeyi hiç bilmeyen birine anlatır gibi veya jüri/sunum esnasında referans gösterilmek üzere hazırlanmış "Ana Kod Külliyatı"dır.
+Bu devasa referans dosyasi, hazirlandigi donemde projede bulunan **siniflari, metodlari ve mimari kararları** alt seviyede referanslamak icin uretilmis bir "Ana Kod Kulliyati"dir. Bugunku moduler dagilim ve sorumluluk haritasi icin bu dosya tek basina yeterli kabul edilmemelidir.
 
 ---
 
@@ -187,7 +190,7 @@ Kod tabanında aktif olarak bulunan fakat önceki anlatıda daha sınırlı gör
 
 ### 4. Test ve Doğrulama Durumu
 
-Güncel test envanteri:
+Bu analiz yazildigi andaki test envanteri:
 
 * 206 unit test
 * 20 integration test

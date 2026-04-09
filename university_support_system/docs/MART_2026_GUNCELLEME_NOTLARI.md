@@ -1,5 +1,7 @@
 # Mart 2026 Guncelleme Notlari
 
+> Durum Notu (Nisan 2026): Bu belge Mart 2026 doneminin snapshot ozetidir. Sonraki refactor, benchmark ve deployment degisiklikleri icin guncel ana referans seti `README.md`, `docs/KURULUM_VE_CALISTIRMA.md`, `docs/PROJE_ANATOMISI_KILAVUZU.md` ve `docs/AZURE_VM_RUNBOOK.md` dosyalaridir.
+
 Bu dokuman, proje uzerinde Mart 2026 boyunca yapilan guncellemeleri, dogrulamalari ve kalan teknik borclari tek yerde toplar. Bazi eski faz dokumanlarinda yer alan anlatilar tarihsel baglam tasidigi icin, mevcut repo durumunu degerlendirirken bu belge oncelikli referans kabul edilmelidir.
 
 ## 1. Mimari ve Sozlesme Guncellemeleri
@@ -210,7 +212,7 @@ Smoke dogrulamalari:
 
 ## 5. Test Envanteri ve Pratik Durum
 
-Guncel test envanteri:
+Mart 2026 snapshot'indaki test envanteri:
 
 * **206 unit test**
 * **20 integration test**
@@ -293,9 +295,9 @@ Bu degisiklikle birlikte `/query` ve `/a2a/dispatch` endpoint'leri artik:
 
 Not:
 
-* e-posta gonderimi su an `email_stub` modunda tutulmustur
+* bu not yazildigi sirada e-posta akisi `email_stub` agirlikliydi
 * gelistirme modunda OTP preview kodu API yanitina eklenebilir
-* gercek SMTP/kurumsal posta entegrasyonu sonraki fazdir
+* o tarihte gercek SMTP/kurumsal posta entegrasyonu ayri bir sonraki is olarak not edilmisti
 
 Ek olarak auth payload modelleri tekrar sadece API dosyasinda tutulmayip
 `src/db/schemas.py` icinde ortak semalara alinmistir. Boylece auth ve query
@@ -394,4 +396,4 @@ Mart 2026 sonundaki mevcut durum:
 Bu nedenle bugun icin dogru ifade:
 
 * "uygulama ici A2A iskeleti ve dispatch akisi eklendi"
-* "tam dagitik A2A servislesmesi daha sonraki faza birakildi"
+* "tam dagitik A2A servislesmesi bu notun yazildigi tarihte sonraki fazlara birakilmisti"

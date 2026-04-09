@@ -46,6 +46,7 @@ def _mock_retriever_factory():
     mock_retriever.search = MagicMock(return_value=[
         {"content": "Test icerik.", "source": "test.pdf", "score": 0.9, "metadata": {}},
     ])
+    mock_retriever.enrich_results = MagicMock(side_effect=lambda results, department=None: results)
     return MagicMock(return_value=mock_retriever)
 
 

@@ -62,6 +62,9 @@ class TestRerankerRerank:
 
         assert results[0]["score"] == 0.9
         assert results[1]["score"] == 0.7
+        assert results[0]["metadata"]["score_type"] == "reranker"
+        assert results[0]["metadata"]["reranker_score"] == 0.9
+        assert results[0]["metadata"]["pre_rerank_score"] == 0.0
 
     def test_empty_candidates(self, mock_cross_encoder):
         reranker = CrossEncoderReranker()
@@ -161,4 +164,5 @@ class TestRerankerInit:
             "custom/model",
             max_length=256,
             device="cpu",
+            local_files_only=True,
         )

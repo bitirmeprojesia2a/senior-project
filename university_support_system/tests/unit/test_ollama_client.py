@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
 import httpx
+import pytest
 
 from src.llm.ollama_client import OllamaClient, OllamaClientError
+
 
 @pytest.fixture
 def ollama_client():
@@ -10,7 +12,10 @@ def ollama_client():
         mock_settings.ollama.host = "http://localhost:11434"
         mock_settings.ollama.model = "test-model"
         mock_settings.ollama.timeout = 5
+        mock_settings.ollama.num_ctx = 8192
+        mock_settings.ollama.num_predict = 512
         return OllamaClient()
+
 
 class MockResponse:
     def __init__(self, json_data=None, text_data="", status_code=200):
@@ -27,9 +32,8 @@ class MockResponse:
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise httpx.HTTPStatusError(
-                "Error", request=AsyncMock(), response=self
-            )
+            raise httpx.HTTPStatusError("Error", request=AsyncMock(), response=self)
+
 
 @pytest.mark.asyncio
 async def test_get_health_healthy(ollama_client):
@@ -40,6 +44,7 @@ async def test_get_health_healthy(ollama_client):
         assert result["status"] == "healthy"
         assert result["model_found"] is True
 
+
 @pytest.mark.asyncio
 async def test_get_health_model_missing(ollama_client):
     mock_resp = MockResponse(json_data={"models": [{"name": "other-model"}]})
@@ -49,6 +54,7 @@ async def test_get_health_model_missing(ollama_client):
         assert result["status"] == "model_missing"
         assert result["model_found"] is False
 
+
 @pytest.mark.asyncio
 async def test_get_health_unhealthy(ollama_client):
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
@@ -57,6 +63,7 @@ async def test_get_health_unhealthy(ollama_client):
         assert result["status"] == "unhealthy"
         assert result["model_found"] is False
 
+
 @pytest.mark.asyncio
 async def test_generate_success(ollama_client):
     mock_resp = MockResponse(json_data={"response": "Generated text"})
@@ -64,64 +71,75 @@ async def test_generate_success(ollama_client):
         mock_post.return_value = mock_resp
         result = await ollama_client.generate("Hello", system="Sys", json_mode=True)
         assert result == "Generated text"
-        # Verify post arguments
-        args, kwargs = mock_post.call_args
+        _, kwargs = mock_post.call_args
         payload = kwargs["json"]
         assert payload["prompt"] == "Hello"
         assert payload["system"] == "Sys"
         assert payload["format"] == "json"
+        assert payload["options"]["num_ctx"] == 8192
+        assert payload["options"]["num_predict"] == 512
+
 
 @pytest.mark.asyncio
 async def test_generate_timeout(ollama_client):
     with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
         mock_post.side_effect = httpx.TimeoutException("Timeout")
-        with pytest.raises(OllamaClientError, match="Ollama yanıt süresi aşıldı"):
+        with pytest.raises(OllamaClientError, match="Ollama yanit suresi asildi"):
             await ollama_client.generate("Hello")
+
 
 @pytest.mark.asyncio
 async def test_generate_http_error(ollama_client):
     mock_resp = MockResponse(status_code=500, text_data="Internal Error")
     with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
         mock_post.side_effect = httpx.HTTPStatusError("500", request=AsyncMock(), response=mock_resp)
-        with pytest.raises(OllamaClientError, match="Ollama HTTP hatası"):
+        with pytest.raises(OllamaClientError, match="Ollama HTTP hatasi"):
             await ollama_client.generate("Hello")
+
 
 @pytest.mark.asyncio
 async def test_generate_request_error(ollama_client):
     with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
         mock_post.side_effect = httpx.RequestError("Network drop", request=AsyncMock())
-        with pytest.raises(OllamaClientError, match="Ollama bağlantı hatası"):
+        with pytest.raises(OllamaClientError, match="Ollama baglanti hatasi"):
             await ollama_client.generate("Hello")
 
-# Since streaming uses context managers (async with client.stream), it is tricky to mock simply.
-# We will mock the aiter_lines method.
+
 @pytest.mark.asyncio
 async def test_generate_stream_success(ollama_client):
     class MockStreamResponse:
         def __init__(self):
             self.status_code = 200
+
         def raise_for_status(self):
             pass
+
         async def aiter_lines(self):
             yield '{"response": "Hello"}'
             yield '{"response": " World"}'
-            
+
     class MockStreamContext:
         async def __aenter__(self):
             return MockStreamResponse()
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            pass
 
-    with patch("httpx.AsyncClient.stream", return_value=MockStreamContext()):
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+    with patch("httpx.AsyncClient.stream", return_value=MockStreamContext()) as mock_stream:
         chunks = []
         async for chunk in ollama_client.generate_stream("Stream this"):
             chunks.append(chunk)
         assert chunks == ["Hello", " World"]
+        _, kwargs = mock_stream.call_args
+        payload = kwargs["json"]
+        assert payload["options"]["num_ctx"] == 8192
+        assert payload["options"]["num_predict"] == 512
+
 
 @pytest.mark.asyncio
 async def test_generate_stream_error(ollama_client):
     with patch("httpx.AsyncClient.stream") as mock_stream:
         mock_stream.side_effect = Exception("Stream failed")
-        with pytest.raises(OllamaClientError, match="Şelale akışı"):
+        with pytest.raises(OllamaClientError, match="stream hatasi"):
             async for _ in ollama_client.generate_stream("Stream this"):
                 pass

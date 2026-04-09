@@ -4,8 +4,8 @@
 # Tüm servisleri ayağa kaldırmak için: docker compose up -d
 # Servisleri durdurmak için: docker compose down
 # Logları görmek için: docker compose logs -f
-# Not: Bu dosya altyapı servislerini ayağa kaldırır; repo içinde
-# doğrudan çalıştırılabilir bir FastAPI uygulama girişi henüz yoktur.
+# Not: Bu dosya altyapi servislerini ayaga kaldirir; FastAPI uygulamasi
+# repo icinde ayrica `uvicorn src.api.main:app` ile baslatilir.
 
 services:
   # ── PostgreSQL 15 ─────────────────────────────

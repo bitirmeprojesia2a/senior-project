@@ -7,12 +7,16 @@ from src.orchestrators.response_utils import (
     DEPARTMENT_DISPLAY_ORDER,
     DEPARTMENT_SECTION_TITLES,
     compact_text,
+    is_announcement_response,
     split_answer_and_contact_flag,
 )
 
 
 def responses_need_contact_suggestion(responses: list[DepartmentResponse]) -> bool:
     return any(split_answer_and_contact_flag(response.answer)[1] for response in responses)
+
+
+_GLOBAL_SYNTHESIS_CONTEXT_MAX_LEN = 1600
 
 
 def build_global_synthesis_prompt(
@@ -22,7 +26,7 @@ def build_global_synthesis_prompt(
     meaningful = [
         response
         for response in responses
-        if response.answer.strip() and response.success
+        if response.answer.strip() and response.success and not is_announcement_response(response)
     ]
     meaningful.sort(key=lambda response: DEPARTMENT_DISPLAY_ORDER.get(response.department, 99))
     if len({response.department for response in meaningful}) < 2:
@@ -44,7 +48,7 @@ def build_global_synthesis_prompt(
         source_names = [name for name in source_names if name]
         source_suffix = f"\nKaynaklar: {', '.join(source_names)}" if source_names else ""
         context_parts.append(
-            f"[{title}]\n{compact_text(answer, max_len=180)}{source_suffix}"
+            f"[{title}]\n{compact_text(answer, max_len=_GLOBAL_SYNTHESIS_CONTEXT_MAX_LEN)}{source_suffix}"
         )
 
     if len(context_parts) < 2:
@@ -53,6 +57,13 @@ def build_global_synthesis_prompt(
     prompt = (
         f"Kullanici sorusu:\n{query}\n\n"
         f"Departman ara yanitlari:\n{chr(10).join(context_parts)}\n\n"
-        "Bu bilgileri tek bir tutarli final cevapta birlestir."
+        "Bu bilgileri tek bir tutarli final cevapta birlestir.\n"
+        "KURALLAR:\n"
+        "- YALNIZCA verilen departman yanitlarindaki bilgileri kullan. Yeni bilgi EKLEME.\n"
+        "- Soruyla dogrudan ilgili olmayan madde, tebligat veya belge parcalarini kullanma.\n"
+        "- Ayni bilgiyi tekrar etme.\n"
+        "- YALNIZCA Turkce yaz. Ingilizce kelime KULLANMA.\n"
+        "- 'Kaynaklar:', 'Sonuc:' veya madde listesi basliklari uretme.\n"
+        "- Yalnizca kullanicinin isine yarayan somut adim, tarih, kosul ve sonucu kisa bicimde yaz."
     )
     return prompt, meaningful

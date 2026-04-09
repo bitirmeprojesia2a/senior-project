@@ -264,7 +264,7 @@ class TuitionAgent(BaseSpecialistAgent):
         return normalize_finance_text(text)
 
     @staticmethod
-    def _compact_source_content(content: str, *, max_len: int = 260) -> str:
+    def _compact_source_content(content: str, *, max_len: int | None = 260) -> str:
         return compact_source_content(content, max_len=max_len)
 
     def _extract_requested_unit(self, query_text: str) -> str | None:

@@ -34,10 +34,56 @@ logger = logging.getLogger(__name__)
 _SHARED_RETRIEVER: HybridRetriever | None = None
 _LLM_SYNTHESIS_TIMEOUT_SECONDS = settings.llm.specialist_synthesis_timeout_seconds
 
+_DIRECT_RAG_RERANKER_THRESHOLD = 0.50
+_DIRECT_RAG_RETRIEVAL_THRESHOLD = 0.65
+
 _CONTACT_REQUEST_KEYWORDS = (
-    "iletisim", "iletisim", "telefon", "dahili", "e-posta",
-    "eposta", "sekreter", "ofis", "numara",
+    "iletisim", "iletisim bilgisi", "telefon", "dahili", "e-posta",
+    "eposta", "email", "sekreter", "sekreterlik", "ofis", "telefon numarasi",
+    "adres", "kime basvurayim", "kimle gorusmeliyim", "birim", "mudurluk",
 )
+
+_DIRECT_RAG_RERANKER_THRESHOLD = 0.50
+_DIRECT_RAG_RETRIEVAL_THRESHOLD = 0.25
+_SPECIALIST_LLM_CONTEXT_MAX_LEN = 1500
+
+_LLM_SYNTHESIS_MIN_RERANKER_SCORE = 0.08
+_LLM_SYNTHESIS_MIN_RETRIEVAL_SCORE = 0.18
+
+_NO_USEFUL_RESULT_RERANKER_CEILING = 0.03
+
+_FAQ_QUESTION_RE = re.compile(r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$", re.MULTILINE)
+_FAQ_SOURCE_PATTERNS = ("sik_sorulan", "sikca_sorulan", "sss", "faq")
+
+
+def _extract_relevant_faq_block(content: str, query: str) -> str:
+    """SSS iceriginden sorguya en yakin Q&A blogunu cikar."""
+    questions = list(_FAQ_QUESTION_RE.finditer(content))
+    if len(questions) < 2:
+        return content
+
+    query_lower = normalize_text(query)
+    query_words = set(query_lower.split())
+
+    best_block = content
+    best_overlap = 0
+    for i, match in enumerate(questions):
+        end = questions[i + 1].start() if i + 1 < len(questions) else len(content)
+        block = content[match.start():end].strip()
+        block_lower = normalize_text(block)
+        block_words = set(block_lower.split())
+        overlap = len(query_words & block_words)
+        if overlap > best_overlap:
+            best_overlap = overlap
+            best_block = block
+
+    return best_block
+
+
+def _is_faq_source(source: str) -> bool:
+    lowered = normalize_text(source)
+    return any(p in lowered for p in _FAQ_SOURCE_PATTERNS)
+_GENERATION_MODE_ORDER = ("vt", "rag", "llm", "kural")
 
 
 @dataclass(frozen=True)
@@ -147,15 +193,21 @@ class BaseSpecialistAgent:
             topic_hint = (task.metadata or {}).get("conversation_topic")
             disable_specialist_llm = bool((task.metadata or {}).get("disable_specialist_llm", False))
             llm_profile = (task.metadata or {}).get("llm_profile")
+            student_department = (task.metadata or {}).get("student_department")
             with profile_stage("agent.retriever.search", agent_id=self.agent_id, department=self.department.value):
                 results = retriever.search(
                     query_text,
                     department=self.department,
                     source_hints=source_hints,
                     topic_hint=topic_hint,
+                    student_department=student_department,
                 )
+            enrich_results = getattr(type(retriever), "enrich_results", None)
+            if callable(enrich_results):
+                with profile_stage("agent.retriever.enrich_results", agent_id=self.agent_id, department=self.department.value):
+                    results = retriever.enrich_results(results, department=self.department)
             with profile_stage("agent.generate_answer", agent_id=self.agent_id):
-                answer = await self._generate_answer(
+                answer, generation_mode = await self._generate_answer(
                     query_text,
                     results,
                     allow_llm=not disable_specialist_llm,
@@ -164,6 +216,7 @@ class BaseSpecialistAgent:
             return self._build_department_response(
                 answer=f"{answer}{CONTACT_SUGGESTION}",
                 results=results,
+                generation_mode=generation_mode,
             )
 
     async def handle_a2a_task(self, task: Task) -> Task:
@@ -175,6 +228,7 @@ class BaseSpecialistAgent:
         *,
         answer: str,
         results: Sequence[dict],
+        generation_mode: str | None = None,
         success: bool = True,
     ) -> DepartmentResponse:
         """RAG sonuc listesiyle birlikte standart departman cevabi kurar."""
@@ -185,12 +239,25 @@ class BaseSpecialistAgent:
                 RAGSource(
                     content=item.get("content", ""),
                     score=float(item.get("score", 0.0)),
-                    metadata=item.get("metadata", {}),
+                    metadata=self._build_source_metadata(item),
                 )
                 for item in results
             ],
+            generation_mode=generation_mode,
             success=success,
         )
+
+    @staticmethod
+    def _build_source_metadata(item: dict) -> dict:
+        """Top-level retriever alanlarini kaynak metadata'sina tasir."""
+        metadata = dict(item.get("metadata", {}) or {})
+        source = item.get("source")
+        if source and "source" not in metadata:
+            metadata["source"] = source
+        source_url = item.get("source_url")
+        if source_url and "source_url" not in metadata:
+            metadata["source_url"] = source_url
+        return metadata
 
     def _extract_query_from_task(self, task: Task) -> str:
         """Task icindeki ilk text part'tan sorgu cikarir."""
@@ -219,12 +286,15 @@ class BaseSpecialistAgent:
             agent_id=self.agent_id,
         )
         if not contacts:
+            contacts = await self._contact_fetcher(department=self.department)
+        if not contacts:
             return DepartmentResponse(
                 department=self.department,
                 answer=(
                     "Su anda bu alan icin kayitli iletisim bilgisi bulunamadi. "
                     "Ogrenci Isleri Daire Baskanligi genel hattindan yardim alabilirsiniz."
                 ),
+                generation_mode="kural",
                 success=True,
             )
 
@@ -243,6 +313,7 @@ class BaseSpecialistAgent:
         return DepartmentResponse(
             department=self.department,
             answer="\n".join(lines),
+            generation_mode="kural",
             success=True,
         )
 
@@ -255,13 +326,39 @@ class BaseSpecialistAgent:
         force_llm: bool = False,
         allow_llm: bool = True,
         llm_profile: str | None = None,
-    ) -> str:
+    ) -> tuple[str, str]:
         """Tek yanit uretim noktasi. Tum ajanlar bu metodu kullanmali."""
         if not results and not db_context:
             return (
                 "Bu konuda elimde yeterli kaynak bulunamadi. "
                 "Soruyu biraz daha detaylandirirsan veya ilgili birimle iletisime gecersen daha net yardimci olabilirim."
+            ), "kural"
+
+        if results and not db_context:
+            top_meta = results[0].get("metadata") or {}
+            score_type_raw = str(top_meta.get("score_type", "")).lower()
+            top_score = float(results[0].get("score", 0.0))
+            top_source = results[0].get("source", "?")
+            logger.info(
+                "generate_answer_score_check",
+                agent_id=self.agent_id,
+                top_score=round(top_score, 4),
+                score_type=score_type_raw,
+                top_source=top_source,
+                result_count=len(results),
+                ceiling=_NO_USEFUL_RESULT_RERANKER_CEILING,
+                llm_min=_LLM_SYNTHESIS_MIN_RERANKER_SCORE,
             )
+            if score_type_raw == "reranker":
+                if top_score < _NO_USEFUL_RESULT_RERANKER_CEILING:
+                    logger.info(
+                        "no_useful_rag_results agent=%s top_reranker_score=%.4f ceiling=%.4f",
+                        self.agent_id, top_score, _NO_USEFUL_RESULT_RERANKER_CEILING,
+                    )
+                    return (
+                        "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
+                        "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin."
+                    ), "kural"
 
         force_llm = force_llm or self._should_force_llm_synthesis(
             query_text,
@@ -271,19 +368,28 @@ class BaseSpecialistAgent:
 
         if not force_llm:
             with profile_stage("agent.direct_rag_check", agent_id=self.agent_id):
-                direct = self._try_direct_rag_answer(results)
+                direct = self._try_direct_rag_answer(results, query_text=query_text)
             if direct is not None:
                 prefix = f"{db_context}\n\n" if db_context else ""
                 logger.info("rag_direct_answer used=%s score=%.3f", self.agent_id, results[0].get("score", 0))
-                return prefix + direct
+                return prefix + direct, self._derive_non_llm_generation_mode(
+                    results,
+                    db_context=db_context,
+                )
 
             if not allow_llm:
                 with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
-                    return self._build_source_only_answer(query_text, results, db_context=db_context)
+                    return (
+                        self._build_source_only_answer(query_text, results, db_context=db_context),
+                        self._derive_non_llm_generation_mode(results, db_context=db_context),
+                    )
 
             if self._should_skip_llm_synthesis(query_text, results, db_context=db_context):
                 with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
-                    return self._build_source_only_answer(query_text, results, db_context=db_context)
+                    return (
+                        self._build_source_only_answer(query_text, results, db_context=db_context),
+                        self._derive_non_llm_generation_mode(results, db_context=db_context),
+                    )
 
         with profile_stage("agent.llm_synthesize", agent_id=self.agent_id):
             return await self._llm_synthesize(
@@ -323,7 +429,48 @@ class BaseSpecialistAgent:
         """LLM sentezi atlandiginda gosterilecek guvenli kaynak yaniti."""
         return self._build_llm_failure_fallback(results, db_context=db_context)
 
-    def _try_direct_rag_answer(self, results: Sequence[dict]) -> str | None:
+    @classmethod
+    def _compose_generation_mode(cls, *parts: str) -> str:
+        normalized = {
+            str(part).strip().lower()
+            for part in parts
+            if part and str(part).strip()
+        }
+        if not normalized:
+            return "kural"
+        ordered = [part for part in _GENERATION_MODE_ORDER if part in normalized]
+        extras = sorted(normalized - set(_GENERATION_MODE_ORDER))
+        return "+".join(ordered + extras)
+
+    def _derive_non_llm_generation_mode(
+        self,
+        results: Sequence[dict],
+        *,
+        db_context: str | None = None,
+    ) -> str:
+        parts: list[str] = []
+        if db_context:
+            parts.append("vt")
+        if results:
+            parts.append("rag")
+        if not parts:
+            parts.append("kural")
+        return self._compose_generation_mode(*parts)
+
+    def _derive_llm_generation_mode(
+        self,
+        results: Sequence[dict],
+        *,
+        db_context: str | None = None,
+    ) -> str:
+        parts: list[str] = ["llm"]
+        if db_context:
+            parts.append("vt")
+        if results:
+            parts.append("rag")
+        return self._compose_generation_mode(*parts)
+
+    def _try_direct_rag_answer(self, results: Sequence[dict], query_text: str = "") -> str | None:
         """En yuksek skorlu RAG sonucu yeterince iyiyse LLM'e gitmeden dondurur."""
         if not results:
             return None
@@ -332,13 +479,29 @@ class BaseSpecialistAgent:
         score = float(top.get("score", 0.0))
         content = top.get("content", "").strip()
         source = top.get("source", "")
+        metadata = dict(top.get("metadata", {}) or {})
+        score_type = str(metadata.get("score_type", "semantic_similarity"))
+        direct_threshold = self._resolve_direct_rag_threshold(score_type)
 
-        if score < RAG_DIRECT_SCORE_THRESHOLD:
+        if score < direct_threshold:
             return None
         if len(content) < RAG_DIRECT_MIN_CONTENT_LEN:
             return None
 
-        return f"{self._compact_source_content(content, max_len=360)}\n\n(Kaynak: {source})"
+        if _is_faq_source(source) and query_text:
+            content = _extract_relevant_faq_block(content, query_text)
+
+        return f"{self._compact_source_content(content, max_len=None)}\n\n(Kaynak: {source})"
+
+    @staticmethod
+    def _resolve_direct_rag_threshold(score_type: str) -> float:
+        """Map heterogeneous score types onto practical direct-answer thresholds."""
+        normalized_type = (score_type or "").strip().lower()
+        if normalized_type == "reranker":
+            return _DIRECT_RAG_RERANKER_THRESHOLD
+        if normalized_type == "retrieval":
+            return _DIRECT_RAG_RETRIEVAL_THRESHOLD
+        return RAG_DIRECT_SCORE_THRESHOLD
 
     async def _llm_synthesize(
         self,
@@ -347,12 +510,40 @@ class BaseSpecialistAgent:
         *,
         db_context: str | None = None,
         llm_profile: str | None = None,
-    ) -> str:
+    ) -> tuple[str, str]:
         """RAG kaynaklarini (ve varsa DB baglamini) LLM ile sentezler."""
+        if results and not db_context:
+            top_score = float(results[0].get("score", 0.0))
+            top_metadata = results[0].get("metadata") or {}
+            score_type = str(top_metadata.get("score_type", "semantic_similarity")).strip().lower()
+
+            min_threshold = (
+                _LLM_SYNTHESIS_MIN_RERANKER_SCORE
+                if score_type == "reranker"
+                else _LLM_SYNTHESIS_MIN_RETRIEVAL_SCORE
+            )
+
+            if top_score < min_threshold:
+                logger.info(
+                    "llm_synthesis_blocked_low_score agent=%s top_score=%.4f threshold=%.4f score_type=%s",
+                    self.agent_id, top_score, min_threshold, score_type,
+                )
+                return (
+                    "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
+                    "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin.",
+                    "kural",
+                )
+
         context_chunks = []
         for index, item in enumerate(results[:3], start=1):
             source = item.get("source", "bilinmiyor")
-            content = self._compact_source_content(item.get("content", ""), max_len=700)
+            raw_content = item.get("content", "")
+            if _is_faq_source(source) and query_text:
+                raw_content = _extract_relevant_faq_block(raw_content, query_text)
+            content = self._compact_source_content(
+                raw_content,
+                max_len=_SPECIALIST_LLM_CONTEXT_MAX_LEN,
+            )
             context_chunks.append(f"[Kaynak {index}: {source}]\n{content}")
 
         prompt = f"Soru:\n{query_text}\n\n"
@@ -360,7 +551,16 @@ class BaseSpecialistAgent:
             prompt += f"Veritabani Bilgisi:\n{db_context}\n\n"
         if context_chunks:
             prompt += f"Belge Baglami:\n{chr(10).join(context_chunks)}\n\n"
-        prompt += "Yalnizca verilen baglama dayanarak kisa ve acik bir cevap uret."
+        prompt += (
+            "KURALLAR:\n"
+            "1. Yalnizca verilen belge baglaminda ACIKCA gecen bilgileri kullan.\n"
+            "2. Kaynaklar soruyu dogrudan yanitlamiyorsa 'Bu konuda elimdeki kaynaklarda net bilgi bulunamadi' de.\n"
+            "3. ASLA tahmin yurutme, genel bilgiyle bosluk doldurma, kavram tanimi uydurma.\n"
+            "4. Kaynaklarda yer almayan adim listeleri, buton isimleri, ekran adimlari veya kisaltma acimlari URETME.\n"
+            "5. YALNIZCA Turkce yanit ver; Ingilizce veya baska dilden kelime KULLANMA (contribution, spring, register gibi).\n"
+            "6. Universite adini kaynakta yazmiyorsa UYDURMA. Bu sistem Ondokuz Mayis Universitesi (OMU) icindir.\n"
+            "7. 'Kisisel deneyimim' veya 'genel bilgi birikimim' gibi ifadeler KULLANMA — sadece belge kaynagi kullan."
+        )
 
         system = self.definition.system_prompt or GENERAL_QA_SYSTEM_PROMPT
         selected_model = settings.resolve_llm_model(
@@ -380,7 +580,7 @@ class BaseSpecialistAgent:
 
         try:
             with profile_stage("agent.llm_generate", agent_id=self.agent_id):
-                return await asyncio.wait_for(
+                answer = await asyncio.wait_for(
                     self.llm_service.generate(
                         prompt=prompt,
                         system=system,
@@ -389,6 +589,7 @@ class BaseSpecialistAgent:
                     ),
                     timeout=_LLM_SYNTHESIS_TIMEOUT_SECONDS,
                 )
+                return answer, self._derive_llm_generation_mode(results, db_context=db_context)
         except (asyncio.TimeoutError, LLMServiceError) as exc:
             logger.warning(
                 "llm_synthesis_fallback_used agent=%s reason=%s",
@@ -396,13 +597,17 @@ class BaseSpecialistAgent:
                 type(exc).__name__,
             )
             with profile_stage("agent.llm_failure_fallback", agent_id=self.agent_id, reason=type(exc).__name__):
-                return self._build_llm_failure_fallback(results, db_context=db_context)
+                return (
+                    self._build_llm_failure_fallback(results, db_context=db_context),
+                    self._derive_non_llm_generation_mode(results, db_context=db_context),
+                )
 
     def _build_llm_failure_fallback(
         self,
         results: Sequence[dict],
         *,
         db_context: str | None = None,
+        query_text: str = "",
     ) -> str:
         """LLM sentezi basarisiz olursa en guvenli belge ozetine doner."""
         prefix = f"{db_context}\n\n" if db_context else ""
@@ -416,15 +621,17 @@ class BaseSpecialistAgent:
         top = results[0]
         content = top.get("content", "").strip()
         source = top.get("source", "bilinmiyor")
-        content = self._compact_source_content(content, max_len=320)
+        if _is_faq_source(source) and query_text:
+            content = _extract_relevant_faq_block(content, query_text)
+        content = self._compact_source_content(content, max_len=None)
         return (
             prefix
             + f"Eldeki en ilgili kaynakta su bilgi yer aliyor:\n{content}\n\n(Kaynak: {source})"
         )
 
     @staticmethod
-    def _compact_source_content(content: str, *, max_len: int = 320) -> str:
+    def _compact_source_content(content: str, *, max_len: int | None = 320) -> str:
         collapsed = re.sub(r"\s+", " ", content).strip()
-        if len(collapsed) > max_len:
+        if max_len is not None and len(collapsed) > max_len:
             return f"{collapsed[: max_len - 3].rstrip()}..."
         return collapsed

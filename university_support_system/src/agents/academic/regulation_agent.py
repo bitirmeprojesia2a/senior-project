@@ -50,7 +50,7 @@ class RegulationAgent(BaseSpecialistAgent):
         if preferred is None:
             return super()._build_source_only_answer(query_text, results, db_context=db_context)
 
-        content = self._compact_source_content(preferred.get("content", ""), max_len=260)
+        content = self._compact_source_content(preferred.get("content", ""), max_len=None)
         source = preferred.get("source", "bilinmiyor")
         prefix = f"{db_context}\n\n" if db_context else ""
         intro = build_regulation_intro(query_text)

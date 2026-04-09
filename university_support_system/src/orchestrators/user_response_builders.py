@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from src.db.schemas import DepartmentResponse, UserQueryResponse
 from src.orchestrators.query_policy import personalize_answer
-from src.orchestrators.response_utils import clean_final_answer
+from src.orchestrators.response_utils import (
+    append_generation_summary,
+    append_source_summary,
+    append_source_summary_for_sources,
+    clean_final_answer,
+)
 
 
 def build_clarification_user_response(
@@ -34,6 +39,8 @@ def build_final_user_response(
     student_full_name: str | None,
 ) -> UserQueryResponse:
     cleaned_answer = clean_final_answer(answer)
+    cleaned_answer = append_generation_summary(cleaned_answer, responses)
+    cleaned_answer = append_source_summary(cleaned_answer, responses)
     personalized_answer = personalize_answer(cleaned_answer, student_full_name)
     sources = [source for response in responses for source in response.sources]
     return UserQueryResponse(
@@ -52,7 +59,9 @@ def build_announcement_user_response(
     sources,
     response_time_ms: float,
 ) -> UserQueryResponse:
-    departments_involved = ["announcement"] if sources else []
+    departments_involved = ["announcement"]
+    answer = clean_final_answer(answer)
+    answer = append_source_summary_for_sources(answer, sources)
     return UserQueryResponse(
         answer=answer,
         departments_involved=departments_involved,

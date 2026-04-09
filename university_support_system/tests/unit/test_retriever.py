@@ -11,6 +11,7 @@ import pytest
 from langchain_core.documents import Document
 
 from src.core.constants import Department
+from src.rag.candidate_utils import deduplicate_documents
 from src.rag.retriever import (
     OFF_TOPIC_PENALTY,
     HybridRetriever,
@@ -61,6 +62,18 @@ class TestTurkishBm25Preprocess:
     def test_whitespace_normalization(self):
         tokens = turkish_bm25_preprocess("kayıt   dondurma    işlemi")
         assert tokens == ["kayıt", "dondurma", "işlemi"]
+
+    def test_ogrenci_not_stripped_to_ogren(self):
+        """-ci eki kaldirildi; 'ogrenci' -> 'ogren' hatasi olmamali."""
+        tokens = turkish_bm25_preprocess("öğrenci belgesi")
+        assert "ogren" not in tokens
+        assert "öğrenci" in tokens
+
+    def test_devamsizlik_no_bogus_split(self):
+        """Bilesik bolme 'devam sizlik' uretmemeli."""
+        tokens = turkish_bm25_preprocess("devamsızlık sınırı")
+        assert "sizlik" not in tokens
+        assert "sızlık" not in tokens
 
 
 # ═══════════════════════════════════════════════════
@@ -237,6 +250,20 @@ class TestDeduplicationLogic:
     def test_dedup_empty_list(self):
         assert self._run_dedup([]) == []
 
+    def test_dedup_preserves_score_metadata(self):
+        docs = [
+            Document(
+                page_content="AynÄ± iÃ§erik",
+                metadata={"similarity_score": 0.42, "source": "cap.pdf"},
+            ),
+        ]
+
+        results = deduplicate_documents(docs)
+
+        assert results[0]["score"] == 0.42
+        assert results[0]["metadata"]["score_type"] == "semantic_similarity"
+        assert results[0]["metadata"]["retrieval_score"] == 0.42
+
 
 # ═══════════════════════════════════════════════════
 # _QueryCache Testleri
@@ -325,6 +352,7 @@ class TestHybridRetrieverDepartmentSearch:
         retriever.reranker = MagicMock()
         retriever.reranker.rerank.side_effect = lambda query, candidates, top_k: candidates[:top_k]
         retriever._cache = _QueryCache(ttl=300)
+        retriever._BM25_DOCUMENT_CACHE = {}
         return retriever
 
     def test_search_uses_only_explicit_department_collection(self):
@@ -415,6 +443,136 @@ class TestHybridRetrieverDepartmentSearch:
             call("academic_programs_docs", "Rastgele bir soru")
         ]
 
+    def test_enrich_results_merges_adjacent_sub_chunks_for_same_madde(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content="MADDE 5 - CAP basvuru kosullari.\nBASLANGIC-ORTAK gecis kosullari ve ilk sartlar.",
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "1/3",
+                    "chunk_index": 10,
+                },
+            ),
+            Document(
+                page_content=(
+                    "[MADDE 5 - CAP basvuru kosullari.]\n"
+                    "BASLANGIC-ORTAK gecis kosullari ve ilk sartlar. ORTA-ORTAK "
+                    "basvuru tarihleri ve not ortalamasi."
+                ),
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "2/3",
+                    "chunk_index": 11,
+                },
+            ),
+            Document(
+                page_content=(
+                    "[MADDE 5 - CAP basvuru kosullari.]\n"
+                    "ORTA-ORTAK basvuru tarihleri ve not ortalamasi. SON-TAMAM "
+                    "hak kazanan ogrenciler ilan edilir."
+                ),
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "3/3",
+                    "chunk_index": 12,
+                },
+            ),
+        ]
+
+        enriched = HybridRetriever.enrich_results(
+            retriever,
+            [
+                {
+                    "content": "[MADDE 5 - CAP basvuru kosullari.]\nBASLANGIC-ORTAK gecis kosullari ve ilk sartlar. ORTA-ORTAK basvuru tarihleri ve not ortalamasi.",
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "score": 0.84,
+                    "metadata": {
+                        "source": "yonerge_cift_anadal_yandal.pdf",
+                        "department": "academic_programs",
+                        "madde_no": "5",
+                        "sub_chunk": "2/3",
+                        "chunk_index": 11,
+                    },
+                }
+            ],
+            department=Department.ACADEMIC_PROGRAMS,
+        )
+
+        assert len(enriched) == 1
+        assert "BASLANGIC-ORTAK" in enriched[0]["content"]
+        assert "SON-TAMAM" in enriched[0]["content"]
+        assert enriched[0]["content"].count("MADDE 5 - CAP basvuru kosullari.") == 1
+        assert enriched[0]["metadata"]["context_expanded"] is True
+        assert enriched[0]["metadata"]["merged_chunk_count"] == 3
+
+    def test_enrich_results_deduplicates_repeated_expanded_rows(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content="MADDE 5 - CAP basvuru kosullari.\nIlk parca.",
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "1/2",
+                    "chunk_index": 1,
+                },
+            ),
+            Document(
+                page_content="[MADDE 5 - CAP basvuru kosullari.]\nIlk parca. Ikinci parca.",
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "2/2",
+                    "chunk_index": 2,
+                },
+            ),
+        ]
+
+        enriched = HybridRetriever.enrich_results(
+            retriever,
+            [
+                {
+                    "content": "MADDE 5 - CAP basvuru kosullari.\nIlk parca.",
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "score": 0.42,
+                    "metadata": {
+                        "source": "yonerge_cift_anadal_yandal.pdf",
+                        "department": "academic_programs",
+                        "madde_no": "5",
+                        "sub_chunk": "1/2",
+                        "chunk_index": 1,
+                    },
+                },
+                {
+                    "content": "[MADDE 5 - CAP basvuru kosullari.]\nIlk parca. Ikinci parca.",
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "score": 0.84,
+                    "metadata": {
+                        "source": "yonerge_cift_anadal_yandal.pdf",
+                        "department": "academic_programs",
+                        "madde_no": "5",
+                        "sub_chunk": "2/2",
+                        "chunk_index": 2,
+                    },
+                },
+            ],
+            department=Department.ACADEMIC_PROGRAMS,
+        )
+
+        assert len(enriched) == 1
+        assert enriched[0]["score"] == 0.84
+
 
 class TestDepartmentPlanningFallbacks:
     """Retriever fallback planlama testleri."""
@@ -425,7 +583,7 @@ class TestDepartmentPlanningFallbacks:
         assert fallback == []
 
     def test_plan_search_departments_with_close_scores(self):
-        primary, fallback = _plan_search_departments("ÇAP ve müfredat koşulları nelerdir?")
+        primary, fallback = _plan_search_departments("ÇAP ve yatay geçiş koşulları nelerdir?")
         assert Department.STUDENT_AFFAIRS in primary
         assert Department.ACADEMIC_PROGRAMS in primary
         assert fallback == []

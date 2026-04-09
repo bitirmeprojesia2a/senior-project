@@ -23,6 +23,8 @@ from typing import Dict, List, Set, Tuple
 
 import structlog
 
+from src.core.text_normalization import normalize_text
+
 logger = structlog.get_logger()
 
 
@@ -47,46 +49,86 @@ SYNONYM_MAP: Dict[str, List[str]] = {
     "öğrenci işleri": ["ÖİDB", "öğrenci işleri daire başkanlığı"],
 
     # Kayıt İşlemleri
-    "kayıt dondurma": ["kayıt dondurmak", "dönem izni", "kayıt dondurulması"],
+    "kayıt dondurma": ["kayıt dondurmak", "dönem izni", "kayıt dondurulması", "kayıt dondurmak istiyorum"],
+    "dönem dondurma": ["kayıt dondurma", "dönem izni"],
     "kayıt yenileme": ["ders kaydı yenileme", "kayıt yenilemek"],
     "ders kaydı": ["kayıt yenileme", "ders seçimi", "ders kaydı yenileme"],
+    "kayıt silme": ["kayıt sildirme", "kaydını silme"],
+    "ilişik kesme": ["ilişik kesmek", "ayrılma", "kaydını silme"],
 
     # Akademik Terimler
-    "gno": ["genel not ortalaması", "not ortalaması", "GNO"],
+    "gno": ["genel not ortalaması", "not ortalaması", "GNO", "akademik ortalama"],
     "not ortalaması": ["GNO", "genel not ortalaması"],
     "akts": ["kredi", "AKTS", "ects"],
-    "transkript": ["not belgesi", "transkript belgesi"],
-    "mezuniyet": ["diploma", "mezun olma", "mezuniyet belgesi"],
-    "diploma": ["mezuniyet belgesi", "lisans diploması"],
+    "transkript": ["not belgesi", "transkript belgesi", "not dökümü"],
+    "mezuniyet": ["diploma", "mezun olma", "mezuniyet belgesi", "mezun olmak"],
+    "diploma": ["mezuniyet belgesi", "lisans diploması", "diploma eki"],
+    "önkoşul": ["ön koşul", "ön şart", "önşart"],
+    "müfredat": ["ders planı", "ders programı", "öğretim programı"],
 
     # Burs
     "burs": ["burs başvurusu", "burs programı", "başarı bursu"],
-    "başarı bursu": ["burs", "akademik burs", "başarı bursu"],
+    "başarı bursu": ["burs", "akademik burs"],
+    "yemek bursu": ["yemek kartı", "ücretsiz yemek"],
+    "kısmi zamanlı": ["kısmi zamanlı çalışma", "yarı zamanlı çalışma"],
 
     # Sınav
     "bütünleme": ["bütünleme sınavı", "telafi sınavı"],
     "final": ["dönem sonu sınavı", "final sınavı"],
     "vize": ["ara sınav", "vize sınavı", "midterm"],
+    "mazeret sınavı": ["mazeret", "mazeret dilekçesi"],
 
     # Staj
-    "staj": ["staj uygulaması", "pratik çalışma", "staj programı"],
+    "staj": ["staj uygulaması", "staj programı", "zorunlu staj"],
+    "mesleki uygulama": ["MÜP", "sanayi uygulaması", "staj"],
+    "bitirme projesi": ["bitirme tezi", "lisans projesi"],
 
     # Yaz Okulu
     "yaz okulu": ["yaz dönemi", "yaz okulu eğitimi"],
 
-    # Yatay Geçiş
+    # Geçiş Programları
     "yatay geçiş": ["kurum içi yatay geçiş", "kurumlar arası yatay geçiş"],
+    "dikey geçiş": ["DGS", "dikey geçiş sınavı"],
 
-    # Erasmus
+    # Erasmus ve Değişim
     "erasmus": ["öğrenci değişimi", "erasmus programı", "değişim programı"],
+    "mevlana": ["mevlana değişim programı"],
+    "farabi": ["farabi değişim programı"],
 
     # Formasyon
     "formasyon": ["pedagojik formasyon", "öğretmenlik sertifikası"],
     "pedagojik formasyon": ["formasyon", "öğretmenlik sertifikası"],
 
+    # Uluslararasi terimler
+    "tömer": ["turkce ogretimi uygulama ve arastirma merkezi", "turkce ogretimi merkezi", "TÖMER", "tomer"],
+    "tomer": ["turkce ogretimi uygulama ve arastirma merkezi", "turkce ogretimi merkezi", "TÖMER"],
+    "yös": ["yabanci ogrenci sinavi", "uluslararasi ogrenci basvurusu", "YÖS", "yos"],
+    "yos": ["yabanci ogrenci sinavi", "uluslararasi ogrenci basvurusu", "YÖS"],
+    "denklik": ["denklik belgesi", "okul denkligi", "lise denklik", "diploma denklik"],
+    "ikamet": ["ikamet izni", "oturma izni", "göç idaresi", "goc idaresi"],
+
+    # Harç ve Ücret
+    "harç": ["katkı payı", "öğrenim ücreti", "harç ücreti"],
+    "katkı payı": ["harç", "öğrenim ücreti"],
+    "ücret iadesi": ["harç iadesi", "para iadesi"],
+
+    # Devamsızlık ve Kurallar
+    "devamsızlık": ["devam zorunluluğu", "yoklama", "devam durumu"],
+    "bağıl değerlendirme": ["bağıl not sistemi", "not sistemi"],
+    "azami süre": ["azami öğrenim süresi", "maksimum süre"],
+
+    # Belgeler
+    "öğrenci belgesi": ["öğrenci durum belgesi", "kayıt belgesi"],
+    "askerlik belgesi": ["askerlik tecil belgesi", "tecil belgesi"],
+    "disiplin": ["disiplin cezası", "disiplin soruşturması", "disiplin kurulu"],
+
     # Üniversite
     "omü": ["ondokuz mayıs üniversitesi", "OMÜ"],
     "üniversite": ["ondokuz mayıs üniversitesi", "OMÜ"],
+
+    # Sistem
+    "ubys": ["üniversite bilgi yönetim sistemi", "UBYS"],
+    "obs": ["öğrenci bilgi sistemi", "OBS"],
 }
 
 
@@ -97,16 +139,20 @@ COMPOUND_WORD_SPLITS: Dict[str, str] = {
     "yandal": "yan dal",
     "çiftanadal": "çift ana dal",
     "lisansüstü": "lisans üstü",
+    "önkosul": "ön koşul",
+    "önkoşul": "ön koşul",
+    "önsart": "ön şart",
+    "önşart": "ön şart",
 }
 
 
-# ── Prosedürel Sorgu Anahtar Kelimeleri ──────────────────────────────
-# Kullanıcı "nasıl" gibi prosedürel bir soru sorduğunda
-# arama sonuçlarında başvuru süreçlerine öncelik verilmesi için
 PROCEDURAL_KEYWORDS = {
     "nasıl", "ne zaman", "nereye", "nerede", "nereden",
     "başvuru", "başvurmak", "başvurulur", "yapılır",
     "süreç", "adım", "prosedür", "işlem",
+    "gerekir", "gereklidir", "gerekiyor",
+    "şart", "koşul", "zorunlu",
+    "nereye başvurulur", "kimden alınır",
 }
 
 
@@ -253,13 +299,13 @@ class QueryPreprocessor:
             "factual" — Ne, kim, kaç gibi bilgi soruları
             "general" — Diğer
         """
-        query_lower = query.lower()
+        normalized_query = normalize_text(query)
 
-        if any(kw in query_lower for kw in PROCEDURAL_KEYWORDS):
+        if any(normalize_text(keyword) in normalized_query for keyword in PROCEDURAL_KEYWORDS):
             return "procedural"
 
         factual_keywords = {"nedir", "kaçtır", "kaç", "kimdir", "hangi", "ne kadardır"}
-        if any(kw in query_lower for kw in factual_keywords):
+        if any(normalize_text(keyword) in normalized_query for keyword in factual_keywords):
             return "factual"
 
         return "general"

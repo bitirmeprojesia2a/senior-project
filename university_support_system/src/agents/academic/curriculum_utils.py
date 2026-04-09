@@ -7,8 +7,14 @@ from typing import Any
 
 from src.core.text_normalization import normalize_text
 
-COURSE_LIST_KEYWORDS = ("acik ders", "açık ders", "bu donem", "bu dönem", "hangi dersler", "ders listesi")
-PREREQUISITE_KEYWORDS = ("onkosul", "önkoşul", "on kosul", "ön koşul", "on sart", "ön şart")
+COURSE_LIST_KEYWORDS = (
+    "acik ders", "açık ders", "bu donem", "bu dönem", "hangi dersler", "ders listesi",
+    "sinif dersleri", "sınıf dersleri", "bolum dersleri", "bölüm dersleri",
+)
+PREREQUISITE_KEYWORDS = (
+    "onkosul", "önkoşul", "on kosul", "ön koşul", "on sart", "ön şart",
+    "onsart", "önşart",
+)
 COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
 DEPARTMENT_CONTEXT_MARKERS = (
     "mufredat",
@@ -19,14 +25,25 @@ DEPARTMENT_CONTEXT_MARKERS = (
     "dönem",
     "secmeli",
     "seçmeli",
+    "teknik secmeli",
+    "alan secmeli",
+    "zorunlu ders",
     "ders listesi",
     "hangi dersler",
     "ders plani",
     "ders planı",
+    "ders programi",
+    "ders programı",
+    "ders icerigi",
+    "ders içeriği",
     "akts gerekli",
     "kredi gerekli",
     "toplam akts",
     "toplam kredi",
+    "bolum dersleri",
+    "bölüm dersleri",
+    "sinif dersleri",
+    "sınıf dersleri",
 )
 DEPARTMENT_CONTEXT_MESSAGE = (
     "Bu akademik program sorusunu dogru cevaplayabilmem icin once bolum veya program bilgisini bilmem gerekiyor. "
@@ -43,6 +60,10 @@ PERSONAL_PROGRESS_MARKERS = (
     "aldigim akts",
     "akts'im",
     "aktsim",
+    "kalan akts",
+    "eksik akts",
+    "eksik kredi",
+    "kalan kredi",
 )
 SEMESTER_QUERY_PATTERN = re.compile(
     r"\b([1-8])\s*\.?\s*(?:yariyil|yarıyıl|donem|dönem)\b",

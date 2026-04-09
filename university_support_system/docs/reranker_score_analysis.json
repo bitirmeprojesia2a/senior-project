@@ -1,0 +1,3539 @@
+{
+  "raw_stats": {
+    "count": 400,
+    "min": 0.0,
+    "max": 0.9976,
+    "mean": 0.1783,
+    "std": 0.2851,
+    "median": 0.0405,
+    "p10": 0.0002,
+    "p25": 0.0021,
+    "p75": 0.203,
+    "p90": 0.7329
+  },
+  "sigmoid_stats": {
+    "count": 400,
+    "min": 0.5,
+    "max": 0.7306,
+    "mean": 0.5428,
+    "std": 0.067,
+    "median": 0.5101,
+    "p10": 0.5001,
+    "p25": 0.5005,
+    "p75": 0.5506,
+    "p90": 0.6754
+  },
+  "top1_raw_stats": {
+    "count": 40,
+    "min": 0.0,
+    "max": 0.9976,
+    "mean": 0.5093,
+    "std": 0.4029,
+    "median": 0.4443,
+    "p10": 0.014,
+    "p25": 0.0593,
+    "p75": 0.9546,
+    "p90": 0.9788
+  },
+  "top1_sigmoid_stats": {
+    "count": 40,
+    "min": 0.5,
+    "max": 0.7306,
+    "mean": 0.62,
+    "std": 0.0932,
+    "median": 0.6093,
+    "p10": 0.5035,
+    "p25": 0.5148,
+    "p75": 0.722,
+    "p90": 0.7269
+  },
+  "suggestion": {
+    "shift": 0.0405,
+    "scale": 0.5,
+    "formula": "sigmoid((score - 0.0405) / 0.5000)",
+    "suggested_direct_rag_threshold": 0.581,
+    "suggested_min_source_threshold": 0.481
+  },
+  "queries": [
+    {
+      "query": "Sistem giris sifremi unuttum, ne yapmaliyim?",
+      "department": "student_affairs",
+      "profile": "explore_student_documents_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Sistem giriş şifremi unuttuğum için sisteme giriş yapamıyorum. Ne yapmalıyım? parola.omu.edu.tr giriş yaptıktan sonra öğ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.877401,
+          "sigmoid_score": 0.706283,
+          "content_length": 920
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Kayıt işlemi bittikten sonra sistem çıktı alarak saklamam gerekir mi? Böyle bir zorunluluk bulunmamaktadır. Fakat zaman ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000944,
+          "sigmoid_score": 0.500236,
+          "content_length": 978
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Müfredat kontrolü nedir ve ne zaman yapmalıyım? Öğrenci bilgi yönetim sisteminde yer alan müfredat bilgileri ve transkri",
+          "pre_rerank_score": -0.0223,
+          "raw_reranker_score": 0.000753,
+          "sigmoid_score": 0.500188,
+          "content_length": 831
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Üniversitenizden mezun oldum. Diploma ve mezuniyet bilgilerim e-devlette görünmüyor. Ne yapmalıyım? 2002 yılı ve öncesin",
+          "pre_rerank_score": 0.0335,
+          "raw_reranker_score": 0.00073,
+          "sigmoid_score": 0.500182,
+          "content_length": 1017
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Danışmanıma ulaşamaz ve ders kaydımı onaylatamazsam ne yapmam gerekir? Bölüm başkanınıza, bölüm başkanına da ulaşamazsan",
+          "pre_rerank_score": 0.0321,
+          "raw_reranker_score": 0.000545,
+          "sigmoid_score": 0.500136,
+          "content_length": 893
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Danışman olarak öğrenci ile sistem üzerinden iletişime geçebilir miyim? Evet. UBYS üzerinden öğrenciye mesaj gönderebili",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000392,
+          "sigmoid_score": 0.500098,
+          "content_length": 974
+        },
+        {
+          "source": "öğrenci_işleri_birimi.txt",
+          "content_preview": "Bilgi Sistemleri Ofisi Yusuf Suat ŞENYURT Programcı ☎ 7321 Recep ARSLAN Teknisyen ☎ 7339 Ziya ERGİN Tekniker ☎ 7316 Göre",
+          "pre_rerank_score": 0.0405,
+          "raw_reranker_score": 0.000351,
+          "sigmoid_score": 0.500088,
+          "content_length": 901
+        },
+        {
+          "source": "öğrenci_işleri_birimi.txt",
+          "content_preview": "Görev Adı: ÖİDB Ders Kayıt ve Not İşlemleri Ofisi Sorumlusu Kod: GT148  Ders katalog ve müfredat menüsünde yapılacak gün",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000245,
+          "sigmoid_score": 0.500061,
+          "content_length": 1016
+        },
+        {
+          "source": "kimlik_kartı_yönergesi.pdf",
+          "content_preview": "MADDE 10 – (1) Kimlik kartı sahibi personelin, herhangi bir nedenle (emeklilik, nakil, istifa vb.) Üniversiteden ayrılma",
+          "pre_rerank_score": 0.043,
+          "raw_reranker_score": 0.000244,
+          "sigmoid_score": 0.500061,
+          "content_length": 997
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "✓ Onaylı/E-imzalı not durum belgesi (Transkript), ✓ ÖSYM Yerleştirme Belgesi (Kontrol kodu olmalıdır) ✓ ÖSYM Sınav Sonuç",
+          "pre_rerank_score": -0.0226,
+          "raw_reranker_score": 0.000204,
+          "sigmoid_score": 0.500051,
+          "content_length": 930
+        }
+      ]
+    },
+    {
+      "query": "UBYS uzerinden ilisik kesme talebini nasil baslatirim?",
+      "department": "student_affairs",
+      "profile": "explore_student_documents_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Sistem giriş şifremi unuttuğum için sisteme giriş yapamıyorum. Ne yapmalıyım? parola.omu.edu.tr giriş yaptıktan sonra öğ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.95156,
+          "sigmoid_score": 0.721429,
+          "content_length": 920
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "II. Öğretim öğrencisiyim. Kayıt dondurmak istediğimde harç ücretimi yatırmak zorunda mıyım? Kayıt dondurma isteğinizin i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.946717,
+          "sigmoid_score": 0.720454,
+          "content_length": 751
+        },
+        {
+          "source": "kimlik_kartı_yönergesi.pdf",
+          "content_preview": "MADDE 10 – (1) Kimlik kartı sahibi personelin, herhangi bir nedenle (emeklilik, nakil, istifa vb.) Üniversiteden ayrılma",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.162476,
+          "sigmoid_score": 0.54053,
+          "content_length": 997
+        },
+        {
+          "source": "öğrenci_işleri_birimi.txt",
+          "content_preview": "Her eğitim öğretim döneminde yabancı uyruklu öğrencilerin ders kayıtlanma durumunu göç idaresine göndermek. YÖK tarafınd",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.034399,
+          "sigmoid_score": 0.508599,
+          "content_length": 471
+        },
+        {
+          "source": "öğrenci_toplulukları_yönergesi.pdf",
+          "content_preview": "MADDE 18 - (1) Öğrencinin mezuniyet ve benzeri nedenlerle Üniversitemiz ile ilişiğinin kesilmesi gibi olağan süreçler dı",
+          "pre_rerank_score": 0.0442,
+          "raw_reranker_score": 0.01187,
+          "sigmoid_score": 0.502967,
+          "content_length": 875
+        },
+        {
+          "source": "öğrenci_işleri_birimi.txt",
+          "content_preview": "Disiplin cezalarını bilgi yönetim sistemine işlemek, ilişik kesme cezası alan öğrenci bilgilerini YÖK'e ve diğer ilgili ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.011482,
+          "sigmoid_score": 0.50287,
+          "content_length": 870
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 32 – (1) Yükseköğretim Kurumları Öğrenci Disiplin Yönetmeliği ve diğer ilgili mevzuat hükümlerine göre yükseköğret",
+          "pre_rerank_score": 0.0614,
+          "raw_reranker_score": 0.009413,
+          "sigmoid_score": 0.502353,
+          "content_length": 728
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "MADDE 32- (1) Yükseköğretim Kurumları Öğrenci Disiplin Yönetmeliği ve diğer ilgili mevzuat hükümlerine göre yükseköğreti",
+          "pre_rerank_score": 0.0622,
+          "raw_reranker_score": 0.006437,
+          "sigmoid_score": 0.501609,
+          "content_length": 947
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Öğrenci harç iademi nasıl alabilirim? İade gerekçenizi belirtir bir dilekçe ve kendi adınıza açılmış hesaba ait 26 hanel",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.004789,
+          "sigmoid_score": 0.501197,
+          "content_length": 908
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yatay geçiş yaparsam bursumu devredebilir miyim, bursum kesilir mi? Bursunuzun devri veya kesilip kesilmeyeceği konusund",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.003005,
+          "sigmoid_score": 0.500751,
+          "content_length": 822
+        }
+      ]
+    },
+    {
+      "query": "Diplomami kaybettim, ikinci nusha icin ne yapmaliyim?",
+      "department": "student_affairs",
+      "profile": "explore_student_documents_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Üniversitenizden mezun oldum. Diploma ve mezuniyet bilgilerim e-devlette görünmüyor. Ne yapmalıyım? 2002 yılı ve öncesin",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.955074,
+          "sigmoid_score": 0.722134,
+          "content_length": 1017
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 17- (1) Diplomasını kaybedenler, yaygın gazetelerden birine diploma kayıp ilanı verirler. Kayıp ilanının yer aldığ",
+          "pre_rerank_score": 0.4317,
+          "raw_reranker_score": 0.949993,
+          "sigmoid_score": 0.721114,
+          "content_length": 938
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "[MADDE 17- (1) Diplomasını kaybedenler, yaygın gazetelerden birine diploma kayıp ilanı] ve/veya Rektör tarafından imzala",
+          "pre_rerank_score": 0.3103,
+          "raw_reranker_score": 0.060024,
+          "sigmoid_score": 0.515001,
+          "content_length": 284
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 16- (1) Diploma, diploma eki, ve sertifikalar yalnızca hak sahiplerinin kendilerine veya noter onaylı vekâletnamel",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.045633,
+          "sigmoid_score": 0.511406,
+          "content_length": 736
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 18 – (1) Mezuniyetten sonra, mahkeme kararına dayalı nüfus kaydı değişikliği olması durumunda; mahkeme kararı, dip",
+          "pre_rerank_score": 0.2616,
+          "raw_reranker_score": 0.016038,
+          "sigmoid_score": 0.504009,
+          "content_length": 275
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Sistem giriş şifremi unuttuğum için sisteme giriş yapamıyorum. Ne yapmalıyım? parola.omu.edu.tr giriş yaptıktan sonra öğ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.002193,
+          "sigmoid_score": 0.500548,
+          "content_length": 920
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Transkript belgemi nasıl alabilirim? Öğrenimine devam eden öğrencilerimiz transkript belgelerini bölüm/program sekreterl",
+          "pre_rerank_score": 0.2325,
+          "raw_reranker_score": 0.001693,
+          "sigmoid_score": 0.500423,
+          "content_length": 943
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "[MADDE 7- (1) Öğrenim gördüğü eğitim-öğretim programında yer alan bütün şartları yerine getirerek] imzalar gerekmesi hal",
+          "pre_rerank_score": 0.232,
+          "raw_reranker_score": 0.001123,
+          "sigmoid_score": 0.500281,
+          "content_length": 858
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 4 – (1) Bu uygulama esaslarında geçen; a) Birim: Enstitü, fakülte, yüksekokul, meslek yüksekokulu ve merkez müdürl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000941,
+          "sigmoid_score": 0.500235,
+          "content_length": 976
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yeni mezun oldum. Diplomamı ne zaman alabilirim? Dönem sonlarında WEB sitemizde ilan edilen takvimde belirtilen tarihler",
+          "pre_rerank_score": 0.2558,
+          "raw_reranker_score": 0.000864,
+          "sigmoid_score": 0.500216,
+          "content_length": 658
+        }
+      ]
+    },
+    {
+      "query": "Diploma eki transkript yerine gecer mi?",
+      "department": "student_affairs",
+      "profile": "explore_student_documents_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Diploma ekini transkript yerine kullanabilir miyim? Diploma eki transkript (not çizelgesi) veya diploma yerine geçmez.  ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.994415,
+          "sigmoid_score": 0.729959,
+          "content_length": 535
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Diploma eki neden verilir? Kişinin takip edip başarıyla tamamladığı öğrenimin yapı, düzey, bağlam, içerik ve statüsünü t",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.976675,
+          "sigmoid_score": 0.726448,
+          "content_length": 863
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Transkript belgemi nasıl alabilirim? Öğrenimine devam eden öğrencilerimiz transkript belgelerini bölüm/program sekreterl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.458533,
+          "sigmoid_score": 0.612666,
+          "content_length": 943
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 4 – (1) Bu uygulama esaslarında geçen; a) Birim: Enstitü, fakülte, yüksekokul, meslek yüksekokulu ve merkez müdürl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.369778,
+          "sigmoid_score": 0.591405,
+          "content_length": 976
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 12 - (1) Diploma eki, kayıtlı oldukları programları başarıyla tamamlayarak diploma almaya hak kazanan tüm ön lisan",
+          "pre_rerank_score": 0.3346,
+          "raw_reranker_score": 0.017636,
+          "sigmoid_score": 0.504409,
+          "content_length": 749
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 16- (1) Diploma, diploma eki, ve sertifikalar yalnızca hak sahiplerinin kendilerine veya noter onaylı vekâletnamel",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.009257,
+          "sigmoid_score": 0.502314,
+          "content_length": 736
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 1- (1) Bu uygulama esaslarının amacı; Ondokuz Mayıs Üniversitesi’ne bağlı Enstitü, Fakülte, Yüksekokul ve Meslek Y",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.006534,
+          "sigmoid_score": 0.501633,
+          "content_length": 503
+        },
+        {
+          "source": "2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+          "content_preview": "hazırlık sınıfı ve/veya eşdeğer yabancı dil sınavlarından başarılı olduğunu gösterir belge, 10. Kayıt donduran öğrencile",
+          "pre_rerank_score": 0.242,
+          "raw_reranker_score": 0.006506,
+          "sigmoid_score": 0.501626,
+          "content_length": 656
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "content_preview": "MADDE 11 - (1) Bu uygulama esasları kapsam ve koşullarında düzenlenen diplomalar, diplomayı hazırlayan birimler tarafınd",
+          "pre_rerank_score": 0.2332,
+          "raw_reranker_score": 0.005654,
+          "sigmoid_score": 0.501413,
+          "content_length": 522
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "belge. (Ek Madde-1 başvurusu için sisteme ✓ Ek Madde-1 başvurusu yapacaklar için daha önce Ek yüklenmeyecektir) Madde-1 ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.005413,
+          "sigmoid_score": 0.501353,
+          "content_length": 814
+        }
+      ]
+    },
+    {
+      "query": "Kayit dondurma ile kayit yaptirmamak arasinda ne fark var?",
+      "department": "student_affairs",
+      "profile": "explore_student_documents_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "II. Öğretim öğrencisiyim. Kayıt dondurmak istediğimde harç ücretimi yatırmak zorunda mıyım? Kayıt dondurma isteğinizin i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.874026,
+          "sigmoid_score": 0.705583,
+          "content_length": 751
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 31 – (1) Öğrencilerin, belgelendirecekleri önemli mazeretlerinin veya eğitim-öğretimlerine katkıda bulunacak Ünive",
+          "pre_rerank_score": -0.1498,
+          "raw_reranker_score": 0.169704,
+          "sigmoid_score": 0.542324,
+          "content_length": 993
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "[MADDE 31- (1) Öğrencilerin belgelendirecekleri önemli mazeretlerinin veya eğitimöğretimlerine katkıda] sınavlara gireme",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.158772,
+          "sigmoid_score": 0.53961,
+          "content_length": 1037
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "yapacakları döneme kadar müfredatlarında yer alan bütün dersleri almış olmaları gerekmektedir. Derslerin tamamını başarm",
+          "pre_rerank_score": -0.1786,
+          "raw_reranker_score": 0.085467,
+          "sigmoid_score": 0.521354,
+          "content_length": 736
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Kayıt işlemi bittikten sonra sistem çıktı alarak saklamam gerekir mi? Böyle bir zorunluluk bulunmamaktadır. Fakat zaman ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.078615,
+          "sigmoid_score": 0.519644,
+          "content_length": 978
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "olmayan öğrencilerin getirmesine gerek yoktur) bölüm/programlara yatay geçiş yapmak isteyen öğrenciler için hazırlık sın",
+          "pre_rerank_score": -0.159,
+          "raw_reranker_score": 0.060998,
+          "sigmoid_score": 0.515245,
+          "content_length": 967
+        },
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "content_preview": "• Disiplin cezası almış öğrencilerin yatay geçiş başvuruları kabul edilmez. Başvuru esnasında disiplin cezası almadıklar",
+          "pre_rerank_score": -0.1749,
+          "raw_reranker_score": 0.041768,
+          "sigmoid_score": 0.51044,
+          "content_length": 593
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "MADDE 31- (1) Öğrencilerin belgelendirecekleri önemli mazeretlerinin veya eğitimöğretimlerine katkıda bulunacak Üniversi",
+          "pre_rerank_score": -0.2109,
+          "raw_reranker_score": 0.035207,
+          "sigmoid_score": 0.508801,
+          "content_length": 455
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "[MADDE 30 – (1) (Değişik:RG-14/7/2019-30831) Kayıtlı olduğu programın 14 üncü maddede belirtilen yükümlülüklerini] (9) B",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.021189,
+          "sigmoid_score": 0.505297,
+          "content_length": 803
+        },
+        {
+          "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+          "content_preview": "[MADDE 4 – (1) Ön lisans ve lisans diploma programlarının hazırlık sınıfına; ön lisans] program tarafından belirlenir. (",
+          "pre_rerank_score": -0.2498,
+          "raw_reranker_score": 0.014189,
+          "sigmoid_score": 0.503547,
+          "content_length": 336
+        }
+      ]
+    },
+    {
+      "query": "Hazirlik sinifi okuyan ogrenci transkriptsiz Ek Madde-1 ile yatay gecis basvurusu yapabilir mi?",
+      "department": "student_affairs",
+      "profile": "explore_transfer_and_special_status_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yatay geçiş hakkı kazanıp kayıt yaptırmasam herhangi bir sorun olur mu? Üniversitemize yatay geçişle kayıt hakkı kazanıp",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.702339,
+          "sigmoid_score": 0.668706,
+          "content_length": 989
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "belge. (Ek Madde-1 başvurusu için sisteme ✓ Ek Madde-1 başvurusu yapacaklar için daha önce Ek yüklenmeyecektir) Madde-1 ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.363806,
+          "sigmoid_score": 0.589961,
+          "content_length": 814
+        },
+        {
+          "source": "2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+          "content_preview": "hazırlık sınıfı ve/veya eşdeğer yabancı dil sınavlarından başarılı olduğunu gösterir belge, 10. Kayıt donduran öğrencile",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.240989,
+          "sigmoid_score": 0.559957,
+          "content_length": 656
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "✓ Onaylı/E-imzalı not durum belgesi (Transkript), ✓ ÖSYM Yerleştirme Belgesi (Kontrol kodu olmalıdır) ✓ ÖSYM Sınav Sonuç",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.088999,
+          "sigmoid_score": 0.522235,
+          "content_length": 930
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "Başvuru ve Kayıt İçin Gerekli Belgeler: Yatay geçiş ile kayıt hakkı kazanan öğrenciler kesin kayıt için geldiklerinde aş",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.071706,
+          "sigmoid_score": 0.517919,
+          "content_length": 983
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "▪ Yatay geçiş hakkı kazanan öğrencilerin kayıt işlemleri yüz yüze yapılacak olup, ilan edilen tarihlerde kayıtlarını yap",
+          "pre_rerank_score": 0.1941,
+          "raw_reranker_score": 0.058358,
+          "sigmoid_score": 0.514585,
+          "content_length": 956
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yatay geçiş türleri nelerdir? Hangi türde başvuru yapabilirim? Kurum içi yatay geçiş: Üniversitemiz öğrencilerinin aynı ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.056549,
+          "sigmoid_score": 0.514133,
+          "content_length": 945
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "olmayan öğrencilerin getirmesine gerek yoktur) bölüm/programlara yatay geçiş yapmak isteyen öğrenciler için hazırlık sın",
+          "pre_rerank_score": 0.2286,
+          "raw_reranker_score": 0.052858,
+          "sigmoid_score": 0.513211,
+          "content_length": 967
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yatay geçiş için gerekli başarı şartları nelerdir? Ek Madde-1 kapsamında yapılacak yatay geçiş başvurularında öğrencinin",
+          "pre_rerank_score": 0.2233,
+          "raw_reranker_score": 0.033318,
+          "sigmoid_score": 0.508329,
+          "content_length": 916
+        },
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "content_preview": "• İkinci öğretim diploma programlarından başarı bakımından bulunduğu sınıfın ilk %10’una girerek bir üst sınıfa geçen öğ",
+          "pre_rerank_score": 0.1795,
+          "raw_reranker_score": 0.009381,
+          "sigmoid_score": 0.502345,
+          "content_length": 999
+        }
+      ]
+    },
+    {
+      "query": "Birden fazla universiteye yatay gecis basvurusu yapabilir miyim?",
+      "department": "student_affairs",
+      "profile": "explore_transfer_and_special_status_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yatay geçiş hakkı kazanıp kayıt yaptırmasam herhangi bir sorun olur mu? Üniversitemize yatay geçişle kayıt hakkı kazanıp",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.41181,
+          "sigmoid_score": 0.601522,
+          "content_length": 989
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "▪ Yatay geçiş hakkı kazanan öğrencilerin kayıt işlemleri yüz yüze yapılacak olup, ilan edilen tarihlerde kayıtlarını yap",
+          "pre_rerank_score": 0.1589,
+          "raw_reranker_score": 0.077255,
+          "sigmoid_score": 0.519304,
+          "content_length": 956
+        },
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "content_preview": "uygulama nedeni ile herhangi bir hukuki hak iddiasında bulunamaz. • Yatay geçiş hakkı kazanan öğrencilerin kayıt işlemle",
+          "pre_rerank_score": 0.1557,
+          "raw_reranker_score": 0.064125,
+          "sigmoid_score": 0.516026,
+          "content_length": 914
+        },
+        {
+          "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+          "content_preview": "[MADDE 4 – (1) Ön lisans ve lisans diploma programlarının hazırlık sınıfına; ön lisans] gördüğü programdaki genel not or",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.044314,
+          "sigmoid_score": 0.511077,
+          "content_length": 1072
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yatay geçiş türleri nelerdir? Hangi türde başvuru yapabilirim? Kurum içi yatay geçiş: Üniversitemiz öğrencilerinin aynı ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.04015,
+          "sigmoid_score": 0.510036,
+          "content_length": 945
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yatay geçiş yaparsam bursumu devredebilir miyim, bursum kesilir mi? Bursunuzun devri veya kesilip kesilmeyeceği konusund",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.039943,
+          "sigmoid_score": 0.509984,
+          "content_length": 822
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 11 – (1) Diğer yükseköğretim kurumlarından Üniversiteye yatay geçişler, 24/4/2010 tarihli ve 27561 sayılı Resmî Ga",
+          "pre_rerank_score": 0.1888,
+          "raw_reranker_score": 0.014442,
+          "sigmoid_score": 0.50361,
+          "content_length": 471
+        },
+        {
+          "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+          "content_preview": "[MADDE 7 - (1) Yatay geçiş değerlendirme sonuçları, geçerli başvurusu olan tüm adayların] Değerlendirme Puanı=[(X/Y)*100",
+          "pre_rerank_score": 0.1534,
+          "raw_reranker_score": 0.011376,
+          "sigmoid_score": 0.502844,
+          "content_length": 985
+        },
+        {
+          "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+          "content_preview": "[MADDE 6 - (1) Üniversitemize yatay geçişler, diğer yükseköğretim kurumlarındaki aynı] yarıyılda açılması istenen ilave ",
+          "pre_rerank_score": 0.1644,
+          "raw_reranker_score": 0.008306,
+          "sigmoid_score": 0.502076,
+          "content_length": 865
+        },
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "content_preview": "• İkinci öğretim diploma programlarından başarı bakımından bulunduğu sınıfın ilk %10’una girerek bir üst sınıfa geçen öğ",
+          "pre_rerank_score": 0.1784,
+          "raw_reranker_score": 0.008256,
+          "sigmoid_score": 0.502064,
+          "content_length": 999
+        }
+      ]
+    },
+    {
+      "query": "Ozel ogrenci olarak ne zaman basvuru yapmaliyim?",
+      "department": "student_affairs",
+      "profile": "explore_transfer_and_special_status_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Üniversitenize özel öğrenci olarak başvuru yapabilmem için kendi üniversitemde ne kadar süre eğitim almış olmam gerekmek",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.730712,
+          "sigmoid_score": 0.674961,
+          "content_length": 403
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Özel öğrenci olarak nasıl başvuru yapabilirim? Üniversitemiz Özel Öğrenci Yönergesi'nde istenen belgelerle ilgili Fakült",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.241167,
+          "sigmoid_score": 0.560001,
+          "content_length": 975
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Müfredat kontrolü nedir ve ne zaman yapmalıyım? Öğrenci bilgi yönetim sisteminde yer alan müfredat bilgileri ve transkri",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.00107,
+          "sigmoid_score": 0.500267,
+          "content_length": 831
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Daha önceden başardığım derslerden muaf tutulabilmem için ne yapmam gerekir? Fakülteye/yüksekokula/meslek yüksekokuluna ",
+          "pre_rerank_score": 0.0954,
+          "raw_reranker_score": 0.000934,
+          "sigmoid_score": 0.500233,
+          "content_length": 447
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Kayıt işlemi bittikten sonra sistem çıktı alarak saklamam gerekir mi? Böyle bir zorunluluk bulunmamaktadır. Fakat zaman ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000496,
+          "sigmoid_score": 0.500124,
+          "content_length": 978
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Öğrenci harç iademi nasıl alabilirim? İade gerekçenizi belirtir bir dilekçe ve kendi adınıza açılmış hesaba ait 26 hanel",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000454,
+          "sigmoid_score": 0.500113,
+          "content_length": 908
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "content_preview": "[MADDE 11 – (1) Yaz okulu programına yapılacak misafir öğrenci ön başvuruları] (2) Öğrenci bir yaz okulunda OMÜ ve/veya ",
+          "pre_rerank_score": 0.0325,
+          "raw_reranker_score": 0.000393,
+          "sigmoid_score": 0.500098,
+          "content_length": 1055
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "İkinci öğretim öğrencisiyim. Üniversitenizde özel öğrenci olduğum takdirde harç ödeyecek miyim? Evet. Öğrencilik hakkını",
+          "pre_rerank_score": 0.0708,
+          "raw_reranker_score": 0.000367,
+          "sigmoid_score": 0.500092,
+          "content_length": 840
+        },
+        {
+          "source": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 12 – (1) (Değişik:RG-24/5/2015-29365) Yaz dönemi programına yapılacak misafir öğrenci ön başvuruları elektronik or",
+          "pre_rerank_score": 0.058,
+          "raw_reranker_score": 0.000304,
+          "sigmoid_score": 0.500076,
+          "content_length": 983
+        },
+        {
+          "source": "document.pdf",
+          "content_preview": "kendileri veya stajyeri tarafından yaptırılmalıdır. Ara dönemde (Staj takvimi dışında) zorunlu staj yapılabilmesi için; ",
+          "pre_rerank_score": 0.0415,
+          "raw_reranker_score": 0.00029,
+          "sigmoid_score": 0.500072,
+          "content_length": 921
+        }
+      ]
+    },
+    {
+      "query": "Ozel ogrenci olarak basvuru icin hangi belgeler gerekir?",
+      "department": "student_affairs",
+      "profile": "explore_transfer_and_special_status_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Özel öğrenci olarak nasıl başvuru yapabilirim? Üniversitemiz Özel Öğrenci Yönergesi'nde istenen belgelerle ilgili Fakült",
+          "pre_rerank_score": 0.1389,
+          "raw_reranker_score": 0.360156,
+          "sigmoid_score": 0.589078,
+          "content_length": 975
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Özel öğrenci statüsünde Üniversitenizden eğitim almam için hangi belgelerle başvuru yapmam gerekir? Üniversitemize bağlı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.296045,
+          "sigmoid_score": 0.573475,
+          "content_length": 868
+        },
+        {
+          "source": "2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+          "content_preview": "zorundadır. Islak imzalı belgelerin fotoğrafı, e-posta çıktısı vb. kabul edilmemekte olup, belgenin aslının getirilmesi ",
+          "pre_rerank_score": 0.2068,
+          "raw_reranker_score": 0.182844,
+          "sigmoid_score": 0.545584,
+          "content_length": 1009
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "Başvuru ve Kayıt İçin Gerekli Belgeler: Yatay geçiş ile kayıt hakkı kazanan öğrenciler kesin kayıt için geldiklerinde aş",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.17432,
+          "sigmoid_score": 0.54347,
+          "content_length": 983
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Üniversitenize özel öğrenci olarak başvuru yapabilmem için kendi üniversitemde ne kadar süre eğitim almış olmam gerekmek",
+          "pre_rerank_score": 0.1649,
+          "raw_reranker_score": 0.122536,
+          "sigmoid_score": 0.530596,
+          "content_length": 403
+        },
+        {
+          "source": "2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+          "content_preview": "hazırlık sınıfı ve/veya eşdeğer yabancı dil sınavlarından başarılı olduğunu gösterir belge, 10. Kayıt donduran öğrencile",
+          "pre_rerank_score": 0.141,
+          "raw_reranker_score": 0.042243,
+          "sigmoid_score": 0.510559,
+          "content_length": 656
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "✓ Onaylı/E-imzalı not durum belgesi (Transkript), ✓ ÖSYM Yerleştirme Belgesi (Kontrol kodu olmalıdır) ✓ ÖSYM Sınav Sonuç",
+          "pre_rerank_score": 0.18,
+          "raw_reranker_score": 0.03929,
+          "sigmoid_score": 0.509821,
+          "content_length": 930
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "belge. (Ek Madde-1 başvurusu için sisteme ✓ Ek Madde-1 başvurusu yapacaklar için daha önce Ek yüklenmeyecektir) Madde-1 ",
+          "pre_rerank_score": 0.1164,
+          "raw_reranker_score": 0.034288,
+          "sigmoid_score": 0.508571,
+          "content_length": 814
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "olmayan öğrencilerin getirmesine gerek yoktur) bölüm/programlara yatay geçiş yapmak isteyen öğrenciler için hazırlık sın",
+          "pre_rerank_score": 0.1211,
+          "raw_reranker_score": 0.028185,
+          "sigmoid_score": 0.507046,
+          "content_length": 967
+        },
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "content_preview": "✓ Disiplin cezası almadığına ilişkin belge, ✓ ÖSYM Sınav Sonuç Belgesi, (Kontrol kodu olmalıdır) ✓ Öğrencinin geldiği yü",
+          "pre_rerank_score": 0.1594,
+          "raw_reranker_score": 0.024805,
+          "sigmoid_score": 0.506201,
+          "content_length": 988
+        }
+      ]
+    },
+    {
+      "query": "Daha once aldigim dersler icin muafiyet basvurusunu ne zaman yapmaliyim?",
+      "department": "student_affairs",
+      "profile": "explore_transfer_and_special_status_turk",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Daha önceden başardığım derslerden muaf tutulabilmem için ne yapmam gerekir? Fakülteye/yüksekokula/meslek yüksekokuluna ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.954466,
+          "sigmoid_score": 0.722012,
+          "content_length": 447
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "MADDE 5 - (1) Üniversiteye kayıtlı öğrencilerin, öğrenim gördükleri programlarda yer alan derslerden muafiyet talepleri ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.887684,
+          "sigmoid_score": 0.708412,
+          "content_length": 980
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Daha önce aldığım ders/dersler için Dekanlığa/Müdürlüğe muafiyet dilekçesi verdim, muafiyet başvurum sonuçlanıncaya kada",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.6994,
+          "sigmoid_score": 0.668055,
+          "content_length": 635
+        },
+        {
+          "source": "yonerge_ders_yeterlik_muafiyet_intibak.pdf",
+          "content_preview": "MADDE 6 - (1) Komisyon, öğrencilerin yeterlik başvurusunda bulundukları, daha önce herhangi bir yükseköğretim kurumundan",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.339231,
+          "sigmoid_score": 0.584004,
+          "content_length": 940
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "MADDE 4 - (1) Bu Yönergede geçen; a) İntibak İşlemi: Ondokuz Mayıs Üniversitesi’ne kayıt hakkı kazanan öğrencilerin daha",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.31067,
+          "sigmoid_score": 0.577049,
+          "content_length": 870
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) Komisyon, öğrencilerin yeterlik başvurusunda bulundukları, daha önce] geçmiş olması kaydıyla, muafiyet ve",
+          "pre_rerank_score": 0.2754,
+          "raw_reranker_score": 0.292648,
+          "sigmoid_score": 0.572644,
+          "content_length": 1046
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "[MADDE 5 - (1) Üniversiteye kayıtlı öğrencilerin, öğrenim gördükleri programlarda yer alan] sonuna kadar alınır. (4) Ön ",
+          "pre_rerank_score": 0.3752,
+          "raw_reranker_score": 0.256786,
+          "sigmoid_score": 0.563846,
+          "content_length": 586
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Üniversitenize dikey/yatay geçiş yolu ile kayıt yaptırdım. Üniversitenizden muaf olduğum dersleri ve almam gereken dersl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.149364,
+          "sigmoid_score": 0.537272,
+          "content_length": 954
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) Komisyon, öğrencilerin yeterlik başvurusunda bulundukları, daha önce] uyumlu olması dikkate alınır. (4) Ü",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.079566,
+          "sigmoid_score": 0.519881,
+          "content_length": 1059
+        },
+        {
+          "source": "ders_yeterlilik_sınavı_uygulama_yönergesi.pdf",
+          "content_preview": "MADDE 5 - (1) Önceki öğrenmelerin tanınması için yapılacak başvuru işlemleri, kesin kaydı takip eden ilk dönem başında a",
+          "pre_rerank_score": 0.2817,
+          "raw_reranker_score": 0.068099,
+          "sigmoid_score": 0.517018,
+          "content_length": 964
+        }
+      ]
+    },
+    {
+      "query": "Ikamet izni basvurusu icin hangi belgeler gerekir?",
+      "department": "academic_programs",
+      "profile": "explore_international_procedures_turk",
+      "results": [
+        {
+          "source": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+          "content_preview": "þ Aşağıda belirtilen belgeleri, Açıklamalar kısmında yer alan bilgileri dikkatli bir şekilde okuyarak tamamlayınız. þ Tü",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.974713,
+          "sigmoid_score": 0.726058,
+          "content_length": 989
+        },
+        {
+          "source": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+          "content_preview": "İKAMET İZNİ BAŞVURUSU İÇİN İZLEMENİZ GEREKEN ADIMLAR Üniversite kaydınızı tamamladıktan sonra, Göç İdaresi Başkanlığı re",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.907896,
+          "sigmoid_score": 0.712569,
+          "content_length": 964
+        },
+        {
+          "source": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+          "content_preview": "ì Özel sağlık sigortası poliçesi (sigorta poliçenizin, poliçe numarasını içerir ilk sayfasını ibraz ediniz.) 6. İKAMET İ",
+          "pre_rerank_score": 0.2809,
+          "raw_reranker_score": 0.886738,
+          "sigmoid_score": 0.708217,
+          "content_length": 1010
+        },
+        {
+          "source": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+          "content_preview": "è Pasaportun kimlik bilgilerinin yer aldığı ilk sayfa ile varsa vizenin bulunduğu sayfa ve ülkeye giriş yaptığı en son d",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.847046,
+          "sigmoid_score": 0.699947,
+          "content_length": 917
+        },
+        {
+          "source": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+          "content_preview": "5. GEÇERLİ SAĞLIK SİGORTASI è Sigorta süresi istenilen ikamet izni süresini kapsamalıdır. è Geçerli Sağlık Sigortası Tür",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.78786,
+          "sigmoid_score": 0.687372,
+          "content_length": 1014
+        },
+        {
+          "source": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+          "content_preview": "kriminal parmak izi numarası bulunmayan dosyalar teslim alınmayacaktır. Ofisimize gelirken öğrenci ikamet izni başvurusu",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.661777,
+          "sigmoid_score": 0.659659,
+          "content_length": 956
+        },
+        {
+          "source": "uluslararası_öğrenci_ikamet_işlemleri.pdf",
+          "content_preview": "ULUSLARARASI ÖĞRENCİ İKAMET İŞLEMLERİ “Öğrenci İkamet İzin Belgesi” ülkemize yasal yollarla giriş yapmış olmanız kaydıyl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.512016,
+          "sigmoid_score": 0.625279,
+          "content_length": 1001
+        },
+        {
+          "source": "uluslararası_öğrenci.pdf",
+          "content_preview": "⇒ Başvuru esnasında seçeceğiniz uyruk türüne göre istenecek evraklar (Kimlik fotokopisi, Pasaport, Suriyeliler için Geçi",
+          "pre_rerank_score": 0.1453,
+          "raw_reranker_score": 0.48719,
+          "sigmoid_score": 0.619444,
+          "content_length": 972
+        },
+        {
+          "source": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+          "content_preview": "è Destekleyici yanında kalıyorsanız, yanında kaldığı kişinin noter onaylı taahhüdü (Destekleyici evli ise ayrıca eşinin ",
+          "pre_rerank_score": 0.1446,
+          "raw_reranker_score": 0.423609,
+          "sigmoid_score": 0.604347,
+          "content_length": 1007
+        },
+        {
+          "source": "muvafakatname.pdf",
+          "content_preview": "MUVAFAKATNAME* Muvafakatname (Anne-Baba izin/onam belgesi): Kayıt tarihi itibarıyla 18 yaşından küçük adayların, yetkili",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.353417,
+          "sigmoid_score": 0.587446,
+          "content_length": 985
+        }
+      ]
+    },
+    {
+      "query": "Denklik belgesi ne zaman gerekir?",
+      "department": "academic_programs",
+      "profile": "explore_international_procedures_turk",
+      "results": [
+        {
+          "source": "denklik_belgesi.pdf",
+          "content_preview": "DENKLİK BELGESİ  Yurt içinde (TÜRKİYE), milletlerarası ortaöğretim düzeyindeki özel öğretim kurumları ve büyükelçilikle",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.900048,
+          "sigmoid_score": 0.710959,
+          "content_length": 1000
+        },
+        {
+          "source": "denklik_belgesi.pdf",
+          "content_preview": "DENKLİK BELGENİZİ Denklik belgesi olmayan öğrenci izinli sayılacak olup, ALMAK İÇİN derslere kayıtlanamaycak ve öğrenci ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.547457,
+          "sigmoid_score": 0.633545,
+          "content_length": 395
+        },
+        {
+          "source": "yonerge_uluslararasi_ogrenci_kabul.pdf",
+          "content_preview": "[MADDE 17 – (1) (Değişik fıkra: 29.08.2024-232) Bu Yönergede hüküm bulunmayan] b) Pasaport fotokopisi, c)Lisans veya yük",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.226701,
+          "sigmoid_score": 0.556434,
+          "content_length": 1044
+        },
+        {
+          "source": "uluslararası_öğrenci_alımı_ve_kesin_kayıt_iş_akış_süreci.pdf",
+          "content_preview": "Gerekli bilgileri, taahhütleri ve belge teslimini içeren kayıt formu doldurulur. Aday Öğrenci Adayın Türkçe yeterlilik C",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.222483,
+          "sigmoid_score": 0.555392,
+          "content_length": 1016
+        },
+        {
+          "source": "yonerge_uluslararasi_ogrenci_kabul.pdf",
+          "content_preview": "MADDE 12- (Mülga: 29.08.2024-232) (Yeniden Düzenleme: 11.09.2024-260) (1) Başvuru koşullarını sağlayan uluslararası öğre",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.172543,
+          "sigmoid_score": 0.543029,
+          "content_length": 967
+        },
+        {
+          "source": "tyb.pdf",
+          "content_preview": "OMÜ Türkçe Uygulama ve a) Türkçe düzeylerini geliştirmek üzere kayıt olduğu eğitim- Araştırma Merkezi’nden mi aldınız? ö",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.092759,
+          "sigmoid_score": 0.523173,
+          "content_length": 1016
+        },
+        {
+          "source": "lisansüstü_eğitim_enstitüsü.pdf",
+          "content_preview": "MADDE 6 - (1) Başvuru yapacak adaylardan istenecek belgeler; a) Uyruğunu gösterir belge (pasaport, fotoğraflı kimlik bel",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.080571,
+          "sigmoid_score": 0.520132,
+          "content_length": 951
+        },
+        {
+          "source": "uluslararası_öğrenci.pdf",
+          "content_preview": "⇒Not Belgesi (Transkript) (Orijinal Belge)* ⇒Not Belgesinin (Transkript) Türkçe Tercümesi (Varsa) ⇒Lise Mezuniyet Not Or",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.064538,
+          "sigmoid_score": 0.516129,
+          "content_length": 281
+        },
+        {
+          "source": "türkçe_öğretimi_uygulama_ve_araştırma_merkezi.pdf",
+          "content_preview": "[MADDE 8 – (1) OMÜ-TÜRKÇE bünyesinde düzenlenen sınavlar, OMÜ-TÜRKÇE] a) Yurt içinde ve yurt dışında faaliyet gösteren T",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.047815,
+          "sigmoid_score": 0.511951,
+          "content_length": 1041
+        },
+        {
+          "source": "türkçe_öğretimi_uygulama_ve_araştırma_merkezi.pdf",
+          "content_preview": "[MADDE 8 – (1) OMÜ-TÜRKÇE bünyesinde düzenlenen sınavlar, OMÜ-TÜRKÇE] kura devam etmese dahi yatırmış olduğu kurs ücreti",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.047254,
+          "sigmoid_score": 0.511811,
+          "content_length": 1035
+        }
+      ]
+    },
+    {
+      "query": "YOS ID numarami nasil ogrenebilirim?",
+      "department": "academic_programs",
+      "profile": "explore_international_procedures_turk",
+      "results": [
+        {
+          "source": "öğrenci_no_öğrenme.pdf",
+          "content_preview": "1.ADIM yostercih.omu.edu.tr adresine gidiniz. 2.ADIM Giriş yapınız 3.ADIM Giriş yaptığınızda açılan ekranda Tercih Sonuç",
+          "pre_rerank_score": 0.252,
+          "raw_reranker_score": 0.028428,
+          "sigmoid_score": 0.507107,
+          "content_length": 570
+        },
+        {
+          "source": "uluslararası_öğrenci.pdf",
+          "content_preview": "⇒ Başvuru esnasında seçeceğiniz uyruk türüne göre istenecek evraklar (Kimlik fotokopisi, Pasaport, Suriyeliler için Geçi",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.027557,
+          "sigmoid_score": 0.506889,
+          "content_length": 972
+        },
+        {
+          "source": "yös_ıd_no_öğrenme.pdf",
+          "content_preview": "1.ADIM yostercih.omu.edu.tr adresine gidiniz. 2.ADIM Giriş yapınız 3.ADIM Giriş yaptığınızda açılan ekranda ID NUMARNANI",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.016061,
+          "sigmoid_score": 0.504015,
+          "content_length": 136
+        },
+        {
+          "source": "uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf",
+          "content_preview": "ONDOKUZ MAYIS ÜNİVERSİTESİ ULUSLARARASI ÖĞRENCİ KAYIT, TAAHHÜT VE EVRAK TESLİM FORMU ÖĞRENCİ BİLGİLERİ Öğrenci Ad Numara",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.002304,
+          "sigmoid_score": 0.500576,
+          "content_length": 1010
+        },
+        {
+          "source": "uluslararası_öğrenci_alımı_ve_kesin_kayıt_iş_akış_süreci.pdf",
+          "content_preview": "Gerekli bilgileri, taahhütleri ve belge teslimini içeren kayıt formu doldurulur. Aday Öğrenci Adayın Türkçe yeterlilik C",
+          "pre_rerank_score": 0.1584,
+          "raw_reranker_score": 0.000541,
+          "sigmoid_score": 0.500135,
+          "content_length": 1016
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "content_preview": "[MADDE 7 - (1) Öğrencinin, Türkiye Cumhuriyeti Vatandaşı veya başka ülkelerin] öğrencilerin yabancı dil düzeyi Yabancı D",
+          "pre_rerank_score": 0.1973,
+          "raw_reranker_score": 0.000429,
+          "sigmoid_score": 0.500107,
+          "content_length": 413
+        },
+        {
+          "source": "uluslararası_öğrenci_kimlik_bilgileri_güncelleme_formu.pdf",
+          "content_preview": "ONDOKUZ MAYIS ÜNİVERSİTESİ ULUSLARARASI ÖĞRENCİ KİMLİK BİLGİLERİ GÜNCELLEME FORMU ÖĞRENCİ İŞLERİ DAİRE BAŞKANLIĞINA Öğre",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000399,
+          "sigmoid_score": 0.5001,
+          "content_length": 995
+        },
+        {
+          "source": "özel_yetenek_sınavı_yönergesi.pdf",
+          "content_preview": "MADDE 11 –Yabancı uyruklu adaylara tanınan kontenjanlar, her yıl üniversite tarafından belirlenir. OMÜ-YÖS’e girip kazan",
+          "pre_rerank_score": 0.229,
+          "raw_reranker_score": 0.00027,
+          "sigmoid_score": 0.500067,
+          "content_length": 557
+        },
+        {
+          "source": "uluslararası_öğrenci_evrak_teslim_formu_r1.pdf",
+          "content_preview": "ÖĞRENCİ BİLGİLERİ Öğrenci Vekili Belgeleri Teslim Alan Öğrenci Numarası Öğrencilik Durumu: T.C. Kimlik No/ Yabancı Kimli",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000213,
+          "sigmoid_score": 0.500053,
+          "content_length": 313
+        },
+        {
+          "source": "yonerge_uluslararasi_ogrenci_kabul.pdf",
+          "content_preview": "[MADDE 16 – (1) Uluslararası Öğrenciler;] yapılmayacaktır. Öğrenciler, güncel e-posta adresleri ile telefon bilgilerinde",
+          "pre_rerank_score": 0.1637,
+          "raw_reranker_score": 0.000193,
+          "sigmoid_score": 0.500048,
+          "content_length": 855
+        }
+      ]
+    },
+    {
+      "query": "Uluslararasi ogrenci kaydinda evrak teslim formu gerekiyor mu?",
+      "department": "academic_programs",
+      "profile": "explore_international_procedures_turk",
+      "results": [
+        {
+          "source": "yonerge_uluslararasi_ogrenci_kabul.pdf",
+          "content_preview": "[MADDE 9 – (1) Kesin kayıtlar, çevrim içi veya şahsî başvuru yoluyla yapılabilir. Kayıt] (9) Kayıt hakkı kazanan öğrenci",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.969899,
+          "sigmoid_score": 0.725099,
+          "content_length": 954
+        },
+        {
+          "source": "uluslararası_öğrenci_yönergesi.pdf",
+          "content_preview": "[MADDE 9 – (1) Kayıt işlemlerine ve koşullarına uluslararası öğrenci alım kılavuzunda yer] kesin kaydı yapılmış olsa dah",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.965253,
+          "sigmoid_score": 0.724172,
+          "content_length": 1086
+        },
+        {
+          "source": "uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf",
+          "content_preview": "ONDOKUZ MAYIS ÜNİVERSİTESİ ULUSLARARASI ÖĞRENCİ KAYIT, TAAHHÜT VE EVRAK TESLİM FORMU 1-GEÇİCİ MEZUNİYET BELGESİ TAAHHÜTN",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.847881,
+          "sigmoid_score": 0.700122,
+          "content_length": 911
+        },
+        {
+          "source": "uluslararası_öğrenci_evrak_teslim_formu_r1.pdf",
+          "content_preview": "ONDOKUZ MAYIS ÜNİVERSİTESİ ULUSLARARASI ÖĞRENCİ EVRAK TESLİM FORMU Ondokuz Mayıs Üniversitesi Önlisans ve Lisans Program",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.748319,
+          "sigmoid_score": 0.678812,
+          "content_length": 1011
+        },
+        {
+          "source": "uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf",
+          "content_preview": "ONDOKUZ MAYIS ÜNİVERSİTESİ ULUSLARARASI ÖĞRENCİ KAYIT, TAAHHÜT VE EVRAK TESLİM FORMU ÖĞRENCİ BİLGİLERİ Öğrenci Ad Numara",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.716517,
+          "sigmoid_score": 0.67184,
+          "content_length": 1010
+        },
+        {
+          "source": "uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf",
+          "content_preview": "halinde sorumluluğun tarafıma ait olduğunu, Göç İdaresi Tarafından verilen İkamet İzin Belgemi Uluslararası Öğrenci Ofis",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.364746,
+          "sigmoid_score": 0.590189,
+          "content_length": 1017
+        },
+        {
+          "source": "uluslararası_öğrenci_alımı_ve_kesin_kayıt_iş_akış_süreci.pdf",
+          "content_preview": "Gerekli bilgileri, taahhütleri ve belge teslimini içeren kayıt formu doldurulur. Aday Öğrenci Adayın Türkçe yeterlilik C",
+          "pre_rerank_score": 0.2456,
+          "raw_reranker_score": 0.179426,
+          "sigmoid_score": 0.544737,
+          "content_length": 1016
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "content_preview": "MADDE 8- (1) UİB her yıl öğrencilere yönelik düzenli tanıtım toplantıları yaparak, Değişim programlarının (öğrenim veya ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.098809,
+          "sigmoid_score": 0.524682,
+          "content_length": 975
+        },
+        {
+          "source": "yonerge_uluslararasi_ogrenci_kabul.pdf",
+          "content_preview": "[MADDE 9 – (1) Kesin kayıtlar, çevrim içi veya şahsî başvuru yoluyla yapılabilir. Kayıt] belirttiği tarihe kadar belgele",
+          "pre_rerank_score": 0.2318,
+          "raw_reranker_score": 0.098174,
+          "sigmoid_score": 0.524524,
+          "content_length": 1084
+        },
+        {
+          "source": "ön_kayıt_kılavuzu_başvuru_adımları.pdf",
+          "content_preview": "Uluslararası Öğrenci Ön Kayıt: Öğrencilere kesin kayıt hakkı vermez, öğrencilerin kayıtlarının yasal düzenlemeler çerçev",
+          "pre_rerank_score": 0.2977,
+          "raw_reranker_score": 0.085438,
+          "sigmoid_score": 0.521347,
+          "content_length": 1020
+        }
+      ]
+    },
+    {
+      "query": "TOMER ne is yapar?",
+      "department": "academic_programs",
+      "profile": "explore_international_procedures_turk",
+      "results": [
+        {
+          "source": "kök_hücre_araştırma_merkezi_yönergesi.pdf",
+          "content_preview": "MADDE 4 – (1) Bu Yönergede geçen; a) Üniversite (OMÜ): Ondokuz Mayıs Üniversitesini, b) Rektör: Ondokuz Mayıs Üniversite",
+          "pre_rerank_score": 0.0187,
+          "raw_reranker_score": 0.000313,
+          "sigmoid_score": 0.500078,
+          "content_length": 522
+        },
+        {
+          "source": "türkçe_öğretimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+          "content_preview": "MADDE 5 – (1) Merkezin amacı; çeşitli kurs ve seminer düzenlemek suretiyle isteyenlere Türkçe öğretmek; Türkiye’yi, Türk",
+          "pre_rerank_score": 0.1173,
+          "raw_reranker_score": 0.000282,
+          "sigmoid_score": 0.50007,
+          "content_length": 177
+        },
+        {
+          "source": "türkçe_öğretimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+          "content_preview": "[MADDE 6 – (1) Merkezin faaliyet alanları şunlardır:] i) Üniversiteler arası işbirliği protokolleri kapsamında, yurt dış",
+          "pre_rerank_score": 0.0652,
+          "raw_reranker_score": 0.000274,
+          "sigmoid_score": 0.500068,
+          "content_length": 533
+        },
+        {
+          "source": "veteriner_fakültesi_eğitim_uygulama_ve_araştırma_hastanesi_işletme_yönergesi.pdf",
+          "content_preview": "MADDE 12 - (1) Hastane Kliniklerine getirilen hastaların tanı ve tedavileri için gerekli tetkiklerin standartlara uygun ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000251,
+          "sigmoid_score": 0.500063,
+          "content_length": 495
+        },
+        {
+          "source": "dil_ve_konuşma_bozuklukları.pdf",
+          "content_preview": "MADDE 5 – (1) Merkezin amaçları şunlardır: a) Dil ve konuşma bozukluğu nedeniyle Üniversite içinden ve Üniversite dışınd",
+          "pre_rerank_score": 0.0097,
+          "raw_reranker_score": 0.000221,
+          "sigmoid_score": 0.500055,
+          "content_length": 986
+        },
+        {
+          "source": "türkçe_öğretimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+          "content_preview": "[MADDE 6 – (1) Merkezin faaliyet alanları şunlardır:] f) Yurt dışındaki üniversitelerin Türkoloji bölümü öğrencilerine v",
+          "pre_rerank_score": 0.0732,
+          "raw_reranker_score": 0.000216,
+          "sigmoid_score": 0.500054,
+          "content_length": 1017
+        },
+        {
+          "source": "sağlık_uygulama_ve_araştırma_merkezi_tıp_laboratuvarları_yönergesi.pdf",
+          "content_preview": "MADDE 1- (1) Ondokuz Mayıs Üniversitesi Sağlık Uygulama ve Araştırma Merkezi'nin Tıp Laboratuvarlarının işlevlerini, yön",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000199,
+          "sigmoid_score": 0.50005,
+          "content_length": 189
+        },
+        {
+          "source": "toplumsal_katkı_politikası.pdf",
+          "content_preview": "sosyal sorumluluk, toplumsal katkı gibi alanlarda özel çağrılar açarak toplumsal katkı faaliyetlerinin uygulanabilmesine",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000148,
+          "sigmoid_score": 0.500037,
+          "content_length": 967
+        },
+        {
+          "source": "kariyer_merkezi_yönergesi.pdf",
+          "content_preview": "MADDE 4 – (1) Bu Yönergede geçen; a) Danışma Kurulu: Merkezin Danışma Kurulunu, b) Ondokuz Mayıs Üniversitesi Kariyer Me",
+          "pre_rerank_score": 0.0472,
+          "raw_reranker_score": 0.000145,
+          "sigmoid_score": 0.500036,
+          "content_length": 717
+        },
+        {
+          "source": "güvenlik_hizmetlerinin_yürütülmesine_dair_yönerge.pdf",
+          "content_preview": "[MADDE 27 – (1) Kampüs İzleme Merkezi’ne Koruma ve Güvenlik Şube Müdürlüğü] gizliliği hususlarına dikkat ederek gözlem v",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000137,
+          "sigmoid_score": 0.500034,
+          "content_length": 898
+        }
+      ]
+    },
+    {
+      "query": "Pedagojik formasyon dersleri transkripte dahil edilir mi?",
+      "department": "academic_programs",
+      "profile": "explore_formasyon_turk",
+      "results": [
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Öğrenciler seçmeli ders olarak aldıklarından dolayı dersler transkript içinde yer alacaktır. Sadece bir Transkript düzen",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.997601,
+          "sigmoid_score": 0.730587,
+          "content_length": 769
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] programından mezun olabilirler.",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.984576,
+          "sigmoid_score": 0.728015,
+          "content_length": 570
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Eğitim/Eğitim Bilimleri Fakülteleri dışında formasyon eğitimi nasıl verilecek?  Öğrencilerin kayıtlı olduğu programın ör",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.982837,
+          "sigmoid_score": 0.727671,
+          "content_length": 976
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Öğretmenlik Uygulaması  GENEL TOPLAM  Pedagojik formasyon eğitiminde verilen derslerin hepsinin alınması zorunlu mudur? ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.974313,
+          "sigmoid_score": 0.725978,
+          "content_length": 592
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar uyarınca, Millî Eğitim Bakanlığı ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.252095,
+          "sigmoid_score": 0.562692,
+          "content_length": 994
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "MADDE 7- (1) (Değişik fıkra: 22.12.2023-317) Pedagojik Formasyon Eğitimi Sertifika Programında yer alan dersler, 29.12.2",
+          "pre_rerank_score": 0.2641,
+          "raw_reranker_score": 0.139789,
+          "sigmoid_score": 0.53489,
+          "content_length": 1001
+        },
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "[MADDE 10 – (1) Muafiyet ve intibak talebinde bulunan öğrenci, daha önce aldığı ve] (6) Öğrencinin muaf sayıldığı ders/b",
+          "pre_rerank_score": 0.1782,
+          "raw_reranker_score": 0.133238,
+          "sigmoid_score": 0.53326,
+          "content_length": 429
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[Madde 6 – (1) İlgili birim ve kişiler arasında iş birliğini sağlayarak derslerin düzenli bir şekilde] tarihler arasında",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.089973,
+          "sigmoid_score": 0.522478,
+          "content_length": 1125
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Diplomasını almak isteyen öğrenciler diplomalarını alabilecektir. Ancak formasyon ile ilgili mezun şartlarına tabidirler",
+          "pre_rerank_score": 0.2134,
+          "raw_reranker_score": 0.075884,
+          "sigmoid_score": 0.518962,
+          "content_length": 919
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "[MADDE 4- (1) Bu Yönergede geçen;] ğ) Meslek Bilgisi Dersleri: Bütün öğretmenlik alanlarında öğretmenlik mesleği ile ilg",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.069273,
+          "sigmoid_score": 0.517311,
+          "content_length": 967
+        }
+      ]
+    },
+    {
+      "query": "Pedagojik formasyon mezuniyet ortalamasina dahil edilir mi?",
+      "department": "academic_programs",
+      "profile": "explore_formasyon_turk",
+      "results": [
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] programından mezun olabilirler.",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.977775,
+          "sigmoid_score": 0.726667,
+          "content_length": 570
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Öğrenciler seçmeli ders olarak aldıklarından dolayı dersler transkript içinde yer alacaktır. Sadece bir Transkript düzen",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.973799,
+          "sigmoid_score": 0.725876,
+          "content_length": 769
+        },
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "content_preview": "MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar uyarınca, Millî Eğitim Bakanlığı ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.743499,
+          "sigmoid_score": 0.677761,
+          "content_length": 994
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Eğitim/Eğitim Bilimleri Fakülteleri dışında formasyon eğitimi nasıl verilecek?  Öğrencilerin kayıtlı olduğu programın ör",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.551931,
+          "sigmoid_score": 0.634583,
+          "content_length": 976
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Diplomasını almak isteyen öğrenciler diplomalarını alabilecektir. Ancak formasyon ile ilgili mezun şartlarına tabidirler",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.479867,
+          "sigmoid_score": 0.617716,
+          "content_length": 919
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] Öğretmenlik Uygulaması yapmak i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.454041,
+          "sigmoid_score": 0.6116,
+          "content_length": 1045
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "MADDE 4- (1) Bu Yönergede geçen; a) Aday: Pedagojik Formasyon Eğitimi Sertifika Programına başvuran ilgili lisans progra",
+          "pre_rerank_score": 0.2682,
+          "raw_reranker_score": 0.305543,
+          "sigmoid_score": 0.575797,
+          "content_length": 1007
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "MADDE 1- (1) Bu Yönergenin amacı; Millî Eğitim Bakanlığı (MEB) Talim ve Terbiye Kurulu Başkanlığının 20 Şubat 2014 tarih",
+          "pre_rerank_score": 0.2573,
+          "raw_reranker_score": 0.162816,
+          "sigmoid_score": 0.540614,
+          "content_length": 568
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Öğretmenlik Uygulaması  GENEL TOPLAM  Pedagojik formasyon eğitiminde verilen derslerin hepsinin alınması zorunlu mudur? ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.112392,
+          "sigmoid_score": 0.528068,
+          "content_length": 592
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "[MADDE 4- (1) Bu Yönergede geçen;] ğ) Meslek Bilgisi Dersleri: Bütün öğretmenlik alanlarında öğretmenlik mesleği ile ilg",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.068668,
+          "sigmoid_score": 0.51716,
+          "content_length": 967
+        }
+      ]
+    },
+    {
+      "query": "Pedagojik formasyon alirsam mezuniyet 240 AKTS'nin ustune cikabilir mi?",
+      "department": "academic_programs",
+      "profile": "explore_formasyon_turk",
+      "results": [
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Eğitim/Eğitim Bilimleri Fakülteleri dışında formasyon eğitimi nasıl verilecek?  Öğrencilerin kayıtlı olduğu programın ör",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.988473,
+          "sigmoid_score": 0.728786,
+          "content_length": 976
+        },
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "content_preview": "MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar uyarınca, Millî Eğitim Bakanlığı ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.572812,
+          "sigmoid_score": 0.639412,
+          "content_length": 994
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "content_preview": "[MADDE 8 - (1) ÇAP'ta başarı ve mezuniyet koşulları şunlardır:] ayrıca öderler. d) Azami süre içinde ÇAP öğreniminin tam",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.437226,
+          "sigmoid_score": 0.607598,
+          "content_length": 999
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Öğrenciler seçmeli ders olarak aldıklarından dolayı dersler transkript içinde yer alacaktır. Sadece bir Transkript düzen",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.093022,
+          "sigmoid_score": 0.523239,
+          "content_length": 769
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "MADDE 5- (1) Millî Eğitim Bakanlığı Talim ve Terbiye Kurulunun 20 Şubat 2014 tarih ve 9 sayılı karar ekinde yer alan ve ",
+          "pre_rerank_score": 0.2596,
+          "raw_reranker_score": 0.072982,
+          "sigmoid_score": 0.518237,
+          "content_length": 1018
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] programından mezun olabilirler.",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.04753,
+          "sigmoid_score": 0.51188,
+          "content_length": 570
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "MADDE 1- (1) Bu Yönergenin amacı; Millî Eğitim Bakanlığı (MEB) Talim ve Terbiye Kurulu Başkanlığının 20 Şubat 2014 tarih",
+          "pre_rerank_score": 0.1975,
+          "raw_reranker_score": 0.042679,
+          "sigmoid_score": 0.510668,
+          "content_length": 568
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Diplomasını almak isteyen öğrenciler diplomalarını alabilecektir. Ancak formasyon ile ilgili mezun şartlarına tabidirler",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.035019,
+          "sigmoid_score": 0.508754,
+          "content_length": 919
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "MADDE 4- (1) Bu Yönergede geçen; a) Aday: Pedagojik Formasyon Eğitimi Sertifika Programına başvuran ilgili lisans progra",
+          "pre_rerank_score": 0.2305,
+          "raw_reranker_score": 0.031856,
+          "sigmoid_score": 0.507963,
+          "content_length": 1007
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] Öğretmenlik Uygulaması yapmak i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.029693,
+          "sigmoid_score": 0.507423,
+          "content_length": 1045
+        }
+      ]
+    },
+    {
+      "query": "Pedagojik formasyon derslerinin tumunu almak zorunlu mu?",
+      "department": "academic_programs",
+      "profile": "explore_formasyon_turk",
+      "results": [
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Öğretmenlik Uygulaması  GENEL TOPLAM  Pedagojik formasyon eğitiminde verilen derslerin hepsinin alınması zorunlu mudur? ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.977523,
+          "sigmoid_score": 0.726616,
+          "content_length": 592
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Öğrenciler seçmeli ders olarak aldıklarından dolayı dersler transkript içinde yer alacaktır. Sadece bir Transkript düzen",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.893051,
+          "sigmoid_score": 0.709519,
+          "content_length": 769
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar uyarınca, Millî Eğitim Bakanlığı ",
+          "pre_rerank_score": 0.2763,
+          "raw_reranker_score": 0.231134,
+          "sigmoid_score": 0.557528,
+          "content_length": 994
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Eğitim/Eğitim Bilimleri Fakülteleri dışında formasyon eğitimi nasıl verilecek?  Öğrencilerin kayıtlı olduğu programın ör",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.213267,
+          "sigmoid_score": 0.553116,
+          "content_length": 976
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "[MADDE 10- (1) Bir dönemde en az bir dersten devam şartını sağlayan, ancak bazı] (2) (Değişik fıkra: 22.12.2023-317) Öğr",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.164714,
+          "sigmoid_score": 0.541086,
+          "content_length": 1010
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] (4) İlgili ders kayıt döneminde",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.156474,
+          "sigmoid_score": 0.539039,
+          "content_length": 1098
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "[MADDE 10- (1) Bir dönemde en az bir dersten devam şartını sağlayan, ancak bazı] Eğitimi Sertifika Programı hükümlerine ",
+          "pre_rerank_score": 0.2716,
+          "raw_reranker_score": 0.15635,
+          "sigmoid_score": 0.539008,
+          "content_length": 801
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] programından mezun olabilirler.",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.153327,
+          "sigmoid_score": 0.538257,
+          "content_length": 570
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] Öğretmenlik Uygulaması yapmak i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.121988,
+          "sigmoid_score": 0.530459,
+          "content_length": 1045
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Diplomasını almak isteyen öğrenciler diplomalarını alabilecektir. Ancak formasyon ile ilgili mezun şartlarına tabidirler",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.105054,
+          "sigmoid_score": 0.526239,
+          "content_length": 919
+        }
+      ]
+    },
+    {
+      "query": "Pedagojik formasyon dersleri en erken hangi yariyilda alinabilir?",
+      "department": "academic_programs",
+      "profile": "explore_formasyon_turk",
+      "results": [
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar uyarınca, Millî Eğitim Bakanlığı ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.900438,
+          "sigmoid_score": 0.71104,
+          "content_length": 994
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Eğitim/Eğitim Bilimleri Fakülteleri dışında formasyon eğitimi nasıl verilecek?  Öğrencilerin kayıtlı olduğu programın ör",
+          "pre_rerank_score": 0.3561,
+          "raw_reranker_score": 0.896354,
+          "sigmoid_score": 0.7102,
+          "content_length": 976
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "MADDE 7- (1) (Değişik fıkra: 22.12.2023-317) Pedagojik Formasyon Eğitimi Sertifika Programında yer alan dersler, 29.12.2",
+          "pre_rerank_score": 0.3342,
+          "raw_reranker_score": 0.742543,
+          "sigmoid_score": 0.677552,
+          "content_length": 1001
+        },
+        {
+          "source": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+          "content_preview": "Diplomasını almak isteyen öğrenciler diplomalarını alabilecektir. Ancak formasyon ile ilgili mezun şartlarına tabidirler",
+          "pre_rerank_score": 0.3768,
+          "raw_reranker_score": 0.731803,
+          "sigmoid_score": 0.675201,
+          "content_length": 919
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] Öğretmenlik Uygulaması yapmak i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.454852,
+          "sigmoid_score": 0.611792,
+          "content_length": 1045
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "[MADDE 10- (1) Bir dönemde en az bir dersten devam şartını sağlayan, ancak bazı] (2) (Değişik fıkra: 22.12.2023-317) Öğr",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.26517,
+          "sigmoid_score": 0.565907,
+          "content_length": 1010
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] (4) İlgili ders kayıt döneminde",
+          "pre_rerank_score": 0.2433,
+          "raw_reranker_score": 0.246614,
+          "sigmoid_score": 0.561343,
+          "content_length": 1098
+        },
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "content_preview": "[Madde 6 – (1) İlgili birim ve kişiler arasında iş birliğini sağlayarak derslerin düzenli bir şekilde] tarihler arasında",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.221528,
+          "sigmoid_score": 0.555157,
+          "content_length": 1125
+        },
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "content_preview": "[MADDE 5 – (1) 29.12.2022 tarihli Yükseköğretim Genel Kurulu toplantısında alınan karar] programından mezun olabilirler.",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.216125,
+          "sigmoid_score": 0.553822,
+          "content_length": 570
+        },
+        {
+          "source": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+          "content_preview": "MADDE 4 - (1) Bu Usul ve Esaslarda geçen; a) Alan: Talim ve Terbiye Kurulu'nun 20.02.2014 tarih ve 09 no’lu kararının ek",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.203898,
+          "sigmoid_score": 0.550799,
+          "content_length": 1007
+        }
+      ]
+    },
+    {
+      "query": "Yemek bursu basvurulari nereden yapilir?",
+      "department": "finance,student_affairs",
+      "profile": "explore_finance_edge_turk",
+      "results": [
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 6 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursuna başvuru şekli, şartları ve süresi, SKSDB tarafından her",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.976401,
+          "sigmoid_score": 0.726394,
+          "content_length": 941
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 7 - (1) Birim yöneticileri tarafından üç kişiden oluşan “Yemek Bursu Değerlendirme Komisyonu” oluşturulur. (2) (De",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.834253,
+          "sigmoid_score": 0.697253,
+          "content_length": 993
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 8 - (1) (Değişik fıkra: 27/11/2025-2025/312) Aşağıda belirtilen nitelikleri taşıyan öğrenciler; “Yemek Bursu Başvu",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.537616,
+          "sigmoid_score": 0.631258,
+          "content_length": 955
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 5 - (1) Her akademik yılın başında geçmiş yıllardaki uygulamalar, gözlenen ihtiyaçlar ve elde edilen performanslar",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.225548,
+          "sigmoid_score": 0.556149,
+          "content_length": 406
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 7 - (1) Birim yöneticileri tarafından üç kişiden oluşan “Yemek Bursu] kontenjanın %10’u dâhilinde yemek bursu ver",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.131385,
+          "sigmoid_score": 0.532799,
+          "content_length": 454
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursuna başvuru şekli,] bursu iptal edilir. Gerekli görülürse ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.102972,
+          "sigmoid_score": 0.52572,
+          "content_length": 502
+        },
+        {
+          "source": "kimlik_kartı_yönergesi.pdf",
+          "content_preview": "[MADDE 8 – (1) (Değişik fıkra: 22.12.2023-315) Yemekhanelerdeki turnike geçişlerinde] (3) (Değişik fıkra: 22.12.2023-315",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.091372,
+          "sigmoid_score": 0.522827,
+          "content_length": 646
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 4 - (1) Bu Yönergede geçen; a) Birim: Fakülte, Enstitü, Yüksekokul, Meslek Yüksekokulu ve Konservatuarı, b) Birim ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.052586,
+          "sigmoid_score": 0.513143,
+          "content_length": 674
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 9 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursu, SKSDB’ye bağlı] öğrencinin yemek bursu kesilir ve hakkı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.044498,
+          "sigmoid_score": 0.511123,
+          "content_length": 190
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 9 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursu, SKSDB’ye bağlı yemekhanelerde, akademik yıl boyunca geçe",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.037766,
+          "sigmoid_score": 0.50944,
+          "content_length": 981
+        }
+      ]
+    },
+    {
+      "query": "Bursum hangi sartlarda kesilir?",
+      "department": "finance,student_affairs",
+      "profile": "explore_finance_edge_turk",
+      "results": [
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 9 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursu, SKSDB’ye bağlı yemekhanelerde, akademik yıl boyunca geçe",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.048269,
+          "sigmoid_score": 0.512065,
+          "content_length": 981
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 9 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursu, SKSDB’ye bağlı] öğrencinin yemek bursu kesilir ve hakkı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.043363,
+          "sigmoid_score": 0.510839,
+          "content_length": 190
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 5 - (1) Her akademik yılın başında geçmiş yıllardaki uygulamalar, gözlenen ihtiyaçlar ve elde edilen performanslar",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001974,
+          "sigmoid_score": 0.500493,
+          "content_length": 406
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 8 - (1) (Değişik fıkra: 27/11/2025-2025/312) Aşağıda belirtilen nitelikleri] kontenjan sınırlamasına tabi olmaksı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001282,
+          "sigmoid_score": 0.50032,
+          "content_length": 234
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 4 - (1) Bu Yönergede geçen; a) Birim: Fakülte, Enstitü, Yüksekokul, Meslek Yüksekokulu ve Konservatuarı, b) Birim ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001064,
+          "sigmoid_score": 0.500266,
+          "content_length": 674
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 7 - (1) Birim yöneticileri tarafından üç kişiden oluşan “Yemek Bursu] kontenjanın %10’u dâhilinde yemek bursu ver",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000979,
+          "sigmoid_score": 0.500245,
+          "content_length": 454
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 9 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursu, SKSDB’ye bağlı] (7) (Ek fıkra: 27/11/2025-2025/312) Yem",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.00095,
+          "sigmoid_score": 0.500237,
+          "content_length": 209
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursuna başvuru şekli,] bursu iptal edilir. Gerekli görülürse ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000895,
+          "sigmoid_score": 0.500224,
+          "content_length": 502
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 6 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursuna başvuru şekli, şartları ve süresi, SKSDB tarafından her",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000865,
+          "sigmoid_score": 0.500216,
+          "content_length": 941
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 8 - (1) (Değişik fıkra: 27/11/2025-2025/312) Aşağıda belirtilen nitelikleri taşıyan öğrenciler; “Yemek Bursu Başvu",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000462,
+          "sigmoid_score": 0.500115,
+          "content_length": 955
+        }
+      ]
+    },
+    {
+      "query": "Kayit ekraninda borclu ya da fazla ucretli gorunuyorsam ne yapmaliyim?",
+      "department": "finance",
+      "profile": "explore_finance_edge_turk",
+      "results": [
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 10 - (1) Birimin gerekçeli talebi üzerine, Rektör’ün olur verdiği durumlar hariç olmak üzere, fırsat eşitliğinin s",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.9e-05,
+          "sigmoid_score": 0.500005,
+          "content_length": 970
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 7 - (1) Birim yöneticileri tarafından üç kişiden oluşan “Yemek Bursu Değerlendirme Komisyonu” oluşturulur. (2) (De",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.8e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 993
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 7 - (1) Başvuru; a) Kısmi zamanlı olarak çalışmak isteyen öğrenciler, “portal.omu.edu.tr” web adresinden “Kısmi Za",
+          "pre_rerank_score": -0.1243,
+          "raw_reranker_score": 1.8e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 966
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 5 - (1) Her akademik yılın başında geçmiş yıllardaki uygulamalar, gözlenen ihtiyaçlar ve elde edilen performanslar",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.8e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 406
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 8 - (1) Kısmi zamanlı olarak çalıştırılacak öğrencilerin seçimi, birimlerde oluşturulan komisyonlar tarafından yap",
+          "pre_rerank_score": -0.1933,
+          "raw_reranker_score": 1.8e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 676
+        },
+        {
+          "source": "idari_ve_mali_işler_birimi.txt",
+          "content_preview": "İş sağlığı ve güvenliği ile ilgili tedbirlere uymak.  Görevlerini ve kullandığı otomasyon sistemlerine doğru ve zamanınd",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 751
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 8 - (1) (Değişik fıkra: 27/11/2025-2025/312) Aşağıda belirtilen nitelikleri taşıyan öğrenciler; “Yemek Bursu Başvu",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 955
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursuna başvuru şekli,] bursu iptal edilir. Gerekli görülürse ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 502
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 6 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursuna başvuru şekli, şartları ve süresi, SKSDB tarafından her",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 941
+        },
+        {
+          "source": "idari_ve_mali_işler_birimi.txt",
+          "content_preview": "Yürütmüş olduğu faaliyetleri değerlendirmek, gerekli gördüğü durumlarda düzeltici iyileştirici faaliyet (DİF) tasarlamak",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 948
+        }
+      ]
+    },
+    {
+      "query": "Program suresini asarsam katki payi oder miyim?",
+      "department": "finance",
+      "profile": "explore_finance_edge_turk",
+      "results": [
+        {
+          "source": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf",
+          "content_preview": "2- 2025/32951 sayılı Cumhurbaşkanlığı Kararı’nın 1/5 maddesi gereği; engelli öğrencilerimize II. Öğretim de engeli oranı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.024348,
+          "sigmoid_score": 0.506087,
+          "content_length": 913
+        },
+        {
+          "source": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf",
+          "content_preview": "Turizm Fakültesi 1.759,00 879,50 Mimarlık Fakültesi 2.397,00 1.198,50 Güzel Sanatlar Fakültesi 1.953,00 976,50 Yaşar Doğ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001105,
+          "sigmoid_score": 0.500276,
+          "content_length": 870
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 15 - (1) Bu yönerge hükümleri Rektör tarafından yürütülür. Yönergenin kabul edildiği Senato Kararının; Tarihi Sayı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000102,
+          "sigmoid_score": 0.500025,
+          "content_length": 209
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 12 - (1) Bu Yönerge hükümlerini, Ondokuz Mayıs Üniversitesi Rektörü yürütür. Yönergenin kabul edildiği Senato Kara",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 5.3e-05,
+          "sigmoid_score": 0.500013,
+          "content_length": 346
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "[MADDE 10 - (1) Birimin gerekçeli talebi üzerine, Rektör’ün olur verdiği durumlar hariç olmak] (altmış) saattir. (4) Çal",
+          "pre_rerank_score": -0.2086,
+          "raw_reranker_score": 4.9e-05,
+          "sigmoid_score": 0.500012,
+          "content_length": 1072
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 1 - (1) Bu yönergenin amacı; öğrencilerin, kişilik ve becerilerini geliştirerek, iş disiplini edinmiş, üretken bir",
+          "pre_rerank_score": -0.1887,
+          "raw_reranker_score": 4.2e-05,
+          "sigmoid_score": 0.50001,
+          "content_length": 296
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 8 - (1) (Değişik fıkra: 27/11/2025-2025/312) Aşağıda belirtilen nitelikleri] kontenjan sınırlamasına tabi olmaksı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 3.8e-05,
+          "sigmoid_score": 0.500009,
+          "content_length": 234
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "[MADDE 9 - (1) (Değişik fıkra: 27/11/2025-2025/312) Yemek bursu, SKSDB’ye bağlı] öğrencinin yemek bursu kesilir ve hakkı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 3.8e-05,
+          "sigmoid_score": 0.500009,
+          "content_length": 190
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 3 - (1) Bu Yönerge, 2547 sayılı Yükseköğretim Kanununun 46 ncı maddesi ve Yükseköğretim Kurumları, Mediko-Sosyal, ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 3.3e-05,
+          "sigmoid_score": 0.500008,
+          "content_length": 236
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 1- (1) Bu Yönergenin amacı, başarılı ve gelir düzeyi düşük öğrencilerin öğle veya akşam yemeği ihtiyaçlarının ücre",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 3.2e-05,
+          "sigmoid_score": 0.500008,
+          "content_length": 187
+        }
+      ]
+    },
+    {
+      "query": "Harc iadesi icin IBAN ve dekontla nereye basvurmam gerekir?",
+      "department": "finance",
+      "profile": "explore_finance_edge_turk",
+      "results": [
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "[MADDE 12 - (1) Öğrencilerin ücret ve ödemelerinde aşağıdaki hususlara riayet edilir:] e) “KZÖ Puantaj Girişi” sekmesind",
+          "pre_rerank_score": -0.02,
+          "raw_reranker_score": 2.4e-05,
+          "sigmoid_score": 0.500006,
+          "content_length": 431
+        },
+        {
+          "source": "idari_ve_mali_işler_birimi.txt",
+          "content_preview": "Yatay Geçiş ve Burs İşlemleri Ofisi Mehtap AKTAŞ Memur ☎ 7312  Destek Hizmetleri Ofisi Mustafa ÖZDEMİR Destek Personeli ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 2.2e-05,
+          "sigmoid_score": 0.500005,
+          "content_length": 814
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 12 - (1) Öğrencilerin ücret ve ödemelerinde aşağıdaki hususlara riayet edilir: a) Öğrencilere bir saatlik çalışma ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.8e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 1006
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 7 - (1) Başvuru; a) Kısmi zamanlı olarak çalışmak isteyen öğrenciler, “portal.omu.edu.tr” web adresinden “Kısmi Za",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.8e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 966
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 10 - (1) Birimin gerekçeli talebi üzerine, Rektör’ün olur verdiği durumlar hariç olmak üzere, fırsat eşitliğinin s",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.8e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 970
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "content_preview": "MADDE 4 - (1) Bu Yönergede geçen; a) Birim: Fakülte, Enstitü, Yüksekokul, Meslek Yüksekokulu ve Konservatuarı, b) Birim ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 674
+        },
+        {
+          "source": "idari_ve_mali_işler_birimi.txt",
+          "content_preview": "Birimi ile ilgili olmayan geri bildirimleri ÜNİKYS yazılımı aracılığıyla ilişkisini kaldırarak  kalite koordinatörlüğüne",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 814
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "[MADDE 10 - (1) Birimin gerekçeli talebi üzerine, Rektör’ün olur verdiği durumlar hariç olmak] (14) Boş kalan kontenjanl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 275
+        },
+        {
+          "source": "idari_ve_mali_işler_birimi.txt",
+          "content_preview": "Uygunsuzlukları dikkate alarak ÜNİKYS yazılımında yer alan düzeltme kayıtlarını oluşturmak,  YGG sürecinde KYS Performan",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 937
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "content_preview": "MADDE 11 - (1) Kısmi zamanlı olarak çalışan öğrenciler, işlerini dikkat ve itina ile yerine getirmek, kendilerine teslim",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 1.7e-05,
+          "sigmoid_score": 0.500004,
+          "content_length": 941
+        }
+      ]
+    },
+    {
+      "query": "Sinava giremedigim ders icin mazeret sinavi basvurusu nasil yapilir?",
+      "department": "student_affairs",
+      "profile": "explore_exam_and_attendance_turk",
+      "results": [
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "content_preview": "MADDE 22- (1) İzinli sayıldığı için veya ilgili yönetim kurulu tarafından kabul edilen haklı ve geçerli bir mazereti ned",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.243966,
+          "sigmoid_score": 0.560691,
+          "content_length": 1016
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 22 – (1) İzinli sayıldığı için veya ilgili yönetim kurulu tarafından kabul edilen haklı ve geçerli bir mazereti ne",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.202755,
+          "sigmoid_score": 0.550516,
+          "content_length": 849
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "content_preview": "MADDE 21- (1) Bir dersin dönem/yıl sonu ve bütünleme sınavına girebilmek için zamanında ders kaydının yapılmış ve devam ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.13972,
+          "sigmoid_score": 0.534873,
+          "content_length": 907
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 21 – (1) Bir dersin dönem/yılsonu ve bütünleme sınavına girebilmek için zamanında ders kaydının yapılmış ve devam ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.123197,
+          "sigmoid_score": 0.53076,
+          "content_length": 882
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Muafiyet talep ettiğim dersin notu en az ne olmadır? Bir dersten muaf olabilmesi için notunun en az CC ve üzeri olması g",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.03862,
+          "sigmoid_score": 0.509654,
+          "content_length": 926
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 25 – (1) (Değişik:RG-14/7/2019-30831) Sınavlar, yazılı olarak yapılır. Ancak, dersin özelliği nedeniyle sınavın sö",
+          "pre_rerank_score": 0.0453,
+          "raw_reranker_score": 0.022891,
+          "sigmoid_score": 0.505723,
+          "content_length": 1005
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "[MADDE 31- (1) Öğrencilerin belgelendirecekleri önemli mazeretlerinin veya eğitimöğretimlerine katkıda] sınavlara gireme",
+          "pre_rerank_score": 0.0377,
+          "raw_reranker_score": 0.017595,
+          "sigmoid_score": 0.504399,
+          "content_length": 1037
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Yarıyıl sonu/ Bütünleme sınavlarının mazeret sınav hakkı var mı?  Mazeret sınavına girmek için almış olduğum sağlık rapo",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.015942,
+          "sigmoid_score": 0.503985,
+          "content_length": 878
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "content_preview": "MADDE 25- (1) Sınavların yüz yüze ve yazılı olarak yapılması esastır. Bununla birlikte dersin özelliği nedeniyle sınavın",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.006982,
+          "sigmoid_score": 0.501745,
+          "content_length": 927
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "[MADDE 31- (1) Öğrencilerin belgelendirecekleri önemli mazeretlerinin veya eğitimöğretimlerine katkıda] b) İlçelerde kay",
+          "pre_rerank_score": 0.1011,
+          "raw_reranker_score": 0.006184,
+          "sigmoid_score": 0.501546,
+          "content_length": 1045
+        }
+      ]
+    },
+    {
+      "query": "Bir dersten kac kez sinav hakkina sahibim?",
+      "department": "academic_programs",
+      "profile": "explore_exam_and_attendance_turk",
+      "results": [
+        {
+          "source": "uzaktan_eğitim_önlisans_ve_lisans_yönergesi.pdf",
+          "content_preview": "[MADDE 10 - (1) (Değişik fıkra-3/11/2022- 2022/344) Bir öğretim yarıyılında her ders] hakkını ise o dersin açıldığı ilk ",
+          "pre_rerank_score": 0.2127,
+          "raw_reranker_score": 0.148708,
+          "sigmoid_score": 0.537109,
+          "content_length": 397
+        },
+        {
+          "source": "uzaktan_eğitim_tezsiz_yüksek_lisans_programı_yönergesi.pdf",
+          "content_preview": "[MADDE 14 - (1) Yıl boyunca yapılacak sınavlar şunlardır:] giremedikleri ara sınav hakkını aynı yarıyıl içinde kullanırl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.111509,
+          "sigmoid_score": 0.527848,
+          "content_length": 380
+        },
+        {
+          "source": "uzaktan_eğitim_önlisans_ve_lisans_yönergesi.pdf",
+          "content_preview": "MADDE 10 - (1) (Değişik fıkra-3/11/2022- 2022/344) Bir öğretim yarıyılında her ders için en az bir dönem içi değerlendir",
+          "pre_rerank_score": 0.1508,
+          "raw_reranker_score": 0.02701,
+          "sigmoid_score": 0.506752,
+          "content_length": 978
+        },
+        {
+          "source": "mühendislik_fakültesi_ortak_sınav_yönergesi.pdf",
+          "content_preview": "MADDE 9 –Belirlenen sınav tarihlerinde, haklı ve geçerli mazeretleri yönetim kurulunca kabul edilen öğrencilerin mazeret",
+          "pre_rerank_score": 0.1394,
+          "raw_reranker_score": 0.020017,
+          "sigmoid_score": 0.505004,
+          "content_length": 408
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 44 – (1) Yüksek lisans derecesi ile kabul edilen öğrenci en geç beşinci yarıyılın, lisans derecesi ile kabul edile",
+          "pre_rerank_score": 0.1373,
+          "raw_reranker_score": 0.011878,
+          "sigmoid_score": 0.502969,
+          "content_length": 933
+        },
+        {
+          "source": "bilgisayar_derslerinin_muafiyeti_sınav_yönergesi.pdf",
+          "content_preview": "MADDE 8- (1) Üniversite birimlerinden herhangi bir bölümüne kayıt yaptıran öğrencilerimiz Güz ve Bahar Yarıyılı ENF kodl",
+          "pre_rerank_score": 0.1785,
+          "raw_reranker_score": 0.011596,
+          "sigmoid_score": 0.502899,
+          "content_length": 208
+        },
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "[MADDE 26 – (1) Öğrencilerin mazeretleri, haklı ve geçerli nedenlerin varlığı halinde] katılamayan öğrencilere, süresi i",
+          "pre_rerank_score": 0.1331,
+          "raw_reranker_score": 0.006224,
+          "sigmoid_score": 0.501556,
+          "content_length": 1079
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "content_preview": "MADDE 15 – (1) (Değişik fıkra: 03/11/2022-345) Hazırlık sınıflarına devam zorunludur. Programında haftada 30 saat ders b",
+          "pre_rerank_score": 0.1442,
+          "raw_reranker_score": 0.006003,
+          "sigmoid_score": 0.501501,
+          "content_length": 442
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "MADDE 37 – (1) Yeterlik sınavı, derslerini ve seminerini tamamlayan öğrencinin alanındaki temel konular ve kavramlar ile",
+          "pre_rerank_score": 0.1316,
+          "raw_reranker_score": 0.005743,
+          "sigmoid_score": 0.501436,
+          "content_length": 673
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "[MADDE 10- (1) Bir dönemde en az bir dersten devam şartını sağlayan, ancak bazı] (2) (Değişik fıkra: 22.12.2023-317) Öğr",
+          "pre_rerank_score": 0.13,
+          "raw_reranker_score": 0.005468,
+          "sigmoid_score": 0.501367,
+          "content_length": 1010
+        }
+      ]
+    },
+    {
+      "query": "Bagil degerlendirme sistemi nasil isler?",
+      "department": "academic_programs",
+      "profile": "explore_exam_and_attendance_turk",
+      "results": [
+        {
+          "source": "tıp_fakültesi_tıp_doktorluğu_programı.pdf",
+          "content_preview": "MADDE 21- (1) Sınavların değerlendirilmesi, 100 puan üzerinden yapılır. Yıl sonu puanlarının 4'lük sistemdeki karşılıkla",
+          "pre_rerank_score": -0.0565,
+          "raw_reranker_score": 0.001507,
+          "sigmoid_score": 0.500377,
+          "content_length": 705
+        },
+        {
+          "source": "risk_ve_fırsat_yönetimi_prosedürü.pdf",
+          "content_preview": "faaliyetleri ve iç kontrol sonucunda geriye kalan risk ifade eden net risk puanını ifade ifade eder. Risklerin ölçülmesi",
+          "pre_rerank_score": -0.1397,
+          "raw_reranker_score": 0.00109,
+          "sigmoid_score": 0.500272,
+          "content_length": 208
+        },
+        {
+          "source": "eğitim_öğretim_perfomansını_değerlendirme_prosedürü.pdf",
+          "content_preview": "değerlendirilir. Öğrenciler, PP.5.3.FR.0020 Ders Değerlendirme Anketinde yer alan 10 ölçüte göre ilgili akademik döneme ",
+          "pre_rerank_score": -0.121,
+          "raw_reranker_score": 0.000806,
+          "sigmoid_score": 0.500201,
+          "content_length": 1012
+        },
+        {
+          "source": "personel_performans_değerlendirme_yönergesi.pdf",
+          "content_preview": "MADDE 6 - (1) Performans değerlendirme, Ek-1 ve Ek-2’de bulunan Performans Değerlendirme Formu ile personelin fiilen gör",
+          "pre_rerank_score": -0.129,
+          "raw_reranker_score": 0.00043,
+          "sigmoid_score": 0.500107,
+          "content_length": 994
+        },
+        {
+          "source": "bilgi_güvenliği_yedekleme_prosedürü.pdf",
+          "content_preview": "yedekler yüklenmelidir. d. NAS (Network Attached Storage): Yerel ağa dahil edilmiş, genellikle RAID ile yapılandırılmış ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000367,
+          "sigmoid_score": 0.500092,
+          "content_length": 981
+        },
+        {
+          "source": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+          "content_preview": "[MADDE 5- (1) Millî Eğitim Bakanlığı Talim ve Terbiye Kurulunun 20 Şubat 2014 tarih ve] programa yerleştirilir. Asıl ve ",
+          "pre_rerank_score": -0.1154,
+          "raw_reranker_score": 0.000242,
+          "sigmoid_score": 0.50006,
+          "content_length": 603
+        },
+        {
+          "source": "satın_alma_prosedürü.pdf",
+          "content_preview": "yerine getiren tedarikçiler; a)Ürün/hizmet/yapım kalitesi, b)Teslim süresi, c)Sözleşme süresince veya sonrasında sorunla",
+          "pre_rerank_score": -0.0269,
+          "raw_reranker_score": 0.000133,
+          "sigmoid_score": 0.500033,
+          "content_length": 1014
+        },
+        {
+          "source": "eğitim_öğretim_perfomansını_değerlendirme_prosedürü.pdf",
+          "content_preview": "planının yapılmasından sorumludur. d) Fakülte/MYO/YO eğitim öğretim ölçme ve değerlendirme komisyonunun EÖPD sistemi üze",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 9.9e-05,
+          "sigmoid_score": 0.500025,
+          "content_length": 1017
+        },
+        {
+          "source": "sağlık_uygulama_ve_araştırma_merkezi_tıp_laboratuvarları_yönergesi.pdf",
+          "content_preview": "[MADDE 10- (1) Taşınır kayıt ve kontrol yetkilisi, merkez müdürü tarafından] teslim etmeden görevlerinden ayrılamazlar. ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 9.8e-05,
+          "sigmoid_score": 0.500024,
+          "content_length": 217
+        },
+        {
+          "source": "eğitim_öğretim_perfomansını_değerlendirme_prosedürü.pdf",
+          "content_preview": "4.1. Genel Değerlendirme Akademik birimlerde KGS İşlem takvimi doğrultusunda Birim Kalite Komisyonları tarafından EÖPD s",
+          "pre_rerank_score": -0.1366,
+          "raw_reranker_score": 9.8e-05,
+          "sigmoid_score": 0.500024,
+          "content_length": 989
+        }
+      ]
+    },
+    {
+      "query": "Final sinavina girme sarti olarak devam yuzdesi kac olmalidir?",
+      "department": "academic_programs",
+      "profile": "explore_exam_and_attendance_turk",
+      "results": [
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "content_preview": "MADDE 20 – (1) Devam zorunluluğunu yerine getiren hazırlık sınıfı öğrencileri yılsonu sınavına girmeye hak kazanırlar. Y",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.050683,
+          "sigmoid_score": 0.512668,
+          "content_length": 255
+        },
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "[MADDE 23 – (1) 2547 sayılı Yükseköğretim Kanununun 5/ı maddesinde belirtilen ortak] (4) Bütünleme sınavı; blok dışı der",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.02629,
+          "sigmoid_score": 0.506572,
+          "content_length": 1102
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "content_preview": "MADDE 15 – (1) (Değişik fıkra: 03/11/2022-345) Hazırlık sınıflarına devam zorunludur. Programında haftada 30 saat ders b",
+          "pre_rerank_score": 0.1643,
+          "raw_reranker_score": 0.014216,
+          "sigmoid_score": 0.503554,
+          "content_length": 442
+        },
+        {
+          "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+          "content_preview": "[MADDE 23 – (1) 2547 sayılı Yükseköğretim Kanununun 5/ı maddesinde belirtilen ortak] bütünleme sınav haklarını, o grupla",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.010653,
+          "sigmoid_score": 0.502663,
+          "content_length": 564
+        },
+        {
+          "source": "sürekli_eğitim_merkezi_yönergesi.pdf",
+          "content_preview": "MADDE 12 - (1) Eğitim programlarına devam zorunluluğu en az %80’dir ve ilgili birimin gerek görmesi halinde devam zorunl",
+          "pre_rerank_score": 0.1481,
+          "raw_reranker_score": 0.003591,
+          "sigmoid_score": 0.500898,
+          "content_length": 423
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "MADDE 22 – (1) Yarıyıl içi değerlendirme ve yarıyıl sonu sınavları aşağıdaki gibidir: a) (Değişik:RG-5/12/2022-32034) Ya",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.002716,
+          "sigmoid_score": 0.500679,
+          "content_length": 879
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 22 – (Başlığı ile Birlikte Değişik:RG-18/4/2020-31103) (1) Yarıyıl içi değerlendirme ve yarıyıl sonu sınavları aşa",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.002709,
+          "sigmoid_score": 0.500677,
+          "content_length": 999
+        },
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "[MADDE 23 – (1) 2547 sayılı Yükseköğretim Kanununun 5/ı maddesinde belirtilen ortak] devam edemez, başarısız olduğu bloğ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001134,
+          "sigmoid_score": 0.500283,
+          "content_length": 1014
+        },
+        {
+          "source": "tıp_fakültesi_tıp_doktorluğu_programı.pdf",
+          "content_preview": "MADDE 26- (1) a) (Değişik bent: 12.02.2026-40) 1, 2 ve 3.sınıfta ders yılı sonunda yıl sonu sınav puanı 50 puanın altınd",
+          "pre_rerank_score": 0.1564,
+          "raw_reranker_score": 0.001088,
+          "sigmoid_score": 0.500272,
+          "content_length": 980
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "[MADDE 44 – (1) Yüksek lisans derecesi ile kabul edilen öğrenci en geç beşinci yarıyılın, lisans] (3) Yeterlik sınavı, y",
+          "pre_rerank_score": 0.1671,
+          "raw_reranker_score": 0.000982,
+          "sigmoid_score": 0.500245,
+          "content_length": 811
+        }
+      ]
+    },
+    {
+      "query": "Not itirazi icin ne kadar sureye sahibim?",
+      "department": "student_affairs",
+      "profile": "explore_exam_and_attendance_turk",
+      "results": [
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 27- (1) (Değişik:RG-14/7/2019-30831) Öğrenciler sınav sonuçlarına, sınav sonuçlarının açıklanmasından itibaren ilg",
+          "pre_rerank_score": 0.1463,
+          "raw_reranker_score": 0.067567,
+          "sigmoid_score": 0.516885,
+          "content_length": 916
+        },
+        {
+          "source": "yonerge_yuzde_on_basari_degerlendirme.pdf",
+          "content_preview": "MADDE 8– (1) Yüzde on hesaplamaları ilan edildikten sonra, itirazı olan öğrenciler 15 gün içerisinde fakülte/yüksekokulu",
+          "pre_rerank_score": 0.2518,
+          "raw_reranker_score": 0.061425,
+          "sigmoid_score": 0.515351,
+          "content_length": 420
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Muafiyet talep ettiğim dersin notu en az ne olmadır? Bir dersten muaf olabilmesi için notunun en az CC ve üzeri olması g",
+          "pre_rerank_score": 0.2317,
+          "raw_reranker_score": 0.058722,
+          "sigmoid_score": 0.514676,
+          "content_length": 926
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "content_preview": "[MADDE 27- (1) Sınavların bitiminde cevap anahtarının bir örneği, sadece ilgili birim yöneticilerinin] üç iş günü içinde",
+          "pre_rerank_score": 0.091,
+          "raw_reranker_score": 0.047291,
+          "sigmoid_score": 0.511821,
+          "content_length": 304
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "MADDE 27- (1) Sınavların bitiminde cevap anahtarının bir örneği, sadece ilgili birim yöneticilerinin erişebileceği biçim",
+          "pre_rerank_score": 0.1032,
+          "raw_reranker_score": 0.022394,
+          "sigmoid_score": 0.505598,
+          "content_length": 998
+        },
+        {
+          "source": "ders_yeterlilik_sınavı_uygulama_yönergesi.pdf",
+          "content_preview": "MADDE 7 - (1) Bu sınavlarda alınan not, ara sınav şartı aranmaksızın en az 60 (CC) ise öğrenci başarılı sayılır ve trans",
+          "pre_rerank_score": 0.1621,
+          "raw_reranker_score": 0.019292,
+          "sigmoid_score": 0.504823,
+          "content_length": 483
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) Komisyon, öğrencilerin yeterlik başvurusunda bulundukları, daha önce] geçmiş olması kaydıyla, muafiyet ve",
+          "pre_rerank_score": 0.0623,
+          "raw_reranker_score": 0.013057,
+          "sigmoid_score": 0.503264,
+          "content_length": 1046
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Üniversitenize dikey/yatay geçiş yolu ile kayıt yaptırdım. Üniversitenizden muaf olduğum dersleri ve almam gereken dersl",
+          "pre_rerank_score": 0.1875,
+          "raw_reranker_score": 0.003795,
+          "sigmoid_score": 0.500949,
+          "content_length": 954
+        },
+        {
+          "source": "öğrenci_konukevi_uygulama_yönergesi.pdf",
+          "content_preview": "MADDE 22 - (1) Savunma, Konukevi Müdürlüğü tarafından alınır. Savunma alınmadan disiplin yaptırımı verilemez. Öğrenciye ",
+          "pre_rerank_score": 0.099,
+          "raw_reranker_score": 0.00111,
+          "sigmoid_score": 0.500277,
+          "content_length": 394
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "MADDE 24- (1) Öğrenciler; her eğitim-öğretim yılında, en fazla iki ders için olmak üzere, akademik takvimde belirtilen t",
+          "pre_rerank_score": 0.0393,
+          "raw_reranker_score": 0.001046,
+          "sigmoid_score": 0.500261,
+          "content_length": 864
+        }
+      ]
+    },
+    {
+      "query": "Yaz okulunda en fazla kac ders alabilirim?",
+      "department": "student_affairs",
+      "profile": "explore_graduation_gpa_turk",
+      "results": [
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "MADDE 11 – (1) Yaz okulu programına yapılacak misafir öğrenci ön başvuruları elektronik ortamda kabul edilir, kayıt ve b",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.989146,
+          "sigmoid_score": 0.728919,
+          "content_length": 971
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "content_preview": "[MADDE 11 – (1) Yaz okulu programına yapılacak misafir öğrenci ön başvuruları] (2) Öğrenci bir yaz okulunda OMÜ ve/veya ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.984199,
+          "sigmoid_score": 0.727941,
+          "content_length": 1055
+        },
+        {
+          "source": "yonerge_yaz_okulu_egitim_ogretim.pdf",
+          "content_preview": "[MADDE 11 – (1) Yaz okulu programına yapılacak misafir öğrenci ön başvuruları] Yabancı Diller Yüksekokulu tarafından açı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.909265,
+          "sigmoid_score": 0.71285,
+          "content_length": 1025
+        },
+        {
+          "source": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 12 – (1) (Değişik:RG-24/5/2015-29365) Yaz dönemi programına yapılacak misafir öğrenci ön başvuruları elektronik or",
+          "pre_rerank_score": 0.3979,
+          "raw_reranker_score": 0.880842,
+          "sigmoid_score": 0.706997,
+          "content_length": 983
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "[MADDE 11 – (1) Yaz okulu programına yapılacak misafir öğrenci ön başvuruları elektronik] koşuluyla yaz okulunda ders al",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.874342,
+          "sigmoid_score": 0.705648,
+          "content_length": 1074
+        },
+        {
+          "source": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 11 – (Değişik:RG-24/5/2015-29365) (1) Yaz döneminde açılacak dersi verecek öğretim elemanı, ilgili bölüm kurulunun",
+          "pre_rerank_score": 0.3914,
+          "raw_reranker_score": 0.535618,
+          "sigmoid_score": 0.630792,
+          "content_length": 339
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "content_preview": "MADDE 10 – (1) Yaz okulunda açılacak dersler, kontenjanları, dersleri verecek öğretim üyeleri ve haftalık ders programla",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.168853,
+          "sigmoid_score": 0.542113,
+          "content_length": 948
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "MADDE 10 – (1) Yaz okulunda açılacak dersler, kontenjanları, dersleri verecek öğretim üyeleri ve haftalık ders programla",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.168853,
+          "sigmoid_score": 0.542113,
+          "content_length": 948
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "content_preview": "[MADDE 10 – (1) Yaz okulunda açılacak dersler, kontenjanları, dersleri verecek öğretim üyeleri] ile ders/grup açılabilme",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.080982,
+          "sigmoid_score": 0.520234,
+          "content_length": 574
+        },
+        {
+          "source": "yonerge_yaz_okulu_egitim_ogretim.pdf",
+          "content_preview": "[MADDE 10 – (1) Yaz okulunda açılacak dersler, kontenjanları, dersleri verecek öğretim] özelliğine göre daha az öğrenci ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.077055,
+          "sigmoid_score": 0.519254,
+          "content_length": 628
+        }
+      ]
+    },
+    {
+      "query": "Basarisiz oldugum dersi tekrar almak icin ne yapmaliyim?",
+      "department": "student_affairs",
+      "profile": "explore_graduation_gpa_turk",
+      "results": [
+        {
+          "source": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "[MADDE 12 – (1) (Değişik:RG-24/5/2015-29365) Yaz dönemi programına yapılacak misafir] (4) Öğrenci, ders eksiğini tamamla",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.433242,
+          "sigmoid_score": 0.606648,
+          "content_length": 1021
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "[MADDE 10 – (1) Öğrenciler, her dönem/yıl başında akademik takvimde belirlenen süre içinde öğrenci bilgi sistemi] dersle",
+          "pre_rerank_score": 0.1909,
+          "raw_reranker_score": 0.349992,
+          "sigmoid_score": 0.586616,
+          "content_length": 1098
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Daha önce başarısız olduğum derslere devam zorunluluğum var mı? Tekrar alınan derslerin devam koşulu yerine getirilmişse",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.31306,
+          "sigmoid_score": 0.577632,
+          "content_length": 854
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "content_preview": "MADDE 19- (1) Azami öğrenim süresi içerisinde mezun olamayan öğrenciler bakımından, öğretim programı değişikliği veya de",
+          "pre_rerank_score": 0.1713,
+          "raw_reranker_score": 0.289381,
+          "sigmoid_score": 0.571845,
+          "content_length": 472
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Hangi durumda üst sınıftan ders alabilirim? Birinci yarıyıl sonundan itibaren; varsa öncelikle daha önce alıp başarısız ",
+          "pre_rerank_score": 0.3475,
+          "raw_reranker_score": 0.281122,
+          "sigmoid_score": 0.569821,
+          "content_length": 943
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "5-i Derslerini uzaktan eğitim yolu ile alabilmek için ne yapmam gerekir? Ders kayıt esnasında dersler UZAKTAN EĞİTİM ve ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.261524,
+          "sigmoid_score": 0.565011,
+          "content_length": 896
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Devamsızlıktan kaldığım dersin bütünleme sınavına girebilir miyim? Bir dersten devamsızlıktan kalan öğrenci o dersin büt",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.150418,
+          "sigmoid_score": 0.537534,
+          "content_length": 580
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "content_preview": "[MADDE 10- (1) Öğrenciler, her dönem/yıl başında akademik takvimde belirlenen süre içinde öğrenci bilgi] yaptırmak zorun",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.136677,
+          "sigmoid_score": 0.534116,
+          "content_length": 1120
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 19 – (1) Azami öğrenim süresi içerisinde mezun olamayan öğrenciler bakımından, öğretim programı değişikliği veya i",
+          "pre_rerank_score": 0.1671,
+          "raw_reranker_score": 0.116041,
+          "sigmoid_score": 0.528978,
+          "content_length": 593
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Daha önceden başardığım derslerden muaf tutulabilmem için ne yapmam gerekir? Fakülteye/yüksekokula/meslek yüksekokuluna ",
+          "pre_rerank_score": 0.2356,
+          "raw_reranker_score": 0.111185,
+          "sigmoid_score": 0.527768,
+          "content_length": 447
+        }
+      ]
+    },
+    {
+      "query": "Azami ogrenim suresi dolunca ne olur?",
+      "department": "academic_programs",
+      "profile": "explore_graduation_gpa_turk",
+      "results": [
+        {
+          "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+          "content_preview": "MADDE 12 – (1) Diş Hekimliği Fakültesinde normal eğitim-öğretim süresi, her biri en az 32 haftalık ders yılını kapsayan ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.042349,
+          "sigmoid_score": 0.510586,
+          "content_length": 651
+        },
+        {
+          "source": "yonetmelik_lisansustu_egitim_ogretim.pdf",
+          "content_preview": "[MADDE 50 – (1) Sağlık gerekçesiyle ilgili uygulama esasları aşağıda belirtildiği şekildedir:] belgesi. (5) Afet ve salg",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.010833,
+          "sigmoid_score": 0.502708,
+          "content_length": 380
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "MADDE 31 – (1) Tezli yüksek lisans programını tamamlama süresi bilimsel hazırlıkta geçen süre hariç, kayıt olduğu progra",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.008882,
+          "sigmoid_score": 0.50222,
+          "content_length": 616
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 31 – (1) Tezli yüksek lisans programını tamamlama süresi bilimsel hazırlıkta geçen süre hariç, kayıt olduğu progra",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.008494,
+          "sigmoid_score": 0.502123,
+          "content_length": 626
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 43 – (1) Sanatta yeterlik programını tamamlama süresi, bilimsel hazırlıkta geçen süre hariç yüksek lisans derecesi",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.003163,
+          "sigmoid_score": 0.500791,
+          "content_length": 1016
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "MADDE 43 – (1) Sanatta yeterlik programını tamamlama süresi, bilimsel hazırlıkta geçen süre hariç yüksek lisans derecesi",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.003027,
+          "sigmoid_score": 0.500757,
+          "content_length": 956
+        },
+        {
+          "source": "yonerge_uluslararasi_ogrenci_kabul.pdf",
+          "content_preview": "[MADDE 14 – (1) Öğrencilerin Türkçe yeterlilik seviyelerinin belirlenmesinde, OMÜ] kurumlardan birine kayıt yaptırmayan ",
+          "pre_rerank_score": -0.0466,
+          "raw_reranker_score": 0.00235,
+          "sigmoid_score": 0.500587,
+          "content_length": 525
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 36 – (1) Doktora programı, bilimsel hazırlıkta geçen süre hariç tezli yüksek lisans derecesi ile kabul edilenler i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001939,
+          "sigmoid_score": 0.500485,
+          "content_length": 979
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "MADDE 36 – (1) Doktora programı, bilimsel hazırlıkta geçen süre hariç tezli yüksek lisans derecesi ile kabul edilenler i",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001917,
+          "sigmoid_score": 0.500479,
+          "content_length": 958
+        },
+        {
+          "source": "tıpta_uzmanlık_eğitimi_yönergesi.pdf",
+          "content_preview": "MADDE 5 – (1) TUEK 12 (on iki) üyeden oluşur. Bu üyeler: a) Kurum eğitim sorumlusu, b) Dekanın görevlendireceği temel tı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.00157,
+          "sigmoid_score": 0.500392,
+          "content_length": 948
+        }
+      ]
+    },
+    {
+      "query": "Donem dondurma icin saglik raporu yeterli mi?",
+      "department": "student_affairs",
+      "profile": "explore_graduation_gpa_turk",
+      "results": [
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "[MADDE 31- (1) Öğrencilerin belgelendirecekleri önemli mazeretlerinin veya eğitimöğretimlerine katkıda] sınavlara gireme",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.015372,
+          "sigmoid_score": 0.503843,
+          "content_length": 1037
+        },
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "content_preview": "adaylar için yüzde ona girdiğine dair belge, dondurduğunu gösteren belge, ✓ “Yatay Geçiş Muafiyet Talep Formu”. (Muafiye",
+          "pre_rerank_score": 0.0477,
+          "raw_reranker_score": 0.004182,
+          "sigmoid_score": 0.501045,
+          "content_length": 422
+        },
+        {
+          "source": "staj_yönergesi.pdf",
+          "content_preview": "[MADDE 11 – (1) Staj çalışmaları Bölüm Staj Komisyonu tarafından incelenir ve] (6) Staj Komisyonu, gerekli gördüğü takdi",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.001458,
+          "sigmoid_score": 0.500364,
+          "content_length": 1036
+        },
+        {
+          "source": "1_elektrik_elektronik_staj_ilkeleri_ve_uygulama_esasları.pdf",
+          "content_preview": "(b) Değerlendirme “Başarılı/Başarısız “ biçiminde yapılır. (c) Değerlendirme sonucunda yeterli veya başarılı görülmeyen ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000752,
+          "sigmoid_score": 0.500188,
+          "content_length": 976
+        },
+        {
+          "source": "2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+          "content_preview": "hazırlık sınıfı ve/veya eşdeğer yabancı dil sınavlarından başarılı olduğunu gösterir belge, 10. Kayıt donduran öğrencile",
+          "pre_rerank_score": 0.0249,
+          "raw_reranker_score": 0.000715,
+          "sigmoid_score": 0.500179,
+          "content_length": 656
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "content_preview": "Kayıt işlemi bittikten sonra sistem çıktı alarak saklamam gerekir mi? Böyle bir zorunluluk bulunmamaktadır. Fakat zaman ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000702,
+          "sigmoid_score": 0.500175,
+          "content_length": 978
+        },
+        {
+          "source": "mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+          "content_preview": "MADDE 10 – (1) Staj çalışmaları Bölüm Staj Komisyonu tarafından incelenir ve değerlendirilir. (2) Staj raporu, dönemin b",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000674,
+          "sigmoid_score": 0.500168,
+          "content_length": 1000
+        },
+        {
+          "source": "staj_esaslar.pdf",
+          "content_preview": "MADDE 13– (a) Staj çalışmaları Bölüm staj Komisyonu tarafından incelenir ve değerlendirilir. (b) Değerlendirme Üniversit",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000647,
+          "sigmoid_score": 0.500162,
+          "content_length": 966
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 31 – (1) Öğrencilerin, belgelendirecekleri önemli mazeretlerinin veya eğitim-öğretimlerine katkıda bulunacak Ünive",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.000582,
+          "sigmoid_score": 0.500145,
+          "content_length": 993
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "content_preview": "yapacakları döneme kadar müfredatlarında yer alan bütün dersleri almış olmaları gerekmektedir. Derslerin tamamını başarm",
+          "pre_rerank_score": -0.046,
+          "raw_reranker_score": 0.000559,
+          "sigmoid_score": 0.50014,
+          "content_length": 736
+        }
+      ]
+    },
+    {
+      "query": "Mezuniyet icin GNO en az kac olmalidir?",
+      "department": "student_affairs",
+      "profile": "explore_graduation_gpa_turk",
+      "results": [
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "MADDE 30- (1) Kayıtlı olduğu programın 14 üncü maddede belirtilen yükümlülüklerini yerine getiren, ders geçme sisteminde",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.272353,
+          "sigmoid_score": 0.56767,
+          "content_length": 923
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 30 – (1) (Değişik:RG-14/7/2019-30831) Kayıtlı olduğu programın 14 üncü maddede belirtilen yükümlülüklerini yerine ",
+          "pre_rerank_score": 0.2774,
+          "raw_reranker_score": 0.192582,
+          "sigmoid_score": 0.547997,
+          "content_length": 839
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "[MADDE 29- (1) Başarı notu, öğrencilerin dönem/yıl içi değerlendirme notu ile dönem/yıl sonu veya bütünleme] ve bu sınav",
+          "pre_rerank_score": 0.2623,
+          "raw_reranker_score": 0.065684,
+          "sigmoid_score": 0.516415,
+          "content_length": 1091
+        },
+        {
+          "source": "ön_lisans_ve_lisans_yatay_geçiş_yönergesi2.pdf",
+          "content_preview": "MADDE 3- (1) Bu Yönergede geçen; a) Birim: İlgili fakülte/yüksekokul/konservatuar/meslek yüksekokulunu, b) Birim yönetim",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.024195,
+          "sigmoid_score": 0.506048,
+          "content_length": 1013
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) Komisyon, öğrencilerin yeterlik başvurusunda bulundukları, daha önce] geçer not ise CC harf notu olarak k",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.008655,
+          "sigmoid_score": 0.502164,
+          "content_length": 571
+        },
+        {
+          "source": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "[MADDE 13 – (1) Yaz döneminde derslere devam zorunludur. Bir dersin devam koşulunun daha] (3) (Değişik:RG-24/5/2015-2936",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.006959,
+          "sigmoid_score": 0.50174,
+          "content_length": 925
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "content_preview": "[MADDE 28- (1) Üniversitede ders geçme sisteminin uygulandığı birimlerde; yabancı dil hazırlık sınıfları hariç,] (2) Üni",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.006432,
+          "sigmoid_score": 0.501608,
+          "content_length": 843
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "content_preview": "[MADDE 28– (1) (Değişik:RG-7/10/2019-30911) Üniversitede ders geçme sisteminin uygulandığı birimlerde, bir dersin] sonu ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.004555,
+          "sigmoid_score": 0.501139,
+          "content_length": 934
+        },
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "content_preview": "• Disiplin cezası almış öğrencilerin yatay geçiş başvuruları kabul edilmez. Başvuru esnasında disiplin cezası almadıklar",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.003583,
+          "sigmoid_score": 0.500896,
+          "content_length": 593
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "content_preview": "[MADDE 12 – (1) Yaz okulunda derslere devam zorunludur. Bir dersin devam koşulunun] (3) Yaz okulunda açılan dersler için",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.003135,
+          "sigmoid_score": 0.500784,
+          "content_length": 1024
+        }
+      ]
+    },
+    {
+      "query": "Zorunlu staj icin SGK baslangic islemleri nasil yapilir?",
+      "department": "student_affairs",
+      "profile": "explore_internship_project_turk",
+      "results": [
+        {
+          "source": "staj_iş_akışı.pdf",
+          "content_preview": "EK-1 Staj Formu  Doldurduğunuz formları aşağıda gösterilen şekilde onaylatınız. NOT: Sorumlu öğretim üyesi için imza ve",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.172611,
+          "sigmoid_score": 0.543046,
+          "content_length": 826
+        },
+        {
+          "source": "staj_bilgilendirme_toplantısı_sunumu_2024_2025.pdf",
+          "content_preview": "Staj Bilgilendirme Toplantısı  Staj Tarihleri & Son Belge Teslim Tarihi 2024-2025 BAHAR YARIYILI DÖNEMSEL STAJ TAKVİMİ Z",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.139922,
+          "sigmoid_score": 0.534924,
+          "content_length": 970
+        },
+        {
+          "source": "zorunlu_stajda_izlenecek_yol.pdf",
+          "content_preview": "Staja başlamadan önce sigorta giriş belgesi talep eden staj yerleri için sigorta giriş belgesi staja başlamadan önce e-d",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.060513,
+          "sigmoid_score": 0.515124,
+          "content_length": 886
+        },
+        {
+          "source": "mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+          "content_preview": "MADDE 8 – (1) Öğrenciler staja başlama tarihinden en az 30 gün önce, “Zorunlu Staj Formu”nu düzenlemeleri ve fakülte, so",
+          "pre_rerank_score": 0.1819,
+          "raw_reranker_score": 0.040091,
+          "sigmoid_score": 0.510021,
+          "content_length": 902
+        },
+        {
+          "source": "document.pdf",
+          "content_preview": "kendileri veya stajyeri tarafından yaptırılmalıdır. Ara dönemde (Staj takvimi dışında) zorunlu staj yapılabilmesi için; ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.027577,
+          "sigmoid_score": 0.506894,
+          "content_length": 921
+        },
+        {
+          "source": "document.pdf",
+          "content_preview": "ONDOKUZ MAYIS ÜNİVERSİTESİ REKTÖRLÜĞÜ Mühendislik Fakültesi Dekanlığı Sayı : E-81181891-773-2400060311 22.03.2024 Konu :",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.026027,
+          "sigmoid_score": 0.506506,
+          "content_length": 924
+        },
+        {
+          "source": "1_elektrik_elektronik_staj_ilkeleri_ve_uygulama_esasları.pdf",
+          "content_preview": "iv. İşletme, bakım ve onarım yöntemlerinin incelenmesi v. Yapılan mühendislik uygulamalarına ilişkin iş bilgileri • İşin",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.01052,
+          "sigmoid_score": 0.50263,
+          "content_length": 1021
+        },
+        {
+          "source": "staj_esaslar.pdf",
+          "content_preview": "MADDE 11– Öğrenci, staj yeri ile ilgili bilgilerin de yer aldığı “Zorunlu Staj Formu” ekli bir dilekçe ile Bölüme başvur",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.01026,
+          "sigmoid_score": 0.502565,
+          "content_length": 258
+        },
+        {
+          "source": "staj_ilkeleri_23122019_inş_müh.pdf",
+          "content_preview": "MADDE 11– Öğrenci, staj yeri ile ilgili bilgilerin de yer aldığı “Zorunlu Staj Formu” ekli (Ek-2) bir dilekçe ile Bölüme",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.009202,
+          "sigmoid_score": 0.5023,
+          "content_length": 265
+        },
+        {
+          "source": "staj_iş_akışı.pdf",
+          "content_preview": "STAJ İŞ AKIŞI PP.1.2.FR.0021-Zorunlu Staj Başvuru Formunu Omü Kalem formlardan (https://kalem.omu.edu.tr/tr/document_cat",
+          "pre_rerank_score": 0.203,
+          "raw_reranker_score": 0.0088,
+          "sigmoid_score": 0.5022,
+          "content_length": 1005
+        }
+      ]
+    },
+    {
+      "query": "Staj defterini teslim etme suresi ne kadardir?",
+      "department": "student_affairs",
+      "profile": "explore_internship_project_turk",
+      "results": [
+        {
+          "source": "mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+          "content_preview": "MADDE 10 – (1) Staj çalışmaları Bölüm Staj Komisyonu tarafından incelenir ve değerlendirilir. (2) Staj raporu, dönemin b",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.497137,
+          "sigmoid_score": 0.621786,
+          "content_length": 1000
+        },
+        {
+          "source": "staj_esaslar.pdf",
+          "content_preview": "[MADDE 12– (a) Öğrenci Staj değerlendirme Formu ve Staj Raporunu] Üniversitesi Mühendislik Fakültesi Dekanlığı 55139 Kur",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.438357,
+          "sigmoid_score": 0.607867,
+          "content_length": 1069
+        },
+        {
+          "source": "1_elektrik_elektronik_staj_ilkeleri_ve_uygulama_esasları.pdf",
+          "content_preview": "Madde 11. (a) Öğrenci Staj Değerlendirme Formunu ve Staj Raporunu Mühendislik Fakültesi Öğrenci işlerinden temin eder. (",
+          "pre_rerank_score": 0.2555,
+          "raw_reranker_score": 0.200937,
+          "sigmoid_score": 0.550066,
+          "content_length": 1003
+        },
+        {
+          "source": "staj_bilgilendirme_toplantısı_sunumu_2024_2025.pdf",
+          "content_preview": "STAJ UYGULAMA USUL, ESAS VE İLKELERİ  STAJ KONULARI  İNŞAAT MÜHENDİSLİĞİ BÖLÜMÜ ÖĞRENCİ STAJ RAPORU (DEFTERİ) 2024-2025 ",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.20088,
+          "sigmoid_score": 0.550052,
+          "content_length": 794
+        },
+        {
+          "source": "zorunlu_stajda_izlenecek_yol.pdf",
+          "content_preview": "Staja başlamadan önce sigorta giriş belgesi talep eden staj yerleri için sigorta giriş belgesi staja başlamadan önce e-d",
+          "pre_rerank_score": 0.2318,
+          "raw_reranker_score": 0.141747,
+          "sigmoid_score": 0.535378,
+          "content_length": 886
+        },
+        {
+          "source": "zorunlu_gönüllü_staj_başvuru_formu.pdf",
+          "content_preview": "1.Stajımın başlangıç tarihinin değişmesi halinde en az 1 hafta önceden kurum yetkilisine bilgi vereceğim. 2.Staja fiilen",
+          "pre_rerank_score": 0.2424,
+          "raw_reranker_score": 0.099054,
+          "sigmoid_score": 0.524743,
+          "content_length": 1004
+        },
+        {
+          "source": "staj_yönergesi.pdf",
+          "content_preview": "[MADDE 10 – (1) Öğrenci Staj Değerlendirme Formunu ve Staj Raporunu] Bölümü 55139 Kurupelit / SAMSUN adresine gönderilir",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.095199,
+          "sigmoid_score": 0.523782,
+          "content_length": 737
+        },
+        {
+          "source": "staj_sıkça_sorulanlar.pdf",
+          "content_preview": "İNŞAAT MÜHENDİSLİĞİ BÖLÜMÜ ZORUNLU STAJI HAKKINDA SIKÇA SORULAN SORULAR KİMLER STAJ YAPABİLİR? Bahar yarıyılında “İNŞ320",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.073945,
+          "sigmoid_score": 0.518478,
+          "content_length": 1010
+        },
+        {
+          "source": "1_elektrik_elektronik_staj_ilkeleri_ve_uygulama_esasları.pdf",
+          "content_preview": "edilmeyecektir. (f) Staj Değerlendirme Formu, staj yerindeki yetkili amir tarafından öğrencinin devamı, ilgisi, başarısı",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.066703,
+          "sigmoid_score": 0.51667,
+          "content_length": 1000
+        },
+        {
+          "source": "mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+          "content_preview": "[MADDE 9 – (1) Öğrenci Staj Değerlendirme Formunu ve Staj Raporunu Mühendislik Fakültesi] zarf üzeri imzalı ve mühürlü o",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.063553,
+          "sigmoid_score": 0.515883,
+          "content_length": 1076
+        }
+      ]
+    },
+    {
+      "query": "Bitirme projesi danismani nasil belirlenir?",
+      "department": "student_affairs",
+      "profile": "explore_internship_project_turk",
+      "results": [
+        {
+          "source": "endüstri_mühendisliği_tasarımı_yaptırma_ve_değerlendirme_ı̇lkeleri_güncel.pdf",
+          "content_preview": "Grup Üyeleri Öğrencinin Numarası / Adı Soyadı İmza  EK-2  ONDOKUZMAYIS ÜNİVERSİTESİ MÜHENDİSLİK FAKÜLTESİ ENDÜSTRİ MÜHEN",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.062171,
+          "sigmoid_score": 0.515538,
+          "content_length": 992
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "content_preview": "[MADDE 6 - (1) Komisyon, öğrencilerin yeterlik başvurusunda bulundukları, daha önce] başvurusu sahibi olan öğrenciler; k",
+          "pre_rerank_score": -0.025,
+          "raw_reranker_score": 0.040818,
+          "sigmoid_score": 0.510203,
+          "content_length": 1014
+        },
+        {
+          "source": "mat_bitirme_çalışması_ilkeleri.pdf",
+          "content_preview": "MADDE 4 – (1) Bitirme Çalışması danışmanı Matematik Bölümü Öğretim üyeleri arasından seçilir. (2) Bitirme Çalışmasında d",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.025821,
+          "sigmoid_score": 0.506455,
+          "content_length": 624
+        },
+        {
+          "source": "mat_bitirme_çalışması_ilkeleri.pdf",
+          "content_preview": "MADDE 2 –(1) Bitirme çalışmaları; Lisans Eğitim-Öğretim planlarında yer alan, ders saati sayısı ve kredisi belirli, proj",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.022242,
+          "sigmoid_score": 0.50556,
+          "content_length": 691
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "content_preview": "[MADDE 24- (1) Öğrenciler; her eğitim-öğretim yılında, en fazla iki ders için olmak üzere, akademik takvimde] yarışmalar",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.017554,
+          "sigmoid_score": 0.504388,
+          "content_length": 552
+        },
+        {
+          "source": "bağıl_değerlendirme_yönergesi.pdf",
+          "content_preview": "[MADDE 5 - Bağıl Değerlendirme uygulama esasları üç farklı yöntemle belirlenir.] Üstü ≤57.49 64.99 59.99 49.99 44.99 39.",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.015413,
+          "sigmoid_score": 0.503853,
+          "content_length": 837
+        },
+        {
+          "source": "mat_bitirme_çalışması_ilkeleri.pdf",
+          "content_preview": "MADDE 3-(1) Bitirme Çalışması ile öğrencilerimize; bilgiye ulaşma, bilgiyi kullanarak bağımsız olarak bir çalışma yapabi",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.015268,
+          "sigmoid_score": 0.503817,
+          "content_length": 736
+        },
+        {
+          "source": "mat_bitirme_çalışması_ilkeleri.pdf",
+          "content_preview": "MADDE 14 – (1) Bitirme Çalışması; Dış Kapak, İç kapak sayfası, İçindekiler, Simge listesi, Kısaltma listesi, Şekil liste",
+          "pre_rerank_score": 0.0092,
+          "raw_reranker_score": 0.009183,
+          "sigmoid_score": 0.502296,
+          "content_length": 225
+        },
+        {
+          "source": "mat_bitirme_çalışması_ilkeleri.pdf",
+          "content_preview": "MADDE 11 – (1) Bitirme Çalışmasının ana bölüm başlıkları 1, 2, 3, … ile numaralandırılır. Alt bölüm başlıklarında ikili,",
+          "pre_rerank_score": -0.0466,
+          "raw_reranker_score": 0.00564,
+          "sigmoid_score": 0.50141,
+          "content_length": 412
+        },
+        {
+          "source": "mup_ilke_ve_esasları.pdf",
+          "content_preview": "[MADDE 9-] c) Danışmanın uygun görmesi ve Bölüm Başkanlığının onayı ile öğrencinin Bitirme Çalışması konusu MUP ile iliş",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.00542,
+          "sigmoid_score": 0.501355,
+          "content_length": 604
+        }
+      ]
+    },
+    {
+      "query": "Staj yerim degisirse ne yapmaliyim?",
+      "department": "student_affairs",
+      "profile": "explore_internship_project_turk",
+      "results": [
+        {
+          "source": "zorunlu_gönüllü_staj_başvuru_formu.pdf",
+          "content_preview": "1.Stajımın başlangıç tarihinin değişmesi halinde en az 1 hafta önceden kurum yetkilisine bilgi vereceğim. 2.Staja fiilen",
+          "pre_rerank_score": 0.334,
+          "raw_reranker_score": 0.343795,
+          "sigmoid_score": 0.585112,
+          "content_length": 1004
+        },
+        {
+          "source": "staj_esaslar.pdf",
+          "content_preview": "MADDE 7– (a) Öğrenciler staj yerlerini kendileri bulmak zorundadırlar. Fakülte, Bölüm ve Staj Komisyonu staj yeri bulmak",
+          "pre_rerank_score": 0.2707,
+          "raw_reranker_score": 0.050126,
+          "sigmoid_score": 0.512529,
+          "content_length": 1009
+        },
+        {
+          "source": "mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+          "content_preview": "MADDE 7- (1) Öğrenciler staj yerlerini kendileri bulmak zorundadırlar. Fakülte, Bölüm ve Staj Komisyonu staj yeri bulmak",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.040848,
+          "sigmoid_score": 0.510211,
+          "content_length": 974
+        },
+        {
+          "source": "staj_yönergesi.pdf",
+          "content_preview": "MADDE 8 - (1) Öğrenciler staj yerlerini kendileri bulmak zorundadırlar. Fakülte, Bölüm ve Staj Komisyonu staj yeri bulma",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.036602,
+          "sigmoid_score": 0.509149,
+          "content_length": 955
+        },
+        {
+          "source": "işyeri_staj_sözleşmesi.pdf",
+          "content_preview": "MADDE 16 – a. Öğrencilerin işletmedeki iş yeri stajını Fakülte Dekanlığı/Yüksekokul Müdürlüğü veya Meslek Yüksekokulu ta",
+          "pre_rerank_score": 0.3189,
+          "raw_reranker_score": 0.027286,
+          "sigmoid_score": 0.506821,
+          "content_length": 990
+        },
+        {
+          "source": "mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+          "content_preview": "MADDE 6- (1) Bölüm öğrencileri 30 (otuz) iş gününü kapsamak üzere 6. yarıyıldan itibaren mesleki staj yapmak zorundadırl",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.019195,
+          "sigmoid_score": 0.504799,
+          "content_length": 730
+        },
+        {
+          "source": "endüstri_mühendisliği_bölümü_staj_ilkeleri_06_01_2022.pdf",
+          "content_preview": "MADDE 7- (1) Öğrenciler staj yerlerini kendileri bulmak zorundadırlar. Fakülte, Bölüm ve Staj  Komisyonu staj yeri bulma",
+          "pre_rerank_score": 0.2875,
+          "raw_reranker_score": 0.014881,
+          "sigmoid_score": 0.50372,
+          "content_length": 1005
+        },
+        {
+          "source": "1_elektrik_elektronik_staj_ilkeleri_ve_uygulama_esasları.pdf",
+          "content_preview": "Süre Madde 6. (a) Bölüm öğrencileri 40 iş günü mesleki staj yapmak zorundadırlar. Resmi tatil günleri yapılan çalışmalar",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.013028,
+          "sigmoid_score": 0.503257,
+          "content_length": 1006
+        },
+        {
+          "source": "staj_yönergesi.pdf",
+          "content_preview": "MADDE 7 - (1) Bölüm öğrencileri 30 (otuz) iş gününü kapsamak üzere 6. yarıyıldan itibaren mesleki staj yapmak zorundadır",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.009158,
+          "sigmoid_score": 0.502289,
+          "content_length": 667
+        },
+        {
+          "source": "işyeri_staj_sözleşmesi.pdf",
+          "content_preview": "MADDE 17 – a. İşletmede iş yeri stajı yapan öğrenciye, 3308 sayılı Kanunun 25 inci maddesi birinci fıkrasına göre öğrenc",
+          "pre_rerank_score": 0.2622,
+          "raw_reranker_score": 0.007882,
+          "sigmoid_score": 0.50197,
+          "content_length": 744
+        }
+      ]
+    },
+    {
+      "query": "Lisansustu ogrenciler icin tez teslim suresi ne kadardir?",
+      "department": "academic_programs",
+      "profile": "explore_internship_project_turk",
+      "results": [
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 48 – (1) Tez savunmasında başarılı olmak ve diğer koşulları da sağlamak kaydıyla tezinin ciltlenmiş en az üç kopya",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.455292,
+          "sigmoid_score": 0.611897,
+          "content_length": 977
+        },
+        {
+          "source": "yonetmelik_lisansustu_egitim_ogretim.pdf",
+          "content_preview": "MADDE 48 – (1) Tez savunmasında başarılı olmak ve diğer koşulları da sağlamak kaydıyla tezini sınava giriş tarihinden it",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.349776,
+          "sigmoid_score": 0.586563,
+          "content_length": 948
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 32 – (1) Yüksek lisans tez önerisi; danışmanın denetiminde öğrenci tarafından hazırlanır, anabilim/anasanat dalı k",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.21151,
+          "sigmoid_score": 0.552681,
+          "content_length": 667
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 33 – (1) (Değişik:RG-18/4/2020-31103) Tezli yüksek lisans programındaki bir öğrenci, elde ettiği sonuçları bağlı o",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.211248,
+          "sigmoid_score": 0.552616,
+          "content_length": 1020
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "[MADDE 9 – (1) Tezsiz ve tezli yüksek lisans, doktora ve sanatta yeterlik programlarına] üyesi başına düşen tez danışman",
+          "pre_rerank_score": 0.2441,
+          "raw_reranker_score": 0.209447,
+          "sigmoid_score": 0.552171,
+          "content_length": 712
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "MADDE 49 – (1) Tez savunmasında başarılı olmak ve diğer koşulları da sağlamak kaydıyla tezini sınava giriş tarihinden it",
+          "pre_rerank_score": 0.228,
+          "raw_reranker_score": 0.176623,
+          "sigmoid_score": 0.544041,
+          "content_length": 1012
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 41 – (1) Jüri üyeleri, adayın sunduğu doktora tezini bilimsel ve biçimsel yönden inceleyerek, hazırladıkları kişis",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.171033,
+          "sigmoid_score": 0.542654,
+          "content_length": 955
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "content_preview": "[MADDE 33 – (1) Tezli yüksek lisans programındaki bir öğrenci, elde ettiği sonuçları tez] (3) Tez çalışmasını tamamlayan",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.12005,
+          "sigmoid_score": 0.529977,
+          "content_length": 938
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "MADDE 30 – (1) Tezli yüksek lisans programı 24 ulusal ve 120 AKTS kredisidir. Program en az yedi ders, bir seminer ve te",
+          "pre_rerank_score": 0.2595,
+          "raw_reranker_score": 0.108829,
+          "sigmoid_score": 0.52718,
+          "content_length": 381
+        },
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "content_preview": "[MADDE 33 – (1) (Değişik:RG-18/4/2020-31103) Tezli yüksek lisans programındaki bir öğrenci,] kuruluna gönderilir. (3) Yü",
+          "pre_rerank_score": 0.0,
+          "raw_reranker_score": 0.090552,
+          "sigmoid_score": 0.522623,
+          "content_length": 1055
+        }
+      ]
+    }
+  ]
+}

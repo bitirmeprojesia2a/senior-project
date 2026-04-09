@@ -26,8 +26,14 @@ from src.routing.routing_policy import (
     detect_task_type as detect_task_type_by_policy,
     has_academic_calendar_markers,
     has_cap_markers,
+    has_general_akts_markers,
+    has_internship_markers,
     has_formal_rule_markers,
     has_international_markers,
+    has_scholarship_markers,
+    has_student_services_markers,
+    has_student_document_markers,
+    has_student_document_request_markers,
     has_payment_registration_timing_overlap,
     looks_like_personal_data_query as looks_like_personal_data_query_by_policy,
     looks_like_personal_credit_progress_query,
@@ -186,6 +192,90 @@ class DepartmentRouter:
 
     def _apply_routing_overrides(self, query: str, decision: _RuleRoutingDecision) -> _RuleRoutingDecision:
         lowered = normalize_routing_text(query)
+
+        if has_student_document_markers(lowered) or has_student_document_request_markers(lowered):
+            confidence = max(decision.confidence, 0.84)
+            return _RuleRoutingDecision(
+                departments=[Department.STUDENT_AFFAIRS],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.DIRECT,
+                reasoning="Transkript veya ogrenci belgesi niteliginde soru; ogrenci isleri oncelikli.",
+            )
+
+        if has_student_services_markers(lowered):
+            confidence = max(decision.confidence, 0.84)
+            return _RuleRoutingDecision(
+                departments=[Department.STUDENT_AFFAIRS],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.DIRECT,
+                reasoning="UBYS, sifre, kayit/donem dondurma veya ilisik kesme odakli soru; ogrenci isleri oncelikli.",
+            )
+
+        if has_internship_markers(lowered):
+            confidence = max(decision.confidence, 0.86)
+            return _RuleRoutingDecision(
+                departments=[Department.STUDENT_AFFAIRS],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.DIRECT,
+                reasoning="Staj, MUP, sanayi uygulamasi veya bitirme sureci; ogrenci isleri oncelikli.",
+            )
+
+        if contains_any(lowered, ("katki payi", "borc", "borclu", "iade", "fazla ucret", "harc burosu")):
+            confidence = max(decision.confidence, 0.84)
+            return _RuleRoutingDecision(
+                departments=[Department.FINANCE],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.DIRECT,
+                reasoning="Katki payi, borc, iade veya ucret duzeltme odakli soru; finans oncelikli.",
+            )
+
+        if has_general_akts_markers(lowered):
+            confidence = max(decision.confidence, 0.84)
+            return _RuleRoutingDecision(
+                departments=[Department.STUDENT_AFFAIRS],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.DIRECT,
+                reasoning="Program bazli mezuniyet AKTS sorusu; ogrenci isleri oncelikli ve structured veri kullanilmali.",
+            )
+
+        if has_scholarship_markers(lowered):
+            confidence = max(decision.confidence, 0.83)
+            if has_international_markers(lowered) and "burs" not in lowered:
+                return _RuleRoutingDecision(
+                    departments=[Department.ACADEMIC_PROGRAMS, Department.FINANCE],
+                    confidence=confidence,
+                    confidence_level=self._confidence_level(confidence),
+                    strategy=RoutingStrategy.PARALLEL,
+                    reasoning=(
+                        "Uluslararasi hibe veya benzeri bir burs sorusu; "
+                        "academic_programs ve finance birlikte ele alinmali."
+                    ),
+                )
+            if contains_any(lowered, ("basvuru", "ne zaman", "tarih", "surec", "son tarih")):
+                return _RuleRoutingDecision(
+                    departments=[Department.FINANCE, Department.STUDENT_AFFAIRS],
+                    confidence=confidence,
+                    confidence_level=self._confidence_level(confidence),
+                    strategy=RoutingStrategy.PARALLEL,
+                    reasoning=(
+                        "Burs basvurusu/takvimi sorusu; finance ve ogrenci isleri "
+                        "academic_programs yerine oncelikli ele alinmali."
+                    ),
+                )
+            return _RuleRoutingDecision(
+                departments=[Department.FINANCE, Department.STUDENT_AFFAIRS],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.PARALLEL,
+                reasoning=(
+                    "Burs odakli soru; finance ana departman, ogrenci isleri destek departmani olarak secildi."
+                ),
+            )
 
         if has_payment_registration_timing_overlap(lowered):
             confidence = max(decision.confidence, 0.86)

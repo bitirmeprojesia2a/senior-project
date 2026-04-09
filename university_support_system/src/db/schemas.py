@@ -61,6 +61,7 @@ class DepartmentResponse(BaseModel):
     answer: str
     sources: list[RAGSource] = Field(default_factory=list)
     db_data: Optional[dict[str, Any]] = None
+    generation_mode: Optional[str] = None
     success: bool = True
     response_time_ms: Optional[float] = None
     error: Optional[str] = None

@@ -1,5 +1,7 @@
 # RAG Değerlendirme Raporu
 
+> Durum Notu: Bu dosya belirli bir tarihte uretilmis tekil bir RAG degerlendirme snapshot'idir. Guncel performans ya da bugunku benchmark sonucu olarak yorumlanmamalidir; yeni olcumler icin `scripts/evaluate_rag.py` ve `scripts/live_question_test.py` kullanilmalidir.
+
 **Tarih:** 05 March 2026  
 **Test Sorusu Sayısı:** 20  
 **Top-K:** 5  

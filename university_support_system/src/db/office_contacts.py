@@ -6,10 +6,15 @@ from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import ProgrammingError
 
 from src.core.constants import Department
 from src.db.connection import get_session
 from src.db.support_models import OfficeContact
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -33,16 +38,20 @@ async def fetch_office_contacts(
 ) -> list[OfficeContactRecord]:
     """Departman veya ajan bazli ofis iletisim kayitlarini getirir."""
 
-    async with get_session() as session:
-        query = select(OfficeContact)
-        if active_only:
-            query = query.where(OfficeContact.is_active.is_(True))
-        if department is not None:
-            department_value = department.value if isinstance(department, Department) else department
-            query = query.where(OfficeContact.department == department_value)
+    try:
+        async with get_session() as session:
+            query = select(OfficeContact)
+            if active_only:
+                query = query.where(OfficeContact.is_active.is_(True))
+            if department is not None:
+                department_value = department.value if isinstance(department, Department) else department
+                query = query.where(OfficeContact.department == department_value)
 
-        result = await session.execute(query.order_by(OfficeContact.unit_name.asc(), OfficeContact.id.asc()))
-        records = result.scalars().all()
+            result = await session.execute(query.order_by(OfficeContact.unit_name.asc(), OfficeContact.id.asc()))
+            records = result.scalars().all()
+    except ProgrammingError:
+        logger.warning("office_contacts_table_missing_or_unavailable")
+        return []
 
     filtered: list[OfficeContactRecord] = []
     for record in records:

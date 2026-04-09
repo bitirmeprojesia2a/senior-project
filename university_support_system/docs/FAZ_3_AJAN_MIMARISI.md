@@ -1,5 +1,7 @@
 # FAZ 3 — Çok Ajanlı Sistem Mimarisi: Teknik Dokümantasyon
 
+> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 3 tasarim/snapshot kaydidir. Ajan ve orchestrator implementasyonu bu dokuman yazildiktan sonra daha moduler hale gelmistir; "temel iskelet" ibareleri bugunku kodun tam karsiligi degildir. Guncel gorunum icin `README.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` okunmalidir.
+
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 17 Mart 2026  
 **Hazırlayan:** Geliştirme Ekibi  
@@ -36,7 +38,7 @@ FAZ 3'ün temel hedefi: FAZ 0–2'de inşa edilen RAG altyapısı, LLM servisi v
 
 ### 2.2 Kapsam Dışı Departman
 
-`it_support` (Bilgi İşlem) bu fazda kapsam dışıdır. İlgili kod temizliği tamamlanmıştır:
+Bu belge yazildigi donemde tartisilan `it_support` alani bugunku aktif departman setinde yer almaz. O donemde ilgili kod temizligi su sekilde not edilmistir:
 - `Department.IT_SUPPORT` enum'dan kaldırıldı
 - `DEPARTMENT_CONFIGS` ve IT görev tipleri silindi
 - `src/agents/it/` klasörü silindi
@@ -790,13 +792,13 @@ Mevcut durumun sınırları:
 
 * uzman ajanlar şu an ağırlıklı olarak genel RAG + LLM tabanı üzerinde çalışır
 * kişisel veri/DB sorgulari halen parcali durumdadir
-* `announcement_agent` artik `announcements` tablosundan okuma yapar; scraping ve periyodik doldurma akisi ise sonraki fazdir
-* OTP/session auth aktif olsa da e-posta gönderimi şu an `email_stub` seviyesindedir; gerçek SMTP veya kurumsal posta entegrasyonu sonraki fazdır
-* A2A ağ iletişimi değil, önce yerel tipler ve görev akışı iskeleti kurulmuştur
-* Slack yüzeyi halen sonraki adım kapsamındadır
+* Bu belge yazildiginda `announcement_agent` icin veri kaynagi olarak `announcements` tablosu alinmis, scraping ve periyodik doldurma ise ayri bir sonraki is kalemi olarak not edilmistir
+* Bu belge yazildigi sirada auth akisinda stub agirlikli e-posta davranisindan bahsedilmistir; bugunku SMTP ve calistirma ayrintilari guncel kurulum belgelerinde yer alir
+* Bu belge yazildiginda odak, dagitik A2A ag iletisiminden once yerel tipler ve gorev akisi zeminini kurmakti
+* Slack yuzeyi bu belge doneminde sonraki adim olarak birakilmistir
 * `src/api/main.py` katmanı ana orkestratör, iç A2A dispatch ve auth session çözümlemesini uygulama içinde kullanır
 
-Bu nedenle FAZ 3 şu anda "tasarım + çalışan temel uygulama iskeleti" seviyesindedir.
+Bu nedenle bu belge, FAZ 3 doneminde sistemin "tasarimdan calisan uygulamaya gecis" asamasindaki durumunu temsil eder; bugunku sistemin tam resmi icin ana dokuman seti esas alinmalidir.
 
 ---
 

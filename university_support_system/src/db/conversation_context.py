@@ -16,11 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
 from src.core.constants import Department, TaskType
-from src.core.query_markers import (
-    ACADEMIC_DEPARTMENT_CONTEXT_MARKERS,
-    ANNOUNCEMENT_QUERY_MARKERS,
-)
-from src.core.text_normalization import contains_any_normalized, normalize_text
+from src.core.text_normalization import normalize_text
 from src.db.connection import get_session
 from src.db.conversation_models import ConversationState, ConversationTurn
 from src.db.schemas import RAGSource
@@ -45,6 +41,12 @@ _FOLLOW_UP_PREFIXES = (
     "o zaman",
     "ya da",
     "ya peki",
+    "ayrica",
+    "ek olarak",
+    "bununla birlikte",
+    "buna ek olarak",
+    "oyle ise",
+    "oylemi",
 )
 _FOLLOW_UP_SUFFIXES = (
     "ne zaman",
@@ -55,45 +57,52 @@ _FOLLOW_UP_SUFFIXES = (
     "sartlari",
     "ucreti ne kadar",
     "ucretleri ne kadar",
+    "nedir",
+    "ne demek",
+    "ne oluyor",
 )
-_EXPLICIT_TOPIC_MARKERS = (
-    "cap",
-    "cift anadal",
-    "yandal",
-    "erasmus",
-    "ikamet",
-    "harc",
-    "ucret",
-    "bors",
-    "mezuniyet",
-    "gno",
-    "staj",
-    "ders kaydi",
-    "yatay gecis",
-    "dikey gecis",
-    "onkosul",
-    "mufredat",
-    "yonerge",
-    "yonetmelik",
-)
-_STANDALONE_QUERY_MARKERS = (
-    "not ortalamam",
-    "ortalamam",
-    "gano",
-    "gpa",
-    "devam zorunlulugu",
-)
+_MIN_CONTENT_WORD_OVERLAP = 0.35
+
+
+def _rewrite_preserves_intent(original: str, rewritten: str) -> bool:
+    """Check that the LLM rewrite did not completely change the query topic.
+
+    Returns True when the rewritten query shares enough content words with
+    the original, preventing the conversation resolver from replacing
+    a standalone question with a totally different one.
+    """
+    stop_words = {
+        "bir", "bu", "su", "o", "ve", "ile", "icin", "ne", "nasil",
+        "nedir", "mi", "mu", "mu", "mi", "da", "de", "den", "dan",
+        "ya", "veya", "ama", "fakat", "gibi", "kadar", "en", "cok",
+        "az", "hangi", "kim", "nere", "nerede", "zaman", "ise",
+    }
+    orig_tokens = set(normalize_text(original).split()) - stop_words
+    rew_tokens = set(normalize_text(rewritten).split()) - stop_words
+    if not orig_tokens:
+        return True
+    overlap = len(orig_tokens & rew_tokens)
+    ratio = overlap / len(orig_tokens)
+    return ratio >= _MIN_CONTENT_WORD_OVERLAP
+
+
 _TOPIC_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("CAP / Cift Anadal", ("cap", "cift anadal", "cift ana dal")),
+    ("CAP / Cift Anadal", ("cap", "cift anadal", "cift ana dal", "ikinci lisans")),
     ("Yandal", ("yandal", "yan dal")),
-    ("Erasmus ve Uluslararasi Surecler", ("erasmus", "ikamet", "yos", "tomer")),
-    ("Harc ve Ogrenim Ucretleri", ("harc", "katki payi", "ucret", "odeme", "taksit")),
-    ("Burs ve Destekler", ("burs", "yemek bursu", "kismi zamanli")),
-    ("Kayit ve Akademik Takvim", ("kayit", "ders kaydi", "akademik takvim", "muafiyet")),
-    ("Mezuniyet ve Akademik Durum", ("mezuniyet", "gno", "transkript", "diploma")),
-    ("Staj ve Uygulamali Egitim", ("staj", "mup", "sanayi uygulamasi", "bitirme projesi")),
-    ("Mufredat ve Ders Yapisi", ("mufredat", "onkosul", "ders programi", "akts")),
-    ("Mevzuat ve Yonergeler", ("yonerge", "yonetmelik", "madde", "prosedur")),
+    ("Erasmus ve Uluslararasi Surecler", ("erasmus", "ikamet", "yos", "tomer", "denklik", "mevlana", "farabi", "degisim programi")),
+    ("Harc ve Ogrenim Ucretleri", ("harc", "katki payi", "ucret", "odeme", "taksit", "ogrenim ucreti")),
+    ("Burs ve Destekler", ("burs", "yemek bursu", "kismi zamanli", "basari bursu", "ihtiyac bursu")),
+    ("Kayit ve Akademik Takvim", ("kayit", "ders kaydi", "akademik takvim", "muafiyet", "kayit donemi", "ders secimi")),
+    ("Kayit Dondurma ve Silme", ("kayit dondurma", "donem dondurma", "kayit sildirme", "ilisik kesme")),
+    ("Mezuniyet ve Akademik Durum", ("mezuniyet", "gno", "transkript", "diploma", "not ortalamasi", "azami sure")),
+    ("Staj ve Uygulamali Egitim", ("staj", "mup", "sanayi uygulamasi", "bitirme projesi", "zorunlu staj", "mesleki uygulama")),
+    ("Sinav ve Degerlendirme", ("sinav", "butunleme", "final", "vize", "mazeret", "bagil degerlendirme", "harf notu")),
+    ("Yatay ve Dikey Gecis", ("yatay gecis", "dikey gecis", "kurum ici", "kurumlar arasi")),
+    ("Mufredat ve Ders Yapisi", ("mufredat", "onkosul", "ders programi", "akts", "secmeli", "zorunlu ders")),
+    ("Mevzuat ve Yonergeler", ("yonerge", "yonetmelik", "madde", "prosedur", "genelge")),
+    ("Belgeler", ("ogrenci belgesi", "transkript belgesi", "diploma eki", "tecil", "askerlik belgesi")),
+    ("Yaz Okulu", ("yaz okulu", "yaz donemi")),
+    ("Devamsizlik", ("devamsizlik", "devam zorunlulugu", "yoklama")),
 )
 
 
@@ -325,18 +334,7 @@ class ConversationContextService:
     ) -> dict[str, str | bool | None]:
         normalized_query = normalize_text(query)
         query_tokens = [token for token in normalized_query.split() if token]
-        has_course_code = _COURSE_CODE_PATTERN.search(query) is not None
-        has_explicit_topic = has_course_code or any(
-            marker in normalized_query for marker in _EXPLICIT_TOPIC_MARKERS
-        ) or contains_any_normalized(
-            normalized_query,
-            ANNOUNCEMENT_QUERY_MARKERS,
-        ) or contains_any_normalized(
-            normalized_query,
-            ACADEMIC_DEPARTMENT_CONTEXT_MARKERS,
-        ) or any(
-            marker in normalized_query for marker in _STANDALONE_QUERY_MARKERS
-        )
+
         starts_with_follow_up = self._starts_with_any(normalized_query, _FOLLOW_UP_PREFIXES)
         generic_question = any(
             normalized_query.startswith(marker) or normalized_query == marker
@@ -346,10 +344,9 @@ class ConversationContextService:
             token in {"bu", "bunun", "bunlar", "onun", "onlar", "orada", "burada"}
             for token in query_tokens[:3]
         )
-        short_query = len(query_tokens) <= 6
         is_follow_up = bool(
             state.turn_count > 0
-            and (starts_with_follow_up or generic_question or pronoun_like or (short_query and not has_explicit_topic))
+            and (starts_with_follow_up or generic_question or pronoun_like)
         )
         return {
             "is_follow_up": is_follow_up,
@@ -396,17 +393,32 @@ class ConversationContextService:
             return None
 
         standalone_query = str(payload.get("standalone_query") or query).strip() or query
+        is_follow_up = bool(payload.get("is_follow_up", True))
+
+        if not is_follow_up:
+            standalone_query = query
+
+        if is_follow_up and standalone_query != query:
+            if not _rewrite_preserves_intent(query, standalone_query):
+                logger.warning(
+                    "conversation_rewrite_rejected original=%r rewritten=%r",
+                    query,
+                    standalone_query,
+                )
+                standalone_query = query
+                is_follow_up = False
+
         carry_over_departments = self._parse_departments(payload.get("carry_over_departments") or [])
         clarification_message = payload.get("clarification_message")
         return ConversationResolution(
             original_query=query,
             effective_query=standalone_query,
-            is_follow_up=bool(payload.get("is_follow_up", True)),
+            is_follow_up=is_follow_up,
             used_context=standalone_query != query,
             active_topic=str(payload.get("active_topic") or state.active_topic or "").strip() or None,
-            department_hints=carry_over_departments or self._parse_departments(state.last_departments),
-            source_hints=list(state.last_source_refs),
-            task_type_hint=self._parse_task_type(state.last_task_type),
+            department_hints=(carry_over_departments or self._parse_departments(state.last_departments)) if is_follow_up else [],
+            source_hints=list(state.last_source_refs) if is_follow_up else [],
+            task_type_hint=self._parse_task_type(state.last_task_type) if is_follow_up else None,
             clarification_message=(
                 str(clarification_message).strip()
                 if payload.get("needs_clarification") and clarification_message

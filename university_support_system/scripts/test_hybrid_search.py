@@ -1,5 +1,5 @@
 """
-Hibrit Arama (Hybrid Search) Test Betiği — v2
+Hibrit Arama (Hybrid Search) Test Betigi — v3
 
 HybridRetriever kullanarak BM25 (kelime) + ChromaDB (vektör) +
 Sorgu Ön İşleme (sinonim genişletme) ile aynı anda soru sorar.

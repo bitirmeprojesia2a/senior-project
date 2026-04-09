@@ -5,6 +5,7 @@ ACADEMIC_DEPARTMENT_CONTEXT_MARKERS: tuple[str, ...] = (
     "yariyil",
     "donem",
     "secmeli",
+    "zorunlu ders",
     "ders listesi",
     "hangi dersler",
     "akts gerekli",
@@ -12,6 +13,15 @@ ACADEMIC_DEPARTMENT_CONTEXT_MARKERS: tuple[str, ...] = (
     "toplam akts",
     "toplam kredi",
     "ders plani",
+    "ders programi",
+    "ders icerigi",
+    "onkosul",
+    "on kosul",
+    "teknik secmeli",
+    "alan secmeli",
+    "ortak zorunlu",
+    "bolum dersleri",
+    "sinif dersleri",
 )
 
 ANNOUNCEMENT_QUERY_MARKERS: tuple[str, ...] = (
@@ -21,6 +31,46 @@ ANNOUNCEMENT_QUERY_MARKERS: tuple[str, ...] = (
     "haberler",
     "guncel duyuru",
     "son aciklanan",
+    "ilan",
+    "ilanlar",
+    "bilgilendirme",
+)
+
+RELATED_ANNOUNCEMENT_QUERY_MARKERS: tuple[str, ...] = (
+    "ne zaman",
+    "son tarih",
+    "son gun",
+    "takvim",
+    "guncel",
+    "guncellendi",
+    "basvuru tarihi",
+    "acildi mi",
+    "acildi",
+    "basladi mi",
+    "bitti mi",
+    "kapandi mi",
+    "suresi doldu",
+    "son basvuru",
+)
+
+CONTACT_QUERY_MARKERS: tuple[str, ...] = (
+    "iletisim",
+    "telefon",
+    "dahili",
+    "eposta",
+    "e-posta",
+    "email",
+    "sekreter",
+    "sekreterlik",
+    "ofis",
+    "telefon numarasi",
+    "iletisim bilgisi",
+    "adres",
+    "nerede",
+    "kime basvurayim",
+    "kimle gorusmeliyim",
+    "birim",
+    "mudurluk",
 )
 
 GLOBAL_SYNTHESIS_QUERY_MARKERS: tuple[str, ...] = (
@@ -30,6 +80,9 @@ GLOBAL_SYNTHESIS_QUERY_MARKERS: tuple[str, ...] = (
     "kosul",
     "surec",
     "adim",
+    "ne zaman",
+    "tarih",
+    "takvim",
     "cap",
     "cift anadal",
     "cift ana dal",
@@ -37,4 +90,8 @@ GLOBAL_SYNTHESIS_QUERY_MARKERS: tuple[str, ...] = (
     "yan dal",
     "erasmus",
     "degisim programi",
+    "yatay gecis",
+    "dikey gecis",
+    "kayit dondurma",
+    "staj",
 )

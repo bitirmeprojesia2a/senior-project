@@ -8,7 +8,9 @@ from src.core.constants import Department, TaskType
 from src.core.query_markers import (
     ACADEMIC_DEPARTMENT_CONTEXT_MARKERS,
     ANNOUNCEMENT_QUERY_MARKERS,
+    CONTACT_QUERY_MARKERS,
     GLOBAL_SYNTHESIS_QUERY_MARKERS,
+    RELATED_ANNOUNCEMENT_QUERY_MARKERS,
 )
 from src.core.text_normalization import contains_any_normalized, normalize_text
 from src.db.schemas import DepartmentResponse
@@ -38,37 +40,31 @@ def augment_query_for_department(
     query: str,
     metadata: dict,
 ) -> str:
-    """Inject department-specific context into the query when needed."""
-    student_department = (metadata.get("student_department") or "").strip()
-    student_faculty = (metadata.get("student_faculty") or "").strip()
-    student_type = (metadata.get("student_type") or "").strip()
-    if department != Department.ACADEMIC_PROGRAMS or not student_department:
-        augmented = query
-    else:
-        lowered_query = normalize_text(query)
-        lowered_department = normalize_text(student_department)
-        if lowered_department in lowered_query:
-            augmented = query
-        else:
-            faculty_prefix = f"{student_faculty} / " if student_faculty else ""
-            augmented = f"{faculty_prefix}{student_department} bolumu/programi icin: {query}"
+    """Add lightweight context to the query only when strictly needed.
 
+    ACADEMIC_PROGRAMS queries are no longer prefixed; department context is
+    handled via metadata-based boosting in the retriever instead.
+    Finance queries still receive a student-type hint for fee differentiation.
+    """
     if department != Department.FINANCE:
-        return augmented
+        return query
 
-    lowered_augmented = normalize_text(augmented)
+    student_type = (metadata.get("student_type") or "").strip()
+    student_faculty = (metadata.get("student_faculty") or "").strip()
+
+    lowered_query = normalize_text(query)
     student_type_prefix = ""
-    if student_type and normalize_text(student_type) not in lowered_augmented:
+    if student_type and normalize_text(student_type) not in lowered_query:
         suffix = " baglami icin: " if "ogrenci" in normalize_text(student_type) else " ogrenci baglami icin: "
         student_type_prefix = f"{student_type}{suffix}"
 
     faculty_prefix = ""
     fee_markers = ("ucret", "harc", "odeme", "katki payi")
-    if student_faculty and any(marker in lowered_augmented for marker in fee_markers):
-        if normalize_text(student_faculty) not in lowered_augmented:
+    if student_faculty and any(marker in lowered_query for marker in fee_markers):
+        if normalize_text(student_faculty) not in lowered_query:
             faculty_prefix = f"{student_faculty} icin: "
 
-    return f"{student_type_prefix}{faculty_prefix}{augmented}".strip()
+    return f"{student_type_prefix}{faculty_prefix}{query}".strip()
 
 
 def requires_academic_department_clarification(
@@ -100,6 +96,20 @@ def looks_like_announcement_query(query: str) -> bool:
     return contains_any_normalized(query, ANNOUNCEMENT_QUERY_MARKERS)
 
 
+def looks_like_contact_query(query: str) -> bool:
+    """Return whether the query primarily asks for contact information."""
+    return contains_any_normalized(query, CONTACT_QUERY_MARKERS)
+
+
+def should_fetch_related_announcements(query: str) -> bool:
+    """Return whether a non-announcement query still benefits from related announcements."""
+    if looks_like_contact_query(query):
+        return False
+    if looks_like_announcement_query(query):
+        return True
+    return contains_any_normalized(query, RELATED_ANNOUNCEMENT_QUERY_MARKERS)
+
+
 def personalize_answer(answer: str, full_name: str | None) -> str:
     """Add a first-name prefix when a profile is available."""
     if not full_name or not answer:
@@ -124,6 +134,8 @@ def should_disable_specialist_llm(
 
 def should_use_global_synthesis(*, query: str, responses: list[DepartmentResponse]) -> bool:
     """Return whether final answer composition should use global synthesis."""
+    if looks_like_contact_query(query):
+        return False
     meaningful = [response for response in responses if response.answer.strip() and response.success]
     departments = {response.department for response in meaningful}
     if len(departments) < 2:

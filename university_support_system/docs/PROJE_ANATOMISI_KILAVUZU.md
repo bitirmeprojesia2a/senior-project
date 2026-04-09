@@ -1,167 +1,192 @@
-# Üniversite Kurumsal Destek Sistemi 
-# PROJE ANATOMİSİ VE MODÜL KILAVUZU (V1.0)
+# Universite Kurumsal Destek Sistemi
+# Proje Anatomisi ve Modul Kilavuzu
 
-Bu doküman, projenin sadece belirli bir fazını değil; **tüm mimarisini, dizin yapısını, core (çekirdek), db (veritabanı) ve rag (arama)** modüllerindeki dosyaların tam olarak ne işe yaradığını, içerisindeki metodları ve tasarım kararlarını detaylandıran ana başvuru (reference) kaynağıdır.
+Bu belge, guncel repo yapisini ve aktif modullerin sorumluluklarini ozetler. Tarihsel faz dokumanlari daha ayrintili ama eski baglamlar icerebilir; mevcut kodu anlamak icin once bu dosya, `README.md` ve kurulum rehberi okunmalidir.
 
----
+## 1. Ust Duzey Akis
 
-## 🏗️ GENEL PROJE KLASÖR YAPISI (`src/` dizini)
+Guncel sorgu akisi kabaca soyledir:
 
-Sistem modüler ve Domain-Driven Design (DDD) prensiplerine uygun tasarlanmıştır.
+1. Istemci FastAPI uzerinden `/query` ya da ilgili auth endpoint'ine gelir.
+2. API katmani auth, profile ve conversation baglamini cozer.
+3. `MainOrchestrator` sorgunun follow-up olup olmadigini, hangi departmana gidecegini ve synthesis gerekip gerekmedigini belirler.
+4. Ilgili departman ajanlari RAG ve LLM katmanlarini kullanarak cevap uretir.
+5. Gerekirse cevaplar tek cikti haline sentezlenir, telemetry yazilir ve kaynaklar donulur.
 
-*   `src/core/`: Sistem genelinde kullanılan sabitler, konfigürasyonlar ve tipler.
-*   `src/db/`: Veritabanı bağlantısı, ORM modelleri, Pydantic doğrulama şemaları.
-*   `src/rag/`: Doküman vektörizasyonu, hibrit arama ve LLM'e beslenecek bağlamın çıkarılması.
-*   `src/llm/` *(FAZ 2 tamamlandı)*: Ollama / OpenAI istemcileri ve LLM servis katmanı.
-*   `src/agents/` *(temel iskelet aktif)*: Spesifik konularda (`finance`, `student_affairs`, `academic_programs`) görev yapan uzman ajan tabanları ve ilk ajan implementasyonları.
-*   `src/api/` *(iskelet / planlı)*: Dış dünyaya açılacak FastAPI gateway için ayrılmış klasör.
-*   `src/orchestrators/` *(temel iskelet aktif)*: Ajanları yöneten departman orkestratörleri ve ana orkestratör katmanı.
+## 2. `src/` Dizini
 
-Aşağıda, halihazırda kodlanmış ve mimarisi oturtulmuş aktif modüllerin satır satır analizi bulunmaktadır.
+### `src/api/`
 
----
+Dis dunyaya acilan FastAPI katmanidir.
 
-## 1. ÇEKİRDEK (CORE) KATMANI
-Sistemin çalışması için gerekli çevresel değişkenleri ve kod geneli sabitleri tutar.
+- `main.py`: uygulama giris noktasi, health endpoint'leri, auth endpoint'leri, `/query` ve `/a2a/dispatch`
+- `query_flow.py`: query ve dispatch tarafinda ortak baglam cozumleme yardimcilari
+- `profile_flow.py`: kullanici profil baglami ve buna bagli yardimci akislar
 
-### 📄 `src/core/config.py`
-Projeye ait ortam (Environment/.env) değişkenlerini doğrulanmış sınıflara çevirir. `pydantic-settings` kütüphanesini kullanır. Tip güvenliğini sağlar.
+Bu klasor artik "planli iskelet" degil, aktif uygulama yuzeyidir.
 
-*   **Algoritma / Tasarım:** Pydantic `BaseSettings` kullanılarak `POSTGRES_`, `REDIS_`, `OLLAMA_` gibi prefix'lerle başlayan çevresel değişkenleri RAM'de önbellekler.
-*   **İlgili Sınıflar:**
-    *   `PostgresSettings`: DB host, port, havuz (pool_size=10) sınırları.
-    *   `EmbeddingSettings`: Vektör modelinin (BAAI/bge-m3) boyutunu (1024-D) ve `device` seçimini (`auto`, `cpu`, `cuda`) tutar.
-    *   `RerankerSettings`: Cross-encoder modelini, batch_size sınırlarını ve `device` seçimini belirler.
-    *   `RAGSettings`: Chunk_size (1024) ve top_k (5) gibi arama limitlerini barındırır.
-    *   `Settings`: En dipteki *Singleton* sınıftır. Tüm projede `from src.core.config import settings` ile tekilleştirilmiş (sadece bir kere initialize edilen) konfigürasyonu dağıtır.
+### `src/orchestrators/`
 
-### 📄 `src/core/constants.py`
-Uygulamada "sihirli stringleri (magic strings)" önlemek için kullanılan `Enum` ve sabit deposu.
-*   **İlgili Enum'lar:**
-    *   `Department`: Olası departman adlarını (`FINANCE`, `STUDENT_AFFAIRS`, `ACADEMIC_PROGRAMS`) ve Türkçe karşılıklarını (`display_name`) barındırır.
-    *   `TaskType`: LLM veya Kural Motoru bir soruyu incelediğinde bunun "Ders Sorgusu mu (COURSE_QUERY)" yoksa "Harç Sorgusu mu (TUITION_QUERY)" olduğunu belirten labellerdir.
-    *   `RoutingStrategy`: Sorgunun nasıl devam edeceğini belirler (DIRECT, CLARIFICATION vb.).
-*   **İlgili Sabitler (Thresholds):** `ROUTING_HIGH_CONFIDENCE_THRESHOLD = 0.7`, `RAG_RESPONSE_TIME_TARGET_MS = 100` gibi kalite ve karar mekanizması eşiklerini metin içinde tutarak kodun modüler olmasını sağlar.
+Sorgunun departmanlar arasinda nasil akacagini belirleyen katmandir.
 
----
+- `main.py`: `MainOrchestrator`
+- `department.py`: departman orchestrator yapisi
+- `department_dispatch.py`: departmanlara gorev dagitimi
+- `department_factories.py`: departman orchestrator olusturuculari
+- `department_task_utils.py`: departman gorev yardimcilari
+- `announcement_utils.py`: announcement kisa yolu ve cevap yardimcilari
+- `query_policy.py`: clarification, announcement detection ve synthesis kurallari
+- `response_utils.py`: departman cevaplarini birlestirme
+- `synthesis_utils.py`: global synthesis prompt ve karar mantigi
+- `task_builders.py`: gorev olusturma yardimcilari
+- `user_response_builders.py`: son kullaniciya donecek payload uretimi
 
-## 2. VERİTABANI (DB) KATMANI
-PostgreSQL işlemlerinin (Read-Write) asenkron olarak (asyncpg) yönetildiği katman.
+Bu klasor son refactor ile ciddi oranda modulerlestirildi; onceki tek parca orchestrator mantigi parcalanmis durumdadir.
 
-### 📄 `src/db/connection.py`
-Uygulama ile veritabanı (PostgreSQL) arasındaki köprüyü Asenkron kurar ve yönetir.
-*   **Tasarım / Algoritma (Lazy Initialization):** `_engine` değişkeni en başta null (None) olarak durur. Python kodları import edildiği an gidip DB'ye boşuna bağlanmaya çalışmaz. Ne zaman ki veritabanına gerçekten ihtiyaç olursa (`get_engine` çağrılırsa) TCP bağlantısını açar. Bu test yazmayı inanılmaz kolaylaştıran bir mimaridir.
-*   **Metodlar:**
-    *   `get_session()`: Bir "AsyncContextManager" (yield) dır. Veritabanına bir sorgu girdiği an *session* başlatır, başarıyla biterse *commit*, hata patlarsa veritabanı yorulmasın diye *rollback* fırlatır ve bağlantıyı havuza iade eder.
-    *   `check_db_health()`: `SELECT 1` sorgusu atıp veritabanına gidiş-dönüş milisaniyesini (latency) ölçerek "healthy" raporu verir.
+### `src/agents/`
 
-### 📄 `src/db/models.py`
-Veri tabanındaki tabloların Python sınıflarına döküldüğü (SQLAlchemy ORM) dosyadır. İş mantığının kalbidir.
-*   **Ortak Mixin (`TimestampMixin`)**: Tüm ORM modelleri bu sınıfı miras (inherit) alır. Bu sayede her veritabanı satırında `created_at` ve `updated_at` kolonları otomatik açılır ve UTC saatine göre, geliştirici müdahalesi olmadan, zaman damgası basılır.
-*   **Öğrenci İşleri Tabloları:**  
-    *   `Student`: Öğrencinin kimlik, bölüm/fakülte, sınıf, GNO ve toplam/tamamlanan kredi bilgilerini tutar.  
-    *   `Course`: Ders kataloğu; ders kodu, ad, kredi, bölüm ve dönem bilgisi.  
-    *   `CoursePrerequisite`: Bir dersin diğer derslere olan **önkoşul** ilişkilerini tutan join tablosu.  
-    *   `StudentCourse`: Hangi öğrencinin hangi dersi hangi dönemde aldığını ve notunu tutan Many-to-Many köprüsüdür.  
-    *   `CourseRegistrationPeriod`: "Ders kaydı ne zaman yapılır?" sorusunun tarih tarafını tutar (dönem bazlı başlangıç/bitiş).
-*   **Finans / Burs Tabloları:**  
-    *   `Tuition`, `Payment`, `Installment`: Öğrencinin dönemlik harç toplamını, yaptığı ödemeleri ve varsa taksit planını tutar. `has_debt` ve `debt_amount` alanları PostgreSQL tarafından otomatik hesaplanır.  
-    *   `AvailableScholarship`, `Scholarship`, `ScholarshipApplication`: Üniversitenin burs ilanlarını, öğrencinin aktif burslarını ve başvuru geçmişini modeller.
-*   **Kimlik Doğrulama ve Duyuru Tabloları:**  
-    *   `OTPCode`, `VerificationSession`, `SlackStudentMapping`: OTP tabanlı kimlik doğrulama ve Slack kullanıcılarını öğrencilerle eşleştirmek için kullanılan runtime tablolardır.  
-    *   `Announcement`: Üniversite/fakülte duyurularının ham metnini ve LLM özetini saklar; bölüm/fakülte filtresiyle öğrenciye uygun duyurular seçilir.
-*   **Ajan / Telemetri Tabloları:**  
-    *   `AgentRegistry`: Aktif yapay zekaların (ana/departman/uzman ajanların) kartlarının tutulduğu "ajan envanteri" tablosudur.  
-    *   `QueryLog`: Her kullanıcı sorgusunu, yönlendirme stratejisini, güven skorunu ve yanıt süresini kaydeden telemetri tablosudur (Python tarafında `query_metadata` alanı ile ek JSON bağlam tutulur).  
-    *   `AgentTask`: A2A protokolünde ajanlar arasında dolaşan görevlerin yaşam döngüsünü (`submitted → processing → completed/failed`) kanıtlayan kayıt tablosudur.
+Uzman ajanlar burada bulunur. Ajanlar artik domain bazli alt klasorlere ayrilmistir.
 
-### 📄 `src/db/schemas.py`
-API'den gelen veya Controller'lara giden verilerin doğruluğunu, uzunluğunu, tipini kontrol eden koruma zırhı (Pydantic).
-*   **Metod / Sınıflar:**
-    *   `RAGQuery`: Bir arama yapmadan önce sorunun (minimum 1, max 500 karakter olmak zorunda) kurallarını belirler, top_k'nın 20'yi aşmasına izin vermez.
-    *   `UserQueryRequest`: Yeni açılacak API tarafındaki Endpoint şemasıdır.
-    *   A2A SDK importları bu alanda yapılmaz, projeye saf iç iş (business logic) verileri burada tutulur.
+- `academic/`
+  - `curriculum_agent.py`
+  - `regulation_agent.py`
+  - `international_agent.py`
+- `finance/`
+  - tipik olarak tuition ve scholarship odakli ajanlar
+- `student/`
+  - registration, graduation, internship ve student life odakli ajanlar
+- `announcement/`
+  - duyuru sorgulari icin ayri ajan akisi
+- `base.py`
+  - ortak ajan temel siniflari
 
----
+### `src/routing/`
 
-## 3. RAG (RETRIEVAL-AUGMENTED GENERATION) KATMANI
-Kurumun yönetmelik/yönerge gibi sabit verilerinden öğrencinin sorularına kanıt getirilmesini sağlayan zeki arama arbedesidir.
+Departman secimi ve yuksek seviyeli yonlendirme bu klasorde bulunur.
 
-### 📄 `src/rag/document_loader.py` (Doküman Yükleyici)
-`pdfplumber` veya utf-8 fallback'leriyle `.pdf` / `.txt` belgelerini temizleyerek RAM'e alır. Karakter sayılarını metadata'ya ekler, anlamsız kısa belgeleri (50 karakterden az) otomatik eler.
+- `router.py`: `DepartmentRouter`
+- `routing_policy.py`: karar kurallari ve policy yardimcilari
 
-### 📄 `src/rag/text_preprocessor.py` (Metin Temizleyici)
-Belgenin içerisinden gereksiz kalıntıları arındırarak kaliteli bağlam (Context) yaratır:
-*   **Header Frekans Analizi:** Belgenin içinde kendini sürekli tekrar eden "T.C. ONDOKUZ MAYIS ÜNİV" tarzı tepelikleri (Header/Footer), 3 kereden fazla geçiyorlarsa otomatik siler.
-*   **Regex Kuralları:** Belge ID'lerini (PP.1.0 vb.), sayfa numaralarını ve kontrol uyarılarını filtreler.
+### `src/rag/`
 
-### 📄 `src/rag/chunker.py` (Akıllı Metin Parçalayıcı)
-*   **MADDE-Aware Algoritması:** Metinleri dümdüz 1000 karakterde kesmez. Regex (`_MADDE_RE`) ile **"MADDE 5 -"** yapılarını anlayıp metni "Maddeler" halinde bloklar.
-*   **Bağlam Aşılama:** Eğer 5. Madde çok uzunsa ve 2'ye bölünmek zorundaysa, 2. parçanın en başına da *"MADDE 5"* bilgisini enjekte ederek arama bütünlüğünü korur.
+Dokuman yukleme, isleme, retrieval ve indeksleme burada yer alir.
 
-### 📄 `src/rag/embedder.py` (Anlam Vektörü Üretici)
-*   **Tembel Yükleme:** 700 MB'lik BAAI/bge-m3 yapay zekasını RAM'e sadece ihtiyaç anında yükler. 
-*   **BGE-M3 (1024-D):** 8192 Token window büyüklüğünde, kelimenin anlam dünyasındaki uzay koordinatlarını çıkarır.
-*   `embed_texts()`: 100'lük gruplar (Batch) halinde belgeleri matris çarpımına sokar.
+- `document_loader.py`: `.pdf` ve `.txt` yukleme
+- `text_preprocessor.py`: temizlik ve tekrarli satir ayiklama
+- `chunker.py`: chunk olusturma
+- `embedder.py`: embedding modeli ve vektor uretimi
+- `indexer.py`: ChromaDB yazma/okuma katmani
+- `pipeline.py`: indeksleme pipeline'i
+- `retriever.py`: hibrit retrieval
+- `reranker.py`: cross-encoder reranking
+- `candidate_utils.py`: candidate listesi yardimcilari
+- `query_preprocessor.py`: sorgu genisletme ve on isleme
+- `query_cache.py`: sorgu cache mantigi
+- `search_planner.py`: retrieval plani yardimcilari
+- `warmup.py`: opsiyonel warm-up davranislari
 
-### 📄 `src/rag/indexer.py` (ChromaDB Bağlantı REST API'si)
-Chromadb istemcisi lokalde ağır ve C++ bağımlılıklarına yol açtığı için saf HTTP (`httpx`) bağlantısıyla Docker'a istek atar.
-*   **Batch Write**: 100'lü sayfalama (Pagination) yapar, sunucunun şişmesini engeller. Pydantic-JSON dönüşümünde tip uyuşmazlığını yok eder.
-*   **Idempotency:** SHA-256 algoritmasıyla belgenin "İçeriği" üzerinden bir hash ID yaratır. Kod 50 kere çalıştırılsa bile dosya içerikleri değişmedikçe veri tabanına 51. kez eklenmez.
+### `src/llm/`
 
-### 📄 `src/rag/query_preprocessor.py` (Sorgu Genişleticisi)
-LLM çalışmadan ÖNCE kural tabanlı yapay zeka taklidi yapar.
-*   **Sinonim Genişletme:** Öğrenci "çap" yazarsa, sistem sözlüğe bakıp bu sorunun arama stringine hayalet kelime olarak `"çift ana dal"`, `"ikinci lisans"` da yazar ki Vector taramasından kaçmasın.
-*   **Tip Skoru:** Sorunun içinde "nasıl", "ne zaman" kelimeleri varsa bunun `procedural` bir görev olduğuna karar verir.
+LLM servis katmani burada bulunur.
 
-### 📄 `src/rag/retriever.py` (Hibrit Arama & Reranker Beyni)
-Sonuçların harmanlandığı orkestratör modülü:
-*   **Algoritma (BM25 + Semantic):** "ÇAP" terimi için hem klasik Keyword uyumu (Exact match - BM25), hem de Vektör Cosine Similarity uyumunu yapar. Sonra RRF (Reciprocal Rank Fusion) puanlamasıyla ikisinin birleşim bir listesini oluşturur.
-*   **Deduplication Fix:** İki motor aynı sonucu getirdiğinde düşük puanlı olanı silip en yüksekte çıkanı listeye katan koruyucu döngü barındırır.
-*   **Source Relevance Penalty:** Yersiz bölümler denk gelirse (örneğin "Yaz okulu" sormuş ama cevap "Kayıt dondurma" yönetmeliğinden geliyorsa) algoritma bu duruma otomatik ceza/düşürme skoru (0.75 vs) verir.
+- `llm_service.py`: birincil/yedek provider mantigi ve health kontrolu
+- `ollama_client.py`: yerel Ollama istemcisi
+- `openai_client.py`: yedek OpenAI HTTP istemcisi
+- `prompt_templates.py`: routing, synthesis ve diger prompt sabitleri
 
-### 📄 `src/rag/reranker.py` (Vektör Doğrulayıcı)
-*   Toplanan ilk 20 sonuca "gerçekten sorulan soruya cevap olabiliyor mu?" diye çapraz değerlendirme (`seroe/bge-reranker-v2-m3-turkish-triplet` Cross-Encoder) yaparak sadece en yetkin 5 sonucu RAG'a onaylar.
+LLM kullanimi rol bazlidir; `.env` uzerinden routing, conversation ve synthesis modelleri ayri belirlenebilir.
 
----
+### `src/db/`
 
-## SONUÇ VE İLERİYE YÖNELİK BEKLENTİLER
-Şu anda kod tabanı; Veritabanı ve Veri İndeksleme konularında State of The Art (SOTA) mimari kullanmaktadır. Solid bağımlılıklara, Lazy Initialization bellek yönetimlerine, Singleton Config nesnelerine, Regex kural algoritmalarına ve DDD dizin anatomisine harfiyen uyulmuştur.
+Veritabani, auth, profile ve telemetry katmanlari burada toplanir.
 
-Bundan sonraki fazda (FAZ 2), **`src/llm/`** dizini altına Qwen2.5 bağlantıları kodlanacak ve **`src/agents/`** altında departmanlara yönelik zeka sınıfları tasarlanmaya başlanacaktır.
----
+Temel dosyalar:
 
-## MART 2026 EK NOTLARI
+- `connection.py`: SQLAlchemy engine ve session yonetimi
+- `model_base.py`: ortak ORM temel sinifi
+- `models.py`: geriye donuk ortak export noktasi
+- `schemas.py`: Pydantic semalari
+- `telemetry.py`: query log ve best-effort telemetry
 
-Bu kılavuzun ilk yazıldığı tarihten sonra aktif çekirdekte aşağıdaki değişiklikler yapılmıştır:
+Domain bazli moduller:
 
-### 1. Core ve Sözleşmeler
+- `auth.py`, `auth_models.py`, `auth_queries.py`, `auth_utils.py`
+- `conversation_context.py`, `conversation_models.py`
+- `profile_context.py`
+- `student_models.py`, `student_academic_data.py`, `registration_data.py`
+- `finance_models.py`, `finance_data.py`, `scholarship_models.py`
+- `curriculum_data.py`
+- `announcements.py`, `office_contacts.py`, `personal_data.py`, `support_models.py`
 
-* `Department` artık `FINANCE`, `STUDENT_AFFAIRS` ve `ACADEMIC_PROGRAMS` değerlerini kapsar.
-* `config.py` içindeki `EmbeddingSettings` ve `RerankerSettings` alanlarına `device` desteği eklenmiştir. Geçerli değerler: `auto`, `cpu`, `cuda`.
-* `collection_name_for_department()` yardımcısı ile koleksiyon adları tek noktadan üretilir.
+Bu klasor ilk fazlara gore daha moduler hale gelmistir; tum ORM ve servis mantigi tek dosyada tutulmamaktadir.
 
-### 2. RAG Katmanı
+### `src/core/`
 
-* `document_loader.py` artık `student_affairs`, `academic_programs` ve `finance` klasörlerini resmi departman kaynakları olarak tanır.
-* `academic_programs` belgelerinde `bolum` ve `bolum_adi` metadata alanları kullanılır. Bir belge birden fazla bölüme işaret ediyorsa `genel` etiketi verilir.
-* `indexer.py`, `pipeline.py` ve `retriever.py` tek bir sabit `student_affairs_docs` koleksiyonuna bağlı değildir. Kaynak klasörü ve departman bilgisi üzerinden `student_affairs_docs`, `academic_programs_docs` ve `finance_docs` gibi koleksiyonlar dinamik kullanılır.
-* `retriever.py` içinde kural tabanlı departman puanlama ve kontrollü fallback mantığı bulunur.
-* `reranker.py` içinde son rerank denemesinin başarılı olup olmadığı `last_run_succeeded` alanı ile izlenebilir.
+Sistem genelindeki ortak ayarlar ve sabitler burada bulunur.
 
-### 3. Test Katmanı
+- `config.py`: ortam degiskenlerini `settings` nesnesine donusturur
+- `constants.py`: departmanlar, gorev tipleri ve diger sabitler
+- `profiling.py`, `messages.py` gibi yardimci moduller
 
-* Test envanteri güncel durumda 206 unit test ve 20 integration testten oluşur.
-* Integration testler `smoke`, `model` ve `slow` marker'ları ile ayrıştırılmıştır.
-* Reranker'ın gerçekten devreye girdiğini doğrulayan integration assertion eklenmiştir.
+### Diger klasorler
 
-### 4. LLM Katmanı
+- `src/notifications/`: OTP ve e-posta gonderim yardimcilari
+- `src/slack/`: Slack entegrasyonu ile ilgili temel katman
+- `src/cache/`, `src/queue/`, `src/security/`, `src/mcp/`, `src/a2a/`: yardimci ya da gelecekte genisletilecek alanlar
 
-* `prompt_templates.py` içindeki departman yönlendirme prompt'u artık `finance`, `student_affairs` ve `academic_programs` değerlerini içerir.
-* `llm_service.py`, `ollama_client.py` ve `openai_client.py` tarafında health-check, stream ve fallback akışları aktif olarak mevcuttur.
+## 3. `scripts/` Dizini
 
-### 5. Teknik Borç / Sonraki İyileştirme
+Gunluk operasyon ve benchmark komutlari burada bulunur.
 
-* Yeni departman eklemeyi kolaylaştırmak için merkezi departman kaydı kurulmuştur; display adı, routing açıklaması, keyword kümesi ve kaynak klasör bilgisi artık tek yerde toplanır.
-* Kalan iş, yeni departman eklendiğinde buna ait veri, soru havuzu ve integration kapsamını da aynı disiplinle genişletmektir.
-* Daha ayrıntılı Mart 2026 özeti için `docs/MART_2026_GUNCELLEME_NOTLARI.md` kullanılmalıdır.
+- `index_documents.py`: departman indeksleme
+- `evaluate_rag.py`: retrieval kalitesi olcumu
+- `query_db.py`: CLI sorgu denemesi
+- `test_hybrid_search.py`: retrieval denemeleri
+- `live_question_test.py`: demo ve benchmark preset'leri
+- `compare_collections.py`: koleksiyon kiyaslama
+- `seed_curriculum_data.py`, `seed_synthetic_data.py`: veri tohumlama yardimcilari
+- `profile_benchmarks.json`: demo ve benchmark preset tanimlari
+
+## 4. `tests/` Dizini
+
+Testler iki ana grupta toplanir:
+
+- `tests/unit/`: moduler birim testleri
+- `tests/integration/`: servis, retrieval ve model entegrasyon testleri
+
+Integration tarafta `smoke`, `model` ve `slow` marker'lari kullanilir. Dokuman icinde sabit test sayisi vermek yerine guncel envanteri `pytest --collect-only` ile dogrulamak daha sagliklidir.
+
+## 5. `data/` Dizini
+
+- `data/raw/`: indeksleme icin ham dokumanlar
+- `data/metadata/`: indeksleme sonrasi registry ve metadata artefaktlari
+
+Cross-platform zip ve VM transfer senaryolarinda bu klasorde izin ve karakter kodlama kaynakli sorunlar gorulebilir; operasyon notlari icin kurulum rehberi ve Azure runbook'a bakin.
+
+## 6. `docs/` Dizini
+
+Bu klasorde iki tur belge vardir:
+
+1. Guncel operasyon belgeleri
+   - `KURULUM_VE_CALISTIRMA.md`
+   - `AZURE_VM_RUNBOOK.md`
+   - `demo_runbook.md`
+   - `technical_backlog.md`
+2. Tarihsel veya donemsel referanslar
+   - `FAZ_0_TEKNIK_DOKUMANTASYON.md`
+   - `FAZ_1_TEKNIK_DOKUMANTASYON.md`
+   - `FAZ_2_TEKNIK_DOKUMANTASYON.md`
+   - `FAZ_3_AJAN_MIMARISI.md`
+   - `MART_2026_GUNCELLEME_NOTLARI.md`
+
+## 7. Ozet
+
+Repo guncel durumda:
+
+- calisan FastAPI giris yuzeyi olan
+- modulerlestirilmis orchestrator katmanina sahip
+- conversation context ve auth akislarini destekleyen
+- benchmark ve demo scriptleri bulunan
+- lokal ve Azure uzerinde calistirilabilir
+
+bir sistemdir. Kod tabanini anlamaya baslarken once `README.md`, sonra bu dosya, ardindan ilgili domain klasoru okumak en hizli yaklasimdir.

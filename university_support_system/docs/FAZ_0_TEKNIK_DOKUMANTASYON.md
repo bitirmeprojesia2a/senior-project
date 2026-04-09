@@ -1,5 +1,7 @@
 # FAZ 0 — Kuruluş ve Ortak Altyapı: Teknik Dokümantasyon
 
+> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 0 kaydidir. Bugunku kurulum, modul dagilimi ve operasyon adimlari icin once `README.md`, `docs/KURULUM_VE_CALISTIRMA.md`, `docs/PROJE_ANATOMISI_KILAVUZU.md` ve `docs/DOKUMANTASYON_OKUMA_SIRASI.md` okunmalidir.
+
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 25 Şubat 2026  
 **Doküman Sürümü:** 2.1 (Doğrulanmış — 40/40 test geçti)  
@@ -40,7 +42,7 @@ Prototip aşamasında kullanılan teknolojiler, test ve değerlendirme sonuçlar
 |---------|----------|-------------|-----------------|
 | **Veritabanı** | SQLite | PostgreSQL 15 | SQLite tek kullanıcılı ortamda başarılıydı ancak eşzamanlı erişim, Row-Level Security (RLS) ve JSONB desteği için PostgreSQL'e geçildi. |
 | **Gömme Modeli** | paraphrase-multilingual-MiniLM-L12-v2 | BAAI/bge-m3 | Mevcut kod tabanında çok dilli ve 1024 boyutlu `BAAI/bge-m3` modeli kullanılmaktadır. |
-| **LLM** | Gemini/Claude API (bulut) | Qwen2.5:7B via Ollama (yerel) + OpenAI yedek | Maliyet etkinliği, veri gizliliği ve offline çalışma. 128K token bağlam penceresi. |
+| **LLM** | Gemini/Claude API (bulut) | Bu belge yazildiginda secilen yerel varsayim: Qwen2.5:7B via Ollama + OpenAI yedek | Maliyet etkinliği, veri gizliliği ve offline çalışma. Bu satir bugunun zorunlu konfigürasyonu degil, FAZ 0 kapanis snapshot'idir. |
 | **A2A Protokolü** | Elle yazılmış sınıflar | `a2a-sdk` (Google resmi SDK) | Kalite denetiminde elle yazılan A2A sınıflarının spec ile uyumsuz olduğu tespit edildi. Resmi SDK'ya geçildi. |
 | **Kuyruk Sistemi** | InMemoryQueue | Redis 7 | Kalıcılık, öncelik kuyruğu, TTL yönetimi ve yatay ölçeklendirme. |
 | **Migration** | Manuel tablo oluşturma | Alembic | Veritabanı şema değişikliklerinin versiyonlanması ve geri alınabilmesi. |
@@ -179,7 +181,7 @@ class PostgresSettings(BaseSettings):
 | `REDIS_DB` | `0` | Redis veritabanı numarası |
 | `USE_REDIS` | `true` | Redis aktif/pasif |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama API URL |
-| `OLLAMA_MODEL` | `qwen2.5:7b` | Kullanılacak LLM modeli |
+| `OLLAMA_MODEL` | `qwen2.5:7b` | Bu belge yazildigindaki varsayilan LLM modeli. Guncel sistem rol bazli model secimini destekler. |
 | `OPENAI_API_KEY` | *(boş)* | OpenAI API anahtarı (opsiyonel) |
 | `OPENAI_MODEL` | `gpt-4o-mini` | Yedek LLM modeli |
 | `CHROMA_HOST` | `localhost` | ChromaDB sunucu adresi |
@@ -998,7 +1000,7 @@ venv\Scripts\python.exe -m pytest tests/ -v
 # 6. Docker servislerini başlat (FAZ 1+ için gerekli)
 docker compose up -d
 
-# 7. Ollama'da Qwen2.5 modelini indir
+# 7. O donemde kullanilan varsayilan Ollama modelini indir
 docker exec uni_ollama ollama pull qwen2.5:7b
 
 # 8. Veritabanı migration'ını çalıştır
@@ -1071,7 +1073,7 @@ FAZ 0 tamamlanmıştır. **FAZ 1 — Veri ve RAG Altyapısı** kapsamında:
 
 ---
 
-*Bu doküman, projenin her fazı tamamlandıkça güncellenecektir.*
+*Bu belge FAZ 0 doneminin kapanis kaydidir. Guncel durum icin README, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` belgelerine bakin.*
 
 ---
 
@@ -1131,7 +1133,7 @@ Yeni ortam değişkenleri:
 
 ### 16.5 Test Envanteri ve Güncel Doğrulama
 
-Repo içindeki güncel test envanteri:
+Bu belge yazildigi andaki test snapshot'i:
 
 * **206 unit test**
 * **20 integration test**

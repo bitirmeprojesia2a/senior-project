@@ -10,6 +10,8 @@ from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, Tas
 from src.db.schemas import DepartmentResponse, RAGSource, RoutingResult
 from src.orchestrators.department import DepartmentOrchestrator
 from src.orchestrators.main import MainOrchestrator
+from src.orchestrators.response_utils import filter_low_confidence_responses
+from src.orchestrators.synthesis_utils import build_global_synthesis_prompt
 
 
 class _FakeAgent:
@@ -206,10 +208,159 @@ async def test_main_orchestrator_appends_related_announcements_when_available():
 
     assert "Akademik program cevabi" in response.answer
     assert "Ilgili duyurular" in response.answer
+    assert "Kaynak Ozeti:" in response.answer
+    assert "Duyuru kaydi:" in response.answer
     assert response.departments_involved == ["academic_programs"]
     assert any(source.metadata.get("record_type") == "announcement" for source in response.sources)
     announcement_agent.handle_task.assert_awaited_once()
     telemetry.record_agent_task.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_skips_related_announcements_for_contact_queries():
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.ACADEMIC_PROGRAMS],
+            confidence=0.91,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Iletisim sorgusu",
+            task_type=TaskType.PROCEDURE_QUERY,
+        )
+    )
+    academic_orchestrator = _FakeDepartmentOrchestrator(
+        Department.ACADEMIC_PROGRAMS,
+        "Ilgili birim iletisim bilgileri:\n- Program Isleri Ofisi",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=304)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+        },
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    response = await orchestrator.handle_query("Iletisim bilgisi", context_id="ctx-contact")
+
+    assert "Program Isleri Ofisi" in response.answer
+    assert "Ilgili duyurular" not in response.answer
+    assert "Kaynak Ozeti:" in response.answer
+    assert "Ofis iletisim kaydi: Akademik Programlar" in response.answer
+    announcement_agent.handle_task.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_skips_related_announcements_for_static_queries():
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.ACADEMIC_PROGRAMS],
+            confidence=0.93,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Statik akademik sorgu",
+            task_type=TaskType.COURSE_QUERY,
+        )
+    )
+    academic_orchestrator = _FakeDepartmentOrchestrator(
+        Department.ACADEMIC_PROGRAMS,
+        "BIL104 dersinin onkosulu BIL103'tur.",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=305)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+        },
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    response = await orchestrator.handle_query("BIL104 dersinin on kosulu nedir?", context_id="ctx-static")
+
+    assert "BIL104 dersinin onkosulu" in response.answer
+    assert "Ilgili duyurular" not in response.answer
+    announcement_agent.handle_task.assert_not_awaited()
+
+
+def test_filter_low_confidence_responses_drops_weak_rag_noise_when_strong_answer_exists():
+    weak = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="Zayif RAG yaniti",
+        sources=[
+            RAGSource(
+                content="Alakasiz belge parcasi",
+                score=0.0003,
+                metadata={"source": "ogrenci_isleri.pdf"},
+            )
+        ],
+    )
+    strong = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Guclu akademik cevap",
+        sources=[
+            RAGSource(
+                content="CAP yonergesi ilgili maddeler",
+                score=0.12,
+                metadata={"source": "yonerge_cift_anadal_yandal.pdf"},
+            )
+        ],
+    )
+    announcement = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="Ilgili duyurular:\n1. CAP Basvurulari Acildi",
+        sources=[
+            RAGSource(
+                content="CAP Basvurulari Acildi",
+                score=1.0,
+                metadata={"record_type": "announcement"},
+            )
+        ],
+    )
+
+    filtered = filter_low_confidence_responses([weak, strong, announcement])
+
+    assert weak not in filtered
+    assert strong in filtered
+    assert announcement in filtered
+
+
+def test_build_global_synthesis_prompt_keeps_substantial_department_context():
+    long_tail = "SON-BOLUM-TAM-METIN"
+    academic_answer = "Akademik cevap " + ("detay " * 160) + long_tail
+    finance_answer = "Finans cevap " + ("kosul " * 160) + long_tail
+
+    prompt, meaningful = build_global_synthesis_prompt(
+        "CAP ve harc durumu nedir?",
+        [
+            DepartmentResponse(
+                department=Department.ACADEMIC_PROGRAMS,
+                answer=academic_answer,
+                sources=[],
+            ),
+            DepartmentResponse(
+                department=Department.FINANCE,
+                answer=finance_answer,
+                sources=[],
+            ),
+        ],
+    )
+
+    assert len(meaningful) == 2
+    assert long_tail in prompt
 
 
 @pytest.mark.asyncio

@@ -15,7 +15,10 @@ from src.llm.prompt_templates import INTERNSHIP_AGENT_SYSTEM_PROMPT
 
 
 class InternshipAgent(BaseSpecialistAgent):
-    _CROSS_REF_KEYWORDS = ("ucret", "ücret", "odeme", "ödeme", "geri odeme", "geri ödeme")
+    _CROSS_REF_KEYWORDS = (
+        "ucret", "ücret", "odeme", "ödeme", "geri odeme", "geri ödeme",
+        "sigorta", "sgk", "staj ucreti", "staj ücreti",
+    )
 
     def __init__(
         self,
@@ -29,7 +32,7 @@ class InternshipAgent(BaseSpecialistAgent):
                 name="Internship Agent",
                 department=Department.STUDENT_AFFAIRS,
                 description="Staj, bitirme projesi ve uygulamali egitim sorularina bakar.",
-                task_types=(TaskType.PROCEDURE_QUERY, TaskType.COURSE_QUERY),
+                task_types=(TaskType.PROCEDURE_QUERY,),
                 examples=("Staj basvurusu nasil yapilir?", "Bitirme projesi teslimi nasil olur?"),
                 tags=("student_affairs", "internship"),
                 system_prompt=INTERNSHIP_AGENT_SYSTEM_PROMPT,

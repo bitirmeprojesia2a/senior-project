@@ -19,6 +19,10 @@ REGISTRATION_TIMING_KEYWORDS: tuple[str, ...] = (
     "acik mi",
     "açık mı",
     "aktif",
+    "son gun",
+    "son tarih",
+    "son basvuru",
+    "kayit donemi",
 )
 
 REGISTRATION_SOURCE_ONLY_KEYWORDS: tuple[str, ...] = (
@@ -35,14 +39,22 @@ REGISTRATION_SOURCE_ONLY_KEYWORDS: tuple[str, ...] = (
     "cap",
     "cift anadal",
     "yan dal",
+    "kayit dondurma",
+    "donem dondurma",
+    "kayit sildirme",
+    "ilisik kesme",
+    "ders ekleme",
+    "ders birakma",
 )
 
 REGISTRATION_TOPIC_MARKERS: dict[str, tuple[str, ...]] = {
-    "cap": ("cap", "cift anadal", "cift ana dal"),
+    "cap": ("cap", "cift anadal", "cift ana dal", "ikinci lisans"),
     "yandal": ("yandal", "yan dal"),
-    "yatay": ("yatay gecis", "yatay"),
-    "dikey": ("dikey gecis", "dikey"),
+    "yatay": ("yatay gecis", "yatay", "kurum ici yatay"),
+    "dikey": ("dikey gecis", "dikey", "dgs"),
     "muafiyet": ("muafiyet", "intibak"),
+    "dondurma": ("kayit dondurma", "donem dondurma", "donem izni"),
+    "silme": ("kayit sildirme", "ilisik kesme", "ayrilma"),
 }
 
 

@@ -122,6 +122,14 @@ class TestQueryTypeDetection:
         qp = QueryPreprocessor()
         assert qp.detect_query_type("üniversite bilgileri") == "general"
 
+    def test_procedural_ascii_normalized_text(self):
+        qp = QueryPreprocessor()
+        assert qp.detect_query_type("kayit nasil yapilir") == "procedural"
+
+    def test_factual_ascii_normalized_text(self):
+        qp = QueryPreprocessor()
+        assert qp.detect_query_type("mezuniyet kredisi kactir") == "factual"
+
 
 class TestNormalizeForBm25:
     """BM25 normalizasyon testleri."""

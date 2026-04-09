@@ -14,6 +14,7 @@ Test edilen ajanlar:
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -60,16 +61,25 @@ def _task(
     )
 
 
-def _mock_retriever_factory(*, content: str = "Ornek belge icerigi.", score: float = 0.85):
+def _mock_retriever_factory(
+    *,
+    content: str = "Ornek belge icerigi.",
+    score: float = 0.85,
+    metadata: dict | None = None,
+):
     mock_retriever = MagicMock()
+    payload_metadata = {"file_name": "test_source.pdf"}
+    if metadata:
+        payload_metadata.update(metadata)
     mock_retriever.search = MagicMock(return_value=[
         {
             "content": content,
             "source": "test_source.pdf",
             "score": score,
-            "metadata": {"file_name": "test_source.pdf"},
+            "metadata": payload_metadata,
         }
     ])
+    mock_retriever.enrich_results = MagicMock(side_effect=lambda results, department=None: results)
     return MagicMock(return_value=mock_retriever)
 
 
@@ -110,6 +120,11 @@ _HIGH_SCORE_LONG_CONTENT = (
     "Kayit sureci hakkinda detayli bilgi: 2026-Bahar donemi kayitlari 10-21 Subat "
     "tarihleri arasinda yapilacaktir. Kayit icin gerekli belgeler..."
 )
+_VERY_LONG_SOURCE_CONTENT = (
+    "Madde 5 - CAP basvuru, kabul ve kayit kosullari soyledir. "
+    + ("Basvuru kosulu ayrintisi " * 65)
+    + "SON-BOLUM-TAM-METIN"
+)
 
 
 class TestLLMBypassMechanism:
@@ -125,6 +140,70 @@ class TestLLMBypassMechanism:
 
         agent = StudentLifeAgent(**kwargs)
         response = await agent.handle_task(_task("Kayit nasil yapilir?"))
+
+        assert response.success is True
+        assert _HIGH_SCORE_LONG_CONTENT in response.answer
+        llm.generate.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_high_score_long_content_is_not_truncated_in_direct_rag_answer(self):
+        kwargs = _agent_kwargs()
+        kwargs["retriever_factory"] = _mock_retriever_factory(
+            content=_VERY_LONG_SOURCE_CONTENT, score=0.85,
+        )
+
+        agent = StudentLifeAgent(**kwargs)
+        response = await agent.handle_task(_task("CAP basvurusu nasil yapilir?"))
+
+        assert response.success is True
+        assert "SON-BOLUM-TAM-METIN" in response.answer
+        assert "(Kaynak: test_source.pdf)" in response.answer
+
+    @pytest.mark.asyncio
+    async def test_high_reranker_score_allows_direct_rag_answer(self):
+        kwargs = _agent_kwargs()
+        kwargs["retriever_factory"] = _mock_retriever_factory(
+            content=_HIGH_SCORE_LONG_CONTENT,
+            score=0.82,
+            metadata={"score_type": "reranker"},
+        )
+        llm = kwargs["llm_service"]
+
+        agent = StudentLifeAgent(**kwargs)
+        response = await agent.handle_task(_task("CAP basvuru kosullari nelerdir?"))
+
+        assert response.success is True
+        assert _HIGH_SCORE_LONG_CONTENT in response.answer
+        llm.generate.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_low_reranker_score_falls_back_to_llm(self):
+        kwargs = _agent_kwargs()
+        kwargs["retriever_factory"] = _mock_retriever_factory(
+            content=_HIGH_SCORE_LONG_CONTENT,
+            score=0.30,
+            metadata={"score_type": "reranker"},
+        )
+        llm = kwargs["llm_service"]
+
+        agent = StudentLifeAgent(**kwargs)
+        response = await agent.handle_task(_task("CAP basvuru kosullari nelerdir?"))
+
+        assert response.success is True
+        llm.generate.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_retrieval_score_uses_lower_direct_threshold(self):
+        kwargs = _agent_kwargs()
+        kwargs["retriever_factory"] = _mock_retriever_factory(
+            content=_HIGH_SCORE_LONG_CONTENT,
+            score=0.30,
+            metadata={"score_type": "retrieval"},
+        )
+        llm = kwargs["llm_service"]
+
+        agent = StudentLifeAgent(**kwargs)
+        response = await agent.handle_task(_task("Kayit adimlari nelerdir?"))
 
         assert response.success is True
         assert _HIGH_SCORE_LONG_CONTENT in response.answer
@@ -177,6 +256,66 @@ class TestLLMBypassMechanism:
 
         assert response.success is True
         llm.generate.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_llm_failure_fallback_keeps_full_source_chunk(self):
+        kwargs = _agent_kwargs()
+        kwargs["retriever_factory"] = _mock_retriever_factory(
+            content=_VERY_LONG_SOURCE_CONTENT, score=0.20,
+        )
+        llm = kwargs["llm_service"]
+        llm.generate = AsyncMock(side_effect=asyncio.TimeoutError())
+
+        agent = StudentLifeAgent(**kwargs)
+        response = await agent.handle_task(_task("CAP basvurusu nasil yapilir?"))
+
+        assert response.success is True
+        assert "Eldeki en ilgili kaynakta su bilgi yer aliyor:" in response.answer
+        assert "SON-BOLUM-TAM-METIN" in response.answer
+
+    @pytest.mark.asyncio
+    async def test_specialist_llm_prompt_limits_source_chunk_only_in_prompt(self):
+        kwargs = _agent_kwargs()
+        kwargs["retriever_factory"] = _mock_retriever_factory(
+            content=_VERY_LONG_SOURCE_CONTENT, score=0.20,
+        )
+        llm = kwargs["llm_service"]
+
+        agent = StudentLifeAgent(**kwargs)
+        response = await agent.handle_task(_task("CAP basvurusu nasil yapilir?"))
+
+        assert response.success is True
+        llm.generate.assert_awaited_once()
+        prompt = llm.generate.await_args.kwargs["prompt"]
+        assert "Madde 5 - CAP basvuru, kabul ve kayit kosullari" in prompt
+        assert "SON-BOLUM-TAM-METIN" not in prompt
+        assert "..." in prompt
+
+    @pytest.mark.asyncio
+    async def test_contact_request_falls_back_to_department_contacts(self):
+        kwargs = _agent_kwargs()
+        kwargs["contact_fetcher"] = AsyncMock(
+            side_effect=[
+                [],
+                [
+                    SimpleNamespace(
+                        unit_name="Program Isleri Ofisi",
+                        person_name="Ayse Kaya",
+                        title="Uzman",
+                        phone_ext="7304",
+                        email="program.isleri@omu.edu.tr",
+                    )
+                ],
+            ]
+        )
+
+        agent = RegulationAgent(**kwargs)
+        response = await agent.handle_task(_task("Iletisim bilgisi"))
+
+        assert response.success is True
+        assert "Program Isleri Ofisi" in response.answer
+        assert "program.isleri@omu.edu.tr" in response.answer
+        assert kwargs["contact_fetcher"].await_count == 2
 
 
 # ══════════════════════════════════════════════════════════
@@ -246,6 +385,24 @@ class TestRegistrationAgent:
         assert response.success is True
         assert "planlanmistir" in response.answer
         assert "2026-Guz" in response.answer
+
+    def test_source_only_answer_keeps_full_preferred_chunk(self):
+        agent = RegistrationAgent(**_agent_kwargs())
+
+        answer = agent._build_source_only_answer(
+            "Yatay gecis nasil yapilir?",
+            [
+                {
+                    "content": _VERY_LONG_SOURCE_CONTENT,
+                    "source": "yonerge.pdf",
+                    "score": 0.91,
+                    "metadata": {"file_name": "yonerge.pdf"},
+                }
+            ],
+        )
+
+        assert "SON-BOLUM-TAM-METIN" in answer
+        assert "(Kaynak: yonerge.pdf)" in answer
 
 
 # ══════════════════════════════════════════════════════════
@@ -496,6 +653,24 @@ class TestRegulationAgent:
 
         assert response.success is True
         assert response.sources is not None
+
+    def test_source_only_answer_keeps_full_preferred_chunk(self):
+        agent = RegulationAgent(**_agent_kwargs())
+
+        answer = agent._build_source_only_answer(
+            "CAP yonergesi ne diyor?",
+            [
+                {
+                    "content": _VERY_LONG_SOURCE_CONTENT,
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "score": 0.93,
+                    "metadata": {"file_name": "yonerge_cift_anadal_yandal.pdf"},
+                }
+            ],
+        )
+
+        assert "SON-BOLUM-TAM-METIN" in answer
+        assert "(Kaynak: yonerge_cift_anadal_yandal.pdf)" in answer
 
     @pytest.mark.asyncio
     async def test_no_results_returns_guidance(self):

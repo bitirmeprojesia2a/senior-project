@@ -14,9 +14,11 @@ Kullanım:
     documents = loader.load_directory("data/raw/student_affairs/")
 """
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
+import unicodedata
 
 import pdfplumber
 import structlog
@@ -142,6 +144,11 @@ class DocumentLoader:
     def __init__(self, min_content_length: int = 50):
         self.min_content_length = min_content_length
 
+    @staticmethod
+    def _normalize_source_name(filename: str) -> str:
+        """Kaynak adlarini tutarli eslesme ve gosterim icin NFC'ye sabitler."""
+        return unicodedata.normalize("NFC", filename)
+
     def _detect_department(self, file_path: Path) -> tuple[str, str]:
         """
         Dosya yolundan departman ve alt kategori bilgisini çıkarır.
@@ -222,16 +229,20 @@ class DocumentLoader:
             return None
 
         try:
+            normalized_name = self._normalize_source_name(file_path.name)
+
             if suffix == ".pdf":
                 content = self._load_pdf(file_path)
             else:
                 content = self._load_txt(file_path)
 
+            content = self._clean_content(content)
+
             # Minimum uzunluk kontrolü
             if len(content.strip()) < self.min_content_length:
                 logger.warning(
                     "file_too_short",
-                    path=file_path.name,
+                    path=normalized_name,
                     length=len(content.strip()),
                     min_required=self.min_content_length,
                 )
@@ -241,10 +252,11 @@ class DocumentLoader:
             department, subcategory = self._detect_department(file_path)
 
             # Akademik bölümü dosya adından tespit et
-            bolum_kodu, bolum_adi = self._detect_bolum(file_path.name)
+            bolum_kodu, bolum_adi = self._detect_bolum(normalized_name)
 
             metadata = {
-                "source": file_path.name,
+                "source": normalized_name,
+                "display_source": normalized_name,
                 "file_path": str(file_path),
                 "category": category,
                 "department": department,
@@ -257,7 +269,7 @@ class DocumentLoader:
 
             logger.info(
                 "file_loaded",
-                file=file_path.name,
+                file=normalized_name,
                 department=department,
                 subcategory=subcategory,
                 bolum=bolum_kodu,
@@ -348,3 +360,16 @@ class DocumentLoader:
             return file_path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             return file_path.read_text(encoding="cp1254")
+
+    _LINK_PLACEHOLDER_PATTERN = re.compile(
+        r"(?:Tıklayınız|Tiklayiniz|Tıkla|Buraya Tıklayın|Click Here)[\s.]*",
+        re.IGNORECASE,
+    )
+    _REPEATED_WHITESPACE_PATTERN = re.compile(r"\n{3,}")
+
+    @classmethod
+    def _clean_content(cls, text: str) -> str:
+        """Remove link placeholders and excessive whitespace from loaded content."""
+        text = cls._LINK_PLACEHOLDER_PATTERN.sub("", text)
+        text = cls._REPEATED_WHITESPACE_PATTERN.sub("\n\n", text)
+        return text.strip()

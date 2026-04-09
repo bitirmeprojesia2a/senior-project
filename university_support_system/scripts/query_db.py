@@ -1,10 +1,10 @@
 """
-ChromaDB Hızlı Sorgu Scripti — v2
+ChromaDB Hizli Sorgu Scripti
 
 Sadece arama yapar, yeniden indeksleme yapmaz.
 Hız testi ve RAG sonuçlarının kalitesini ölçmek için kullanılır.
 
-E5 modeli kullanıldığında sorguya otomatik "query:" prefix'i eklenir.
+Secilen embedding modeli E5 ailesindeyse sorguya otomatik "query:" prefix'i eklenir.
 
 Kullanım:
     python scripts/query_db.py "Ders kaydı nasıl yapılır?"
@@ -51,17 +51,19 @@ def main():
         or collection_name_for_department(args.department or Department.STUDENT_AFFAIRS)
     )
 
-    print(f"\n🔍 Aranıyor: '{args.query}'")
-    print(f"   Model: E5 (sorgu prefix'i otomatik eklenir)")
+    print(f"\n🔍 Araniyor: '{args.query}'")
     print(f"   Koleksiyon: {collection_name}")
-    print("-" * 50)
 
     try:
-        # Sadece embedder ve indexer'ı başlat
+        # Sadece embedder ve indexer'i baslat
         embedder = Embedder()
         indexer = ChromaIndexer(collection_name=collection_name)
+        model_note = " (E5 query prefix'i otomatik eklenir)" if embedder._is_e5_model else ""
 
-        # Sorguyu vektöre çevir — is_query=True (E5 prefix eklenir)
+        print(f"   Model: {embedder.model_name}{model_note}")
+        print("-" * 50)
+
+        # Sorguyu vektore cevir
         query_vector = embedder.embed_single(args.query, is_query=True)
 
         # Veritabanında ara

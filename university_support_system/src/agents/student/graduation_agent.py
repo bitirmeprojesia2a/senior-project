@@ -9,11 +9,13 @@ from a2a.types import Task
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.agents.student.graduation_utils import (
     format_academic_snapshot,
+    is_general_akts_rule_query,
     is_graduation_hybrid_query,
     is_graduation_personal_query,
 )
 from src.core.constants import Department, TaskType
 from src.core.messages import CONTACT_SUGGESTION
+from src.db.curriculum_data import fetch_program_akts_summary
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.db.student_academic_data import fetch_student_academic_snapshot
 from src.llm.prompt_templates import GRADUATION_AGENT_SYSTEM_PROMPT
@@ -24,6 +26,7 @@ class GraduationAgent(BaseSpecialistAgent):
         self,
         *,
         academic_fetcher: Callable[[int], Awaitable[dict | None]] | None = None,
+        curriculum_fetcher: Callable[[str], Awaitable[dict | None]] | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -40,12 +43,19 @@ class GraduationAgent(BaseSpecialistAgent):
             **kwargs,
         )
         self._academic_fetcher = academic_fetcher or fetch_student_academic_snapshot
+        self._curriculum_fetcher = curriculum_fetcher or fetch_program_akts_summary
 
     async def handle_department_task(self, task: Task) -> DepartmentResponse:
         metadata = task.metadata or {}
         query_text = str(metadata.get("query_text", "")).strip()
         student_id = metadata.get("student_id")
         is_authenticated = bool(metadata.get("is_authenticated", False))
+        student_department = str(metadata.get("student_department", "") or "").strip()
+
+        if self._is_general_akts_rule_query(query_text):
+            summary = await self._curriculum_fetcher(student_department)
+            if summary is not None:
+                return self._build_program_akts_response(summary)
 
         is_personal = self._is_personal_query(query_text)
         is_hybrid = self._is_hybrid_query(query_text)
@@ -93,12 +103,45 @@ class GraduationAgent(BaseSpecialistAgent):
 
         return await super().handle_department_task(task)
 
+    def _build_program_akts_response(self, summary: dict) -> DepartmentResponse:
+        total_akts = int(summary.get("total_akts", 0))
+        department = summary.get("department") or "Bu program"
+        semester_totals = summary.get("semester_totals") or {}
+        semester_summary = ", ".join(
+            f"{semester}. yariyil: {akts} AKTS"
+            for semester, akts in semester_totals.items()
+        )
+
+        answer_lines = [
+            (
+                f"{department} programinda mezuniyet icin baz mufredat yukumlulugu "
+                f"toplam {total_akts} AKTS'dir."
+            ),
+            (
+                "Yariyil dagilimi: "
+                f"{semester_summary}."
+            ),
+            (
+                "Bu toplam, standart mezuniyet planini temel alir; ozel uygulama "
+                "kalemleri ayri izlendiginden hesaplamaya ayrica dahil edilmemistir."
+            ),
+            CONTACT_SUGGESTION.strip(),
+        ]
+
+        return DepartmentResponse(
+            department=self.department,
+            answer="\n\n".join(answer_lines),
+            db_data=summary,
+            generation_mode="vt",
+            success=True,
+        )
+
     async def _handle_hybrid_query(self, query_text: str, snapshot: dict) -> DepartmentResponse:
         retriever = self._get_retriever()
         results = retriever.search(query_text, department=self.department)
         db_summary = self._format_academic_snapshot(snapshot)
 
-        answer = await self._generate_answer(
+        answer, generation_mode = await self._generate_answer(
             query_text,
             results,
             db_context=db_summary,
@@ -110,6 +153,7 @@ class GraduationAgent(BaseSpecialistAgent):
             department=self.department,
             answer=answer,
             db_data=snapshot,
+            generation_mode=generation_mode,
             sources=[
                 RAGSource(
                     content=item.get("content", ""),
@@ -126,6 +170,9 @@ class GraduationAgent(BaseSpecialistAgent):
 
     def _is_hybrid_query(self, query_text: str) -> bool:
         return is_graduation_hybrid_query(query_text)
+
+    def _is_general_akts_rule_query(self, query_text: str) -> bool:
+        return is_general_akts_rule_query(query_text)
 
     def _format_academic_snapshot(self, snapshot: dict) -> str:
         return format_academic_snapshot(snapshot)

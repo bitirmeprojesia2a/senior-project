@@ -173,6 +173,15 @@ def create_app() -> FastAPI:
             status=overall_status,
             app={
                 "api": "healthy",
+                "runtime": {
+                    "label": settings.server.runtime_label,
+                    "host": settings.server.host,
+                    "port": settings.server.port,
+                    "embedding_device": settings.embedding.device,
+                    "reranker_device": settings.reranker.device,
+                    "ollama_host": settings.ollama.host,
+                    "llm_profile": settings.normalize_llm_profile(settings.llm.profile),
+                },
                 "active_departments": [department.value for department in Department],
                 "a2a_mode": "internal",
                 "auth_mode": "otp_session",

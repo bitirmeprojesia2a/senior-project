@@ -1,213 +1,203 @@
-# Üniversite Kurumsal Destek Sistemi
+# Universite Kurumsal Destek Sistemi
 
-> RAG ve LLM tabanlı üniversite destek sistemi çekirdeği. Çok ajanlı yapı hedeflenmektedir; mevcut repo ağırlıklı olarak RAG, LLM ve veritabanı katmanlarını içerir.
+> RAG, LLM, OTP/session auth ve uygulama ici A2A orkestrasyonu ile universite destek sorgularini cevaplayan cok departmanli destek sistemi.
 
-## Proje Hakkında
+## Proje Ozeti
 
-Bu repo, üniversite destek senaryoları için geliştirilen sistemin çekirdek bileşenlerini içerir. Mevcut implementasyonun odak noktası:
+Bu repo artik sadece "RAG cekirdegi" degil; calisan bir uygulama yuzeyi sunar. Guncel kod tabaninda:
 
-- kurumsal dokümanlardan bilgi getiren RAG hattı,
-- LLM istemcileri ve fallback mekanizması,
-- PostgreSQL veri modeli ve şemaları,
-- değerlendirme ve test altyapısıdır.
+- `finance`, `student_affairs` ve `academic_programs` departmanlari aktif olarak desteklenir
+- duyuru sorgulari ayri announcement akisi ile ele alinir
+- OTP/session tabanli kimlik dogrulama endpoint'leri vardir
+- cok turlu konusma baglami ve follow-up cozumu bulunur
+- FastAPI giris noktasi, ic A2A dispatch ve benchmark/demo scriptleri calisir durumdadir
 
-Çok ajanlı orkestrasyon, Slack arayüzü, FastAPI geçidi, Redis tabanlı kuyruk/önbellek ve güvenlik katmanları bu depoda bağımlılık ve klasör düzeyinde hazırlanmış olsa da, şu an aktif çalışma yüzeyi büyük ölçüde çekirdek RAG/LLM kodudur.
+Slack, dis HTTP A2A genisletmeleri ve daha ileri dagitim katmanlari halen gelistirilebilir alanlar olarak durmaktadir; ancak ana uygulama akisi calismayan iskelet seviyesinde degildir.
 
-### Mevcut Özellikler
+## Guncel Ozellikler
 
-- **RAG Sistemi:** BAAI/bge-m3 + BM25 hibrit arama ile Türkçe semantik erişim
-- **Cross-Encoder Reranking:** Türkçe için iyileştirilmiş reranker ile sonuç sıralama
-- **İdempotent İndeksleme:** Hash tabanlı chunk ID + upsert ile tekrarları önleme
-- **Sorgu Cache:** TTL tabanlı in-memory cache
-- **LLM Entegrasyonu:** Ollama (birincil) + OpenAI (yedek)
-- **Değerlendirme Altyapısı:** Departman etiketli 30 soruluk test havuzu, Precision@k metrikleri, otomatik rapor üretimi
-- **SQLAlchemy 2 + Alembic:** tipli ORM modelleri ve migration akışı
+- Hibrit retrieval: BM25 + ChromaDB semantic search + cross-encoder reranker
+- Rol bazli LLM kullanimi: routing, conversation, specialist synthesis ve global synthesis icin ayri model tercihleri
+- Announcement kisa yolu: duyuru sorgularini gereksiz akademik retrieval'a sokmadan ayri ele alma
+- Conversation memory: context id uzerinden follow-up cozumleme ve kaynak/topic hint kullanimi
+- Profile/auth akisi: OTP isteme, dogrulama, session resolve ve logout endpoint'leri
+- Telemetry: query log, ajan gorevleri ve orchestrator seviyesinde gozlenebilirlik
+- Demo ve benchmark scriptleri: showcase, follow-up ve profile context senaryolari
+- Docker tabanli lokal kurulum ve Azure VM runbook'u
 
-### Mart 2026 Güncellemesi
-
-- **Çok departmanlı RAG çekirdeği:** `academic_programs` resmi departman olarak sisteme eklendi. Aktif çekirdek şu anda `student_affairs`, `academic_programs` ve `finance` departmanlarıyla çalışır.
-- **Dinamik koleksiyon çözümü:** İndeksleme ve sorgulama hattı artık tek bir sabit koleksiyona bağlı değil. `student_affairs_docs`, `academic_programs_docs` ve `finance_docs` ana departman bazlı koleksiyonlar olarak ele alınır.
-- **Metadata iyileştirmesi:** `academic_programs` belgelerinde bölüm (`bolum`) bilgisi metadata olarak tutulur; bir belge birden fazla bölüme işaret ediyorsa `genel` etiketi kullanılır.
-- **Script hizalama:** `index_documents.py`, `query_db.py`, `test_hybrid_search.py`, `compare_collections.py` ve `evaluate_rag.py` scriptleri departman/koleksiyon farkındalıklı hale getirildi.
-- **Merkezi departman kaydı:** Departman display adı, routing açıklaması, keyword kümesi ve kaynak klasör bilgisi `src/core/constants.py` içinde tek yerde toplanarak yeni departman ekleme maliyeti düşürüldü.
-- **Test stratejisi güncellemesi:** Integration testler `smoke`, `model` ve `slow` marker'ları ile ayrıldı. Reranker'ın gerçekten devreye girip girmediğini doğrulayan ek test eklendi.
-- **GPU hazırlığı:** Embedding ve reranker tarafına `auto | cpu | cuda` cihaz seçimi eklendi. CUDA destekli `torch` ile birlikte `auto` modu GPU kullanabilir.
-- **OTP/session auth akışı:** `/auth/request-otp`, `/auth/verify-otp`, `/auth/resolve` ve `/auth/logout` endpoint'leri eklendi. `/query` ve `/a2a/dispatch` artık `session_token` veya `slack_user_id` üzerinden kimlik bağlamı çözebilir.
-
-Ayrıntılı değişiklik özeti ve güncel teknik durum için: `docs/MART_2026_GUNCELLEME_NOTLARI.md`
-
-### Repo İçinde Henüz Tamamlanmamış Alanlar
-
-- **Çoklu ajan orkestrasyonu:** temel A2A yardımcıları, uzman ajan tabanı, departman orkestratörleri ve ana orkestratör iskeleti kodlandı
-- **FastAPI giriş yüzeyi:** `src.api.main:app` altında sağlık, sorgu, ajan listesi ve iç A2A dispatch endpoint'leri eklendi
-- **Slack entegrasyonu:** paket ve klasör iskeleti mevcut, aktif entegrasyon yok
-- **Redis kuyruk/önbellek:** bağımlılık ve ayarlar mevcut, aktif retrieval cache in-memory çalışıyor
-
-## Mevcut Mimari
+## Guncel Mimari
 
 ```text
-Kullanıcı sorgusu
+Kullanici / istemci
     |
     v
-Query Preprocessor
+FastAPI giris katmani
+  - /query
+  - /auth/*
+  - /a2a/dispatch
     |
     v
-Hybrid Retriever
-  - BM25
-  - ChromaDB semantic search
-  - Cross-encoder reranker
+Query / auth / profile helper akislari
     |
     v
-LLM Service
-  - Ollama
+MainOrchestrator
+  - conversation resolve
+  - department routing
+  - announcement fallback
+  - multi-department synthesis
+    |
+    v
+Departman ajanlari
+  - finance
+  - student_affairs
+  - academic_programs
+  - announcement
+    |
+    v
+RAG + LLM katmani
+  - document loader / preprocessor / chunker
+  - embedding / retriever / reranker
+  - Ollama primary
   - OpenAI fallback
     |
     v
-Yanıt + kaynaklar
+Yanit + kaynaklar + telemetry + conversation memory
 ```
 
-## Teknoloji Yığını
+## Teknoloji Yigini
 
-| Bileşen | Teknoloji | Durum |
-|---------|-----------|-------|
-| Dil | Python 3.11+ | Aktif |
-| Veritabanı | PostgreSQL 15 | Aktif |
-| Vektör DB | ChromaDB | Aktif |
-| LLM | Qwen2.5:7B + Qwen2.5:3B (Ollama) | Aktif |
-| Gömme Modeli | BAAI/bge-m3 | Aktif |
-| Reranker | seroe/bge-reranker-v2-m3-turkish-triplet | Aktif |
-| Web Framework | FastAPI | Aktif API giriş yüzeyi mevcut |
-| Kuyruk/Önbellek | Redis 7 | Ayarlar var, aktif kullanım sınırlı |
-| Protokoller | A2A + MCP | A2A yardımcıları ve orkestratör iskeleti aktif, tam ağ entegrasyonu sonraki faz |
-| Kullanıcı Arayüzü | Slack Bot | Planlı / iskelet |
-| Konteyner | Docker Compose | Aktif |
+| Bilesen | Teknoloji | Not |
+|---|---|---|
+| Dil | Python 3.11+ | Ana uygulama dili |
+| Web/API | FastAPI | Aktif giris yuzeyi |
+| ORM ve migration | SQLAlchemy 2 + Alembic | Aktif |
+| Veritabani | PostgreSQL 15 | Aktif |
+| Cache / yan servisler | Redis 7 | Aktif servis, kullanim senaryoya gore degisir |
+| Vektor veritabani | ChromaDB | Aktif |
+| Yerel LLM | Ollama | Varsayilan primary provider |
+| Yedek LLM | OpenAI HTTP fallback client | API key varsa devreye girer |
+| Embedding | BAAI/bge-m3 | Varsayilan embedding modeli |
+| Reranker | seroe/bge-reranker-v2-m3-turkish-triplet | Varsayilan reranker |
+| Konteyner | Docker Compose | Lokal ve VM kurulumlarinda kullanilir |
 
-## Hızlı Başlangıç
+## Hizli Baslangic
 
-### Ön Koşullar
-
-- Python 3.11+
-- Docker & Docker Compose
-- Git
-
-### Kurulum
+### 1. Python ortami
 
 ```powershell
-# 1. Sanal ortam
-python -m venv venv
-venv\Scripts\activate
-
-# 2. Bağımlılıklar
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements-dev.txt
+```
 
-# 3. Ortam değişkenleri
+### 2. Ortam degiskenleri
+
+```powershell
 copy .env.example .env
+```
 
-# 4. Docker servisleri (PostgreSQL, Redis, ChromaDB, Ollama)
+Temiz bir makinede Hugging Face modellerinin indirilebilmesi icin gerekirse su iki ayari ekleyin:
+
+```text
+EMBEDDING_LOCAL_FILES_ONLY=false
+RERANKER_LOCAL_FILES_ONLY=false
+```
+
+### 3. Docker servisleri
+
+```powershell
 docker compose up -d
+docker compose ps
+```
 
-# 5. Veritabanı migration
+### 4. Veritabani migration
+
+```powershell
 python -m alembic upgrade head
+```
 
-# 6. AI modellerini indir (embedding/reranker ilk kullanımda cache'e iner)
-python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
-python -c "from sentence_transformers import CrossEncoder; CrossEncoder('seroe/bge-reranker-v2-m3-turkish-triplet', max_length=512)"
+### 5. Structured seed verileri
 
-# Ollama container açılışta OLLAMA_PRELOAD_MODELS içindeki modelleri otomatik çeker.
-# Varsayılan: qwen2.5:7b + qwen2.5:3b
-docker exec uni_ollama ollama list
+RAG indeksleri tek basina yeterli degildir. Su komutlar PostgreSQL icindeki
+ders, onkosul, kayit donemi, ogrenim ucreti ve demo ogrenci verilerini yukler:
 
-# 7. RAG indeksleme
-python scripts/index_documents.py --reindex
+```powershell
+python -m scripts.seed_curriculum_data
+python -m scripts.seed_synthetic_data
+```
 
-# 8. Unit testler (206 test, Docker gerektirmez)
-python -m pytest tests/unit/ -v --tb=short
+Bu adim ozellikle su sorgular icin gereklidir:
 
-# 9. Integration testler (20 test, ChromaDB gerekli)
-python -m pytest tests/integration/ -v --tb=short
+- `BIL104 dersinin on kosulu nedir?`
+- `1. yariyil dersleri nelerdir?`
+- kayit donemi / harc / burs sorgulari
 
-# 10. Arama testi
-python scripts/test_hybrid_search.py "ÇAP başvurusu için gereken not ortalaması kaçtır"
+Not:
 
-# 11. RAG değerlendirme raporu
-python scripts/evaluate_rag.py
+- `seed_curriculum_data` `courses` ve `course_prerequisites` tablolarini doldurur.
+- `seed_synthetic_data` `course_registration_periods`, `tuition_fee_catalog`, `students`, `tuition`, `payments`, `installments`, `scholarships`, `announcements` ve `office_contacts` tablolarini demo verilerle doldurur.
+- Duyuru ve iletisim kayitlari demo amaclidir; gercek ortama gecerken gercek kaynaklarla degistirilmelidir.
 
-# 12. API'yi çalıştır
+### 6. Departman indeksleme
+
+```powershell
+python scripts/index_documents.py --source data/raw/student_affairs --collection student_affairs_docs --reindex
+python scripts/index_documents.py --source data/raw/academic_programs --collection academic_programs_docs --reindex
+python scripts/index_documents.py --source data/raw/finance --collection finance_docs --reindex
+```
+
+### 7. API'yi calistirma
+
+```powershell
 uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-> GPU kullanacaksanız `EMBEDDING_DEVICE` ve `RERANKER_DEVICE` ayarlarını `cuda` veya `auto` olarak bırakabilirsiniz. Bunun çalışması için kurulu `torch` paketinin CUDA destekli olması gerekir.
+Kontrol icin:
 
-> LLM model seçimi artık rol bazlı ayarlanabilir. Varsayılan balanslı yapıda router `qwen2.5:3b`, uzman sentez ve ana sentez ise `qwen2.5:7b` kullanır. Tüm akışı hızlı moda almak için `.env` içinde `LLM_PROFILE=fast`, kalite odaklı yapmak için `LLM_PROFILE=quality` kullanabilirsiniz.
+- `GET /`
+- `GET /health`
+- `GET /docs`
 
-> Not: Bu repo içinde artık çalıştırılabilir bir `src.api.main:app` girişi vardır. Slack katmanı halen sonraki faz için iskelet düzeyindedir.
+Detayli kurulum ve sorun giderme icin [docs/KURULUM_VE_CALISTIRMA.md](docs/KURULUM_VE_CALISTIRMA.md) dosyasini kullanin.
 
-> Detaylı kurulum rehberi için: [`docs/KURULUM_VE_CALISTIRMA.md`](docs/KURULUM_VE_CALISTIRMA.md)
-
-## Proje Yapısı
+## Proje Yapisi
 
 ```text
 university_support_system/
 |-- src/
-|   |-- rag/               # Aktif RAG hattı
-|   |-- llm/               # Aktif LLM istemcileri ve servis katmanı
-|   |-- db/                # Aktif veritabanı katmanı
-|   |-- core/              # Aktif konfigürasyon ve sabitler
-|   |-- routing/           # Aktif DepartmentRouter
-|   |-- agents/            # Temel uzman ajan iskeleti
-|   |-- orchestrators/     # Temel ana/departman orkestratörleri
-|   |-- api/               # Aktif FastAPI giriş yüzeyi
-|   |-- slack/             # İskelet
-|   |-- security/          # İskelet
-|   |-- queue/             # İskelet
-|   |-- cache/             # İskelet
-|   `-- mcp/               # İskelet
-|-- tests/
-|   |-- unit/              # 206 unit test
-|   `-- integration/       # 20 integration test
-|-- scripts/               # CLI araçları
-|-- migrations/            # Alembic migration'ları
-|-- docs/                  # Teknik dokümantasyon
+|   |-- api/               # FastAPI girisi ve query/auth/profile helper akislari
+|   |-- agents/            # Akademik, finans, ogrenci isleri ve duyuru ajanlari
+|   |-- orchestrators/     # Ana orchestrator ve moduler dispatch/synthesis yardimcilari
+|   |-- routing/           # DepartmentRouter ve routing policy
+|   |-- rag/               # Loader, chunker, retriever, reranker, index pipeline
+|   |-- llm/               # Ollama/OpenAI istemcileri ve LLM service
+|   |-- db/                # ORM modelleri, auth, profile, conversation ve telemetry
+|   |-- notifications/     # OTP e-posta gonderim yardimcilari
+|   |-- slack/             # Slack tarafindaki entegrasyon temeli
+|   |-- a2a/, cache/, queue/, security/, mcp/
+|   `-- core/              # Konfigrasyon, sabitler ve ortak yardimcilar
+|-- scripts/               # Index, benchmark, evaluate ve test CLI scriptleri
+|-- tests/                 # Unit ve integration testleri
+|-- docs/                  # Guncel ve tarihsel dokumantasyon
+|-- data/                  # Raw dokumanlar ve metadata
 |-- docker-compose.yml
-|-- Makefile
-|-- requirements.txt
-`-- requirements-dev.txt
+|-- alembic.ini
+|-- pyproject.toml
+`-- requirements*.txt
 ```
 
-## Testler
+## Dokumantasyon
 
-```powershell
-# Unit testler (206 test - Docker gerektirmez)
-python -m pytest tests/unit/ -v --tb=short
-
-# Integration testler (20 test - ChromaDB gerekli)
-python -m pytest tests/integration/ -v --tb=short
-
-# Hızlı smoke/model testleri
-python -m pytest tests/integration/ -m "smoke or model" -v --tb=short
-
-# Uzun kalite testleri
-python -m pytest tests/integration/ -m slow -v --tb=short
-
-# Tüm testler
-python -m pytest tests/ -v --tb=short
-
-# Coverage ile
-python -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
-
-# RAG değerlendirme raporu (Precision@k, ChromaDB gerekli)
-python scripts/evaluate_rag.py
-```
-
-## Dokümantasyon
-
-| Doküman | Açıklama |
-|---------|----------|
-| [`FAZ_0_TEKNIK_DOKUMANTASYON.md`](docs/FAZ_0_TEKNIK_DOKUMANTASYON.md) | Erken faz veritabanı ve konfigürasyon anlatımı; bazı noktalar güncel koddan sapmış olabilir |
-| [`FAZ_1_TEKNIK_DOKUMANTASYON.md`](docs/FAZ_1_TEKNIK_DOKUMANTASYON.md) | RAG pipeline, embedding, retrieval, reranking ve testler |
-| [`FAZ_2_TEKNIK_DOKUMANTASYON.md`](docs/FAZ_2_TEKNIK_DOKUMANTASYON.md) | LLM servisi, Ollama, OpenAI fallback ve streaming |
-| [`KURULUM_VE_CALISTIRMA.md`](docs/KURULUM_VE_CALISTIRMA.md) | Kurulum, çalıştırma, model indirme, sorun giderme |
-| [`PROJE_ANATOMISI_KILAVUZU.md`](docs/PROJE_ANATOMISI_KILAVUZU.md) | Modül bazlı repo anatomisi |
+| Dokuman | Amac |
+|---|---|
+| [docs/DOKUMANTASYON_OKUMA_SIRASI.md](docs/DOKUMANTASYON_OKUMA_SIRASI.md) | Hangi belgenin guncel, hangisinin tarihsel oldugunu gosteren giris noktasi |
+| [docs/KURULUM_VE_CALISTIRMA.md](docs/KURULUM_VE_CALISTIRMA.md) | Guncel lokal kurulum, indeksleme, test ve sorun giderme rehberi |
+| [docs/PROJE_ANATOMISI_KILAVUZU.md](docs/PROJE_ANATOMISI_KILAVUZU.md) | Mevcut modullerin sorumluluk haritasi |
+| [docs/demo_runbook.md](docs/demo_runbook.md) | Demo ve benchmark senaryolarini calistirma notlari |
+| [docs/AZURE_VM_RUNBOOK.md](docs/AZURE_VM_RUNBOOK.md) | Azure VM uzerinde kurulum ve operasyon notlari |
+| [docs/technical_backlog.md](docs/technical_backlog.md) | Halen acik teknik iyilestirme listesi |
+| [docs/MART_2026_GUNCELLEME_NOTLARI.md](docs/MART_2026_GUNCELLEME_NOTLARI.md) | Mart 2026 donemindeki mimari degisim ozeti |
+| `docs/FAZ_0_*`, `docs/FAZ_1_*`, `docs/FAZ_2_*`, `docs/FAZ_3_*` | Tarihsel faz kayitlari; guncel operasyon dokumani olarak degil, referans arka plan olarak okunmalidir |
 
 ## Lisans
 

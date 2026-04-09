@@ -1,6 +1,7 @@
 """Cross-encoder reranker."""
 
 from typing import Any, ClassVar, Dict, List, Optional
+import math
 
 import structlog
 import torch
@@ -132,13 +133,23 @@ class CrossEncoderReranker:
         self.last_run_succeeded = True
 
         for candidate, score in zip(candidates, scores):
-            candidate["score"] = round(float(score), 4)
+            # Logit skorunu (örn: 5.7 veya -10.2) 0.0 ile 1.0 arasina normalize et (Sigmoid)
+            s_float = float(score)
+            prob = 1.0 / (1.0 + math.exp(-s_float)) if s_float >= 0 else math.exp(s_float) / (1.0 + math.exp(s_float))
+            reranker_score = round(prob, 4)
+            
+            metadata = candidate.setdefault("metadata", {})
+            metadata["pre_rerank_score"] = round(float(candidate.get("score", 0.0)), 4)
+            metadata["reranker_score"] = reranker_score
+            metadata["score_type"] = "reranker"
+            candidate["score"] = reranker_score
 
         candidates.sort(key=lambda c: c["score"], reverse=True)
 
-        logger.debug(
+        logger.info(
             "reranking_complete",
-            top_scores=[(c["source"], c["score"]) for c in candidates[:5]],
+            query=query[:80],
+            top_scores=[(c.get("source", "?"), round(c["score"], 4)) for c in candidates[:5]],
         )
 
         return candidates[:top_k]

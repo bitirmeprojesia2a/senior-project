@@ -25,6 +25,8 @@ from src.core.constants import Department, collection_name_for_department
 from src.rag.candidate_utils import (
     deduplicate_candidate_dicts,
     deduplicate_documents,
+    merge_chunk_texts,
+    parse_sub_chunk_position,
     sort_candidates_by_score,
 )
 from src.rag.query_cache import _QueryCache as _SharedQueryCache
@@ -33,6 +35,7 @@ from src.rag.search_planner import (
     OFF_TOPIC_PENALTY as _SHARED_OFF_TOPIC_PENALTY,
     _apply_finance_source_penalty as _shared_apply_finance_source_penalty,
     _apply_source_relevance as _shared_apply_source_relevance,
+    _apply_student_affairs_faq_bias as _shared_apply_student_affairs_faq_bias,
     _detect_query_topic as _shared_detect_query_topic,
     _plan_search_departments as _shared_plan_search_departments,
     _score_departments as _shared_score_departments,
@@ -55,7 +58,60 @@ _COMPOUND_SPLITS = {
     "lisansustu": "lisans ustu",
     "çiftanadal": "çift ana dal",
     "lisansüstü": "lisans üstü",
+    "onkosul": "on kosul",
+    "önkoşul": "ön koşul",
+    "onsart": "on sart",
+    "önşart": "ön şart",
 }
+
+_AUGMENTATION_PREFIX_RE = re.compile(
+    r"^(?:[\w\s/çğıöşüÇĞİÖŞÜ]+\s+(?:bolumu/programi|baglami|Fakultesi)\s+icin:\s*)+",
+    re.IGNORECASE,
+)
+
+
+def _strip_augmentation_prefix(query: str) -> str:
+    """Remove orchestrator-injected prefixes so the reranker sees a clean query."""
+    stripped = _AUGMENTATION_PREFIX_RE.sub("", query).strip()
+    return stripped if len(stripped) >= 5 else query
+
+
+_TURKISH_SUFFIXES = (
+    "lerin", "larin", "leri", "ları", "lari",
+    "ler", "lar",
+    "nin", "nın", "nın", "nun", "nün",
+    "dan", "den", "tan", "ten",
+    "nda", "nde",
+    "daki", "deki", "ndaki", "ndeki",
+    "yla", "yle", "iyla", "iyle",
+    "ını", "ini", "unu", "ünü",
+    "ına", "ine", "una", "üne",
+    "ında", "inde", "unda", "ünde",
+    "ıdır", "idir", "udur", "üdür",
+    "dır", "dir", "dur", "dür",
+    "tır", "tir", "tur", "tür",
+    "mış", "miş", "muş", "müş",
+    "yor", "arak", "erek",
+    "ması", "mesi",
+    "mak", "mek",
+    "ım", "im", "um", "üm",
+    "ın", "in", "un", "ün",
+    "da", "de", "ta", "te",
+    "ya", "ye",
+    "sı", "si", "su", "sü",
+    "lık", "lik", "luk", "lük",
+    "ca", "ce", "ça", "çe",
+)
+
+
+def _turkish_stem(token: str) -> str:
+    """Aggressive but safe suffix stripping for BM25 recall."""
+    if len(token) <= 3:
+        return token
+    for suffix in _TURKISH_SUFFIXES:
+        if token.endswith(suffix) and len(token) - len(suffix) >= 2:
+            return token[: -len(suffix)]
+    return token
 
 
 def turkish_bm25_preprocess(text: str) -> List[str]:
@@ -71,12 +127,14 @@ def turkish_bm25_preprocess(text: str) -> List[str]:
     normalized_text = _WHITESPACE_RE.sub(" ", normalized_text).strip()
 
     tokens = normalized_text.split()
-    return [token for token in tokens if len(token) > 1]
+    stemmed = [_turkish_stem(token) for token in tokens if len(token) > 1]
+    return stemmed
 
 
 OFF_TOPIC_PENALTY = _SHARED_OFF_TOPIC_PENALTY
 CONVERSATION_SOURCE_HINT_BOOST = 0.08
 CONVERSATION_TOPIC_HINT_BOOST = 0.04
+_DEPARTMENT_METADATA_BOOST = 0.06
 
 
 def _detect_query_topic(query: str) -> Optional[str]:
@@ -113,6 +171,15 @@ def _apply_finance_source_penalty(
 ) -> List[Dict[str, Any]]:
     """Backward-compatible wrapper around shared search planner logic."""
     return _shared_apply_finance_source_penalty(results, query, collection_name)
+
+
+def _apply_student_affairs_faq_bias(
+    results: List[Dict[str, Any]],
+    query: str,
+    collection_name: str,
+) -> List[Dict[str, Any]]:
+    """Backward-compatible wrapper for FAQ/student-affairs source biasing."""
+    return _shared_apply_student_affairs_faq_bias(results, query, collection_name)
 
 
 def _apply_conversation_source_hints(
@@ -159,6 +226,45 @@ def _apply_conversation_source_hints(
             }
         )
     return adjusted
+
+
+def _apply_department_metadata_boost(
+    results: List[Dict[str, Any]],
+    student_department: str | None,
+    boost: float = _DEPARTMENT_METADATA_BOOST,
+) -> List[Dict[str, Any]]:
+    """Boost results whose bolum metadata matches the student's department.
+
+    General documents (bolum=genel or missing) are unaffected so they
+    naturally mix with department-specific results based on relevance.
+    """
+    if not student_department:
+        return results
+
+    from src.core.text_normalization import normalize_text as _norm
+
+    normalized_dept = _norm(student_department)
+    adjusted = False
+    for item in results:
+        metadata = item.get("metadata") or {}
+        bolum_adi = _norm(metadata.get("bolum_adi", ""))
+        bolum_code = _norm(metadata.get("bolum", ""))
+
+        if not bolum_adi or bolum_adi == "genel" or bolum_code == "genel":
+            continue
+
+        if normalized_dept in bolum_adi or bolum_code in normalized_dept:
+            item["score"] = round(float(item.get("score", 0.0)) + boost, 4)
+            adjusted = True
+
+    if adjusted:
+        results.sort(key=lambda c: c.get("score", 0.0), reverse=True)
+        logger.debug(
+            "department_metadata_boost_applied",
+            student_department=student_department,
+            top_sources=[(r.get("source", ""), r.get("score", 0.0)) for r in results[:3]],
+        )
+    return results
 
 
 class ChromaRestRetriever(BaseRetriever):
@@ -296,32 +402,8 @@ class HybridRetriever:
         candidates: List[Dict[str, Any]],
         top_k: int,
     ) -> bool:
-        """Skip reranker in narrow high-signal scenarios to save latency."""
-        if len(candidates) <= top_k:
-            return True
-
-        if (
-            settings.rag.skip_reranker_for_finance_narrow_queries
-            and collection_name == collection_name_for_department(Department.FINANCE)
-            and query_type in {"factual", "procedural"}
-        ):
-            return True
-
-        if (
-            settings.rag.skip_reranker_for_student_affairs_procedural
-            and collection_name == collection_name_for_department(Department.STUDENT_AFFAIRS)
-            and query_type == "procedural"
-        ):
-            return True
-
-        if (
-            settings.rag.skip_reranker_for_academic_programs_procedural
-            and collection_name == collection_name_for_department(Department.ACADEMIC_PROGRAMS)
-            and query_type == "procedural"
-        ):
-            return True
-
-        return False
+        """Skip reranker only when there are not enough candidates to rerank."""
+        return len(candidates) <= top_k
 
     def _rank_without_reranker(
         self,
@@ -331,7 +413,115 @@ class HybridRetriever:
     ) -> List[Dict[str, Any]]:
         """Use fusion score ordering when reranker is skipped."""
         _ = query
+        for candidate in candidates:
+            metadata = candidate.setdefault("metadata", {})
+            metadata.setdefault("retrieval_score", round(float(candidate.get("score", 0.0)), 4))
+            metadata.setdefault("score_type", "retrieval")
         return self._sort_candidates_by_score(candidates)[:top_k]
+
+    @staticmethod
+    def _resolve_collection_name_for_candidate(
+        candidate: Dict[str, Any],
+        department: Department | str | None = None,
+    ) -> str | None:
+        """Infer the backing collection for a candidate from explicit or metadata department."""
+        department_value = department
+        if department_value is None:
+            department_value = (candidate.get("metadata") or {}).get("department")
+        if not department_value:
+            return None
+
+        try:
+            return collection_name_for_department(Department(department_value))
+        except ValueError:
+            return None
+
+    def _load_documents_for_collection(self, collection_name: str) -> List[Document]:
+        """Load BM25 cache documents for a collection on demand."""
+        cached_documents = self._BM25_DOCUMENT_CACHE.get(collection_name)
+        if cached_documents is not None:
+            return cached_documents
+
+        indexer = self._get_indexer(collection_name)
+        return self._load_bm25_documents(collection_name, indexer)
+
+    @staticmethod
+    def _candidate_sort_key(candidate: Dict[str, Any]) -> tuple[int, int]:
+        """Order chunks by sub-chunk position first, then chunk index."""
+        metadata = candidate.get("metadata") or {}
+        position = parse_sub_chunk_position(metadata.get("sub_chunk"))
+        if position is not None:
+            return position[0], int(metadata.get("chunk_index", position[0]))
+        return int(metadata.get("chunk_index", 10**9)), int(metadata.get("chunk_index", 10**9))
+
+    def _expand_candidate_context(
+        self,
+        candidate: Dict[str, Any],
+        *,
+        department: Department | str | None = None,
+    ) -> Dict[str, Any]:
+        """Expand a result to the full MADDE span when the hit is only one sub-chunk."""
+        metadata = dict(candidate.get("metadata") or {})
+        source = metadata.get("source") or candidate.get("source")
+        madde_no = metadata.get("madde_no")
+        sub_chunk = metadata.get("sub_chunk")
+        if not source or not madde_no or not sub_chunk:
+            return candidate
+
+        collection_name = self._resolve_collection_name_for_candidate(candidate, department=department)
+        if not collection_name:
+            return candidate
+
+        documents = self._load_documents_for_collection(collection_name)
+        related_candidates: List[Dict[str, Any]] = []
+        for document in documents:
+            doc_metadata = dict(document.metadata or {})
+            if doc_metadata.get("source") != source:
+                continue
+            if str(doc_metadata.get("madde_no")) != str(madde_no):
+                continue
+            related_candidates.append(
+                {
+                    "content": document.page_content,
+                    "metadata": doc_metadata,
+                }
+            )
+
+        if len(related_candidates) <= 1:
+            return candidate
+
+        related_candidates.sort(key=self._candidate_sort_key)
+        merged_content = merge_chunk_texts(item["content"] for item in related_candidates)
+        if not merged_content:
+            return candidate
+
+        metadata["context_expanded"] = True
+        metadata["merged_chunk_count"] = len(related_candidates)
+        metadata["merged_sub_chunks"] = ",".join(
+            str(item["metadata"].get("sub_chunk", "")) for item in related_candidates if item["metadata"].get("sub_chunk")
+        )
+        return {
+            **candidate,
+            "content": merged_content,
+            "metadata": metadata,
+        }
+
+    def enrich_results(
+        self,
+        results: List[Dict[str, Any]],
+        *,
+        department: Department | str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Expand partial MADDE hits and deduplicate repeated source rows."""
+        if not results:
+            return []
+
+        expanded = [
+            self._expand_candidate_context(result, department=department)
+            for result in results
+        ]
+        expanded = deduplicate_candidate_dicts(expanded)
+        return self._sort_candidates_by_score(expanded)
 
     def _resolve_search_collections(
         self,
@@ -383,16 +573,19 @@ class HybridRetriever:
         fallback_collections: List[str],
         source_hints: List[str] | None = None,
         topic_hint: str | None = None,
+        student_department: str | None = None,
     ) -> str:
         """Build a stable cache key for a search request."""
         normalized_hints = "|".join(sorted(hint.strip().casefold() for hint in (source_hints or []) if hint))
         normalized_topic = (topic_hint or "").strip().casefold()
+        normalized_dept = (student_department or "").strip().casefold()
         return (
             f"{query}::{top_k}::"
             f"{'|'.join(primary_collections)}::"
             f"{'|'.join(fallback_collections)}::"
             f"{normalized_hints}::"
-            f"{normalized_topic}"
+            f"{normalized_topic}::"
+            f"{normalized_dept}"
         )
 
     def _try_cache_hit(
@@ -440,16 +633,18 @@ class HybridRetriever:
             )
             return self._rank_without_reranker(query, reranker_candidates, top_k=top_k)
 
+        clean_query = _strip_augmentation_prefix(query)
         logger.info(
             "reranker_limited",
             query=query,
+            reranker_query=clean_query,
             collection=search_scope,
             query_type=query_type,
             original_candidate_count=len(candidates),
             reranker_candidate_count=len(reranker_candidates),
             top_k=top_k,
         )
-        return self.reranker.rerank(query, reranker_candidates, top_k=top_k)
+        return self.reranker.rerank(clean_query, reranker_candidates, top_k=top_k)
 
     def _finalize_results(
         self,
@@ -623,6 +818,7 @@ class HybridRetriever:
         *,
         source_hints: List[str] | None = None,
         topic_hint: str | None = None,
+        student_department: str | None = None,
     ) -> List[Dict[str, Any]]:
         """Run hybrid retrieval and return ranked results."""
         start_time = time.perf_counter()
@@ -639,6 +835,7 @@ class HybridRetriever:
             fallback_collections=fallback_collections,
             source_hints=source_hints,
             topic_hint=topic_hint,
+            student_department=student_department,
         )
         cached = self._try_cache_hit(
             cache_key=cache_key,
@@ -678,6 +875,7 @@ class HybridRetriever:
         )
 
         search_scope = primary_collections[0] if len(primary_collections) == 1 else "__multi__"
+        candidates = _apply_student_affairs_faq_bias(candidates, query, search_scope)
         candidates = _apply_finance_source_penalty(candidates, query, search_scope)
         candidates = self._sort_candidates_by_score(candidates)
         results = self._rank_candidates(
@@ -687,7 +885,7 @@ class HybridRetriever:
             search_scope=search_scope,
             top_k=k,
         )
-        results = _apply_finance_source_penalty(results, query, search_scope)
+        results = _apply_department_metadata_boost(results, student_department)
         return self._finalize_results(
             query=query,
             query_type=query_type,

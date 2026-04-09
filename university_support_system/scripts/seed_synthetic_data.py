@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 import json
 import sys
@@ -15,10 +15,12 @@ from src.core.console import configure_utf8_stdio
 from src.core.config import settings
 from src.core.text_normalization import collapse_whitespace, normalize_text
 from src.db.models import (
+    Announcement,
     AvailableScholarship,
     Course,
     CourseRegistrationPeriod,
     Installment,
+    OfficeContact,
     Payment,
     Scholarship,
     ScholarshipApplication,
@@ -51,6 +53,119 @@ _REGISTRATION_PERIOD_FIXTURES = (
         "is_active": True,
     },
 )
+
+
+def _seed_demo_announcements(session: Session) -> None:
+    """Sync a small set of demo announcements for end-to-end queries."""
+
+    now = datetime.now(timezone.utc)
+    fixtures = [
+        {
+            "title": "2026 Bahar Ders Kayit Takvimi Guncellendi",
+            "summary": "Bahar donemi ders kayit ve mazeretli kayit tarihleri guncellenmistir. Ogrencilerin takvimi kontrol etmesi gerekir.",
+            "original_text": "Bahar donemi ders kayit, ders ekle-birak ve mazeretli kayit tarihleri guncellenmistir.",
+            "source_url": "https://omu.edu.tr/duyuru/2026-bahar-ders-kayit-takvimi",
+            "faculty": None,
+            "department": "student_affairs",
+            "published_at": now - timedelta(days=2),
+            "is_active": True,
+        },
+        {
+            "title": "CAP Basvurulari Acildi",
+            "summary": "Bilgisayar Muhendisligi dahil uygun programlar icin CAP basvurulari 15 Nisan 2026 tarihine kadar alinacaktir.",
+            "original_text": "CAP basvurulari 15 Nisan 2026 tarihine kadar ogrenci bilgi sistemi uzerinden alinacaktir.",
+            "source_url": "https://omu.edu.tr/duyuru/cap-basvurulari-2026",
+            "faculty": "Muhendislik Fakultesi",
+            "department": "academic_programs",
+            "published_at": now - timedelta(days=1),
+            "is_active": True,
+        },
+        {
+            "title": "Yemek Bursu Basvurulari Basladi",
+            "summary": "Yemek bursu ve kismi zamanli calisma basvurulari 20 Nisan 2026 tarihine kadar aciktir.",
+            "original_text": "Yemek bursu ile kismi zamanli ogrenci calisma programi basvurulari baslamistir.",
+            "source_url": "https://omu.edu.tr/duyuru/yemek-bursu-basvurulari-2026",
+            "faculty": None,
+            "department": "finance",
+            "published_at": now - timedelta(days=3),
+            "is_active": True,
+        },
+    ]
+
+    existing = {
+        item.source_url: item
+        for item in session.scalars(select(Announcement).where(Announcement.source_url.is_not(None))).all()
+    }
+
+    for fixture in fixtures:
+        row = existing.get(fixture["source_url"])
+        if row is None:
+            session.add(Announcement(**fixture))
+            continue
+
+        row.title = fixture["title"]
+        row.summary = fixture["summary"]
+        row.original_text = fixture["original_text"]
+        row.faculty = fixture["faculty"]
+        row.department = fixture["department"]
+        row.published_at = fixture["published_at"]
+        row.is_active = fixture["is_active"]
+
+
+def _seed_demo_office_contacts(session: Session) -> None:
+    """Sync a small set of office contacts for contact-request flows."""
+
+    fixtures = [
+        {
+            "unit_name": "Program Isleri Ofisi",
+            "department": "academic_programs",
+            "person_name": "Ayse Kaya",
+            "title": "Uzman",
+            "phone_ext": "7304",
+            "email": "program.isleri@omu.edu.tr",
+            "related_agents": ["curriculum_agent"],
+            "is_active": True,
+        },
+        {
+            "unit_name": "Ogrenci Isleri Kayit Ofisi",
+            "department": "student_affairs",
+            "person_name": "Mehmet Demir",
+            "title": "Memur",
+            "phone_ext": "7401",
+            "email": "kayit.ofisi@omu.edu.tr",
+            "related_agents": ["registration_agent", "graduation_agent"],
+            "is_active": True,
+        },
+        {
+            "unit_name": "Mali Isler Ofisi",
+            "department": "finance",
+            "person_name": "Elif Yilmaz",
+            "title": "Uzman",
+            "phone_ext": "7412",
+            "email": "mali.isler@omu.edu.tr",
+            "related_agents": ["tuition_agent", "scholarship_agent"],
+            "is_active": True,
+        },
+    ]
+
+    existing = {
+        (item.unit_name, item.department): item
+        for item in session.scalars(select(OfficeContact)).all()
+    }
+
+    for fixture in fixtures:
+        key = (fixture["unit_name"], fixture["department"])
+        row = existing.get(key)
+        if row is None:
+            session.add(OfficeContact(**fixture))
+            continue
+
+        row.person_name = fixture["person_name"]
+        row.title = fixture["title"]
+        row.phone_ext = fixture["phone_ext"]
+        row.email = fixture["email"]
+        row.related_agents = fixture["related_agents"]
+        row.is_active = fixture["is_active"]
 
 
 def _sync_registration_periods(session: Session) -> None:
@@ -162,17 +277,18 @@ def _sync_tuition_fee_catalog(session: Session) -> None:
 
 
 def seed_synthetic_data(session: Session) -> None:
-    """Insert synthetic, student-focused test data if tables are empty."""
+    """Insert synthetic, student-focused test data when student tables are empty."""
 
     _sync_registration_periods(session)
     _sync_tuition_fee_catalog(session)
+    _seed_demo_announcements(session)
+    _seed_demo_office_contacts(session)
 
     has_any_student = session.scalar(select(Student.id).limit(1)) is not None
-    has_any_course = session.scalar(select(Course.id).limit(1)) is not None
 
-    if has_any_student or has_any_course:
+    if has_any_student:
         session.commit()
-        print("Synthetic seed skipped: students or courses already contain data.")
+        print("Support data synced. Synthetic student seed skipped: students already contain data.")
         return
 
     # ---------- 1) STUDENTS ----------

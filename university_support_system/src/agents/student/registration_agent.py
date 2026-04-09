@@ -33,7 +33,7 @@ class RegistrationAgent(BaseSpecialistAgent):
                 name="Registration Agent",
                 department=Department.STUDENT_AFFAIRS,
                 description="Kayit, muafiyet ve yatay gecis sureclerini yonetir.",
-                task_types=(TaskType.REGISTRATION_QUERY, TaskType.PROCEDURE_QUERY),
+                task_types=(TaskType.REGISTRATION_QUERY,),
                 examples=("Ders kaydi ne zaman?", "Yatay gecis basvurusu nasil yapilir?"),
                 tags=("student_affairs", "registration"),
                 system_prompt=REGISTRATION_AGENT_SYSTEM_PROMPT,
@@ -129,7 +129,7 @@ class RegistrationAgent(BaseSpecialistAgent):
         if preferred is None:
             return super()._build_source_only_answer(query_text, results, db_context=db_context)
 
-        content = self._compact_source_content(preferred.get("content", ""), max_len=280)
+        content = self._compact_source_content(preferred.get("content", ""), max_len=None)
         source = preferred.get("source", "bilinmiyor")
         intro = build_registration_intro(query_text)
         prefix = f"{db_context}\n\n" if db_context else ""

@@ -77,10 +77,12 @@ class OllamaSettings(BaseSettings):
     secondary_model: str = "qwen2.5:3b"
     timeout: int = 600
     max_retries: int = 3
+    num_ctx: int = 8192
+    num_predict: int = 512
 
 
 class OpenAISettings(BaseSettings):
-    """Opsiyonel OpenAI yedek ayarlari."""
+    """OpenAI-compatible provider ayarlari."""
 
     model_config = SettingsConfigDict(
         env_prefix="OPENAI_",
@@ -90,7 +92,11 @@ class OpenAISettings(BaseSettings):
     )
 
     api_key: Optional[str] = None
+    base_url: str = "https://api.openai.com/v1"
     model: str = "gpt-4o-mini"
+    secondary_model: Optional[str] = None
+    timeout: int = 30
+    provider_name: str = "openai_compatible"
 
     @property
     def is_available(self) -> bool:
@@ -114,6 +120,8 @@ class LLMRuntimeSettings(BaseSettings):
     global_synthesis_model: Optional[str] = None
     specialist_synthesis_timeout_seconds: int = 600
     global_synthesis_timeout_seconds: int = 600
+    primary_provider: Literal["ollama", "openai_compatible"] = "ollama"
+    fallback_provider: Literal["none", "ollama", "openai_compatible"] = "openai_compatible"
 
 
 class ChromaSettings(BaseSettings):
@@ -164,14 +172,14 @@ class RAGSettings(BaseSettings):
     chunk_size: int = 1024
     chunk_overlap: int = 128
     top_k: int = 5
-    min_similarity: float = 0.0
+    min_similarity: float = 0.02
     reranker_candidate_limit_default: int = 16
     reranker_candidate_limit_finance: int = 5
     reranker_candidate_limit_student_affairs: int = 10
     reranker_candidate_limit_academic_programs: int = 12
     skip_reranker_for_finance_narrow_queries: bool = False
-    skip_reranker_for_student_affairs_procedural: bool = True
-    skip_reranker_for_academic_programs_procedural: bool = True
+    skip_reranker_for_student_affairs_procedural: bool = False
+    skip_reranker_for_academic_programs_procedural: bool = False
 
 
 class RerankerSettings(BaseSettings):
@@ -263,6 +271,7 @@ class ServerSettings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
+    runtime_label: str = "default"
     debug: bool = True
     log_level: str = "INFO"
     warmup_enabled: bool = False
@@ -332,19 +341,21 @@ class Settings(BaseSettings):
         *,
         role: Literal["default", "routing", "conversation", "specialist_synthesis", "global_synthesis"] = "default",
         profile: str | None = None,
+        provider: Literal["ollama", "openai_compatible"] | None = None,
     ) -> str:
         """
         LLM rolune gore kullanilacak Ollama modelini cozumler.
 
-        Cozumleme sirası:
+        Cozumleme sirasi:
         1. Acik istek profili (`fast`, `quality`, `balanced`)
         2. Ayarlardaki varsayilan profil
         3. Role ozel model override'i
-        4. Birincil Ollama modeli
+        4. Provider'in birincil modeli
         """
         requested_profile = self.normalize_llm_profile(profile or self.llm.profile)
-        primary_model = self.ollama.model
-        secondary_model = self.ollama.secondary_model or primary_model
+        active_provider = provider or self.llm.primary_provider
+        primary_model = self._resolve_provider_primary_model(active_provider)
+        secondary_model = self._resolve_provider_secondary_model(active_provider)
 
         if requested_profile == "fast":
             return secondary_model
@@ -360,11 +371,31 @@ class Settings(BaseSettings):
         }
         return role_overrides.get(role) or primary_model
 
+    def _resolve_provider_primary_model(
+        self,
+        provider: Literal["ollama", "openai_compatible"],
+    ) -> str:
+        """Return the default primary model for the selected provider."""
+        if provider == "openai_compatible":
+            return self.openai.model
+        return self.ollama.model
+
+    def _resolve_provider_secondary_model(
+        self,
+        provider: Literal["ollama", "openai_compatible"],
+    ) -> str:
+        """Return the secondary/fast profile model for the selected provider."""
+        if provider == "openai_compatible":
+            return self.openai.secondary_model or self.openai.model
+        return self.ollama.secondary_model or self.ollama.model
+
     def configured_llm_models(self) -> dict[str, str]:
         """Saglik ve debug ciktilari icin cozumlenmis model haritasini dondurur."""
         return {
-            "primary": self.ollama.model,
-            "secondary": self.ollama.secondary_model or self.ollama.model,
+            "provider": self.llm.primary_provider,
+            "fallback_provider": self.llm.fallback_provider,
+            "primary": self._resolve_provider_primary_model(self.llm.primary_provider),
+            "secondary": self._resolve_provider_secondary_model(self.llm.primary_provider),
             "profile": self.normalize_llm_profile(self.llm.profile),
             "routing": self.resolve_llm_model(role="routing"),
             "conversation": self.resolve_llm_model(role="conversation"),
