@@ -8,7 +8,8 @@ Kullanim:
   cd university_support_system
   python scripts/run_quality_benchmark.py                          # Tum sorular
   python scripts/run_quality_benchmark.py --category A             # Tek kategori
-  python scripts/run_quality_benchmark.py --question Q5            # Tek soru
+  python scripts/run_quality_benchmark.py --question Q5             # Tek soru
+  python scripts/run_quality_benchmark.py --question Q8 Q13 Q16    # Birden fazla soru
   python scripts/run_quality_benchmark.py --cold-start             # Cold-start (model yeniden yukle)
   python scripts/run_quality_benchmark.py --use-api                # API uzerinden
   python scripts/run_quality_benchmark.py --use-api --api-base-url http://localhost:8000
@@ -533,8 +534,8 @@ async def main():
     parser = argparse.ArgumentParser(description="Reranker Kalite Benchmark")
     parser.add_argument("--category", type=str, default="",
                         help="Sadece belirli kategoriyi calistir (or. A, B_cross)")
-    parser.add_argument("--question", type=str, default="",
-                        help="Sadece belirli soruyu calistir (or. Q5)")
+    parser.add_argument("--question", type=str, nargs="+", default=[],
+                        help="Bir veya birden fazla soruyu calistir (or. Q5 veya Q8 Q13 Q16)")
     parser.add_argument("--cold-start", action="store_true",
                         help="Cold-start testi (varsayilan: warm)")
     parser.add_argument("--use-api", action="store_true",
@@ -555,9 +556,10 @@ async def main():
     categories = benchmark.get("categories", {})
 
     if args.question:
-        questions = [q for q in questions if q["id"].upper() == args.question.upper()]
+        q_ids = {qid.upper() for qid in args.question}
+        questions = [q for q in questions if q["id"].upper() in q_ids]
         if not questions:
-            print(f"{RED}Soru bulunamadi: {args.question}{RESET}")
+            print(f"{RED}Soru bulunamadi: {', '.join(args.question)}{RESET}")
             return
 
     if args.category:
