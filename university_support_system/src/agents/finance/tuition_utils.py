@@ -80,10 +80,21 @@ UNIT_QUERY_PATTERN = re.compile(
 )
 
 
+_PERSONAL_PROCEDURAL_OVERRIDE = (
+    "nasil", "nereye", "ne yapmaliyim", "ne yapmam gerekiyor",
+    "nasil odenir", "nasil yatirilir", "nasil odeyebilirim",
+    "basvuru", "sart", "kosul",
+)
+
+
 def is_personal_query(query_text: str) -> bool:
     """Return whether the query asks for personal tuition state."""
     lowered = normalize_finance_text(query_text)
-    return any(keyword in lowered for keyword in PERSONAL_KEYWORDS)
+    if not any(keyword in lowered for keyword in PERSONAL_KEYWORDS):
+        return False
+    if any(signal in lowered for signal in _PERSONAL_PROCEDURAL_OVERRIDE):
+        return False
+    return True
 
 
 _FEE_POLICY_SIGNALS = (

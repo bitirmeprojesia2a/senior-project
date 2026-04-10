@@ -65,6 +65,8 @@ async def dispatch_to_departments(
         query=query,
         orchestrator_count=len(orchestrators),
     )
+    if metadata.get("force_llm_synthesis"):
+        disable_specialist_llm = False
 
     if use_parallel:
         tasks = [
