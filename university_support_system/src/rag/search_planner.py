@@ -51,8 +51,20 @@ _TOPIC_SOURCE_PATTERNS: Dict[str, List[str]] = {
     "kayit dondurma": ["kayit", "dondurma", "donem_izni", "ogrenci_isleri"],
     "mezuniyet": ["mezuniyet", "diploma", "ogrenci_isleri"],
     "azami sure": ["azami", "ogrenim_suresi", "yon_lisans"],
-    "devam zorunlulugu": ["devam", "yoklama", "yonetmelik"],
+    "devam zorunlulugu": ["devam", "yoklama", "yonetmelik", "on_lisans"],
+    "başarısız": ["sik_sorulan", "on_lisans", "lisans", "yonetmelik"],
+    "seçmeli ders": ["on_lisans", "lisans", "mufredat", "sik_sorulan"],
 }
+
+_LISANSUSTU_INDICATORS = (
+    "lisansustu", "yuksek lisans", "master", "doktora", "tez savunma",
+)
+_LISANSUSTU_SOURCE_MARKERS = (
+    "lisansustu", "yuksek_lisans", "lisans_ustu", "lisansustu_",
+)
+_LISANS_SOURCE_MARKERS = (
+    "on_lisans", "onlisans", "lisans_yon", "yon_lisans",
+)
 
 _TOPIC_KEYS_BY_LENGTH = sorted(_TOPIC_SOURCE_PATTERNS.keys(), key=len, reverse=True)
 
@@ -254,6 +266,48 @@ def _apply_source_relevance(
             "source_relevance_applied",
             topic=topic,
             adjusted_scores=[(result.get("source", ""), result["score"]) for result in results[:5]],
+        )
+
+    return results
+
+
+def _apply_education_level_penalty(
+    results: List[Dict[str, Any]],
+    query: str,
+) -> List[Dict[str, Any]]:
+    """Penalize lisansustu sources when query is about lisans, and vice versa."""
+    normalized_query = normalize_text(query)
+    query_is_lisansustu = any(
+        marker in normalized_query for marker in _LISANSUSTU_INDICATORS
+    )
+
+    adjusted = False
+    for item in results:
+        source = normalize_text(item.get("source", ""))
+        metadata = item.get("metadata") or {}
+        file_name = normalize_text(str(metadata.get("file_name", "")))
+        combined = f"{source} {file_name}"
+
+        if not query_is_lisansustu:
+            if any(marker in combined for marker in _LISANSUSTU_SOURCE_MARKERS):
+                item["score"] = round(float(item.get("score", 0.0)) * 0.5, 4)
+                adjusted = True
+        else:
+            is_lisans_only = (
+                any(marker in combined for marker in _LISANS_SOURCE_MARKERS)
+                and not any(marker in combined for marker in _LISANSUSTU_SOURCE_MARKERS)
+            )
+            if is_lisans_only:
+                item["score"] = round(float(item.get("score", 0.0)) * 0.6, 4)
+                adjusted = True
+
+    if adjusted:
+        results.sort(key=lambda item: item.get("score", 0.0), reverse=True)
+        logger.debug(
+            "education_level_penalty_applied",
+            query=query,
+            query_is_lisansustu=query_is_lisansustu,
+            top_sources=[(r.get("source", ""), r.get("score", 0.0)) for r in results[:5]],
         )
 
     return results

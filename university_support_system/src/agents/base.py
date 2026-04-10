@@ -42,7 +42,7 @@ _CONTACT_REQUEST_KEYWORDS = (
 
 _DIRECT_RAG_RERANKER_THRESHOLD = 0.605
 _DIRECT_RAG_RETRIEVAL_THRESHOLD = 0.25
-_SPECIALIST_LLM_CONTEXT_MAX_LEN = 1500
+_SPECIALIST_LLM_CONTEXT_MAX_LEN = 2000
 
 _LLM_SYNTHESIS_MIN_RERANKER_SCORE = 0.30
 _LLM_SYNTHESIS_MIN_RETRIEVAL_SCORE = 0.18
@@ -55,8 +55,8 @@ _FAQ_QUESTION_RE = re.compile(r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$", re.MULT
 _FAQ_SOURCE_PATTERNS = ("sik_sorulan", "sikca_sorulan", "sss", "faq")
 
 
-def _extract_relevant_faq_block(content: str, query: str) -> str:
-    """SSS iceriginden sorguya en yakin Q&A blogunu cikar."""
+def _extract_relevant_faq_block(content: str, query: str, *, max_blocks: int = 2) -> str:
+    """SSS iceriginden sorguya en yakin Q&A bloklarini cikar (varsayilan: top-2)."""
     questions = list(_FAQ_QUESTION_RE.finditer(content))
     if len(questions) < 2:
         return content
@@ -64,19 +64,21 @@ def _extract_relevant_faq_block(content: str, query: str) -> str:
     query_lower = normalize_text(query)
     query_words = set(query_lower.split())
 
-    best_block = content
-    best_overlap = 0
+    scored_blocks: list[tuple[int, str]] = []
     for i, match in enumerate(questions):
         end = questions[i + 1].start() if i + 1 < len(questions) else len(content)
         block = content[match.start():end].strip()
         block_lower = normalize_text(block)
         block_words = set(block_lower.split())
         overlap = len(query_words & block_words)
-        if overlap > best_overlap:
-            best_overlap = overlap
-            best_block = block
+        scored_blocks.append((overlap, block))
 
-    return best_block
+    scored_blocks.sort(key=lambda pair: pair[0], reverse=True)
+    top_blocks = [block for overlap, block in scored_blocks[:max_blocks] if overlap > 0]
+    if not top_blocks:
+        return scored_blocks[0][1] if scored_blocks else content
+
+    return "\n\n".join(top_blocks)
 
 
 def _is_faq_source(source: str) -> bool:
@@ -526,7 +528,7 @@ class BaseSpecialistAgent:
                 )
 
         context_chunks = []
-        for index, item in enumerate(results[:3], start=1):
+        for index, item in enumerate(results[:5], start=1):
             source = item.get("source", "bilinmiyor")
             raw_content = item.get("content", "")
             if _is_faq_source(source) and query_text:
@@ -543,6 +545,12 @@ class BaseSpecialistAgent:
         if context_chunks:
             prompt += f"Belge Baglami:\n{chr(10).join(context_chunks)}\n\n"
         prompt += (
+            "YANITLAMA STRATEJISI:\n"
+            "- Once sorunun DOGRUDAN yanitini ver (evet/hayir, tarih, sayi vb.).\n"
+            "- Kaynaklardaki SPESIFIK bilgileri (sayi, tarih, sure, yuzde, kosul esigi) mutlaka dahil et.\n"
+            "- Soru birden fazla alt-soru iceriyorsa her birini ayri ayri yanitla.\n"
+            "- Soru acikca lisansustu/yuksek lisans/doktora programlarindan bahsetmiyorsa ON LISANS VE LISANS kurallarini kullan.\n"
+            "\n"
             "KURALLAR:\n"
             "1. Yalnizca verilen belge baglaminda ACIKCA gecen bilgileri kullan.\n"
             "2. Kaynaklar soruyu dogrudan yanitlamiyorsa 'Bu konuda elimdeki kaynaklarda net bilgi bulunamadi' de.\n"

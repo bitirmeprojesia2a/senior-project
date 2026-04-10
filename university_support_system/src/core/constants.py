@@ -92,6 +92,7 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
             "ders ekleme", "ders birakma", "ders secimi",
             "staj defteri", "staj sigorta", "zorunlu staj",
             "bitirme projesi", "mup", "mesleki uygulama",
+            "uzaktan egitim", "uzaktan ders",
         ),
     ),
     Department.ACADEMIC_PROGRAMS: DepartmentConfig(
@@ -123,6 +124,8 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
             "harf notu", "gecme notu", "basari notu",
             "mevlana", "farabi", "degisim programi",
             "ders plani", "ders programi",
+            "degerlendirme sistemi", "degerlendirme",
+            "uzaktan egitim kurali",
         ),
     ),
 }

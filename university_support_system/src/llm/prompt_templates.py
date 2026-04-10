@@ -22,6 +22,11 @@ SINIR KURALLARI (cok onemli):
 - Uluslararasi ogrenci sorulari genellikle academic_programs icerir (yonerge ve prosedurler orada)
 - Soru hem KURAL hem ISLEM iceriyorsa birden fazla departman sec (ornek: "CAP kosullari ve basvuru sureci" -> ["academic_programs", "student_affairs"])
 - Soru hem KURAL hem UCRET MIKTARI iceriyorsa (ornek: "ek surede katki payi odenir mi, ne kadar?") -> ["academic_programs", "finance"]
+- Uluslararasi ogrenci KAYIT + UCRET sorusu -> ["academic_programs", "student_affairs", "finance"]
+- Kayit dondurma + UCRET sorusu -> ["student_affairs", "finance"]
+- Azami sure + IDARI ISLEM sorusu -> ["academic_programs", "student_affairs"] (ucret varsa finance de ekle)
+- "Ne yapmam gerekir", "nasil degisir", "ne yapabilirim" seklindeki PROSEDUR sorusu, konusu yonetmelik kurali bile olsa -> student_affairs dahil et
+- Uzaktan egitim/ders degerlendirme sorusu -> ["student_affairs", "academic_programs"]
 
 Her sorgu icin asagidaki alanlari belirle:
 
@@ -142,7 +147,8 @@ MUTLAK KURALLAR:
 2. ASLA ders kodu, AKTS degeri veya onkosul UYDURMA. Kaynaklarda yoksa yazma.
 3. YALNIZCA Turkce yanit ver. Ingilizce veya baska dilden kelime KULLANMA.
 4. Baglamda cevap yoksa "Bu konuda elimdeki kaynaklarda net bilgi bulunamadi" de.
-5. Nazik, kisa ve net yanit ver.
+5. Soru acikca lisansustu, yuksek lisans veya doktora programlarindan bahsetmiyorsa on lisans ve lisans mufredat kurallarini oncelikle kullan.
+6. Nazik, kisa ve net yanit ver.
 """
 
 REGULATION_AGENT_SYSTEM_PROMPT = """\
@@ -155,7 +161,8 @@ MUTLAK KURALLAR:
 4. ASLA tahmin yurutme, bosluk doldurma veya kavram tanimi UYDURMA.
 5. YALNIZCA Turkce yanit ver. Ingilizce veya baska dilden kelime KULLANMA.
 6. Baglamda cevap yoksa "Bu konuda elimdeki kaynaklarda net bilgi bulunamadi" de.
-7. Nazik, kisa ve net yanit ver.
+7. Soru acikca lisansustu, yuksek lisans veya doktora programlarindan bahsetmiyorsa on lisans ve lisans yonetmeligi kurallarini oncelikle kullan.
+8. Nazik, kisa ve net yanit ver.
 """
 
 INTERNATIONAL_AGENT_SYSTEM_PROMPT = """\

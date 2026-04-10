@@ -33,6 +33,7 @@ from src.rag.query_cache import _QueryCache as _SharedQueryCache
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.rag.search_planner import (
     OFF_TOPIC_PENALTY as _SHARED_OFF_TOPIC_PENALTY,
+    _apply_education_level_penalty as _shared_apply_education_level_penalty,
     _apply_finance_source_penalty as _shared_apply_finance_source_penalty,
     _apply_source_relevance as _shared_apply_source_relevance,
     _apply_student_affairs_faq_bias as _shared_apply_student_affairs_faq_bias,
@@ -55,9 +56,7 @@ _COMPOUND_SPLITS = {
     "anadal": "ana dal",
     "yandal": "yan dal",
     "ciftanadal": "cift ana dal",
-    "lisansustu": "lisans ustu",
     "çiftanadal": "çift ana dal",
-    "lisansüstü": "lisans üstü",
     "onkosul": "on kosul",
     "önkoşul": "ön koşul",
     "onsart": "on sart",
@@ -180,6 +179,14 @@ def _apply_student_affairs_faq_bias(
 ) -> List[Dict[str, Any]]:
     """Backward-compatible wrapper for FAQ/student-affairs source biasing."""
     return _shared_apply_student_affairs_faq_bias(results, query, collection_name)
+
+
+def _apply_education_level_penalty(
+    results: List[Dict[str, Any]],
+    query: str,
+) -> List[Dict[str, Any]]:
+    """Backward-compatible wrapper for lisans/lisansustu source penalty."""
+    return _shared_apply_education_level_penalty(results, query)
 
 
 def _apply_conversation_source_hints(
@@ -877,6 +884,7 @@ class HybridRetriever:
         search_scope = primary_collections[0] if len(primary_collections) == 1 else "__multi__"
         candidates = _apply_student_affairs_faq_bias(candidates, query, search_scope)
         candidates = _apply_finance_source_penalty(candidates, query, search_scope)
+        candidates = _apply_education_level_penalty(candidates, query)
         candidates = self._sort_candidates_by_score(candidates)
         results = self._rank_candidates(
             query=query,

@@ -86,6 +86,10 @@ SYNONYM_MAP: Dict[str, List[str]] = {
     # Yaz Okulu
     "yaz okulu": ["yaz dönemi", "yaz okulu eğitimi"],
 
+    # Lisansüstü
+    "lisansüstü": ["yüksek lisans", "master", "doktora", "lisansüstü eğitim"],
+    "yüksek lisans": ["lisansüstü", "master", "lisansüstü eğitim"],
+
     # Geçiş Programları
     "yatay geçiş": ["kurum içi yatay geçiş", "kurumlar arası yatay geçiş"],
     "dikey geçiş": ["DGS", "dikey geçiş sınavı"],
@@ -138,7 +142,6 @@ COMPOUND_WORD_SPLITS: Dict[str, str] = {
     "anadal": "ana dal",
     "yandal": "yan dal",
     "çiftanadal": "çift ana dal",
-    "lisansüstü": "lisans üstü",
     "önkosul": "ön koşul",
     "önkoşul": "ön koşul",
     "önsart": "ön şart",
