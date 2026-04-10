@@ -6,12 +6,16 @@ Yine zero dependency hedefine uygun olarak REST API uzerinden (httpx ile)
 implemente edilmistir.
 """
 
+import itertools
 import json
+import logging
 from typing import Any, AsyncGenerator, Dict, Optional
 
 import httpx
 
 from src.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIClientError(Exception):
@@ -26,7 +30,12 @@ class OpenAIClient:
     """OpenAI-compatible HTTP REST API istemcisi."""
 
     def __init__(self):
-        self.api_key = settings.openai.api_key
+        raw_key = settings.openai.api_key or ""
+        self._api_keys: list[str] = [k.strip() for k in raw_key.split(",") if k.strip()]
+        self._key_cycle = itertools.cycle(self._api_keys) if self._api_keys else None
+        if len(self._api_keys) > 1:
+            logger.info("openai_client_key_rotation enabled=%d keys", len(self._api_keys))
+        self.api_key = self._api_keys[0] if self._api_keys else ""
         self.model = settings.openai.model
         self.base_url = settings.openai.base_url.rstrip("/")
         self.chat_url = f"{self.base_url}/chat/completions"
@@ -36,15 +45,20 @@ class OpenAIClient:
     @property
     def is_available(self) -> bool:
         """API key tanimli mi?"""
-        return bool(self.api_key)
+        return bool(self._api_keys)
 
-    def _get_headers(self) -> Dict[str, str]:
-        if not self.api_key:
+    def _next_api_key(self) -> str:
+        """Round-robin ile siradaki API key'i dondurur."""
+        if self._key_cycle is None:
             raise OpenAIClientError(
                 f"{self.provider_name} API anahtari (OPENAI_API_KEY) yapilandirilmamis."
             )
+        return next(self._key_cycle)
+
+    def _get_headers(self) -> Dict[str, str]:
+        api_key = self._next_api_key()
         return {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
 
@@ -53,7 +67,7 @@ class OpenAIClient:
         API baglantisini kontrol eder.
         Basit bir model listesi sorgusu ile key/gecerlilik testi yapar.
         """
-        if not self.api_key:
+        if not self._api_keys:
             return {
                 "status": "unhealthy",
                 "reason": "API_KEY_MISSING",

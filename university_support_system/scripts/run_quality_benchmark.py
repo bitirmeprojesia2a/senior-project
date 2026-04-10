@@ -51,6 +51,7 @@ REPORT_DIR = _ROOT / "docs"
 RESULTS_DIR = _ROOT / "tests"
 
 BOLD = "\033[1m"
+DIM = "\033[2m"
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -621,6 +622,12 @@ async def main():
                 llm_profile=args.llm_profile or None,
             )
             results.append(result)
+
+            if i < len(questions):
+                wait_s = 5
+                print(f"\n  {DIM}Rate-limit bekleme: {wait_s}s ...{RESET}", end="", flush=True)
+                await asyncio.sleep(wait_s)
+                print(f"\r  {DIM}Rate-limit bekleme: {wait_s}s ... tamam{RESET}")
     finally:
         if api_client is not None:
             await api_client.aclose()
