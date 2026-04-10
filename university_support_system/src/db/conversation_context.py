@@ -57,18 +57,10 @@ _FOLLOW_UP_PREFIXES = (
     "birde",
     "yani",
 )
-_FOLLOW_UP_MARKERS = (
-    "ne zaman",
-    "nasil",
-    "neler",
-    "hangileri",
-    "kosullari",
-    "sartlari",
+# Guclu marker'lar: Tek baslarina follow-up sinyali olarak yeterli
+_STRONG_FOLLOW_UP_MARKERS = (
     "ucreti ne kadar",
     "ucretleri ne kadar",
-    "nedir",
-    "ne demek",
-    "ne oluyor",
     "ne kadar",
     "ne olmali",
     "suresi ne",
@@ -78,6 +70,18 @@ _FOLLOW_UP_MARKERS = (
     "olur mu",
     "sart mi",
     "gerekli mi",
+    "kosullari",
+    "sartlari",
+)
+# Zayif marker'lar: Sadece kisa sorgularda (<=5 kelime) follow-up sinyali
+_WEAK_FOLLOW_UP_MARKERS = (
+    "ne zaman",
+    "nasil",
+    "neler",
+    "hangileri",
+    "nedir",
+    "ne demek",
+    "ne oluyor",
     "nereden",
     "nereye",
 )
@@ -106,15 +110,32 @@ def _rewrite_preserves_intent(original: str, rewritten: str) -> bool:
     """
     stop_words = {
         "bir", "bu", "su", "o", "ve", "ile", "icin", "ne", "nasil",
-        "nedir", "mi", "mu", "mu", "mi", "da", "de", "den", "dan",
+        "nedir", "mi", "mu", "da", "de", "den", "dan",
         "ya", "veya", "ama", "fakat", "gibi", "kadar", "en", "cok",
         "az", "hangi", "kim", "nere", "nerede", "zaman", "ise",
+        # Zamirler ve hal ekleri — follow-up sorgularda siklikla bulunurlar
+        "bunun", "bunu", "buna", "bundan", "bunlar", "bunlari", "bunlarin",
+        "onun", "onu", "ona", "ondan", "onlar", "onlari", "onlarin",
+        "peki", "hakkinda",
     }
     orig_tokens = set(normalize_text(original).split()) - stop_words
     rew_tokens = set(normalize_text(rewritten).split()) - stop_words
     if not orig_tokens:
         return True
+
+    # Birebir eslesen tokenlar
     overlap = len(orig_tokens & rew_tokens)
+
+    # Turkcede cogul/hal eki farkliliklari icin kok benzerligi:
+    # 'belge'≈'belgeler', 'staj'≈'staji' gibi durumlari yakala
+    for orig_tok in orig_tokens - rew_tokens:
+        for rew_tok in rew_tokens - orig_tokens:
+            shorter = min(orig_tok, rew_tok, key=len)
+            longer = max(orig_tok, rew_tok, key=len)
+            if len(shorter) >= 3 and longer.startswith(shorter):
+                overlap += 1
+                break
+
     ratio = overlap / len(orig_tokens)
     return ratio >= _MIN_CONTENT_WORD_OVERLAP
 
@@ -439,13 +460,23 @@ class ConversationContextService:
 
         starts_with_follow_up = self._starts_with_any(normalized_query, _FOLLOW_UP_PREFIXES)
 
-        # Marker'lar cümlenin HERHANGİ bir yerinde aranır (eski: startswith → yeni: in)
-        contains_follow_up_marker = any(
+        # Guclu marker'lar: her zaman follow-up sinyali
+        has_strong_marker = any(
             marker in normalized_query
-            for marker in _FOLLOW_UP_MARKERS
+            for marker in _STRONG_FOLLOW_UP_MARKERS
         )
 
-        # Zamir kontrolü: ilk 4 token'da zamir/referans kelime var mı
+        # Zayif marker'lar: yalnizca kisa sorgularda (<=5 kelime) follow-up sinyali
+        # 'Erasmus basvurusu nasil yapilir?' gibi uzun bagimsiz sorulari korur
+        has_weak_marker = (
+            len(query_tokens) <= 5
+            and any(
+                marker in normalized_query
+                for marker in _WEAK_FOLLOW_UP_MARKERS
+            )
+        )
+
+        # Zamir kontrolu: ilk 4 token'da zamir/referans kelime var mi
         pronoun_like = any(
             token in _FOLLOW_UP_PRONOUNS
             for token in query_tokens[:4]
@@ -453,7 +484,7 @@ class ConversationContextService:
 
         is_follow_up = bool(
             state.turn_count > 0
-            and (starts_with_follow_up or contains_follow_up_marker or pronoun_like)
+            and (starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like)
         )
         return {
             "is_follow_up": is_follow_up,

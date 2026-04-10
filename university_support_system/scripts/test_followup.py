@@ -189,8 +189,6 @@ async def run_group(
 
             print(f"\n  {BOLD}Sure:{RESET}        {elapsed:.2f}s")
             print(f"  {BOLD}Departman:{RESET}   {list(response.departments_involved)}")
-            print(f"  {BOLD}Strateji:{RESET}    {response.strategy}")
-            print(f"  {BOLD}Guven:{RESET}       {response.confidence}")
             print(f"  {BOLD}Yanit:{RESET}")
             for line in answer_preview.splitlines()[:6]:
                 print(f"    {line}")
@@ -201,8 +199,6 @@ async def run_group(
                 "query": query,
                 "expected": expected,
                 "departments": list(response.departments_involved),
-                "strategy": str(response.strategy),
-                "confidence": response.confidence,
                 "elapsed_s": round(elapsed, 2),
                 "answer_preview": answer_preview,
                 "error": None,
@@ -216,8 +212,6 @@ async def run_group(
                 "query": query,
                 "expected": expected,
                 "departments": [],
-                "strategy": "error",
-                "confidence": 0.0,
                 "elapsed_s": round(elapsed, 2),
                 "answer_preview": "",
                 "error": str(exc),
