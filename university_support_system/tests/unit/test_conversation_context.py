@@ -64,7 +64,7 @@ async def test_resolve_query_rewrites_follow_up_with_heuristics(monkeypatch):
     )
 
     assert resolution.is_follow_up is True
-    assert "CAP / Cift Anadal baglaminda" in resolution.effective_query
+    assert "CAP / Cift Anadal hakkinda" in resolution.effective_query
     assert Department.STUDENT_AFFAIRS in resolution.department_hints
     assert Department.ACADEMIC_PROGRAMS in resolution.department_hints
 

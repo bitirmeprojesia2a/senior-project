@@ -18,6 +18,7 @@ from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.core.text_normalization import normalize_text
 from src.db.connection import get_session
+from src.cache.conversation_cache import get_cached_state, set_cached_state
 from src.db.conversation_models import ConversationState, ConversationTurn
 from src.db.schemas import RAGSource
 from src.llm.prompt_templates import CONVERSATION_FOLLOWUP_SYSTEM_PROMPT
@@ -47,8 +48,16 @@ _FOLLOW_UP_PREFIXES = (
     "buna ek olarak",
     "oyle ise",
     "oylemi",
+    "bunu",
+    "onu",
+    "aynisi",
+    "boylece",
+    "sonra",
+    "son olarak",
+    "birde",
+    "yani",
 )
-_FOLLOW_UP_SUFFIXES = (
+_FOLLOW_UP_MARKERS = (
     "ne zaman",
     "nasil",
     "neler",
@@ -60,7 +69,31 @@ _FOLLOW_UP_SUFFIXES = (
     "nedir",
     "ne demek",
     "ne oluyor",
+    "ne kadar",
+    "ne olmali",
+    "suresi ne",
+    "son tarihi",
+    "gecerli mi",
+    "zorunlu mu",
+    "olur mu",
+    "sart mi",
+    "gerekli mi",
+    "nereden",
+    "nereye",
 )
+_FOLLOW_UP_PRONOUNS = {
+    "bu", "bunu", "buna", "bunda", "bunun", "bundan",
+    "bunlar", "bunlarin", "bunlara",
+    "su", "sunu", "sunun",
+    "o", "onu", "ona", "onun", "ondan", "onlar", "onlarin",
+    "orada", "burada", "oraya", "buraya",
+    "aynisi", "kendisi",
+}
+_TURBO_WORDS = {
+    "evet", "hayir", "tamam", "tesekkurler", "ok", "sagol",
+    "baska", "anladim", "tamamdir", "sagolun", "tesekkur",
+    "iyi", "guzel", "oldu", "peki",
+}
 _MIN_CONTENT_WORD_OVERLAP = 0.35
 
 
@@ -172,6 +205,11 @@ class ConversationContextService:
         self._now_provider = now_provider or (lambda: datetime.now(timezone.utc))
 
     async def get_state(self, *, context_id: str) -> ConversationStateData | None:
+        # Redis read-through cache
+        cached = await get_cached_state(context_id)
+        if cached is not None:
+            return cached
+
         async with self._session_provider() as session:
             result = await session.execute(
                 select(ConversationState).where(ConversationState.context_id == context_id)
@@ -179,7 +217,11 @@ class ConversationContextService:
             row = result.scalar_one_or_none()
             if row is None:
                 return None
-            return self._to_state_data(row)
+            state_data = self._to_state_data(row)
+
+            # Populate cache for subsequent reads
+            await set_cached_state(state_data)
+            return state_data
 
     async def resolve_query(
         self,
@@ -198,10 +240,22 @@ class ConversationContextService:
 
         state = await self.get_state(context_id=context_id)
         if state is None or self._is_state_stale(state):
+            logger.info(
+                "conversation_resolution context_id=%s state=%s result=direct_no_state",
+                context_id,
+                "stale" if state is not None else "missing",
+            )
             return self._direct_resolution(query)
 
         heuristic = self._classify_follow_up(query=query, state=state)
         if not heuristic["is_follow_up"]:
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=false "
+                "topic=%s original=%r",
+                context_id,
+                heuristic["topic"],
+                query,
+            )
             return ConversationResolution(
                 original_query=query,
                 effective_query=query,
@@ -212,6 +266,7 @@ class ConversationContextService:
                 source_hints=[],
             )
 
+        rewrite_method = "heuristic"
         llm_resolution = None
         if settings.conversation.rewrite_with_llm and llm_service is not None:
             llm_resolution = await self._rewrite_with_llm(
@@ -223,11 +278,32 @@ class ConversationContextService:
                 student_faculty=student_faculty,
                 student_type=student_type,
             )
+            if llm_resolution is not None:
+                rewrite_method = "llm"
 
         if llm_resolution is not None:
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=%s "
+                "rewrite_method=%s original=%r effective=%r topic=%s",
+                context_id,
+                llm_resolution.is_follow_up,
+                rewrite_method,
+                query,
+                llm_resolution.effective_query,
+                llm_resolution.active_topic,
+            )
             return llm_resolution
 
         effective_query = self._rewrite_with_heuristics(query=query, state=state)
+        logger.info(
+            "conversation_resolution context_id=%s is_follow_up=true "
+            "rewrite_method=%s original=%r effective=%r topic=%s",
+            context_id,
+            rewrite_method,
+            query,
+            effective_query,
+            state.active_topic,
+        )
         return ConversationResolution(
             original_query=query,
             effective_query=effective_query,
@@ -306,6 +382,25 @@ class ConversationContextService:
             state.turn_count = turn_index
             await session.flush()
 
+        # Write-through: update Redis cache with fresh state
+        await set_cached_state(
+            ConversationStateData(
+                context_id=context_id,
+                active_topic=topic,
+                rolling_summary=state.rolling_summary,
+                active_entities=list(state.active_entities or []),
+                last_departments=list(dict.fromkeys(departments)),
+                last_source_refs=source_refs,
+                last_task_type=task_type.value if task_type else None,
+                last_turn_id=turn.id,
+                last_user_query=user_query,
+                last_resolved_query=resolved_query,
+                last_assistant_answer=answer_summary,
+                turn_count=turn_index,
+                updated_at=self._now_provider(),
+            )
+        )
+
     @staticmethod
     def _direct_resolution(query: str) -> ConversationResolution:
         return ConversationResolution(
@@ -335,18 +430,30 @@ class ConversationContextService:
         normalized_query = normalize_text(query)
         query_tokens = [token for token in normalized_query.split() if token]
 
+        # Kısa / yanıt niteliğinde ifadeler follow-up olarak değerlendirilmez
+        if len(query_tokens) <= 2 and any(t in _TURBO_WORDS for t in query_tokens):
+            return {
+                "is_follow_up": False,
+                "topic": state.active_topic,
+            }
+
         starts_with_follow_up = self._starts_with_any(normalized_query, _FOLLOW_UP_PREFIXES)
-        generic_question = any(
-            normalized_query.startswith(marker) or normalized_query == marker
-            for marker in _FOLLOW_UP_SUFFIXES
+
+        # Marker'lar cümlenin HERHANGİ bir yerinde aranır (eski: startswith → yeni: in)
+        contains_follow_up_marker = any(
+            marker in normalized_query
+            for marker in _FOLLOW_UP_MARKERS
         )
+
+        # Zamir kontrolü: ilk 4 token'da zamir/referans kelime var mı
         pronoun_like = any(
-            token in {"bu", "bunun", "bunlar", "onun", "onlar", "orada", "burada"}
-            for token in query_tokens[:3]
+            token in _FOLLOW_UP_PRONOUNS
+            for token in query_tokens[:4]
         )
+
         is_follow_up = bool(
             state.turn_count > 0
-            and (starts_with_follow_up or generic_question or pronoun_like)
+            and (starts_with_follow_up or contains_follow_up_marker or pronoun_like)
         )
         return {
             "is_follow_up": is_follow_up,
@@ -438,7 +545,7 @@ class ConversationContextService:
         normalized_topic = normalize_text(state.active_topic)
         if normalized_topic and normalized_topic in lowered:
             return query
-        return f"{state.active_topic} baglaminda: {query}"
+        return f"{state.active_topic} hakkinda: {query}"
 
     def _build_follow_up_prompt(
         self,
@@ -451,12 +558,14 @@ class ConversationContextService:
     ) -> str:
         payload = {
             "current_query": query,
+            "previous_turn": {
+                "user_question": state.last_user_query,
+                "resolved_question": state.last_resolved_query,
+                "answer_summary": state.last_assistant_answer,
+            },
             "conversation_state": {
                 "active_topic": state.active_topic,
                 "rolling_summary": state.rolling_summary,
-                "last_user_query": state.last_user_query,
-                "last_resolved_query": state.last_resolved_query,
-                "last_answer_summary": state.last_assistant_answer,
                 "last_departments": state.last_departments,
                 "last_source_refs": state.last_source_refs,
                 "last_task_type": state.last_task_type,
