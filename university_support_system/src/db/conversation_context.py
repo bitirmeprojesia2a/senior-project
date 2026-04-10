@@ -492,14 +492,17 @@ class ConversationContextService:
             starts_with_follow_up, has_strong_marker, has_weak_marker, pronoun_like,
         )
 
+        signal_based = starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like
+
         is_follow_up = bool(
             state.turn_count > 0
-            and (starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like)
+            and signal_based
         )
 
         # Kisa sorgularda (<=4 kelime) state varsa ve hic sinyal yoksa
         # yine follow-up olarak degerlendir — LLM karar versin.
         # "Taksitle odeyebilir miyim?" gibi semantik follow-up'lari yakalar.
+        auto_followup = False
         if (
             not is_follow_up
             and state.turn_count > 0
@@ -507,9 +510,16 @@ class ConversationContextService:
         ):
             logger.info("followup_debug SHORT_QUERY_AUTO_FOLLOWUP tokens=%s", query_tokens)
             is_follow_up = True
+            auto_followup = True
 
-        # Konu degisimi kontrolu: SADECE marker-tabanli follow-up'larda uygula.
-        marker_only_follow_up = is_follow_up and not starts_with_follow_up and not pronoun_like
+        # Konu degisimi kontrolu: SADECE sinyal-tabanli, marker-only follow-up'larda uygula.
+        # Auto-followup, prefix ve zamir durumlarinda konu kontrolu ATLANIR.
+        marker_only_follow_up = (
+            is_follow_up
+            and not auto_followup
+            and not starts_with_follow_up
+            and not pronoun_like
+        )
         if marker_only_follow_up and len(query_tokens) > 3:
             new_topic = self._infer_topic(query)
             logger.info(
@@ -578,12 +588,13 @@ class ConversationContextService:
         if is_follow_up and standalone_query != query:
             if not _rewrite_preserves_intent(query, standalone_query):
                 logger.warning(
-                    "conversation_rewrite_rejected original=%r rewritten=%r",
+                    "conversation_rewrite_rejected original=%r rewritten=%r → heuristic_fallback",
                     query,
                     standalone_query,
                 )
-                standalone_query = query
-                is_follow_up = False
+                # LLM rewrite'i reddedildi ama sorgu follow-up olabilir.
+                # None dondurup heuristik fallback'e dusur.
+                return None
 
         carry_over_departments = self._parse_departments(payload.get("carry_over_departments") or [])
         clarification_message = payload.get("clarification_message")
