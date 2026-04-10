@@ -34,6 +34,27 @@ ACADEMIC_DEPARTMENT_CLARIFICATION_MESSAGE = (
 
 COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
 
+_GENERAL_RULE_BYPASS: tuple[str, ...] = (
+    "devam zorunlulugu",
+    "devamsizlik",
+    "basarisiz",
+    "sinav",
+    "degerlendirme",
+    "not sistemi",
+    "tekrar",
+    "kural",
+    "yonetmelik",
+    "yonerge",
+    "nasil degisir",
+    "ne olur",
+    "etkilenir mi",
+    "sayilir mi",
+    "muaf",
+    "kosul",
+    "sart",
+    "nasil",
+)
+
 
 def augment_query_for_department(
     department: Department,
@@ -86,6 +107,9 @@ def requires_academic_department_clarification(
     has_explicit_program_signal = any(keyword in lowered for keyword in ("bolumu", "anabilim dali"))
     has_explicit_course_code = COURSE_CODE_PATTERN.search(query) is not None
     if has_explicit_program_signal or has_explicit_course_code:
+        return False
+
+    if any(signal in lowered for signal in _GENERAL_RULE_BYPASS):
         return False
 
     return contains_any_normalized(lowered, ACADEMIC_DEPARTMENT_CONTEXT_MARKERS)

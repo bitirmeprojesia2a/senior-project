@@ -216,6 +216,27 @@ def extract_curriculum_semester(query_text: str) -> int | None:
     return int(match.group(1))
 
 
+_RULE_CONTEXT_BYPASS: tuple[str, ...] = (
+    "devam zorunlulugu",
+    "devamsizlik",
+    "basarisiz",
+    "sinav",
+    "degerlendirme",
+    "not sistemi",
+    "tekrar",
+    "kural",
+    "yonetmelik",
+    "yonerge",
+    "nasil degisir",
+    "ne olur",
+    "etkilenir mi",
+    "sayilir mi",
+    "muaf",
+    "kosul",
+    "sart",
+)
+
+
 def needs_department_context(
     lowered: str,
     query_text: str,
@@ -225,5 +246,7 @@ def needs_department_context(
     if student_department:
         return False
     if COURSE_CODE_PATTERN.search(query_text):
+        return False
+    if any(signal in lowered for signal in _RULE_CONTEXT_BYPASS):
         return False
     return any(marker in lowered for marker in DEPARTMENT_CONTEXT_MARKERS)

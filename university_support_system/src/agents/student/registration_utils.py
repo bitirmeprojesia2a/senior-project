@@ -62,9 +62,70 @@ def normalize_registration_text(text: str) -> str:
     return normalize_text(text)
 
 
+_VT_EXCLUDE_TOPICS: tuple[str, ...] = (
+    "kayit dondurma",
+    "donem dondurma",
+    "kayit sildirme",
+    "ilisik kesme",
+    "muafiyet",
+    "intibak",
+    "yatay",
+    "dikey",
+    "cap",
+    "cift anadal",
+    "yan dal",
+    "staj",
+    "mezuniyet",
+    "burs",
+    "harc",
+    "ucret",
+    "katki payi",
+    "ek sure",
+    "devamsizlik",
+    "butunleme",
+    "sinav",
+    "ders secimi",
+    "ders ekleme",
+    "ders birakma",
+)
+
+_PROCESS_NOT_TIMING: tuple[str, ...] = (
+    "nasil yapilir",
+    "nasil yapacagim",
+    "nasil isliyor",
+    "sureci nasil",
+    "adim adim",
+    "ne yapmaliyim",
+    "danismanin onayi",
+    "danismanin onay",
+)
+
+_REGISTRATION_CONTEXT: tuple[str, ...] = (
+    "kayit",
+    "ders kaydi",
+)
+
+
 def is_registration_timing_query(query_text: str) -> bool:
     lowered = normalize_registration_text(query_text)
-    return any(normalize_registration_text(keyword) in lowered for keyword in REGISTRATION_TIMING_KEYWORDS)
+
+    if any(kw in lowered for kw in _VT_EXCLUDE_TOPICS):
+        return False
+
+    if any(kw in lowered for kw in _PROCESS_NOT_TIMING):
+        return False
+
+    if "kayit donemi" in lowered:
+        return True
+
+    has_timing = any(
+        normalize_registration_text(kw) in lowered
+        for kw in REGISTRATION_TIMING_KEYWORDS
+    )
+    if not has_timing:
+        return False
+
+    return any(kw in lowered for kw in _REGISTRATION_CONTEXT)
 
 
 def should_skip_registration_llm_synthesis(

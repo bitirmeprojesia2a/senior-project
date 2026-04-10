@@ -68,6 +68,25 @@ _GENERAL_RULE_SIGNALS: tuple[str, ...] = (
     "kural",
 )
 
+_PROCEDURAL_OVERRIDE_SIGNALS: tuple[str, ...] = (
+    "nasil",
+    "nereye",
+    "ne yapmaliyim",
+    "ne yapmam gerekiyor",
+    "ne yapabilirim",
+    "basvuru",
+    "surec",
+    "sisteme girmemis",
+    "girilmemis",
+    "girmemis",
+    "hata",
+    "sorun",
+    "problem",
+    "butunleme",
+    "devamsizlik",
+    "tekrar",
+)
+
 
 def _has_general_rule_signal(lowered: str) -> bool:
     return any(s in lowered for s in _GENERAL_RULE_SIGNALS)
@@ -76,6 +95,8 @@ def _has_general_rule_signal(lowered: str) -> bool:
 def is_graduation_personal_query(query_text: str) -> bool:
     lowered = normalize_text(query_text)
     if _has_general_rule_signal(lowered):
+        return False
+    if any(s in lowered for s in _PROCEDURAL_OVERRIDE_SIGNALS):
         return False
     if "gno" in lowered:
         possessive = any(p in lowered for p in ("gnom", "gno'm", "ortalamam"))
