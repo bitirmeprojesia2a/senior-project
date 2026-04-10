@@ -486,6 +486,19 @@ class ConversationContextService:
             state.turn_count > 0
             and (starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like)
         )
+
+        # Konu degisimi kontrolu: Yeni sorguda farkli bir konu tespit edilirse
+        # follow-up olarak degil, bagimsiz soru olarak degerlendir.
+        # Ornek: state.topic="CAP" ama sorgu="Erasmus basvurusu nasil yapilir?"
+        if is_follow_up:
+            new_topic = self._infer_topic(query)
+            if (
+                new_topic is not None
+                and state.active_topic is not None
+                and normalize_text(new_topic) != normalize_text(state.active_topic)
+            ):
+                is_follow_up = False
+
         return {
             "is_follow_up": is_follow_up,
             "topic": state.active_topic if is_follow_up else self._infer_topic(query),
