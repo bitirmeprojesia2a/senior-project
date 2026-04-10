@@ -487,13 +487,25 @@ class ConversationContextService:
             and (starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like)
         )
 
+        # Kisa sorgularda (<=4 kelime) state varsa ve hic sinyal yoksa
+        # yine follow-up olarak degerlendir — LLM karar versin.
+        # "Taksitle odeyebilir miyim?" gibi semantik follow-up'lari yakalar.
+        if (
+            not is_follow_up
+            and state.turn_count > 0
+            and len(query_tokens) <= 4
+        ):
+            is_follow_up = True
+
         # Konu degisimi kontrolu: SADECE marker-tabanli follow-up'larda uygula.
         # Prefix ("peki", "ya") veya zamir ("bunun") varsa kullanici acikca
         # onceki konuya referans veriyor demektir — konu kontrolu atlanir.
         # Ornek korunan: "Peki not ortalamasi kac olmali?" (prefix var → atla)
         # Ornek yakalanan: "Erasmus basvurusu nasil yapilir?" (sadece marker → kontrol et)
         marker_only_follow_up = is_follow_up and not starts_with_follow_up and not pronoun_like
-        if marker_only_follow_up:
+        if marker_only_follow_up and len(query_tokens) > 3:
+            # Kisa sorgularda (<=3 kelime) _infer_topic guvenilir degil,
+            # "Ucreti nedir?" gibi genel kelimelerden yanlis konu cikarir.
             new_topic = self._infer_topic(query)
             if (
                 new_topic is not None
