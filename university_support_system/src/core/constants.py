@@ -51,7 +51,13 @@ class DepartmentConfig:
 DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
     Department.FINANCE: DepartmentConfig(
         display_name="Finans",
-        routing_description="Harç, burs, yurt ödemeleri, dekont, taksitlendirme ile ilgili sorular.",
+        routing_description=(
+            "Ucret MIKTARLARI, harc tutarlari, burs miktarlari, odeme yontemleri, "
+            "taksitlendirme, dekont, banka/havale bilgileri. "
+            "'Ne kadar?', 'Nasil odenir?', 'Nereye yatirilir?' tipi sorular bu departmana gider. "
+            "Ucret KURALI veya POLITIKASI (ornegin 'ek surede katki payi odenir mi?') "
+            "bu departmana degil academic_programs departmanina gider."
+        ),
         keywords=(
             "harc", "ucret", "burs", "odeme", "dekont", "taksit",
             "katki payi", "borc", "borclu",
@@ -63,7 +69,13 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
     ),
     Department.STUDENT_AFFAIRS: DepartmentConfig(
         display_name="Öğrenci İşleri",
-        routing_description="Ders kaydı, akademik takvim, notlar, yatay/dikey geçiş, diploma ve staj işlemleri.",
+        routing_description=(
+            "Idari surecler ve islemler: kayit islemleri, ders kaydi, sinav prosedürleri, "
+            "staj/MUP surecleri, yatay/dikey gecis BASVURU ISLEMLERI, belge talepleri "
+            "(transkript, diploma, ogrenci belgesi), mezuniyet islemleri, ilisik kesme, "
+            "UBYS/OBS islemleri, akademik takvim, not itiraz sureci. "
+            "'Nasil yapilir?', 'Nereye basvurulur?', 'Adimlar neler?' tipi sorular bu departmana gider."
+        ),
         keywords=(
             "ders kaydi", "kayit donemi", "akademik takvim",
             "kayit", "kayd", "not", "gno", "transkript", "mezuniyet", "diploma",
@@ -84,7 +96,16 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
     ),
     Department.ACADEMIC_PROGRAMS: DepartmentConfig(
         display_name="Akademik Programlar",
-        routing_description="Müfredat, önkoşul, ders planı, AKTS, ÇAP/YAP, Erasmus ve akademik kurallar.",
+        routing_description=(
+            "Yonetmelik ve yonerge KURALLARI, mufredat, AKTS, ders planlari, "
+            "CAP/YAP BASVURU KOSULLARI (not ortalamasi esikleri, kontenjan kurallari), "
+            "Erasmus/uluslararasi ogrenci yonergeleri, ikamet izni prosedürleri, "
+            "azami sure kurallari, not/degerlendirme sistemi, devam zorunlulugu, "
+            "butunleme kurallari, politikalar, genelgeler. "
+            "'Kural ne diyor?', 'Kosullar ne?', 'Sinir ne?' tipi sorular bu departmana gider. "
+            "Soru hem kural hem islem iceriyorsa (ornegin 'CAP basvuru kosullari neler ve "
+            "nasil basvururum?') hem academic_programs hem student_affairs secilmelidir."
+        ),
         keywords=(
             "mufredat", "ders icerigi",
             "akts", "ects", "kredi",

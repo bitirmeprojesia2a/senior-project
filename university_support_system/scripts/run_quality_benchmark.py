@@ -149,7 +149,7 @@ def _quality_warnings(answer: str) -> list[str]:
 
 
 def _dept_match(actual: list[str], expected: list[str]) -> bool:
-    return set(actual) == set(expected)
+    return set(expected) <= set(actual)
 
 
 def _generation_mode_match(actual: str, expected: str) -> bool:

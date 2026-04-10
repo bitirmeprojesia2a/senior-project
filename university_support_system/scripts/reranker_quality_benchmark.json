@@ -98,7 +98,7 @@
       "id": "Q5",
       "category": "B_cross_department_parallel",
       "question": "Uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretimi nereye yatırmam gerekiyor ve ayrıca ikamet izni için hangi belgeleri hazırlamalıyım?",
-      "expected_departments": ["finance", "academic_programs"],
+      "expected_departments": ["academic_programs", "finance", "student_affairs"],
       "expected_generation_mode": "llm",
       "expected_key_facts": [
         "ücret",
@@ -106,7 +106,7 @@
         "belge"
       ],
       "difficulty": "hard",
-      "why_llm": "Finance ve academic_programs departmanlarindan bilgi sentezi"
+      "why_llm": "Uluslararasi ogrenci yonergesi (academic), ucret bilgisi (finance), kayit islemleri (student_affairs) capraz sentez"
     },
     {
       "id": "Q6",
@@ -159,7 +159,7 @@
       "id": "Q9",
       "category": "C_conditional_scenario",
       "question": "4. sınıf öğrencisiyim ve program süresini 1 yıl aştım. Ek süre hakkım var mı ve bu sürede katkı payı öder miyim?",
-      "expected_departments": ["student_affairs", "finance"],
+      "expected_departments": ["academic_programs", "student_affairs", "finance"],
       "expected_generation_mode": "llm",
       "expected_key_facts": [
         "azami",
@@ -169,7 +169,7 @@
         "öde"
       ],
       "difficulty": "hard",
-      "why_llm": "Azami sure kurali + ek sure hakki + ucret durumu 3 farkli kaynaktan sentez"
+      "why_llm": "Azami sure KURALI (academic), idari surec (student_affairs), ucret bilgisi (finance) capraz sentez"
     },
     {
       "id": "Q10",

@@ -14,6 +14,15 @@ Sen bir universite destek sistemi asistanisin. Gorevin, kullanicinin sordugu sor
 Asagidaki departmanlardan en uygun olan(lar)ini sec:
 {chr(10).join(build_department_routing_descriptions())}
 
+SINIR KURALLARI (cok onemli):
+- Ucret MIKTARI sorusu ("ne kadar?", "kac TL?") -> finance
+- Ucret KURALI/POLITIKASI sorusu ("odenir mi?", "muaf miyim?", "ek surede katki payi?") -> academic_programs
+- Bir ISLEMIN ADIMLARI ("nasil basvururum?", "nereye gideyim?") -> student_affairs
+- Bir ISLEMIN KOSULLARI ("basvuru sartlari ne?", "not ortalamasi siniri?") -> academic_programs
+- Uluslararasi ogrenci sorulari genellikle academic_programs icerir (yonerge ve prosedurler orada)
+- Soru hem KURAL hem ISLEM iceriyorsa birden fazla departman sec (ornek: "CAP kosullari ve basvuru sureci" -> ["academic_programs", "student_affairs"])
+- Soru hem KURAL hem UCRET MIKTARI iceriyorsa (ornek: "ek surede katki payi odenir mi, ne kadar?") -> ["academic_programs", "finance"]
+
 Her sorgu icin asagidaki alanlari belirle:
 
 1. "departments": Ilgili departman(lar). Ornegin ["student_affairs"] veya ["student_affairs", "finance"].
