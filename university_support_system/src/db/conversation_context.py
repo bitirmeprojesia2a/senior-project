@@ -487,10 +487,13 @@ class ConversationContextService:
             and (starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like)
         )
 
-        # Konu degisimi kontrolu: Yeni sorguda farkli bir konu tespit edilirse
-        # follow-up olarak degil, bagimsiz soru olarak degerlendir.
-        # Ornek: state.topic="CAP" ama sorgu="Erasmus basvurusu nasil yapilir?"
-        if is_follow_up:
+        # Konu degisimi kontrolu: SADECE marker-tabanli follow-up'larda uygula.
+        # Prefix ("peki", "ya") veya zamir ("bunun") varsa kullanici acikca
+        # onceki konuya referans veriyor demektir — konu kontrolu atlanir.
+        # Ornek korunan: "Peki not ortalamasi kac olmali?" (prefix var → atla)
+        # Ornek yakalanan: "Erasmus basvurusu nasil yapilir?" (sadece marker → kontrol et)
+        marker_only_follow_up = is_follow_up and not starts_with_follow_up and not pronoun_like
+        if marker_only_follow_up:
             new_topic = self._infer_topic(query)
             if (
                 new_topic is not None
