@@ -203,6 +203,8 @@ def has_student_document_markers(normalized_text: str) -> bool:
     """Return whether query is clearly about transcript or student document retrieval."""
     if contains_any(normalized_text, ROUTING_STUDENT_DOCUMENT_MARKERS):
         return True
+    if has_international_markers(normalized_text):
+        return False
     return "belge" in normalized_text and any(
         marker in normalized_text for marker in ("ogrenci", "transkript", "diploma")
     )

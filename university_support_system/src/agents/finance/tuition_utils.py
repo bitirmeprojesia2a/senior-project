@@ -93,6 +93,11 @@ _FEE_POLICY_SIGNALS = (
     "odenmezse", "odemezse", "yatirmazsam",
     "iade", "muafiyet", "indirim", "afet", "burs",
 )
+_FEE_PROCEDURAL_SIGNALS = (
+    "nereye", "nasil odenir", "nasil yatirilir", "hangi banka",
+    "hangi hesap", "odeme yontemi", "odeme sekli",
+    "ne zaman odenir", "son odeme", "taksitlendirme",
+)
 
 
 def is_structured_fee_query(query_text: str) -> bool:
@@ -213,6 +218,10 @@ def needs_fee_context_clarification(
     """Return whether the system needs student type/unit clarification."""
     lowered = normalize_finance_text(query_text)
     if not any(keyword in lowered for keyword in FEE_AMOUNT_KEYWORDS):
+        return False
+    if any(signal in lowered for signal in _FEE_POLICY_SIGNALS):
+        return False
+    if any(signal in lowered for signal in _FEE_PROCEDURAL_SIGNALS):
         return False
     if student_type not in {"domestic", "international"}:
         if any(marker in lowered for marker in INTERNATIONAL_QUERY_MARKERS):
