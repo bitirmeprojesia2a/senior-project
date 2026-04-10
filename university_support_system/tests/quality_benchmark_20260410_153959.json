@@ -1,0 +1,475 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153959",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 0.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 0.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 6949.8,
+    "median_time_ms": 6949.8,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1
+  },
+  "results": [
+    {
+      "id": "Q22",
+      "category": "F_edge_cases",
+      "question": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "dept_match": false,
+      "expected_generation_mode": "kural",
+      "actual_generation_mode": "llm",
+      "mode_match": false,
+      "expected_key_facts": [],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 0,
+      "elapsed_ms": 6949.8,
+      "source_count": 9,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "factual"
+      },
+      "answer": "Sınavda kopya çekilmesinin cezası ve disiplin süreci hakkında bilgi alacaksınız.\n\nSınav görevlisinin veya ilgili öğretim elemanının uyarısında bulunmaksızın öğrenciye işleme yapması durumunda, öğrenci kopya çekilmesinin cezasını alacaktır. Kopya verme ve çekme girişiminde bulunan öğrenciler, sınav görevlileri veya ilgili öğretim elemanları tarafından tespit edilebilir ve uyarıda bulunabilir. Uyarıda bulunmaksızın öğrenci hakkında işlem yapan sınav görevlisi veya ilgili öğretim elemanı, öğrencinin kopya verme veya çekme davranışının tespit edildiği sınavı geçersiz sayabilir. Bu durumda, öğrenci aynı sınavdan aldıkları notu kaybeder. Öğrenci ayrıca disiplin soruşturması sonucunda cezaya çarptırılabilir.\n\nSınavda kopya çekilmesinin cezası aşağıda belirtilmiştir:\n\n* Kopya çekilen, kopyaya teşebbüs edilen, kopya verilen, alınıp kopyalama yapılan ve kopyalama yardım eden öğrenciler hakkında, sınav görevlilerince düzenlenen bireysel sınav iptal tutanağı düzenlenerek gerekli yasal işlemler başlatılır.\n* Öğrencinin dersi veren öğretim üyesi veya eğitim görevli tarafından geçersiz sayılması\n* Eğitim görevlilerinin düzenlediği tutanağa göre gerekli yasal işlemlerin başlatılması\n\nBu bilgileri temel alarak, öğrenci disiplin soruşturması sonucunda cezaya çarptırılabilecektir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Belge: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf\n- Belge: mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf\n- Belge: mühendislik_fakültesi_ortak_sınav_yönergesi.pdf\n- Belge: sürekli_eğitim_merkezi_yönergesi.pdf\n- Belge: hizmet_içi_eğitim_yönergesi.pdf\n- Belge: özel_yetenek_sınavı_yönergesi.pdf",
+      "profiling": {
+        "total_ms": 6949.817,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.055,
+            "ended_at_ms": 6949.779,
+            "duration_ms": 6949.724,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q22-153952"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.078,
+            "ended_at_ms": 6.253,
+            "duration_ms": 6.175,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 6.276,
+            "ended_at_ms": 1173.185,
+            "duration_ms": 1166.909,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 6.649,
+            "ended_at_ms": 1172.931,
+            "duration_ms": 1166.281,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 6.691,
+            "ended_at_ms": 1172.872,
+            "duration_ms": 1166.18,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1172.894,
+            "ended_at_ms": 1172.926,
+            "duration_ms": 0.032,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1173.217,
+            "ended_at_ms": 1201.048,
+            "duration_ms": 27.831,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1201.215,
+            "ended_at_ms": 5554.378,
+            "duration_ms": 4353.164,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1201.509,
+            "ended_at_ms": 5389.994,
+            "duration_ms": 4188.486,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "course_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1201.528,
+            "ended_at_ms": 1201.586,
+            "duration_ms": 0.058,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1201.67,
+            "ended_at_ms": 5347.204,
+            "duration_ms": 4145.534,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1201.745,
+            "ended_at_ms": 5346.891,
+            "duration_ms": 4145.146,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1201.778,
+            "ended_at_ms": 2901.636,
+            "duration_ms": 1699.859,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 2730.339,
+            "ended_at_ms": 2777.053,
+            "duration_ms": 46.715,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 2800.344,
+            "ended_at_ms": 2897.577,
+            "duration_ms": 97.233,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 10,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 2901.763,
+            "ended_at_ms": 2904.102,
+            "duration_ms": 2.34,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 2904.153,
+            "ended_at_ms": 5346.795,
+            "duration_ms": 2442.642,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 2904.201,
+            "ended_at_ms": 5346.791,
+            "duration_ms": 2442.589,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 2905.074,
+            "ended_at_ms": 5346.78,
+            "duration_ms": 2441.707,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 2905.136,
+            "ended_at_ms": 5346.746,
+            "duration_ms": 2441.611,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 2905.165,
+            "ended_at_ms": 5346.737,
+            "duration_ms": 2441.572,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 3583.549,
+            "ended_at_ms": 5554.198,
+            "duration_ms": 1970.649,
+            "parent": "llm.generate.openai_compatible",
+            "meta": {
+              "department": "academic_programs",
+              "task_type": "course_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 3583.573,
+            "ended_at_ms": 3583.676,
+            "duration_ms": 0.103,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 3583.778,
+            "ended_at_ms": 5510.323,
+            "duration_ms": 1926.545,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs",
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 3583.873,
+            "ended_at_ms": 5510.006,
+            "duration_ms": 1926.133,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 3583.918,
+            "ended_at_ms": 3837.89,
+            "duration_ms": 253.972,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 3618.267,
+            "ended_at_ms": 3662.71,
+            "duration_ms": 44.442,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 3723.665,
+            "ended_at_ms": 3835.306,
+            "duration_ms": 111.641,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 12,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 3837.934,
+            "ended_at_ms": 3842.481,
+            "duration_ms": 4.547,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 3842.516,
+            "ended_at_ms": 5509.925,
+            "duration_ms": 1667.41,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 3842.552,
+            "ended_at_ms": 5509.921,
+            "duration_ms": 1667.369,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 3842.901,
+            "ended_at_ms": 5509.912,
+            "duration_ms": 1667.011,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 3842.951,
+            "ended_at_ms": 5509.85,
+            "duration_ms": 1666.899,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 3842.97,
+            "ended_at_ms": 5509.842,
+            "duration_ms": 1666.872,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 5347.234,
+            "ended_at_ms": 5389.68,
+            "duration_ms": 42.446,
+            "parent": "llm.generate.openai_compatible",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 5510.35,
+            "ended_at_ms": 5553.924,
+            "duration_ms": 43.574,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 5554.503,
+            "ended_at_ms": 5554.54,
+            "duration_ms": 0.037,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 5554.547,
+            "ended_at_ms": 6893.162,
+            "duration_ms": 1338.615,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.global_llm_synthesis",
+            "started_at_ms": 5554.831,
+            "ended_at_ms": 6892.826,
+            "duration_ms": 1337.995,
+            "parent": "main.compose_response"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 5554.866,
+            "ended_at_ms": 6892.814,
+            "duration_ms": 1337.947,
+            "parent": "main.global_llm_synthesis",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 5554.886,
+            "ended_at_ms": 6892.806,
+            "duration_ms": 1337.92,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "global_synthesis"
+            }
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 6893.177,
+            "ended_at_ms": 6917.426,
+            "duration_ms": 24.249,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 6917.445,
+            "ended_at_ms": 6949.769,
+            "duration_ms": 32.325,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

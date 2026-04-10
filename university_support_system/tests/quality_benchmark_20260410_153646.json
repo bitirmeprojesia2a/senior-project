@@ -1,0 +1,241 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153646",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 100.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 324.2,
+    "median_time_ms": 324.2,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0
+  },
+  "results": [
+    {
+      "id": "Q15",
+      "category": "D_comparison",
+      "question": "Diploma eki ile transkript arasındaki fark nedir? Diploma eki transkript yerine kullanılabilir mi?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "rag",
+      "mode_match": false,
+      "expected_key_facts": [
+        "diploma eki",
+        "transkript",
+        "yerine geçmez"
+      ],
+      "key_fact_results": {
+        "diploma eki": true,
+        "transkript": true,
+        "yerine geçmez": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 3,
+      "elapsed_ms": 324.2,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Diploma ekini transkript yerine kullanabilir miyim? Diploma eki transkript (not çizelgesi) veya diploma yerine geçmez.\n\n(Kaynak: sık_sorulan_sorular.txt)\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt",
+      "profiling": {
+        "total_ms": 324.199,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.073,
+            "ended_at_ms": 324.166,
+            "duration_ms": 324.093,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q15-153646"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.108,
+            "ended_at_ms": 7.185,
+            "duration_ms": 7.077,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 7.21,
+            "ended_at_ms": 7.574,
+            "duration_ms": 0.364,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 7.593,
+            "ended_at_ms": 33.354,
+            "duration_ms": 25.761,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 33.463,
+            "ended_at_ms": 281.605,
+            "duration_ms": 248.142,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 33.763,
+            "ended_at_ms": 281.502,
+            "duration_ms": 247.739,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "academic_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 33.786,
+            "ended_at_ms": 33.848,
+            "duration_ms": 0.062,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 33.934,
+            "ended_at_ms": 240.44,
+            "duration_ms": 206.505,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 34.048,
+            "ended_at_ms": 240.013,
+            "duration_ms": 205.965,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 34.089,
+            "ended_at_ms": 239.545,
+            "duration_ms": 205.456,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 55.518,
+            "ended_at_ms": 94.876,
+            "duration_ms": 39.357,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 153.438,
+            "ended_at_ms": 237.407,
+            "duration_ms": 83.969,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 10,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 239.6,
+            "ended_at_ms": 239.668,
+            "duration_ms": 0.068,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 239.683,
+            "ended_at_ms": 239.936,
+            "duration_ms": 0.253,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.direct_rag_check",
+            "started_at_ms": 239.713,
+            "ended_at_ms": 239.915,
+            "duration_ms": 0.202,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 240.479,
+            "ended_at_ms": 281.22,
+            "duration_ms": 40.741,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 281.746,
+            "ended_at_ms": 281.755,
+            "duration_ms": 0.009,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 281.762,
+            "ended_at_ms": 281.999,
+            "duration_ms": 0.237,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 282.009,
+            "ended_at_ms": 297.535,
+            "duration_ms": 15.526,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 297.554,
+            "ended_at_ms": 324.158,
+            "duration_ms": 26.604,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

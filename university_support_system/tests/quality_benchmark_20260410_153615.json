@@ -1,0 +1,307 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153615",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 50.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 6904.0,
+    "median_time_ms": 6904.0,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1
+  },
+  "results": [
+    {
+      "id": "Q14",
+      "category": "D_comparison",
+      "question": "Bağıl değerlendirme sistemi ile mutlak değerlendirme arasındaki fark nedir ve hangi öğrenci sayısında hangisi uygulanır?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "academic_programs"
+      ],
+      "actual_departments": [
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "bağıl",
+        "mutlak",
+        "10",
+        "öğrenci sayısı"
+      ],
+      "key_fact_results": {
+        "bağıl": true,
+        "mutlak": true,
+        "10": false,
+        "öğrenci sayısı": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 4,
+      "elapsed_ms": 6904.0,
+      "source_count": 3,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "comparison",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "comparative"
+      },
+      "answer": "Bağıl değerlendirme sistemi ile mutlak değerlendirme arasındaki fark aşağıda açıklanmıştır. \n\nBağıl değerlendirme sistemi ile mutlak değerlendirme arasındaki temel fark, öğrencilerin başarısının hesaplanmasına kullanılan ağırlıklar veya katsayıların farklı olmasıdır.\n\nBağıl değerlendirme sisteminde, öğrencilerin başarısının hesaplanmasında, yarıyıl içi değerlendirmenin %40’ı ve yarıyıl sonu sınav notunun %60’ı birlikte dikkate alınır.\n\nÖrneğin, [Kaynak 1: lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf] ve [Kaynak 2: lisansüstü_eğitim_ve.pdf] belgelerine göre, bir derste öğrencilerin başarı notu, hem yarıyıl içi değerlendirmelerinden hem de yarıyıl sonu sınavından alınacak notların 4’lük not sistemindeki karşılığın hesaplanmak suretiyle belirlenmektedir.\n\nBağıl değerlendirme sisteminde, öğrencilerin başarı notuna katkı oranları anabilim/anasanat dalı teklifi, enstitü kurulu kararı ve Senato onayı ile değiştirilebilir.\n\nÖte yandan, mutlak değerlendirme sisteminde ise öğrencilerin başarısı, sadece bir belirli kritere veya notaya bağlıdır. Örneğin, [Kaynak 3: yabancı_dil_eğitim_öğretimi_yönergesi.pdf] belgesine göre, yıl içi değerlendirmeden alınacak puanın %50’si ile yıl sonu sınav notunun %50’si birlikte dikkate alınır.\n\nBu şekilde, mutlak değerlendirmede öğrencilerin başarısının hesaplanmasındaki yaklaşım, bağıl değerlendirmede olduğu kadar karmaşıklıkmaz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf\n- Belge: lisansüstü_eğitim_ve.pdf\n- Belge: yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+      "profiling": {
+        "total_ms": 6903.964,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.122,
+            "ended_at_ms": 6903.921,
+            "duration_ms": 6903.799,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q14-153608"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.15,
+            "ended_at_ms": 7.085,
+            "duration_ms": 6.935,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 7.112,
+            "ended_at_ms": 1558.248,
+            "duration_ms": 1551.137,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 7.518,
+            "ended_at_ms": 1558.032,
+            "duration_ms": 1550.514,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 7.564,
+            "ended_at_ms": 1557.983,
+            "duration_ms": 1550.419,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1558.003,
+            "ended_at_ms": 1558.029,
+            "duration_ms": 0.025,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1558.274,
+            "ended_at_ms": 1585.461,
+            "duration_ms": 27.187,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1585.591,
+            "ended_at_ms": 6866.488,
+            "duration_ms": 5280.897,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1585.806,
+            "ended_at_ms": 6866.314,
+            "duration_ms": 5280.508,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "academic_programs",
+              "task_type": "course_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1585.829,
+            "ended_at_ms": 1585.897,
+            "duration_ms": 0.069,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1586.0,
+            "ended_at_ms": 6826.072,
+            "duration_ms": 5240.072,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs",
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1586.088,
+            "ended_at_ms": 6825.448,
+            "duration_ms": 5239.359,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1586.145,
+            "ended_at_ms": 5267.028,
+            "duration_ms": 3680.883,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 5075.99,
+            "ended_at_ms": 5113.263,
+            "duration_ms": 37.273,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 5138.019,
+            "ended_at_ms": 5264.568,
+            "duration_ms": 126.549,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 12,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 5267.088,
+            "ended_at_ms": 5279.484,
+            "duration_ms": 12.396,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 5279.52,
+            "ended_at_ms": 6825.308,
+            "duration_ms": 1545.788,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 5279.578,
+            "ended_at_ms": 6825.3,
+            "duration_ms": 1545.723,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 5280.317,
+            "ended_at_ms": 6825.278,
+            "duration_ms": 1544.96,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 5280.372,
+            "ended_at_ms": 6825.221,
+            "duration_ms": 1544.849,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 5280.411,
+            "ended_at_ms": 6825.206,
+            "duration_ms": 1544.795,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 6826.128,
+            "ended_at_ms": 6865.755,
+            "duration_ms": 39.627,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 6866.747,
+            "ended_at_ms": 6866.761,
+            "duration_ms": 0.014,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 6866.772,
+            "ended_at_ms": 6867.1,
+            "duration_ms": 0.328,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 6867.111,
+            "ended_at_ms": 6878.985,
+            "duration_ms": 11.874,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 6879.012,
+            "ended_at_ms": 6903.911,
+            "duration_ms": 24.899,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

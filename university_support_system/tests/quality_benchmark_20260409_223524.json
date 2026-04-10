@@ -1,0 +1,307 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260409_223524",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 100.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 4635.4,
+    "median_time_ms": 4635.4,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1
+  },
+  "results": [
+    {
+      "id": "Q16",
+      "category": "D_comparison",
+      "question": "Kayıt dondurma ile kayıt yaptırmamak arasında ne fark var? Her iki durumda da öğrencilik haklarım nasıl etkilenir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "kayıt dondurma",
+        "sayılma",
+        "süre",
+        "hak"
+      ],
+      "key_fact_results": {
+        "kayıt dondurma": true,
+        "sayılma": true,
+        "süre": true,
+        "hak": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 4,
+      "elapsed_ms": 4635.4,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "comparison",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "comparative"
+      },
+      "answer": "Sorunun cevabı şu şekildedir:\n\nKayıt dondurma ile kayıt yaptırmamak arasında farklılıklar vardır. Kayıt dondurma, öğrencinin ders kayıtlarını sınırlı bir süre için askıya alması anlamını taşımaktadır. Bu durum, öğrencinin ders seçme ve değişme hakkını sınırlı bir süre için kaybetmesine neden olur. Ancak, öğrencinin ders kayıtlarını askıya alması, öğrenim süresinden bir dönemin sayılmasına sebep olmaz.\n\nDiğer yandan, kayıt yaptırmamak, öğrencinin belirtilen süre içinde ders kaydı yapmaması anlamına gelir. Bu durum, öğrencinin öğrenim süresinden o dönemi kaybetmesine ve o dönemi sayılmasına sebep olabilir.\n\nHer iki durumda da öğrencinin öğrenim hakları etkilenebilir. Kayıt dondurma, öğrenciye öğrenim süresinden sınırlı bir süre için bir dönem daha verilmesine sebep olabilir. Ancak, kayıt yaptırmamak durumunda, öğrencinin öğrenim hakkını kaybetmesine ve o dönemi sayılmasına sebep olabilir.\n\nYanıtla ilgili kaynaklar:\n\n[Kaynak 1: sık_sorulan_sorular.txt]\nYatay geçiş hakkı kazanıp kayıt yaptırmamasam herhangi bir sorun olur mu? Üniversitemize yatay geçişle kayıt hakkı kazanıp, kayıt yaptırmamanız durumunda herhangi bir sorun olmayacaktır.\n\n[Kaynak 2: sık_sorulan_sorular.txt]\nDers ekleme/çıkarma nedir? Bu işlemi nasıl yapmalıyım? Seçmiş olduğunuz derslerden açılmayan seçmeli ders olduğunda veya değiştirmek istediğiniz dersler için Akademik Takvimde belirtilen süreler içerisinde danışmanınızla irtibata geçerek yapabileceğiniz işlemdir.\n\n[Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf]\nMADDE 10- (1) Öğrenciler, her dönem/yıl başında akademik takvimde belirlenen süre içinde öğrenci bilgi sistemi üzerinden alacakları dersleri seçerler. Ders kaydı, danışman onayı ile kesinleşir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+      "profiling": {
+        "total_ms": 4635.306,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.386,
+            "ended_at_ms": 4634.656,
+            "duration_ms": 4634.27,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q16-223519"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.542,
+            "ended_at_ms": 8.706,
+            "duration_ms": 8.164,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 8.73,
+            "ended_at_ms": 2045.393,
+            "duration_ms": 2036.663,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 10.786,
+            "ended_at_ms": 2044.176,
+            "duration_ms": 2033.39,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 10.85,
+            "ended_at_ms": 2043.97,
+            "duration_ms": 2033.121,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 2043.998,
+            "ended_at_ms": 2044.169,
+            "duration_ms": 0.171,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 2045.434,
+            "ended_at_ms": 2154.475,
+            "duration_ms": 109.04,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 2154.599,
+            "ended_at_ms": 4583.871,
+            "duration_ms": 2429.272,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 2155.738,
+            "ended_at_ms": 4583.77,
+            "duration_ms": 2428.033,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "registration_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 2155.764,
+            "ended_at_ms": 2155.806,
+            "duration_ms": 0.042,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 2157.436,
+            "ended_at_ms": 4537.159,
+            "duration_ms": 2379.723,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 2157.636,
+            "ended_at_ms": 4536.857,
+            "duration_ms": 2379.22,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "registration_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 2157.788,
+            "ended_at_ms": 3087.137,
+            "duration_ms": 929.349,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "registration_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 2391.082,
+            "ended_at_ms": 2591.161,
+            "duration_ms": 200.079,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 2707.619,
+            "ended_at_ms": 3084.602,
+            "duration_ms": 376.983,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 10,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 3087.229,
+            "ended_at_ms": 3090.588,
+            "duration_ms": 3.359,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "registration_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 3090.636,
+            "ended_at_ms": 4536.769,
+            "duration_ms": 1446.133,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 3090.719,
+            "ended_at_ms": 4536.765,
+            "duration_ms": 1446.046,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 3093.197,
+            "ended_at_ms": 4536.757,
+            "duration_ms": 1443.561,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 3093.314,
+            "ended_at_ms": 4536.729,
+            "duration_ms": 1443.415,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 3093.363,
+            "ended_at_ms": 4536.721,
+            "duration_ms": 1443.358,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 4537.185,
+            "ended_at_ms": 4583.479,
+            "duration_ms": 46.294,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 4584.008,
+            "ended_at_ms": 4584.016,
+            "duration_ms": 0.008,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 4584.023,
+            "ended_at_ms": 4584.354,
+            "duration_ms": 0.331,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 4584.362,
+            "ended_at_ms": 4599.04,
+            "duration_ms": 14.678,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 4599.072,
+            "ended_at_ms": 4634.648,
+            "duration_ms": 35.576,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

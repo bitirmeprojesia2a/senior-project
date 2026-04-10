@@ -1,0 +1,314 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153427",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 0.0,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 75.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 6751.5,
+    "median_time_ms": 6751.5,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1
+  },
+  "results": [
+    {
+      "id": "Q10",
+      "category": "C_conditional_scenario",
+      "question": "Devamsızlıktan kaldığım bir dersin bütünleme sınavına girebilir miyim? Giremiyorsam bu dersi ne zaman tekrar alabilirim?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "academic_programs"
+      ],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "giremez",
+        "devamsızlık",
+        "bütünleme",
+        "tekrar"
+      ],
+      "key_fact_results": {
+        "giremez": false,
+        "devamsızlık": true,
+        "bütünleme": true,
+        "tekrar": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 6751.5,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "comparative"
+      },
+      "answer": "Devamsızlık sonucunda kaldığın bir dersin bütünleme sınavına girebilir miyim cevabını verebilmek ve bütünleme sınavından sonra ne zaman dersi tekrar alabilirim cevabını vermeyi amaçlarım.\n\nGerekli kuralları gözden geçirmiş ve konuyu inceleyerek, kaynak belgelerini esas alınarak cevap vermeye geçiş yaparak;\n\nDevamsızlık sonucunda kaldığın bir dersin bütünleme sınavına girebilir miyim cevabı;\nEğer dersin bütünleme sınavına girebilmem konusunda net bir bilgi bulamadım.\n\nBütünleme sınavından sonra ne zaman dersi tekrar alabilirim cevabı;\nEğer kaldığı dersin telafi süresi içerisinde eksik işlerin tamamlanması halinde öğrenciye blok veya klinik uygulama bütünleme sınavlarına girme hakkı tanınır. (Kaynak 1) ve bütünleme sınavı sonrası eğer o yılı tekrar etmek durumda olanlar o yılı tekrar ederler. (Kaynak 3).\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf\n- Belge: lisansüstü_eğitim_ve.pdf\n- Belge: yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf\n- Belge: yonerge_yabanci_dil_egitim_ogretim.pdf",
+      "profiling": {
+        "total_ms": 6751.501,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.117,
+            "ended_at_ms": 6751.461,
+            "duration_ms": 6751.344,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q10-153420"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.143,
+            "ended_at_ms": 6.154,
+            "duration_ms": 6.011,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 6.177,
+            "ended_at_ms": 1114.455,
+            "duration_ms": 1108.278,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 6.573,
+            "ended_at_ms": 1114.229,
+            "duration_ms": 1107.656,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 6.614,
+            "ended_at_ms": 1114.18,
+            "duration_ms": 1107.566,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1114.197,
+            "ended_at_ms": 1114.225,
+            "duration_ms": 0.029,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1114.482,
+            "ended_at_ms": 1155.507,
+            "duration_ms": 41.025,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1155.559,
+            "ended_at_ms": 6642.337,
+            "duration_ms": 5486.779,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1155.817,
+            "ended_at_ms": 6642.207,
+            "duration_ms": 5486.39,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "academic_programs",
+              "task_type": "procedure_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1155.837,
+            "ended_at_ms": 1155.871,
+            "duration_ms": 0.034,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1155.96,
+            "ended_at_ms": 6597.396,
+            "duration_ms": 5441.436,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs",
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1156.06,
+            "ended_at_ms": 6596.999,
+            "duration_ms": 5440.939,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1156.116,
+            "ended_at_ms": 5191.962,
+            "duration_ms": 4035.846,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 4982.867,
+            "ended_at_ms": 5031.873,
+            "duration_ms": 49.006,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 5060.976,
+            "ended_at_ms": 5189.491,
+            "duration_ms": 128.515,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 12,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 5192.051,
+            "ended_at_ms": 5199.251,
+            "duration_ms": 7.2,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 5199.286,
+            "ended_at_ms": 6596.897,
+            "duration_ms": 1397.612,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 5199.326,
+            "ended_at_ms": 6596.892,
+            "duration_ms": 1397.567,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 5199.757,
+            "ended_at_ms": 6596.881,
+            "duration_ms": 1397.124,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 5199.805,
+            "ended_at_ms": 6596.843,
+            "duration_ms": 1397.038,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 5199.824,
+            "ended_at_ms": 6596.833,
+            "duration_ms": 1397.009,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 6597.43,
+            "ended_at_ms": 6641.844,
+            "duration_ms": 44.413,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "main.related_announcements",
+            "started_at_ms": 6642.54,
+            "ended_at_ms": 6704.939,
+            "duration_ms": 62.399,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 6704.969,
+            "ended_at_ms": 6704.983,
+            "duration_ms": 0.014,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 6704.993,
+            "ended_at_ms": 6705.348,
+            "duration_ms": 0.354,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 6705.358,
+            "ended_at_ms": 6721.999,
+            "duration_ms": 16.641,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 6722.019,
+            "ended_at_ms": 6751.452,
+            "duration_ms": 29.432,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

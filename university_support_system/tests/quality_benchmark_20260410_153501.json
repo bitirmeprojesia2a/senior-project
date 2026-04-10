@@ -1,0 +1,201 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153501",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 0.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 0.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 1262.3,
+    "median_time_ms": 1262.3,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1
+  },
+  "results": [
+    {
+      "id": "Q11",
+      "category": "C_conditional_scenario",
+      "question": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "vt",
+      "mode_match": false,
+      "expected_key_facts": [
+        "öğrenim ücreti",
+        "gerek yok",
+        "yönetim kurulu",
+        "sayılma"
+      ],
+      "key_fact_results": {
+        "öğrenim ücreti": false,
+        "gerek yok": false,
+        "yönetim kurulu": false,
+        "sayılma": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 1262.3,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "comparative"
+      },
+      "answer": "Veritabanindaki en yakin kayit donemi 2026-Guz icin 26.08.2026 - 06.09.2026 tarihleri arasinda planlanmistir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- VT\n\nKaynak Ozeti:\n- Veritabani kaydi: kayit donemi",
+      "profiling": {
+        "total_ms": 1262.283,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.079,
+            "ended_at_ms": 1262.246,
+            "duration_ms": 1262.167,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q11-153500"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.114,
+            "ended_at_ms": 10.565,
+            "duration_ms": 10.45,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 10.6,
+            "ended_at_ms": 1110.494,
+            "duration_ms": 1099.895,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 11.246,
+            "ended_at_ms": 1110.257,
+            "duration_ms": 1099.01,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 11.308,
+            "ended_at_ms": 1110.159,
+            "duration_ms": 1098.85,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1110.175,
+            "ended_at_ms": 1110.252,
+            "duration_ms": 0.077,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1110.519,
+            "ended_at_ms": 1145.355,
+            "duration_ms": 34.835,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1145.404,
+            "ended_at_ms": 1206.828,
+            "duration_ms": 61.423,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1145.598,
+            "ended_at_ms": 1206.747,
+            "duration_ms": 61.149,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "registration_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1145.616,
+            "ended_at_ms": 1145.652,
+            "duration_ms": 0.036,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1145.731,
+            "ended_at_ms": 1165.166,
+            "duration_ms": 19.435,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 1165.224,
+            "ended_at_ms": 1206.494,
+            "duration_ms": 41.27,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 1206.989,
+            "ended_at_ms": 1206.998,
+            "duration_ms": 0.009,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 1207.006,
+            "ended_at_ms": 1207.193,
+            "duration_ms": 0.187,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 1207.202,
+            "ended_at_ms": 1221.992,
+            "duration_ms": 14.79,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 1222.012,
+            "ended_at_ms": 1262.237,
+            "duration_ms": 40.225,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

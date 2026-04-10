@@ -1,0 +1,282 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153028",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 66.7,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 2038.8,
+    "median_time_ms": 2038.8,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0
+  },
+  "results": [
+    {
+      "id": "Q2",
+      "category": "A_multi_source_synthesis",
+      "question": "Tek ders sınavına girebilmek için stajımı tamamlamış olmam gerekir mi ve sınavda başarılı sayılmam için minimum not kaç?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "staj",
+        "tamamla",
+        "CC"
+      ],
+      "key_fact_results": {
+        "staj": true,
+        "tamamla": true,
+        "CC": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 3,
+      "elapsed_ms": 2038.8,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Soru: Tek ders sınavına girebilmek için stajımı tamamlamış olmam gerekir mi ve sınavda başarılı sayılmam için minimum not kaç?\n\nCevap: Bu konuda elimdeki kaynaklarda net bilgi bulunamadı.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: staj_esaslar.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: ön_lisans_ve_lisans.pdf",
+      "profiling": {
+        "total_ms": 2038.779,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.081,
+            "ended_at_ms": 2038.729,
+            "duration_ms": 2038.647,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q2-153026"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.116,
+            "ended_at_ms": 7.355,
+            "duration_ms": 7.239,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 7.378,
+            "ended_at_ms": 7.78,
+            "duration_ms": 0.402,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 7.801,
+            "ended_at_ms": 31.734,
+            "duration_ms": 23.933,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 31.794,
+            "ended_at_ms": 1991.862,
+            "duration_ms": 1960.069,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 32.105,
+            "ended_at_ms": 1991.728,
+            "duration_ms": 1959.623,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "procedure_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 32.138,
+            "ended_at_ms": 32.246,
+            "duration_ms": 0.109,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 32.449,
+            "ended_at_ms": 1927.333,
+            "duration_ms": 1894.884,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "internship_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 32.489,
+            "ended_at_ms": 1926.98,
+            "duration_ms": 1894.491,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "internship_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 32.564,
+            "ended_at_ms": 316.219,
+            "duration_ms": 283.655,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "internship_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 54.447,
+            "ended_at_ms": 136.797,
+            "duration_ms": 82.351,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 213.866,
+            "ended_at_ms": 313.28,
+            "duration_ms": 99.414,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 10,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 316.356,
+            "ended_at_ms": 320.19,
+            "duration_ms": 3.833,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "internship_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 320.221,
+            "ended_at_ms": 1926.902,
+            "duration_ms": 1606.681,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "internship_agent"
+            }
+          },
+          {
+            "name": "agent.direct_rag_check",
+            "started_at_ms": 320.264,
+            "ended_at_ms": 320.281,
+            "duration_ms": 0.017,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "internship_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 320.293,
+            "ended_at_ms": 1926.899,
+            "duration_ms": 1606.605,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "internship_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 321.171,
+            "ended_at_ms": 1926.889,
+            "duration_ms": 1605.718,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "internship_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 321.225,
+            "ended_at_ms": 1926.859,
+            "duration_ms": 1605.634,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 321.254,
+            "ended_at_ms": 1926.853,
+            "duration_ms": 1605.599,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 1927.358,
+            "ended_at_ms": 1991.355,
+            "duration_ms": 63.997,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 1992.1,
+            "ended_at_ms": 1992.111,
+            "duration_ms": 0.011,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 1992.12,
+            "ended_at_ms": 1992.417,
+            "duration_ms": 0.297,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 1992.429,
+            "ended_at_ms": 2008.194,
+            "duration_ms": 15.766,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 2008.221,
+            "ended_at_ms": 2038.713,
+            "duration_ms": 30.492,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

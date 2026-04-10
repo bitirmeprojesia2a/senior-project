@@ -1,0 +1,307 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_154127",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 25.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 2871.2,
+    "median_time_ms": 2871.2,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1
+  },
+  "results": [
+    {
+      "id": "Q24",
+      "category": "G_semantic_paraphrase",
+      "question": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "kayıt",
+        "yenileme",
+        "UBYS",
+        "müfredat"
+      ],
+      "key_fact_results": {
+        "kayıt": true,
+        "yenileme": false,
+        "UBYS": false,
+        "müfredat": false
+      },
+      "key_facts_found": 1,
+      "key_facts_total": 4,
+      "elapsed_ms": 2871.2,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "answer": "Bu soruya yanıt verirken ilk olarak, sen de okulumuzu bırakıp 1 yıl aranınca ve şimdi dönüşte ders seçimini nasıl yapacağınızı düşünelim.\n\nKayıtlı olduğunuz dönemden ayrıldığınıza dair bir belge bulunduğunu varsayıyorum. Bu belge, kayıt dondurma belgesidir. \n\nKAYIT DONDURMA BELGESİNİ NASIL ALIRIM?\n\nKayıt dondurma belgesini alma processi, genel olarak öğrenci işleri biriminizin belirlediği kurallara göre yürür.\n\nAyrıca, kaydını donduran öğrenci, öğrenimine devam edemez ve kayıt dondurduğu döneme/yıla ait sınavlara giremez.\n\nDÖNÜŞTE DERS SEÇİMİNİ NASIL YAPACAĞIM?\n\nDönüşte ders seçiminizi yapabilmek için önce kaydınızı devretmelisiniz. Devir alma belgesini almamızın ardından ders seçiminizi yapabilirsiniz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: sık_sorulan_sorular.txt",
+      "profiling": {
+        "total_ms": 2871.24,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.075,
+            "ended_at_ms": 2871.19,
+            "duration_ms": 2871.115,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q24-154124"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.106,
+            "ended_at_ms": 6.839,
+            "duration_ms": 6.733,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 6.865,
+            "ended_at_ms": 1091.345,
+            "duration_ms": 1084.48,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 7.245,
+            "ended_at_ms": 1090.887,
+            "duration_ms": 1083.642,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 7.287,
+            "ended_at_ms": 1090.812,
+            "duration_ms": 1083.525,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1090.842,
+            "ended_at_ms": 1090.882,
+            "duration_ms": 0.039,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1091.405,
+            "ended_at_ms": 1111.135,
+            "duration_ms": 19.73,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1111.177,
+            "ended_at_ms": 2827.547,
+            "duration_ms": 1716.371,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1111.368,
+            "ended_at_ms": 2827.418,
+            "duration_ms": 1716.05,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "course_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1111.39,
+            "ended_at_ms": 1111.457,
+            "duration_ms": 0.067,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1111.536,
+            "ended_at_ms": 2780.663,
+            "duration_ms": 1669.128,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1111.613,
+            "ended_at_ms": 2780.1,
+            "duration_ms": 1668.488,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1111.646,
+            "ended_at_ms": 1317.244,
+            "duration_ms": 205.598,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 1120.396,
+            "ended_at_ms": 1159.784,
+            "duration_ms": 39.388,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 1220.143,
+            "ended_at_ms": 1315.132,
+            "duration_ms": 94.989,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 10,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 1317.304,
+            "ended_at_ms": 1319.423,
+            "duration_ms": 2.119,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 1319.455,
+            "ended_at_ms": 2779.981,
+            "duration_ms": 1460.527,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 1319.501,
+            "ended_at_ms": 2779.975,
+            "duration_ms": 1460.474,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 1320.171,
+            "ended_at_ms": 2779.962,
+            "duration_ms": 1459.791,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 1320.228,
+            "ended_at_ms": 2779.916,
+            "duration_ms": 1459.689,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 1320.249,
+            "ended_at_ms": 2779.903,
+            "duration_ms": 1459.654,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 2780.712,
+            "ended_at_ms": 2827.121,
+            "duration_ms": 46.409,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 2827.778,
+            "ended_at_ms": 2827.792,
+            "duration_ms": 0.013,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 2827.802,
+            "ended_at_ms": 2828.114,
+            "duration_ms": 0.312,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 2828.126,
+            "ended_at_ms": 2841.911,
+            "duration_ms": 13.786,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 2841.949,
+            "ended_at_ms": 2871.179,
+            "duration_ms": 29.23,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

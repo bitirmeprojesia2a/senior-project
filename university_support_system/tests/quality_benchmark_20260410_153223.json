@@ -1,0 +1,241 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153223",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 80.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 1515.6,
+    "median_time_ms": 1515.6,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0
+  },
+  "results": [
+    {
+      "id": "Q7",
+      "category": "B_cross_department_parallel",
+      "question": "Kayıt yenileme döneminde harç ücretimi yatırdıktan sonra ders kaydını nasıl yapacağım, danışmanın onay süreci nasıl işliyor?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "vt",
+      "mode_match": false,
+      "expected_key_facts": [
+        "harç",
+        "UBYS",
+        "ders",
+        "danışman",
+        "onay"
+      ],
+      "key_fact_results": {
+        "harç": true,
+        "UBYS": false,
+        "ders": true,
+        "danışman": true,
+        "onay": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 5,
+      "elapsed_ms": 1515.6,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Ders kaydınızı nasıl yapacağınızı ve danışmanınızın onay sürecini anlayamadıysanız, şu adımları takip edin:\n\nDers kaydı için, kayıt yenileme döneminde harç ücretinizi yatırdıktan sonra Veritabanındaki en yakın kayıt dönemi için tarih aralığını kontrol edin. Öğrenci İşleri departmanı verdiğiniz bilgilere göre 2026-2026-Güz dönemi için 26 Ağustos -6 Eylül 2026 tarihleri arasında planlanmıştır.\n\nÖgrenci Turunuzu ve biriminizi belirledikten sonra, Finans departmasından öğrenim ücreti bilgisini alın. Eğer öğrenci turunuza ve bölüm bilgilerini paylaşmanız gerekiyorsa, Finans departmanı size göre öğrenim ücreti ile ilgili bilgi verecektir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: VT\n- Finans: Kural\n\nKaynak Ozeti:\n- Veritabani kaydi: kayit donemi",
+      "profiling": {
+        "total_ms": 1515.629,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.071,
+            "ended_at_ms": 1515.595,
+            "duration_ms": 1515.524,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q7-153221"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.15,
+            "ended_at_ms": 6.926,
+            "duration_ms": 6.776,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 6.949,
+            "ended_at_ms": 7.479,
+            "duration_ms": 0.53,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 7.525,
+            "ended_at_ms": 38.972,
+            "duration_ms": 31.447,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 39.008,
+            "ended_at_ms": 104.666,
+            "duration_ms": 65.658,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 39.295,
+            "ended_at_ms": 104.53,
+            "duration_ms": 65.236,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "tuition_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 39.313,
+            "ended_at_ms": 39.339,
+            "duration_ms": 0.026,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 39.421,
+            "ended_at_ms": 60.355,
+            "duration_ms": 20.934,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 43.925,
+            "ended_at_ms": 87.923,
+            "duration_ms": 43.998,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "department": "finance",
+              "task_type": "tuition_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 43.948,
+            "ended_at_ms": 43.976,
+            "duration_ms": 0.028,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 44.056,
+            "ended_at_ms": 44.897,
+            "duration_ms": 0.842,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance",
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 44.923,
+            "ended_at_ms": 87.623,
+            "duration_ms": 42.699,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 60.386,
+            "ended_at_ms": 104.296,
+            "duration_ms": 43.91,
+            "parent": "department.telemetry.record_success",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 104.813,
+            "ended_at_ms": 104.832,
+            "duration_ms": 0.019,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 104.839,
+            "ended_at_ms": 1458.528,
+            "duration_ms": 1353.688,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.global_llm_synthesis",
+            "started_at_ms": 105.024,
+            "ended_at_ms": 1458.327,
+            "duration_ms": 1353.302,
+            "parent": "main.compose_response"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 105.062,
+            "ended_at_ms": 1458.316,
+            "duration_ms": 1353.253,
+            "parent": "main.global_llm_synthesis",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 105.086,
+            "ended_at_ms": 1458.309,
+            "duration_ms": 1353.222,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "global_synthesis"
+            }
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 1458.54,
+            "ended_at_ms": 1481.939,
+            "duration_ms": 23.398,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 1481.959,
+            "ended_at_ms": 1515.585,
+            "duration_ms": 33.626,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

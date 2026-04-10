@@ -1,0 +1,207 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_152840",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 0.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 1601.2,
+    "median_time_ms": 1601.2,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1
+  },
+  "results": [
+    {
+      "id": "Q1",
+      "category": "A_multi_source_synthesis",
+      "question": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "vt",
+      "mode_match": false,
+      "expected_key_facts": [
+        "üç hafta",
+        "dilekçe",
+        "komisyon",
+        "derslere devam"
+      ],
+      "key_fact_results": {
+        "üç hafta": false,
+        "dilekçe": false,
+        "komisyon": false,
+        "derslere devam": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 1601.2,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "answer": "Veritabanindaki en yakin kayit donemi 2026-Guz icin 26.08.2026 - 06.09.2026 tarihleri arasinda planlanmistir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- VT\n\nKaynak Ozeti:\n- Veritabani kaydi: kayit donemi",
+      "profiling": {
+        "total_ms": 1600.741,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 1.916,
+            "ended_at_ms": 1600.227,
+            "duration_ms": 1598.311,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q1-152839"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 2.922,
+            "ended_at_ms": 12.113,
+            "duration_ms": 9.191,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 12.161,
+            "ended_at_ms": 1362.035,
+            "duration_ms": 1349.874,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 27.932,
+            "ended_at_ms": 1358.878,
+            "duration_ms": 1330.946,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 29.34,
+            "ended_at_ms": 1358.815,
+            "duration_ms": 1329.476,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1358.838,
+            "ended_at_ms": 1358.874,
+            "duration_ms": 0.036,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1362.077,
+            "ended_at_ms": 1389.994,
+            "duration_ms": 27.917,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1390.033,
+            "ended_at_ms": 1466.724,
+            "duration_ms": 76.692,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1390.791,
+            "ended_at_ms": 1466.656,
+            "duration_ms": 75.865,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "registration_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1390.816,
+            "ended_at_ms": 1390.858,
+            "duration_ms": 0.042,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1392.559,
+            "ended_at_ms": 1427.954,
+            "duration_ms": 35.395,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 1427.99,
+            "ended_at_ms": 1466.425,
+            "duration_ms": 38.436,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.related_announcements",
+            "started_at_ms": 1466.849,
+            "ended_at_ms": 1556.373,
+            "duration_ms": 89.524,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 1556.395,
+            "ended_at_ms": 1556.406,
+            "duration_ms": 0.011,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 1556.413,
+            "ended_at_ms": 1556.647,
+            "duration_ms": 0.234,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 1556.656,
+            "ended_at_ms": 1570.729,
+            "duration_ms": 14.072,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 1570.758,
+            "ended_at_ms": 1600.218,
+            "duration_ms": 29.461,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

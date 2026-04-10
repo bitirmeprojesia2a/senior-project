@@ -1,0 +1,284 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_153136",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 0.0,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 75.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 2096.1,
+    "median_time_ms": 2096.1,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0
+  },
+  "results": [
+    {
+      "id": "Q4",
+      "category": "A_multi_source_synthesis",
+      "question": "Pedagojik formasyon dersleri transkripte dahil ediliyor mu, mezuniyet ortalamasına etkisi var mı ve diplomada nasıl bir ibare yer alıyor?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "transkript",
+        "dahil",
+        "ortalama",
+        "tamamlamıştır"
+      ],
+      "key_fact_results": {
+        "transkript": true,
+        "dahil": true,
+        "ortalama": true,
+        "tamamlamıştır": false
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 2096.1,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Yanıtı aşağıdaki şekilde oluşturabiliriz:\n\nPedagojik formasyon dersleri transkripte dahil ediliyor mu? Elbette dahil ediliyor. Transkript kontrolünün yapıldığında müfredatta yer alan tüm derslerin kaydı ve başarılması önemli olduğu için, pedagojik formasyon dersleri de bu kapsamda değerlendiriyor.\n\nMezuniyet ortalamasına etkisi var mı? Evet, mezuniyet ortalamasına bir etkisi var diyebiliriz. Müfredat transkript kontrolünün yapılması, öğrencinin mezuniyet hakkı elde edebilmesi için tüm dersleri almak ve başarılı olmak zorunda olması nedeniyle, pedagojik formasyon dersi de dahil olmak üzere tüm derslere olumlu katkı sağlıyor.\n\nDiplomada nasıl bir ibare yer alıyor? Diplomada \"Öğrenci Mezunu\" ibaresi yer alır. Además, diploma eki ile yurtdışında daha okunabilir ve mukayese edilebilir bir diploma, akademik güzergâhının ve yurtiçinde ve yurtdışında edindiği yeti ve becerilerin tam bir tarifi, başarı ve yetilerinin nesnel ve âdil değerlendirmesi, geleceğe yönelik olarak yurtdışında iş ve eğitim imkânlarına daha rahat ulaşma olanağı, İş bulma olanaklerini artırma kazanımları elde edilebilir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf\n- Belge: 2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+      "profiling": {
+        "total_ms": 2096.055,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.205,
+            "ended_at_ms": 2096.018,
+            "duration_ms": 2095.813,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q4-153134"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.255,
+            "ended_at_ms": 13.286,
+            "duration_ms": 13.03,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 13.324,
+            "ended_at_ms": 14.008,
+            "duration_ms": 0.684,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 14.053,
+            "ended_at_ms": 46.843,
+            "duration_ms": 32.791,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 46.94,
+            "ended_at_ms": 2047.028,
+            "duration_ms": 2000.089,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 47.313,
+            "ended_at_ms": 2046.927,
+            "duration_ms": 1999.615,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "academic_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 47.349,
+            "ended_at_ms": 47.452,
+            "duration_ms": 0.103,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 47.672,
+            "ended_at_ms": 1984.018,
+            "duration_ms": 1936.346,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 47.886,
+            "ended_at_ms": 1983.726,
+            "duration_ms": 1935.84,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 47.969,
+            "ended_at_ms": 345.893,
+            "duration_ms": 297.924,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 102.822,
+            "ended_at_ms": 211.108,
+            "duration_ms": 108.286,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 245.711,
+            "ended_at_ms": 343.364,
+            "duration_ms": 97.653,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 10,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 345.947,
+            "ended_at_ms": 346.004,
+            "duration_ms": 0.057,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 346.02,
+            "ended_at_ms": 1983.649,
+            "duration_ms": 1637.63,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.direct_rag_check",
+            "started_at_ms": 346.056,
+            "ended_at_ms": 346.072,
+            "duration_ms": 0.015,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 346.085,
+            "ended_at_ms": 1983.645,
+            "duration_ms": 1637.56,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 347.904,
+            "ended_at_ms": 1983.635,
+            "duration_ms": 1635.731,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "graduation_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 347.968,
+            "ended_at_ms": 1983.604,
+            "duration_ms": 1635.636,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 348.001,
+            "ended_at_ms": 1983.596,
+            "duration_ms": 1635.595,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 1984.044,
+            "ended_at_ms": 2046.649,
+            "duration_ms": 62.605,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 2047.177,
+            "ended_at_ms": 2047.186,
+            "duration_ms": 0.009,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 2047.193,
+            "ended_at_ms": 2047.473,
+            "duration_ms": 0.28,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 2047.481,
+            "ended_at_ms": 2060.976,
+            "duration_ms": 13.495,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 2061.001,
+            "ended_at_ms": 2096.008,
+            "duration_ms": 35.007,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}
