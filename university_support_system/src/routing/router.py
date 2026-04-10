@@ -207,6 +207,25 @@ class DepartmentRouter:
         return should_skip_llm_for_academic_context_query_by_policy(query, decision.departments)
 
     def _apply_routing_overrides(self, query: str, decision: _RuleRoutingDecision) -> _RuleRoutingDecision:
+        overridden = self._compute_routing_override(query, decision)
+        if overridden is decision or decision.intent is None:
+            return overridden
+        merged_depts = list(overridden.departments)
+        for dept in decision.departments:
+            if dept not in merged_depts:
+                merged_depts.append(dept)
+        if merged_depts == list(overridden.departments):
+            return overridden
+        return _RuleRoutingDecision(
+            departments=merged_depts,
+            confidence=overridden.confidence,
+            confidence_level=overridden.confidence_level,
+            strategy=RoutingStrategy.PARALLEL if len(merged_depts) > 1 else RoutingStrategy.DIRECT,
+            reasoning=overridden.reasoning + " LLM departman sinyalleri korundu.",
+            intent=overridden.intent,
+        )
+
+    def _compute_routing_override(self, query: str, decision: _RuleRoutingDecision) -> _RuleRoutingDecision:
         lowered = normalize_routing_text(query)
         intent = decision.intent
 
