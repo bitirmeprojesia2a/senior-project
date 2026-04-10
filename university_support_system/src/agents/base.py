@@ -362,36 +362,12 @@ class BaseSpecialistAgent:
                         "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin."
                     ), "kural"
 
-        force_llm = force_llm or self._should_force_llm_synthesis(
-            query_text,
-            results,
-            db_context=db_context,
-        )
-
-        if not force_llm:
-            with profile_stage("agent.direct_rag_check", agent_id=self.agent_id):
-                direct = self._try_direct_rag_answer(results, query_text=query_text)
-            if direct is not None:
-                prefix = f"{db_context}\n\n" if db_context else ""
-                logger.info("rag_direct_answer used=%s score=%.3f", self.agent_id, results[0].get("score", 0))
-                return prefix + direct, self._derive_non_llm_generation_mode(
-                    results,
-                    db_context=db_context,
+        if not allow_llm:
+            with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
+                return (
+                    self._build_source_only_answer(query_text, results, db_context=db_context),
+                    self._derive_non_llm_generation_mode(results, db_context=db_context),
                 )
-
-            if not allow_llm:
-                with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
-                    return (
-                        self._build_source_only_answer(query_text, results, db_context=db_context),
-                        self._derive_non_llm_generation_mode(results, db_context=db_context),
-                    )
-
-            if self._should_skip_llm_synthesis(query_text, results, db_context=db_context):
-                with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
-                    return (
-                        self._build_source_only_answer(query_text, results, db_context=db_context),
-                        self._derive_non_llm_generation_mode(results, db_context=db_context),
-                    )
 
         with profile_stage("agent.llm_synthesize", agent_id=self.agent_id):
             return await self._llm_synthesize(

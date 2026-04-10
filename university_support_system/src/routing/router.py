@@ -112,7 +112,7 @@ class DepartmentRouter:
             preferred_departments=preferred_departments or [],
         )
 
-        if self._is_rule_decision_confident(rule_decision):
+        if self._is_rule_decision_confident(rule_decision, query):
             return self._to_result(
                 query,
                 rule_decision,
@@ -134,12 +134,50 @@ class DepartmentRouter:
             task_type=preferred_task_type or self._detect_task_type(query, llm_decision.departments),
         )
 
-    def _is_rule_decision_confident(self, decision: _RuleRoutingDecision) -> bool:
-        """Yalnizca cok yuksek keyword eslesmelerinde LLM'i atla."""
-        if decision.strategy == RoutingStrategy.DIRECT and decision.confidence >= 0.95:
+    def _is_rule_decision_confident(self, decision: _RuleRoutingDecision, query: str) -> bool:
+        """Yalnizca cok yuksek keyword eslesmelerinde VE basit sorgularda LLM'i atla."""
+        if decision.confidence < 0.95:
+            return False
+        if decision.strategy not in (RoutingStrategy.DIRECT, RoutingStrategy.PARALLEL):
+            return False
+        return not self._is_complex_query(query)
+
+    @staticmethod
+    def _is_complex_query(query: str) -> bool:
+        """Heuristik karmasiklik tespiti. True ise LLM intent analizi zorunludur."""
+        normalized = normalize_routing_text(query)
+
+        if query.count("?") >= 2:
             return True
-        if decision.strategy == RoutingStrategy.PARALLEL and decision.confidence >= 0.95:
+
+        if len(normalized.split()) > 18:
             return True
+
+        _COMPARISON = (
+            "arasindaki fark", "farkli mi", "karsilastir",
+            "yoksa", "hangisi daha",
+        )
+        if any(m in normalized for m in _COMPARISON):
+            return True
+
+        _CONDITIONAL = (
+            "olursa", "olursam", "durumda", "gerekir mi",
+            "gerekiyor mu", "sayilir mi", "etkilenir mi",
+            "etkiler mi", "kesilir mi", "mahsup",
+        )
+        if any(m in normalized for m in _CONDITIONAL):
+            return True
+
+        _PROCESS = (
+            "adim adim", "nasil isliyor", "tum kosul",
+            "hangi adim", "sureci nasil",
+        )
+        if any(m in normalized for m in _PROCESS):
+            return True
+
+        if normalized.count(" ve ") >= 2:
+            return True
+
         return False
 
     @staticmethod
