@@ -1,0 +1,1325 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "run_timestamp": "20260410_172853",
+  "total_questions": 3,
+  "summary": {
+    "dept_accuracy": 33.3,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 83.3,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 4014.3,
+    "median_time_ms": 4431.7,
+    "intent_analysis_active": 3,
+    "force_llm_synthesis_count": 3
+  },
+  "results": [
+    {
+      "id": "Q5",
+      "category": "B_cross_department_parallel",
+      "question": "Uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretimi nereye yatırmam gerekiyor ve ayrıca ikamet izni için hangi belgeleri hazırlamalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "finance",
+        "academic_programs"
+      ],
+      "actual_departments": [
+        "academic_programs",
+        "finance",
+        "student_affairs"
+      ],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "ücret",
+        "ikamet",
+        "belge"
+      ],
+      "key_fact_results": {
+        "ücret": true,
+        "ikamet": true,
+        "belge": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 3,
+      "elapsed_ms": 4640.6,
+      "source_count": 14,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "comparative"
+      },
+      "answer": "Ogrenci Isleri:\nSoru cevabı:\n\nİlk olarak kayıt yaptırırken öğrenim ücretini nerede yatırmalıyım sorusuna cevap vereyim. Öğrenim ücreti Ondokuz Mayıs Üniversitesi (OMU) ÖİDB Katkı Payı ve Öğrenim Ücreti Ofisi'nde yatırılmalıdır. Bu konuda elimdeki kaynaklardaki ilgili görev adının \"ÖİDB Katkı Payı ve Öğrenim Ücreti Ofisi Personeli\" olması ve görev tanımının \"öğrencilerin kayıt yaptırdıkları program düzeyinde bilgi yönetim sisteminden borçlandırma işlemini yapmak ve ödemelerini takip etmek\" olduğu göz önüne alındığında, öğrenim ücretinin bu ofise yatırılması gerektiği söylenebilir. Ancak, daha net bir cevap için ilgili ofiste yapılacak bir işlem gerektirmektedir. Bu konuda elimdeki kaynaklarda net bilgi bulunamadı.\n\nİkamet izni için hangi belgeleri hazırlamalıyım sorusuna cevap veriyorum. İkamet izni için gerekli belgeler arasında öğrenci belgesi ve pasaport bulunmalıdır. Bu konuda elimdeki kaynaklardaki ilgili görev adının \"Her eğitim öğretim döneminde yabancı uyruklu öğrencilerin ders kayıtlanma durumunu göç idaresine göndermek\" olduğu göz önüne alındığında, ikamet izni için öğrenci belgesi ile pasaport gerekli görülmektedir. Ancak, daha net bir cevap için ilgili işlem gerektirmektedir. Bu konuda elimdeki kaynaklarda net bilgi bulunamadı.\n\nGerekli diğer bilgilere ulaşmak için Öğrenci İşleri'ne yönlendirilebilrz.\n\nAkademik Programlar:\nÖn kayıt yaptırırken yurt dışından öğrenci olarak öğrenim ücretini yatırmak durumundasınız. Bu ücreti Üniversite'nin web sitesi aracılığıyla ödemeniz gerekmektedir.\n\nİkamet izni için ise şu belgeleri hazırlamanız gerekecektir:\n\n- Geçerli pasaport,\n- Öğrenim hakkı için verilmiş diplomatik veya konsolosluk belgesi,\n- Ön kayıt yapıldıktan sonra, ÖİB (Öğrenci İşleri Daire Başkanlığı) tarafından verilecek olan ikamet izni belgesi.\n\nEğer üniversite tarafından genel akademik takvimle belirlenen ders kayıtlanma tarihlerinden önce derslerini kaydolmak isteyen öğrenci ise, öğrenci işleri bölümüne şahsen başvurmalıdır.\n\nÖn kayıt yaptıran öğrenciler, kayıtlandıkları yıl için YÖK tarafından belirlenen son kayıt tarihine kadar kayıtlarını kesin bir şekilde yaptırmak zorundadır.\n\nÖn kayıt yaptıran öğrencilerin kayıt bilgileri, Öğrenci İşleri Daire Başkanlığı’nın web sayfasında yayınlanmaktadır.\n\nKayıt işlemleri, öğrenciler tarafından şahsen başvuru ile veya elektronik ortamda yapılacak başvuru ile iki farklı yöntemle yapılır.\n\nFinans:\nBu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Akademik Programlar: RAG + LLM\n- Finans: Kural\n- Ogrenci Isleri: RAG + LLM\n\nKaynak Ozeti:\n- Belge: uluslararası_öğrenci.pdf\n- Belge: uluslararası_öğrenci_yönergesi.pdf\n- Belge: ön_kayıt_kılavuzu_başvuru_adımları.pdf\n- Belge: 2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf\n- Belge: idari_ve_mali_işler_birimi.txt\n- Belge: kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf\n- Belge: sık_sorulan_sorular.txt\n- Belge: öğrenci_işleri_birimi.txt",
+      "profiling": {
+        "total_ms": 4640.591,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.064,
+            "ended_at_ms": 4640.555,
+            "duration_ms": 4640.49,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q5-172831"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.088,
+            "ended_at_ms": 5.988,
+            "duration_ms": 5.9,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 6.03,
+            "ended_at_ms": 1181.202,
+            "duration_ms": 1175.172,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 6.719,
+            "ended_at_ms": 1180.988,
+            "duration_ms": 1174.269,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 6.784,
+            "ended_at_ms": 1180.941,
+            "duration_ms": 1174.157,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1180.958,
+            "ended_at_ms": 1180.984,
+            "duration_ms": 0.027,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1181.227,
+            "ended_at_ms": 1205.499,
+            "duration_ms": 24.272,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1205.543,
+            "ended_at_ms": 4597.342,
+            "duration_ms": 3391.8,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1205.874,
+            "ended_at_ms": 4533.74,
+            "duration_ms": 3327.866,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "academic_programs",
+              "task_type": "tuition_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1205.892,
+            "ended_at_ms": 1205.96,
+            "duration_ms": 0.067,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1206.038,
+            "ended_at_ms": 4488.869,
+            "duration_ms": 3282.831,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs",
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1206.053,
+            "ended_at_ms": 4488.535,
+            "duration_ms": 3282.481,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "international_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1206.095,
+            "ended_at_ms": 1475.972,
+            "duration_ms": 269.877,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "international_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 1251.509,
+            "ended_at_ms": 1294.336,
+            "duration_ms": 42.827,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 1357.667,
+            "ended_at_ms": 1473.817,
+            "duration_ms": 116.15,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 12,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 1476.02,
+            "ended_at_ms": 1480.423,
+            "duration_ms": 4.403,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "international_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 1480.449,
+            "ended_at_ms": 4488.461,
+            "duration_ms": 3008.011,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 1480.488,
+            "ended_at_ms": 4488.456,
+            "duration_ms": 3007.968,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 1481.151,
+            "ended_at_ms": 4488.449,
+            "duration_ms": 3007.298,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 1481.198,
+            "ended_at_ms": 4488.418,
+            "duration_ms": 3007.22,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 1481.216,
+            "ended_at_ms": 4488.409,
+            "duration_ms": 3007.193,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1964.053,
+            "ended_at_ms": 3407.889,
+            "duration_ms": 1443.837,
+            "parent": "llm.generate.openai_compatible",
+            "meta": {
+              "department": "finance",
+              "task_type": "tuition_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1964.072,
+            "ended_at_ms": 1964.109,
+            "duration_ms": 0.037,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1964.185,
+            "ended_at_ms": 2725.415,
+            "duration_ms": 761.229,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance",
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1965.515,
+            "ended_at_ms": 2725.112,
+            "duration_ms": 759.596,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "tuition_agent",
+              "department": "finance"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1965.556,
+            "ended_at_ms": 2724.433,
+            "duration_ms": 758.877,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "tuition_agent",
+              "department": "finance"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 2633.595,
+            "ended_at_ms": 2664.681,
+            "duration_ms": 31.085,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 2724.477,
+            "ended_at_ms": 2724.991,
+            "duration_ms": 0.515,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "tuition_agent",
+              "department": "finance"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 2725.007,
+            "ended_at_ms": 2725.046,
+            "duration_ms": 0.039,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 2725.033,
+            "ended_at_ms": 2725.042,
+            "duration_ms": 0.009,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 2725.441,
+            "ended_at_ms": 3407.607,
+            "duration_ms": 682.166,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 2726.383,
+            "ended_at_ms": 4597.143,
+            "duration_ms": 1870.761,
+            "parent": "department.telemetry.record_success",
+            "meta": {
+              "department": "student_affairs",
+              "task_type": "tuition_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 2726.407,
+            "ended_at_ms": 2726.438,
+            "duration_ms": 0.032,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 2726.509,
+            "ended_at_ms": 4558.37,
+            "duration_ms": 1831.861,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs",
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 2726.579,
+            "ended_at_ms": 4558.098,
+            "duration_ms": 1831.518,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "registration_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 2726.621,
+            "ended_at_ms": 2883.707,
+            "duration_ms": 157.086,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "registration_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 2743.078,
+            "ended_at_ms": 2779.775,
+            "duration_ms": 36.696,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 2802.574,
+            "ended_at_ms": 2881.515,
+            "duration_ms": 78.94,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 10,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 2883.781,
+            "ended_at_ms": 2883.864,
+            "duration_ms": 0.083,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "registration_agent",
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 2883.893,
+            "ended_at_ms": 4558.026,
+            "duration_ms": 1674.133,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 2883.927,
+            "ended_at_ms": 4558.023,
+            "duration_ms": 1674.095,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 2884.332,
+            "ended_at_ms": 4558.016,
+            "duration_ms": 1673.684,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "registration_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 2884.376,
+            "ended_at_ms": 4557.986,
+            "duration_ms": 1673.61,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 2884.393,
+            "ended_at_ms": 4557.979,
+            "duration_ms": 1673.587,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 4488.895,
+            "ended_at_ms": 4533.46,
+            "duration_ms": 44.566,
+            "parent": "llm.generate.openai_compatible",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 4558.395,
+            "ended_at_ms": 4596.87,
+            "duration_ms": 38.475,
+            "parent": "department.handle",
+            "meta": {
+              "department": "student_affairs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 4597.494,
+            "ended_at_ms": 4597.54,
+            "duration_ms": 0.046,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 4597.548,
+            "ended_at_ms": 4598.044,
+            "duration_ms": 0.497,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 4598.053,
+            "ended_at_ms": 4612.198,
+            "duration_ms": 14.144,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 4612.223,
+            "ended_at_ms": 4640.545,
+            "duration_ms": 28.322,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q6",
+      "category": "B_cross_department_parallel",
+      "question": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance"
+      ],
+      "actual_departments": [
+        "finance",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "not ortalaması",
+        "harç",
+        "ödeme",
+        "başvuru"
+      ],
+      "key_fact_results": {
+        "not ortalaması": true,
+        "harç": true,
+        "ödeme": false,
+        "başvuru": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 4431.7,
+      "source_count": 3,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": true,
+        "force_llm_synthesis": true,
+        "query_type": "factual"
+      },
+      "answer": "ÇAP Programına Başvuru Şartları ve Harç Borcu Ödenmesi\n\nÇAP (Çift Anadal) programına başvurmak istediğinizde, bazı ön koşullarını karşılamalısınız. Bunlar:\n\n- Ana dal lisans programınıza devam ederken, başvurduğunuz yarı yıla kadar ana dal lisans programında yer alan tüm dersleri almış ve başarmış olmanız,\n- Başvurduğunuz yarı yıla kadar ana dal not ortalamasının 4.00 üzerinden en az 3.00 olması,\n- Ana dal diploma programının ilgili sınıfında başarı sıralaması itibarı ile en az ilk %20'sinde bulunmanız.\n\nHarç borcunuzun nasıl ödeneceğini bilmiyorsanız, bu durumuna bağlı olarak bazı bilgilerimiz var. Resmi internet sitesinde veya öğrenci hizmet birimlerinden bilgi almanızı öneriyoruz. \nAyrıca OMU harç borçlarınız için resmi internet sitesini ziyaret ederek veya öğrenci hizmet birimlerinden bilgi alabilirsiniz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Finans: Kural\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Belge: yonerge_cift_anadal_yandal.pdf\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+      "profiling": {
+        "total_ms": 4431.681,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.081,
+            "ended_at_ms": 4431.644,
+            "duration_ms": 4431.564,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q6-172841"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.107,
+            "ended_at_ms": 5.872,
+            "duration_ms": 5.765,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 5.894,
+            "ended_at_ms": 1127.998,
+            "duration_ms": 1122.104,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 6.257,
+            "ended_at_ms": 1127.752,
+            "duration_ms": 1121.496,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 6.286,
+            "ended_at_ms": 1127.7,
+            "duration_ms": 1121.414,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1127.718,
+            "ended_at_ms": 1127.747,
+            "duration_ms": 0.029,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1128.028,
+            "ended_at_ms": 1156.402,
+            "duration_ms": 28.374,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1156.439,
+            "ended_at_ms": 3076.197,
+            "duration_ms": 1919.758,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1156.73,
+            "ended_at_ms": 2191.47,
+            "duration_ms": 1034.74,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "finance",
+              "task_type": "tuition_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1156.747,
+            "ended_at_ms": 1156.772,
+            "duration_ms": 0.025,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1156.846,
+            "ended_at_ms": 1157.53,
+            "duration_ms": 0.684,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance",
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 1157.547,
+            "ended_at_ms": 2191.236,
+            "duration_ms": 1033.688,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1158.37,
+            "ended_at_ms": 3076.061,
+            "duration_ms": 1917.69,
+            "parent": "department.telemetry.record_success",
+            "meta": {
+              "department": "academic_programs",
+              "task_type": "tuition_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1158.391,
+            "ended_at_ms": 1158.427,
+            "duration_ms": 0.036,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1158.497,
+            "ended_at_ms": 3031.904,
+            "duration_ms": 1873.407,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs",
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1158.577,
+            "ended_at_ms": 3031.638,
+            "duration_ms": 1873.061,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1158.612,
+            "ended_at_ms": 1624.832,
+            "duration_ms": 466.22,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 1256.888,
+            "ended_at_ms": 1478.699,
+            "duration_ms": 221.811,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 1505.733,
+            "ended_at_ms": 1622.566,
+            "duration_ms": 116.833,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 12,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 1624.885,
+            "ended_at_ms": 1631.117,
+            "duration_ms": 6.231,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 1631.149,
+            "ended_at_ms": 3031.568,
+            "duration_ms": 1400.419,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 1631.185,
+            "ended_at_ms": 3031.565,
+            "duration_ms": 1400.379,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 1632.119,
+            "ended_at_ms": 3031.556,
+            "duration_ms": 1399.437,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "curriculum_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 1632.195,
+            "ended_at_ms": 3031.529,
+            "duration_ms": 1399.334,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 1632.232,
+            "ended_at_ms": 3031.519,
+            "duration_ms": 1399.287,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 3031.931,
+            "ended_at_ms": 3075.804,
+            "duration_ms": 43.873,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 3076.337,
+            "ended_at_ms": 3076.367,
+            "duration_ms": 0.029,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 3076.374,
+            "ended_at_ms": 4371.253,
+            "duration_ms": 1294.88,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.global_llm_synthesis",
+            "started_at_ms": 3076.63,
+            "ended_at_ms": 4371.005,
+            "duration_ms": 1294.374,
+            "parent": "main.compose_response"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 3076.665,
+            "ended_at_ms": 4370.994,
+            "duration_ms": 1294.329,
+            "parent": "main.global_llm_synthesis",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 3076.683,
+            "ended_at_ms": 4370.987,
+            "duration_ms": 1294.304,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "global_synthesis"
+            }
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 4371.269,
+            "ended_at_ms": 4393.091,
+            "duration_ms": 21.822,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 4393.109,
+            "ended_at_ms": 4431.635,
+            "duration_ms": 38.526,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q9",
+      "category": "C_conditional_scenario",
+      "question": "4. sınıf öğrencisiyim ve program süresini 1 yıl aştım. Ek süre hakkım var mı ve bu sürede katkı payı öder miyim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "finance",
+        "academic_programs"
+      ],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "azami",
+        "ek",
+        "süre",
+        "katkı payı",
+        "öde"
+      ],
+      "key_fact_results": {
+        "azami": false,
+        "ek": true,
+        "süre": true,
+        "katkı payı": true,
+        "öde": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 5,
+      "elapsed_ms": 2970.7,
+      "source_count": 10,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "comparison",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "factual"
+      },
+      "answer": "Akademik Programlar:\nSormak istediğiniz soruyu cevaplama imkanlarım var. \n\nSize göre bu durum, ek süre hakkını kazanmış olmakla birlikte, bu süresi kapsamında katkı payı ödemekten muaf olmayacaksniz.\n\nFinans:\nBu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Finans: Kural\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Belge: kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf\n- Belge: öğrenci_yemek_bursu_yönergesi.pdf\n- Belge: 2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf\n- Belge: öğretim_üyesi_yetiştirme_programı_yönergesi.pdf\n- Belge: uluslararası_işbirlikleri_protokoller_kapsamındaki_öğrenci_ve_personel_değişim.pdf\n- Belge: tıp_fakültesi_tıp_doktorluğu_programı.pdf\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf\n- Belge: önlisans_ve_lisans_düzeyindeki_programlar_arasında_geçiş_yönergesi.pdf",
+      "profiling": {
+        "total_ms": 2970.667,
+        "events": [
+          {
+            "name": "main.handle_query",
+            "started_at_ms": 0.061,
+            "ended_at_ms": 2970.631,
+            "duration_ms": 2970.57,
+            "parent": null,
+            "meta": {
+              "context_id": "qbench-Q9-172850"
+            }
+          },
+          {
+            "name": "main.conversation.resolve",
+            "started_at_ms": 0.082,
+            "ended_at_ms": 7.074,
+            "duration_ms": 6.991,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.router.route",
+            "started_at_ms": 7.105,
+            "ended_at_ms": 1032.577,
+            "duration_ms": 1025.472,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 7.678,
+            "ended_at_ms": 1032.347,
+            "duration_ms": 1024.669,
+            "parent": "main.router.route",
+            "meta": {
+              "json_mode": true
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 7.723,
+            "ended_at_ms": 1032.29,
+            "duration_ms": 1024.568,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "routing"
+            }
+          },
+          {
+            "name": "llm.generate.validate_json",
+            "started_at_ms": 1032.31,
+            "ended_at_ms": 1032.342,
+            "duration_ms": 0.033,
+            "parent": "llm.generate"
+          },
+          {
+            "name": "main.telemetry.create_query_log",
+            "started_at_ms": 1032.603,
+            "ended_at_ms": 1067.526,
+            "duration_ms": 34.924,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.dispatch_departments",
+            "started_at_ms": 1067.625,
+            "ended_at_ms": 2935.832,
+            "duration_ms": 1868.207,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1068.106,
+            "ended_at_ms": 2293.706,
+            "duration_ms": 1225.6,
+            "parent": "main.dispatch_departments",
+            "meta": {
+              "department": "finance",
+              "task_type": "payment_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1068.127,
+            "ended_at_ms": 1068.161,
+            "duration_ms": 0.035,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1068.237,
+            "ended_at_ms": 1318.92,
+            "duration_ms": 250.684,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance",
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1068.609,
+            "ended_at_ms": 1318.619,
+            "duration_ms": 250.01,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "tuition_agent",
+              "department": "finance"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1068.643,
+            "ended_at_ms": 1317.937,
+            "duration_ms": 249.293,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "tuition_agent",
+              "department": "finance"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 1074.088,
+            "ended_at_ms": 1295.528,
+            "duration_ms": 221.44,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 1317.977,
+            "ended_at_ms": 1318.485,
+            "duration_ms": 0.508,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "tuition_agent",
+              "department": "finance"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 1318.501,
+            "ended_at_ms": 1318.541,
+            "duration_ms": 0.04,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 1318.529,
+            "ended_at_ms": 1318.538,
+            "duration_ms": 0.009,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "tuition_agent"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 1318.942,
+            "ended_at_ms": 2293.37,
+            "duration_ms": 974.428,
+            "parent": "department.handle",
+            "meta": {
+              "department": "finance"
+            }
+          },
+          {
+            "name": "department.handle",
+            "started_at_ms": 1319.88,
+            "ended_at_ms": 2935.656,
+            "duration_ms": 1615.775,
+            "parent": "department.telemetry.record_success",
+            "meta": {
+              "department": "academic_programs",
+              "task_type": "payment_query"
+            }
+          },
+          {
+            "name": "department.select_agent",
+            "started_at_ms": 1319.899,
+            "ended_at_ms": 1320.062,
+            "duration_ms": 0.163,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "department.agent_handle_task",
+            "started_at_ms": 1320.3,
+            "ended_at_ms": 2891.286,
+            "duration_ms": 1570.987,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs",
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "agent.handle_task",
+            "started_at_ms": 1320.331,
+            "ended_at_ms": 2890.955,
+            "duration_ms": 1570.624,
+            "parent": "department.agent_handle_task",
+            "meta": {
+              "agent_id": "international_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.retriever.search",
+            "started_at_ms": 1320.397,
+            "ended_at_ms": 1703.699,
+            "duration_ms": 383.301,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "international_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "rag.embedder.encode",
+            "started_at_ms": 1369.068,
+            "ended_at_ms": 1501.163,
+            "duration_ms": 132.096,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "count": 1,
+              "batch_size": 32,
+              "is_query": true
+            }
+          },
+          {
+            "name": "rag.reranker.predict",
+            "started_at_ms": 1520.512,
+            "ended_at_ms": 1701.055,
+            "duration_ms": 180.542,
+            "parent": "agent.retriever.search",
+            "meta": {
+              "candidate_count": 12,
+              "top_k": 5
+            }
+          },
+          {
+            "name": "agent.retriever.enrich_results",
+            "started_at_ms": 1703.761,
+            "ended_at_ms": 1708.236,
+            "duration_ms": 4.475,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "international_agent",
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "agent.generate_answer",
+            "started_at_ms": 1708.268,
+            "ended_at_ms": 2890.876,
+            "duration_ms": 1182.609,
+            "parent": "agent.handle_task",
+            "meta": {
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "agent.llm_synthesize",
+            "started_at_ms": 1708.302,
+            "ended_at_ms": 2890.873,
+            "duration_ms": 1182.57,
+            "parent": "agent.generate_answer",
+            "meta": {
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "agent.llm_generate",
+            "started_at_ms": 1709.699,
+            "ended_at_ms": 2890.866,
+            "duration_ms": 1181.167,
+            "parent": "agent.llm_synthesize",
+            "meta": {
+              "agent_id": "international_agent"
+            }
+          },
+          {
+            "name": "llm.generate",
+            "started_at_ms": 1709.761,
+            "ended_at_ms": 2890.843,
+            "duration_ms": 1181.082,
+            "parent": "agent.llm_generate",
+            "meta": {
+              "json_mode": false
+            }
+          },
+          {
+            "name": "llm.generate.openai_compatible",
+            "started_at_ms": 1709.788,
+            "ended_at_ms": 2890.835,
+            "duration_ms": 1181.047,
+            "parent": "llm.generate",
+            "meta": {
+              "model": "llama-3.1-8b-instant",
+              "role": "specialist_synthesis"
+            }
+          },
+          {
+            "name": "department.telemetry.record_success",
+            "started_at_ms": 2891.311,
+            "ended_at_ms": 2935.366,
+            "duration_ms": 44.055,
+            "parent": "department.handle",
+            "meta": {
+              "department": "academic_programs"
+            }
+          },
+          {
+            "name": "main.filter_low_confidence",
+            "started_at_ms": 2935.97,
+            "ended_at_ms": 2936.006,
+            "duration_ms": 0.036,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.compose_response",
+            "started_at_ms": 2936.013,
+            "ended_at_ms": 2936.275,
+            "duration_ms": 0.262,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.telemetry.finalize_success",
+            "started_at_ms": 2936.284,
+            "ended_at_ms": 2948.137,
+            "duration_ms": 11.853,
+            "parent": "main.handle_query"
+          },
+          {
+            "name": "main.conversation.record",
+            "started_at_ms": 2948.155,
+            "ended_at_ms": 2970.611,
+            "duration_ms": 22.455,
+            "parent": "main.handle_query"
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}
