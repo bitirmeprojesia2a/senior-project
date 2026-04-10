@@ -453,9 +453,6 @@ class ConversationContextService:
 
         # Kısa / yanıt niteliğinde ifadeler follow-up olarak değerlendirilmez
         if len(query_tokens) <= 2 and any(t in _TURBO_WORDS for t in query_tokens):
-            logger.info(
-                "followup_debug TURBO_EXIT tokens=%s", query_tokens,
-            )
             return {
                 "is_follow_up": False,
                 "topic": state.active_topic,
@@ -485,13 +482,6 @@ class ConversationContextService:
             for token in query_tokens[:4]
         )
 
-        logger.info(
-            "followup_debug query=%r tokens=%s turn_count=%d "
-            "prefix=%s strong=%s weak=%s pronoun=%s",
-            query, query_tokens, state.turn_count,
-            starts_with_follow_up, has_strong_marker, has_weak_marker, pronoun_like,
-        )
-
         signal_based = starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like
 
         is_follow_up = bool(
@@ -508,7 +498,6 @@ class ConversationContextService:
             and state.turn_count > 0
             and len(query_tokens) <= 4
         ):
-            logger.info("followup_debug SHORT_QUERY_AUTO_FOLLOWUP tokens=%s", query_tokens)
             is_follow_up = True
             auto_followup = True
 
@@ -522,19 +511,13 @@ class ConversationContextService:
         )
         if marker_only_follow_up and len(query_tokens) > 3:
             new_topic = self._infer_topic(query)
-            logger.info(
-                "followup_debug TOPIC_CHECK new_topic=%r state_topic=%r",
-                new_topic, state.active_topic,
-            )
             if (
                 new_topic is not None
                 and state.active_topic is not None
                 and normalize_text(new_topic) != normalize_text(state.active_topic)
             ):
-                logger.info("followup_debug TOPIC_DIVERGE → is_follow_up=False")
                 is_follow_up = False
 
-        logger.info("followup_debug FINAL is_follow_up=%s", is_follow_up)
         return {
             "is_follow_up": is_follow_up,
             "topic": state.active_topic if is_follow_up else self._infer_topic(query),
