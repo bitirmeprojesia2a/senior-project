@@ -48,6 +48,7 @@ class AnnouncementAgent(BaseSpecialistAgent):
             department=self._resolve_department_filter(metadata),
             faculty=self._normalize_optional_text(metadata.get("faculty")),
             limit=3,
+            allow_latest_fallback=bool(metadata.get("allow_latest_fallback", True)),
         )
 
         if not announcements:
@@ -64,6 +65,7 @@ class AnnouncementAgent(BaseSpecialistAgent):
             department=self.department,
             answer=answer,
             sources=sources,
+            generation_mode="vt",
             success=True,
         )
 

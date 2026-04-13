@@ -16,6 +16,26 @@ def sort_candidates_by_score(candidates: Iterable[Dict[str, Any]]) -> List[Dict[
     return sorted(candidates, key=lambda item: item.get("score", 0.0), reverse=True)
 
 
+def _candidate_dedup_key(content: str, metadata: Dict[str, Any]) -> str:
+    """Build a stable dedup key that preserves distinct chunks from the same source."""
+    source = (
+        str(metadata.get("source") or "")
+        or str(metadata.get("file_name") or "")
+        or str(metadata.get("source_url") or "")
+    )
+    chunk_index = metadata.get("chunk_index")
+    sub_chunk = metadata.get("sub_chunk")
+    madde_no = metadata.get("madde_no")
+
+    if metadata.get("context_expanded") and source and madde_no is not None:
+        return f"{source}::{madde_no}::expanded"
+
+    if any(value is not None and str(value) != "" for value in (chunk_index, sub_chunk, madde_no)):
+        return f"{source}::{madde_no}::{chunk_index}::{sub_chunk}"
+
+    return f"{source}::{content[:200]}"
+
+
 def parse_sub_chunk_position(value: Any) -> tuple[int, int] | None:
     """'2/4' gibi alt parca konumunu sayisal ikiliye cevirir."""
     if not value:
@@ -73,8 +93,8 @@ def deduplicate_documents(raw_docs: List[Document]) -> List[Dict[str, Any]]:
 
     for doc in raw_docs:
         content = doc.page_content
-        content_key = content[:200]
         metadata = dict(doc.metadata)
+        content_key = _candidate_dedup_key(content, metadata)
         sim_score = float(metadata.get("similarity_score", 0.0))
         metadata.setdefault(
             "score_type",
@@ -110,7 +130,8 @@ def deduplicate_candidate_dicts(candidates: List[Dict[str, Any]]) -> List[Dict[s
 
     for candidate in candidates:
         content = candidate.get("content", "")
-        content_key = content[:200]
+        metadata = dict(candidate.get("metadata") or {})
+        content_key = _candidate_dedup_key(content, metadata)
         score = float(candidate.get("score", 0.0))
 
         if content_key in seen_contents:
@@ -137,7 +158,7 @@ def deduplicate_candidate_dicts(candidates: List[Dict[str, Any]]) -> List[Dict[s
                 "source": candidate.get("source", "bilinmiyor"),
                 "category": candidate.get("category", "genel"),
                 "score": score,
-                "metadata": dict(candidate.get("metadata") or {}),
+                "metadata": metadata,
             }
         )
 

@@ -47,6 +47,7 @@ async def resolve_query_context(
         session_token=payload.session_token,
         slack_user_id=payload.slack_user_id,
         auth_service=auth_service,
+        allow_slack_identity=False,
     )
 
     profile = await profile_service.get_context(context_id=context_id)
@@ -58,7 +59,7 @@ async def resolve_query_context(
             student_number=resolved["student_number"],
             department=resolved["student_department"] or payload.student_department or "",
             faculty=resolved["student_faculty"] or payload.student_faculty or "",
-            student_type=payload.student_type or getattr(profile, "student_type", None),
+            student_type=None,
             is_verified=True,
             student_db_id=resolved["student_id"],
         )
@@ -122,6 +123,7 @@ async def resolve_dispatch_context(
         session_token=payload.session_token,
         slack_user_id=payload.slack_user_id,
         auth_service=auth_service,
+        allow_slack_identity=True,
     )
     return payload.context_id or "api-a2a-context", resolved
 
@@ -139,6 +141,7 @@ def build_dispatch_metadata(
         "student_full_name": resolved["full_name"],
         "student_department": resolved["student_department"],
         "student_faculty": resolved["student_faculty"],
+        "student_type": resolved["student_type"],
         "llm_profile": payload.llm_profile,
         "is_authenticated": resolved["is_authenticated"],
         "routing_reason": "api_a2a_dispatch",

@@ -78,6 +78,13 @@ class TestSynonymExpansion:
         result = qp.preprocess("test sorusu")
         assert "deneme" in result.lower() or "sınama" in result.lower()
 
+    def test_substring_false_positive_avoided(self):
+        """Anahtar başka bir kelimenin içinde geçiyorsa expansion yapılmaz."""
+        custom = {"test": ["deneme"]}
+        qp = QueryPreprocessor(synonym_map=custom)
+        result = qp.preprocess("protesto düzeni")
+        assert "deneme" not in result.lower()
+
     def test_no_duplicate_terms(self):
         """Orijinal sorguda zaten geçen terimler tekrar eklenmez."""
         qp = QueryPreprocessor()

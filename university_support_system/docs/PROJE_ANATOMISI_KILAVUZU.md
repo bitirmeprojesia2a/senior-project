@@ -19,7 +19,7 @@ Guncel sorgu akisi kabaca soyledir:
 
 Dis dunyaya acilan FastAPI katmanidir.
 
-- `main.py`: uygulama giris noktasi, health endpoint'leri, auth endpoint'leri, `/query` ve `/a2a/dispatch`
+- `main.py`: uygulama giris noktasi, health endpoint'leri, auth endpoint'leri, `/query` ve internal `/a2a/dispatch`
 - `query_flow.py`: query ve dispatch tarafinda ortak baglam cozumleme yardimcilari
 - `profile_flow.py`: kullanici profil baglami ve buna bagli yardimci akislar
 

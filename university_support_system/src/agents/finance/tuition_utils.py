@@ -84,6 +84,18 @@ _PERSONAL_PROCEDURAL_OVERRIDE = (
     "nasil", "nereye", "ne yapmaliyim", "ne yapmam gerekiyor",
     "nasil odenir", "nasil yatirilir", "nasil odeyebilirim",
     "basvuru", "sart", "kosul",
+    "ne yapabilirim", "yapabilir",
+)
+
+# Kural/politika sorulari kisisel veri talebi degildir.
+# "Bursum kesilir mi?" -> kural sorusu, kisiye ozel veri istemiyor
+# "Ek surede odenir mi?" -> kural sorusu
+_PERSONAL_POLICY_OVERRIDE = (
+    "kesilir mi", "odenir mi", "muaf miyim", "odenmezse",
+    "muafiyet", "odeme zorunlu", "zorunda miyim",
+    "icermiyor", "yansir mi", "etkilenir mi",
+    "ne kadar", "kac tl", "kac lira",
+    "odeyebilir miyim", "taksitle", "taksitli",
 )
 
 
@@ -93,6 +105,8 @@ def is_personal_query(query_text: str) -> bool:
     if not any(keyword in lowered for keyword in PERSONAL_KEYWORDS):
         return False
     if any(signal in lowered for signal in _PERSONAL_PROCEDURAL_OVERRIDE):
+        return False
+    if any(signal in lowered for signal in _PERSONAL_POLICY_OVERRIDE):
         return False
     return True
 

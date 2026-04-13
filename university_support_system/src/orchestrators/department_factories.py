@@ -27,7 +27,10 @@ def build_student_affairs_orchestrator(
             TaskType.COURSE_QUERY: by_id["graduation_agent"],
             TaskType.PROCEDURE_QUERY: by_id["internship_agent"],
         },
-        fallback_agent=by_id["student_life_agent"],
+        # Belirsiz ogrenci isleri sorularinda generic fallback yerine daha guclu
+        # idari/prosedurel uzmana dusmek daha guvenli. Student life konulari
+        # halen acik keyword eslesmeleriyle kendi ajanina yonlenir.
+        fallback_agent=by_id["registration_agent"],
         keyword_routing={
             "kayit": "registration_agent",
             "kayit donemi": "registration_agent",
@@ -81,11 +84,11 @@ def build_academic_programs_orchestrator(
             "mufredat": "curriculum_agent",
             "ders": "curriculum_agent",
             "akts": "curriculum_agent",
-            "cap": "curriculum_agent",
-            "yandal": "curriculum_agent",
-            "yan dal": "curriculum_agent",
             "onkosul": "curriculum_agent",
-            "formasyon": "curriculum_agent",
+            "cap": "regulation_agent",
+            "yandal": "regulation_agent",
+            "yan dal": "regulation_agent",
+            "formasyon": "regulation_agent",
             "yonetmelik": "regulation_agent",
             "yonerge": "regulation_agent",
             "politika": "regulation_agent",

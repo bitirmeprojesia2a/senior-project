@@ -4,6 +4,7 @@ import json
 import sys
 
 from sqlalchemy import create_engine, select
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 
@@ -148,10 +149,17 @@ def _seed_demo_office_contacts(session: Session) -> None:
         },
     ]
 
-    existing = {
-        (item.unit_name, item.department): item
-        for item in session.scalars(select(OfficeContact)).all()
-    }
+    try:
+        existing = {
+            (item.unit_name, item.department): item
+            for item in session.scalars(select(OfficeContact)).all()
+        }
+    except (ProgrammingError, OperationalError) as exc:
+        raise RuntimeError(
+            "office_contacts tablosu bulunamadi. "
+            "Lutfen once `python -m alembic upgrade head` komutunu calistirin, "
+            "ardindan seed komutunu tekrar deneyin."
+        ) from exc
 
     for fixture in fixtures:
         key = (fixture["unit_name"], fixture["department"])
@@ -708,8 +716,12 @@ def seed_synthetic_data(session: Session) -> None:
 
 
 def main() -> None:
-    with Session(engine) as session:
-        seed_synthetic_data(session)
+    try:
+        with Session(engine) as session:
+            seed_synthetic_data(session)
+    except RuntimeError as exc:
+        print(str(exc))
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":

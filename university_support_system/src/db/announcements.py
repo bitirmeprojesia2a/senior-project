@@ -121,6 +121,7 @@ async def fetch_relevant_announcements(
     faculty: str | None = None,
     limit: int = 3,
     recent_days: int = 14,
+    allow_latest_fallback: bool = True,
 ) -> list[AnnouncementRecord]:
     """Sorgu ile ilgili aktif duyurulari getirir."""
 
@@ -162,7 +163,7 @@ async def fetch_relevant_announcements(
 
         announcements = list((await session.execute(targeted_stmt)).scalars().all())
 
-        if not announcements:
+        if not announcements and allow_latest_fallback:
             fallback_stmt = base_stmt.order_by(
                 desc(Announcement.published_at),
                 desc(Announcement.id),

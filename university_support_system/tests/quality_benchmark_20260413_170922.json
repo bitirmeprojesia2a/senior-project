@@ -1,0 +1,801 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "run_timestamp": "20260413_170922",
+  "total_questions": 25,
+  "summary": {
+    "dept_accuracy": 0.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 0.0,
+    "clean_quality_pct": 0.0,
+    "avg_time_ms": 6110.3,
+    "median_time_ms": 6111.0,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0
+  },
+  "results": [
+    {
+      "id": "Q1",
+      "category": "A_multi_source_synthesis",
+      "question": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "üç hafta",
+        "dilekçe",
+        "komisyon",
+        "derslere devam"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6203.5,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q2",
+      "category": "A_multi_source_synthesis",
+      "question": "Tek ders sınavına girebilmek için stajımı tamamlamış olmam gerekir mi ve sınavda başarılı sayılmam için minimum not kaç?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "staj",
+        "tamamla",
+        "CC"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 3,
+      "elapsed_ms": 6122.8,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q3",
+      "category": "A_multi_source_synthesis",
+      "question": "Başarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "değiştirebilir",
+        "devam koşulu",
+        "yeni",
+        "ders"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6092.5,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q4",
+      "category": "A_multi_source_synthesis",
+      "question": "Pedagojik formasyon dersleri transkripte dahil ediliyor mu, mezuniyet ortalamasına etkisi var mı ve diplomada nasıl bir ibare yer alıyor?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "transkript",
+        "dahil",
+        "ortalama",
+        "tamamlamıştır"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6117.6,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q5",
+      "category": "B_cross_department_parallel",
+      "question": "Uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretimi nereye yatırmam gerekiyor ve ayrıca ikamet izni için hangi belgeleri hazırlamalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance",
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "ücret",
+        "ikamet",
+        "belge"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 3,
+      "elapsed_ms": 6087.8,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q6",
+      "category": "B_cross_department_parallel",
+      "question": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "not ortalaması",
+        "harç",
+        "ödeme",
+        "başvuru"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6117.9,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q7",
+      "category": "B_cross_department_parallel",
+      "question": "Kayıt yenileme döneminde harç ücretimi yatırdıktan sonra ders kaydını nasıl yapacağım, danışmanın onay süreci nasıl işliyor?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "harç",
+        "UBYS",
+        "ders",
+        "danışman",
+        "onay"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 6111.0,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q8",
+      "category": "B_cross_department_parallel",
+      "question": "Burslu öğrenciyim ve yatay geçiş yapmak istiyorum. Bursum kesilir mi, yeni üniversitede harç ödemem gerekir mi?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "burs",
+        "kesilme",
+        "kurum",
+        "bildiri",
+        "harç"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 6118.9,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q9",
+      "category": "C_conditional_scenario",
+      "question": "4. sınıf öğrencisiyim ve program süresini 1 yıl aştım. Ek süre hakkım var mı ve bu sürede katkı payı öder miyim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "azami",
+        "ek",
+        "süre",
+        "katkı payı",
+        "öde"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 6089.0,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q10",
+      "category": "C_conditional_scenario",
+      "question": "Devamsızlıktan kaldığım bir dersin bütünleme sınavına girebilir miyim? Giremiyorsam bu dersi ne zaman tekrar alabilirim?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "giremez",
+        "devamsızlık",
+        "bütünleme",
+        "tekrar"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6087.0,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q11",
+      "category": "C_conditional_scenario",
+      "question": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "öğrenim ücreti",
+        "gerek yok",
+        "yönetim kurulu",
+        "sayılma"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6140.7,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q12",
+      "category": "C_conditional_scenario",
+      "question": "Hazırlık sınıfındayım ve transkriptim yok. Ek Madde-1 ile başka bir üniversiteye yatay geçiş yapabilir miyim?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "transkript",
+        "Ek Madde",
+        "başvuru yapabilir",
+        "GANO"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6084.4,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q13",
+      "category": "D_comparison",
+      "question": "Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar nelerdir? Başvuru şartları ve değerlendirme kriterleri nasıl farklılık gösterir?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "kurum içi",
+        "kurumlar arası",
+        "Ek Madde",
+        "GANO",
+        "YKS"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 6107.8,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q14",
+      "category": "D_comparison",
+      "question": "Bağıl değerlendirme sistemi ile mutlak değerlendirme arasındaki fark nedir ve hangi öğrenci sayısında hangisi uygulanır?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "academic_programs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "bağıl",
+        "mutlak",
+        "10",
+        "öğrenci sayısı"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6127.3,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q15",
+      "category": "D_comparison",
+      "question": "Diploma eki ile transkript arasındaki fark nedir? Diploma eki transkript yerine kullanılabilir mi?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "diploma eki",
+        "transkript",
+        "yerine geçmez"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 3,
+      "elapsed_ms": 6130.4,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q16",
+      "category": "D_comparison",
+      "question": "Kayıt dondurma ile kayıt yaptırmamak arasında ne fark var? Her iki durumda da öğrencilik haklarım nasıl etkilenir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "kayıt dondurma",
+        "sayılma",
+        "süre",
+        "hak"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6135.5,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q17",
+      "category": "E_process_chain",
+      "question": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "UBYS",
+        "ders seçimi",
+        "danışman",
+        "onay",
+        "yoklama"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 6104.3,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q18",
+      "category": "E_process_chain",
+      "question": "Sınav notuma itiraz etmek istiyorum. Başvuru süreci, süresi ve olası sonuçları nelerdir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "itiraz",
+        "beş iş günü",
+        "dilekçe",
+        "bölüm başkanlığı"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6111.1,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q19",
+      "category": "E_process_chain",
+      "question": "Mezuniyet için gerekli tüm koşulları ve ilişik kesme sürecini adım adım açıklar mısın?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "ders",
+        "staj",
+        "GANO",
+        "2,00",
+        "ilişik kesme",
+        "diploma"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 6,
+      "elapsed_ms": 6117.5,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q20",
+      "category": "F_edge_cases",
+      "question": "Diplomamı kaybettim ve aynı zamanda e-devlette mezuniyet bilgilerim görünmüyor. Her iki sorun için ne yapmalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "2. nüsha",
+        "diploma",
+        "e-devlet",
+        "YÖKSİS"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6106.1,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q21",
+      "category": "F_edge_cases",
+      "question": "Uzaktan eğitim yoluyla alınan 5-i derslerinin sınav ve başarı değerlendirmesi yüz yüze derslerden farklı mıdır?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "uzaktan",
+        "%20",
+        "%80",
+        "%40",
+        "%60"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 6068.0,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q22",
+      "category": "F_edge_cases",
+      "question": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "kural",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 0,
+      "elapsed_ms": 6072.5,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q23",
+      "category": "G_semantic_paraphrase",
+      "question": "Üniversiteyi bırakıp ayrılmak istiyorum, tüm işlemleri ve dikkat etmem gereken hususları söyler misin?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "ilişik kesme",
+        "UBYS",
+        "form",
+        "birim"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6115.5,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q24",
+      "category": "G_semantic_paraphrase",
+      "question": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "kayıt",
+        "yenileme",
+        "UBYS",
+        "müfredat"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 6107.4,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    },
+    {
+      "id": "Q25",
+      "category": "G_semantic_paraphrase",
+      "question": "Hocam benim ders notlarımı sisteme girmemiş, bu durumda ne yapabilirim?",
+      "difficulty": "easy",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "error",
+      "mode_match": false,
+      "expected_key_facts": [
+        "danışman",
+        "bölüm",
+        "oidb@omu.edu.tr"
+      ],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 3,
+      "elapsed_ms": 6081.2,
+      "source_count": 0,
+      "quality_warnings": [
+        "exception"
+      ],
+      "answer": "",
+      "profiling": {},
+      "error": "[WinError 1225] Uzaktaki bilgisayar ağ bağlantısını reddetti"
+    }
+  ]
+}

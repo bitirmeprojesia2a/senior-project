@@ -21,6 +21,8 @@ def build_department_request_task(
         query_text=augmented_query,
         context_id=context_id,
         task_type=task_type.value if task_type else None,
+        original_query=metadata.get("original_query"),
+        resolved_query=metadata.get("resolved_query"),
         routing_reason=metadata.get("routing_reason"),
         is_authenticated=bool(metadata.get("is_authenticated", False)),
         student_id=metadata.get("student_id"),
@@ -30,6 +32,9 @@ def build_department_request_task(
         student_faculty=metadata.get("student_faculty"),
         student_type=metadata.get("student_type"),
         llm_profile=metadata.get("llm_profile"),
+        conversation_is_follow_up=bool(metadata.get("conversation_is_follow_up", False)),
+        conversation_topic=metadata.get("conversation_topic"),
+        conversation_source_refs=list(metadata.get("conversation_source_refs") or []),
     )
     task = build_query_task(payload)
     if disable_specialist_llm:
@@ -52,6 +57,7 @@ def build_announcement_request_task(
     context_id: str,
     routing_reason: str | None,
     departments: list[str] | None = None,
+    faculty: str | None = None,
 ):
     task = build_query_task(
         A2AQueryPayload(
@@ -62,4 +68,6 @@ def build_announcement_request_task(
     )
     if departments:
         task.metadata["departments"] = departments
+    if faculty:
+        task.metadata["faculty"] = faculty
     return task

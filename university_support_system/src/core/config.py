@@ -211,6 +211,7 @@ class AuthSettings(BaseSettings):
 
     otp_length: int = 6
     otp_ttl_minutes: int = 10
+    otp_request_cooldown_seconds: int = 60
     max_failed_attempts: int = 5
     session_ttl_hours: int = 12
     allowed_student_email_domain: str = "stu.omu.edu.tr"
@@ -274,6 +275,7 @@ class ServerSettings(BaseSettings):
     runtime_label: str = "default"
     debug: bool = True
     log_level: str = "INFO"
+    internal_api_key: Optional[str] = None
     warmup_enabled: bool = False
     warmup_include_reranker: bool = False
     warmup_collections: str = "student_affairs_docs,academic_programs_docs"

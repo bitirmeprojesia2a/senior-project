@@ -69,27 +69,48 @@ _GENERAL_RULE_SIGNALS: tuple[str, ...] = (
 )
 
 _PROCEDURAL_OVERRIDE_SIGNALS: tuple[str, ...] = (
-    "nasil",
     "nereye",
     "ne yapmaliyim",
     "ne yapmam gerekiyor",
     "ne yapabilirim",
+    "yapabilir",
     "basvuru",
     "surec",
     "sisteme girmemis",
     "girilmemis",
     "girmemis",
+    "alinir",
+    "alabilirim",
+    "goruntuleyebilirim",
+    "goruntulerim",
     "hata",
     "sorun",
     "problem",
     "butunleme",
     "devamsizlik",
     "tekrar",
+    "ile",
 )
 
 
 def _has_general_rule_signal(lowered: str) -> bool:
     return any(s in lowered for s in _GENERAL_RULE_SIGNALS)
+
+
+# Negation patterns: if a personal keyword is followed by "yok", "yoktu", etc.
+# the person is NOT requesting personal data — they are stating they don't have it.
+# E.g. "transkriptim yok" → not personal, stating a condition.
+_NEGATION_AFTER_POSSESSIVE: tuple[str, ...] = (
+    "yok",
+    "yoktu",
+    "yoksa",
+    "gelmedi",
+    "alinmadi",
+    "bulunmuyor",
+    "eksik",
+    "girilmedi",
+    "girilmemis",
+)
 
 
 def is_graduation_personal_query(query_text: str) -> bool:
@@ -98,6 +119,10 @@ def is_graduation_personal_query(query_text: str) -> bool:
         return False
     if any(s in lowered for s in _PROCEDURAL_OVERRIDE_SIGNALS):
         return False
+    # "<personal_keyword> yok" → NOT a personal data request
+    if any(neg in lowered for neg in _NEGATION_AFTER_POSSESSIVE):
+        if any(kw in lowered for kw in PERSONAL_KEYWORDS):
+            return False
     if "gno" in lowered:
         possessive = any(p in lowered for p in ("gnom", "gno'm", "ortalamam"))
         if not possessive:
@@ -126,7 +151,7 @@ def is_general_akts_rule_query(query_text: str) -> bool:
 
 
 def format_academic_snapshot(snapshot: dict) -> str:
-    lines = [f"{snapshot['student_name']} icin akademik durum ozeti:"]
+    lines = [f"{snapshot['student_name']} icin akademik ozet:"]
     if snapshot.get("gpa") is not None:
         lines.append(f"- GNO: {float(snapshot['gpa']):.2f}")
     lines.append(
@@ -135,6 +160,15 @@ def format_academic_snapshot(snapshot: dict) -> str:
     lines.append(f"- Kayit durumu: {snapshot.get('registration_status', 'bilinmiyor')}")
 
     recent_courses = snapshot.get("recent_courses") or []
+    recent_limit = snapshot.get("recent_course_limit")
+    if recent_courses:
+        if recent_limit:
+            lines.append(
+                f"- Not: Bu ozet tam transkript yerine gecmez; son {recent_limit} ders kaydini gosterir."
+            )
+        else:
+            lines.append("- Not: Bu ozet tam transkript yerine gecmez.")
+
     if recent_courses:
         lines.append("- Son ders kayitlari:")
         for course in recent_courses[:3]:

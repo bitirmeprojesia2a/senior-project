@@ -73,6 +73,7 @@ class DepartmentResponse(BaseModel):
     sources: list[RAGSource] = Field(default_factory=list)
     db_data: Optional[dict[str, Any]] = None
     generation_mode: Optional[str] = None
+    include_contact_suggestion: bool = False
     success: bool = True
     response_time_ms: Optional[float] = None
     error: Optional[str] = None
@@ -106,6 +107,7 @@ class UserQueryResponse(BaseModel):
 
     answer: str = Field(..., description="Nihai yanit")
     departments_involved: list[str] = Field(default_factory=list)
+    generation_modes: list[str] = Field(default_factory=list)
     sources: list[RAGSource] = Field(default_factory=list)
     response_time_ms: float
     query_id: str

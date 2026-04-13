@@ -18,7 +18,6 @@ from src.core.constants import (
     TaskType,
 )
 from src.core.config import settings
-from src.core.messages import CONTACT_SUGGESTION
 from src.core.profiling import profile_stage
 from src.core.text_normalization import normalize_text
 from src.db.office_contacts import OfficeContactRecord, fetch_office_contacts
@@ -40,19 +39,33 @@ _CONTACT_REQUEST_KEYWORDS = (
     "adres", "kime basvurayim", "kimle gorusmeliyim", "birim", "mudurluk",
 )
 
-_DIRECT_RAG_RERANKER_THRESHOLD = 0.605
+_DIRECT_RAG_RERANKER_THRESHOLD = 0.61
 _DIRECT_RAG_RETRIEVAL_THRESHOLD = 0.25
 _SPECIALIST_LLM_CONTEXT_MAX_LEN = 2000
 
-_LLM_SYNTHESIS_MIN_RERANKER_SCORE = 0.30
+_LLM_SYNTHESIS_MIN_RERANKER_SCORE = 0.48
 _LLM_SYNTHESIS_MIN_RETRIEVAL_SCORE = 0.18
 
-_NO_USEFUL_RESULT_RERANKER_CEILING = 0.25
+_NO_USEFUL_RESULT_RERANKER_CEILING = 0.35
 
 _DIRECT_RAG_SCORE_GAP_MIN = 0.01
 
 _FAQ_QUESTION_RE = re.compile(r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$", re.MULTILINE)
 _FAQ_SOURCE_PATTERNS = ("sik_sorulan", "sikca_sorulan", "sss", "faq")
+
+
+# Genel/yaygın kelimeler — eşleşme skorunda düşük ağırlık
+_FAQ_LOW_WEIGHT_WORDS = frozenset({
+    "ne", "nasil", "nerede", "neden", "hangi", "kim", "kac",
+    "mi", "mu", "mi", "mu", "icin", "ile", "ve", "bir",
+    "var", "yok", "olur", "olmali", "gerekir", "yapmali",
+    "kayit",  # çok genel — düşük ağırlık
+    "ogrenci", "universite", "belge", "bilgi",
+})
+
+
+def _faq_word_weight(word: str) -> float:
+    return 0.3 if word in _FAQ_LOW_WEIGHT_WORDS else 1.0
 
 
 def _extract_relevant_faq_block(content: str, query: str, *, max_blocks: int = 2) -> str:
@@ -64,17 +77,26 @@ def _extract_relevant_faq_block(content: str, query: str, *, max_blocks: int = 2
     query_lower = normalize_text(query)
     query_words = set(query_lower.split())
 
-    scored_blocks: list[tuple[int, str]] = []
+    scored_blocks: list[tuple[float, str]] = []
     for i, match in enumerate(questions):
         end = questions[i + 1].start() if i + 1 < len(questions) else len(content)
         block = content[match.start():end].strip()
+
+        # Soru kısmını 2x ağırlıkla puanla
+        question_text = match.group(1) if match.group(1) else block.split("\n")[0]
+        q_text_words = set(normalize_text(question_text).split())
+        q_overlap = sum(_faq_word_weight(w) for w in query_words & q_text_words) * 2.0
+
+        # Blok genel overlap
         block_lower = normalize_text(block)
         block_words = set(block_lower.split())
-        overlap = len(query_words & block_words)
-        scored_blocks.append((overlap, block))
+        b_overlap = sum(_faq_word_weight(w) for w in query_words & block_words)
+
+        total_score = q_overlap + b_overlap
+        scored_blocks.append((total_score, block))
 
     scored_blocks.sort(key=lambda pair: pair[0], reverse=True)
-    top_blocks = [block for overlap, block in scored_blocks[:max_blocks] if overlap > 0]
+    top_blocks = [block for score, block in scored_blocks[:max_blocks] if score > 0]
     if not top_blocks:
         return scored_blocks[0][1] if scored_blocks else content
 
@@ -218,9 +240,10 @@ class BaseSpecialistAgent:
                     llm_profile=llm_profile,
                 )
             return self._build_department_response(
-                answer=f"{answer}{CONTACT_SUGGESTION}",
+                answer=answer,
                 results=results,
                 generation_mode=generation_mode,
+                include_contact_suggestion=True,
             )
 
     async def handle_a2a_task(self, task: Task) -> Task:
@@ -233,6 +256,7 @@ class BaseSpecialistAgent:
         answer: str,
         results: Sequence[dict],
         generation_mode: str | None = None,
+        include_contact_suggestion: bool = False,
         success: bool = True,
     ) -> DepartmentResponse:
         """RAG sonuc listesiyle birlikte standart departman cevabi kurar."""
@@ -248,6 +272,7 @@ class BaseSpecialistAgent:
                 for item in results
             ],
             generation_mode=generation_mode,
+            include_contact_suggestion=include_contact_suggestion,
             success=success,
         )
 
@@ -283,14 +308,34 @@ class BaseSpecialistAgent:
         lowered = normalize_text(query_text)
         return any(kw in lowered for kw in _CONTACT_REQUEST_KEYWORDS)
 
+    async def _fetch_contacts(
+        self,
+        *,
+        department: Department,
+        agent_id: str | None = None,
+        include_generic: bool = True,
+    ) -> list[OfficeContactRecord]:
+        try:
+            return await self._contact_fetcher(
+                department=department,
+                agent_id=agent_id,
+                include_generic=include_generic,
+            )
+        except TypeError:
+            return await self._contact_fetcher(
+                department=department,
+                agent_id=agent_id,
+            )
+
     async def _handle_contact_request(self) -> DepartmentResponse:
         """Ajanla iliskili ofis iletisim bilgilerini sunar."""
-        contacts = await self._contact_fetcher(
+        contacts = await self._fetch_contacts(
             department=self.department,
             agent_id=self.agent_id,
+            include_generic=False,
         )
         if not contacts:
-            contacts = await self._contact_fetcher(department=self.department)
+            contacts = await self._fetch_contacts(department=self.department)
         if not contacts:
             return DepartmentResponse(
                 department=self.department,
@@ -355,19 +400,52 @@ class BaseSpecialistAgent:
             )
             if score_type_raw == "reranker":
                 if top_score < _NO_USEFUL_RESULT_RERANKER_CEILING:
+                    # force_llm=True ise ceiling kontrolunu atla —
+                    # routing LLM sentez gerektirdigine karar vermisse, dusuk skor
+                    # nedeniyle kural moduna dusurmeyelim; LLM kaynaklari birlestirmeye calissin.
+                    if not force_llm:
+                        logger.info(
+                            "no_useful_rag_results agent=%s top_reranker_score=%.4f ceiling=%.4f",
+                            self.agent_id, top_score, _NO_USEFUL_RESULT_RERANKER_CEILING,
+                        )
+                        return (
+                            "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
+                            "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin."
+                        ), "kural"
                     logger.info(
-                        "no_useful_rag_results agent=%s top_reranker_score=%.4f ceiling=%.4f",
+                        "force_llm_bypasses_ceiling agent=%s top_reranker_score=%.4f ceiling=%.4f",
                         self.agent_id, top_score, _NO_USEFUL_RESULT_RERANKER_CEILING,
                     )
-                    return (
-                        "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
-                        "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin."
-                    ), "kural"
 
         if not allow_llm:
             with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
                 return (
                     self._build_source_only_answer(query_text, results, db_context=db_context),
+                    self._derive_non_llm_generation_mode(results, db_context=db_context),
+                )
+
+        force_specialist_llm = force_llm or self._should_force_llm_synthesis(
+            query_text,
+            results,
+            db_context=db_context,
+        )
+        if not force_specialist_llm and self._should_skip_llm_synthesis(
+            query_text,
+            results,
+            db_context=db_context,
+        ):
+            with profile_stage("agent.skip_llm_synthesis", agent_id=self.agent_id):
+                return (
+                    self._build_source_only_answer(query_text, results, db_context=db_context),
+                    self._derive_non_llm_generation_mode(results, db_context=db_context),
+                )
+
+        if not force_specialist_llm and not db_context:
+            with profile_stage("agent.try_direct_rag", agent_id=self.agent_id):
+                direct_rag_answer = self._try_direct_rag_answer(results, query_text=query_text)
+            if direct_rag_answer is not None:
+                return (
+                    direct_rag_answer,
                     self._derive_non_llm_generation_mode(results, db_context=db_context),
                 )
 
@@ -377,6 +455,7 @@ class BaseSpecialistAgent:
                 results,
                 db_context=db_context,
                 llm_profile=llm_profile,
+                force_llm=force_specialist_llm,
             )
 
     def _should_skip_llm_synthesis(
@@ -389,6 +468,12 @@ class BaseSpecialistAgent:
         """Alt ajanlarin LLM sentezini kisa devre etmesine izin verir."""
         return False
 
+    # Çok-parçalı soru kalıpları — tek RAG kaynaktan cevaplanamaz
+    _MULTI_PART_QUERY_MARKERS = frozenset({
+        "ve", "ayrica", "ayrıca", "bunun yaninda", "bunun yani sira",
+        "hem", "hem de", "ile birlikte", "hangileri", "neler",
+    })
+
     def _should_force_llm_synthesis(
         self,
         query_text: str,
@@ -397,6 +482,20 @@ class BaseSpecialistAgent:
         db_context: str | None = None,
     ) -> bool:
         """Belirli sorgulari dogrudan LLM sentezine zorlar."""
+        # 1) Soru birden fazla alt-soru iceriyorsa LLM sentez sart
+        lowered = normalize_text(query_text)
+        marker_count = sum(1 for m in self._MULTI_PART_QUERY_MARKERS if m in lowered)
+        if marker_count >= 2:
+            return True
+
+        # 2) Birden fazla guclu kaynak varsa (skor > 0.50 ve 2+ adet) → sentez gerekli
+        strong_results = [
+            r for r in results[:5]
+            if float(r.get("score", 0.0)) >= 0.50
+        ]
+        if len(strong_results) >= 3:
+            return True
+
         return False
 
     def _build_source_only_answer(
@@ -407,7 +506,11 @@ class BaseSpecialistAgent:
         db_context: str | None = None,
     ) -> str:
         """LLM sentezi atlandiginda gosterilecek guvenli kaynak yaniti."""
-        return self._build_llm_failure_fallback(results, db_context=db_context)
+        return self._build_llm_failure_fallback(
+            results,
+            db_context=db_context,
+            query_text=query_text,
+        )
 
     @classmethod
     def _compose_generation_mode(cls, *parts: str) -> str:
@@ -503,6 +606,7 @@ class BaseSpecialistAgent:
         *,
         db_context: str | None = None,
         llm_profile: str | None = None,
+        force_llm: bool = False,
     ) -> tuple[str, str]:
         """RAG kaynaklarini (ve varsa DB baglamini) LLM ile sentezler."""
         if results and not db_context:
@@ -517,20 +621,42 @@ class BaseSpecialistAgent:
             )
 
             if top_score < min_threshold:
+                # force_llm=True ise threshold kontrolunu atla —
+                # routing LLM sentez gerektirdigine karar vermisse,
+                # dusuk skor nedeniyle LLM cagrisini engellemeyelim.
+                if not force_llm:
+                    logger.info(
+                        "llm_synthesis_blocked_low_score agent=%s top_score=%.4f threshold=%.4f score_type=%s",
+                        self.agent_id, top_score, min_threshold, score_type,
+                    )
+                    return (
+                        "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
+                        "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin.",
+                        "kural",
+                    )
                 logger.info(
-                    "llm_synthesis_blocked_low_score agent=%s top_score=%.4f threshold=%.4f score_type=%s",
-                    self.agent_id, top_score, min_threshold, score_type,
-                )
-                return (
-                    "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
-                    "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin.",
-                    "kural",
+                    "force_llm_bypasses_synthesis_threshold agent=%s top_score=%.4f threshold=%.4f",
+                    self.agent_id, top_score, min_threshold,
                 )
 
         context_chunks = []
         for index, item in enumerate(results[:5], start=1):
             source = item.get("source", "bilinmiyor")
             raw_content = item.get("content", "")
+            score = float(item.get("score", 0.0))
+
+            # Düşük skorlu + düşük keyword overlap'li kaynakları LLM context'ine gönderme
+            # force_llm=True ise bu filtre atlanır — routing LLM sentez gerektirdiğini
+            # belirtmişse, specialist LLM'e tüm mevcut bağlamı göndermeliyiz.
+            if score < 0.55 and not force_llm:
+                _kw_overlap = self._compute_keyword_overlap(query_text, raw_content)
+                if _kw_overlap < 0.10:
+                    logger.info(
+                        "llm_context_filtered source=%s score=%.3f keyword_overlap=%.3f",
+                        source, score, _kw_overlap,
+                    )
+                    continue
+
             if _is_faq_source(source) and query_text:
                 raw_content = _extract_relevant_faq_block(raw_content, query_text)
             content = self._compact_source_content(
@@ -550,6 +676,12 @@ class BaseSpecialistAgent:
             "- Kaynaklardaki SPESIFIK bilgileri (sayi, tarih, sure, yuzde, kosul esigi) mutlaka dahil et.\n"
             "- Soru birden fazla alt-soru iceriyorsa her birini ayri ayri yanitla.\n"
             "- Soru acikca lisansustu/yuksek lisans/doktora programlarindan bahsetmiyorsa ON LISANS VE LISANS kurallarini kullan.\n"
+            "\n"
+            "KAYNAK DOGRULAMA KURALLARI:\n"
+            "- Bir kaynak soruyla ILGISIZSE o kaynaktan bilgi CIKARMA. "
+            "Ornek: Soru 'bagil degerlendirme' ama kaynak 'bilgi guvenligi proseduru' ise o kaynagi YOKSAY.\n"
+            "- Tarih, sayi, yuzde, sure gibi spesifik bilgileri SADECE kaynakta ACIKCA geciyorsa yaz.\n"
+            "- Kaynakta gecmeyen bir tarih veya sayi ASLA tahmin etme veya uydurma.\n"
             "\n"
             "KURALLAR:\n"
             "1. Yalnizca verilen belge baglaminda ACIKCA gecen bilgileri kullan.\n"
@@ -634,3 +766,16 @@ class BaseSpecialistAgent:
         if max_len is not None and len(collapsed) > max_len:
             return f"{collapsed[: max_len - 3].rstrip()}..."
         return collapsed
+
+    @staticmethod
+    def _compute_keyword_overlap(query: str, content: str) -> float:
+        """Sorgu ile icerik arasindaki keyword overlap oranini hesaplar (0.0-1.0)."""
+        _stop = frozenset({
+            "bir", "bu", "su", "o", "ve", "ile", "icin", "ne", "mi", "mu",
+            "da", "de", "nasil", "nedir", "var", "yok", "hangi", "kac",
+        })
+        q_tokens = set(normalize_text(query).split()) - _stop
+        c_tokens = set(normalize_text(content[:500]).split()) - _stop
+        if not q_tokens:
+            return 0.0
+        return len(q_tokens & c_tokens) / len(q_tokens)

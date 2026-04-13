@@ -149,4 +149,5 @@ async def test_graduation_agent_uses_db_snapshot_for_authenticated_personal_quer
     assert response.department == Department.STUDENT_AFFAIRS
     assert "GNO: 3.10" in response.answer
     assert "BLM401" in response.answer
+    assert "tam transkript yerine gecmez" in response.answer
     fetcher.assert_awaited_once_with(9)

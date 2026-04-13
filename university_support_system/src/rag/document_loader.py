@@ -14,7 +14,9 @@ Kullanım:
     documents = loader.load_directory("data/raw/student_affairs/")
 """
 
+import importlib
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
@@ -24,6 +26,7 @@ import pdfplumber
 import structlog
 
 from src.core.constants import known_department_directory_names, normalize_department_value
+from src.core.text_normalization import normalize_text
 
 logger = structlog.get_logger()
 
@@ -54,10 +57,13 @@ class DocumentLoader:
         min_content_length: Minimum karakter sayısı (kısa dosyaları atla).
     """
 
-    SUPPORTED_EXTENSIONS = {".pdf", ".txt"}
+    SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".docx"}
 
     # Bilinen departman klasör isimleri
-    KNOWN_DEPARTMENTS = known_department_directory_names()
+    KNOWN_DEPARTMENTS = {
+        normalize_text(name): name
+        for name in known_department_directory_names()
+    }
 
     # Dosya adından akademik bölüm tespiti için anahtar kelime eşlemeleri.
     # Her key bir bölüm kodu, value ise (bölüm_tam_adı, [anahtar_kelimeler]) tuple'ı.
@@ -164,8 +170,10 @@ class DocumentLoader:
         parts = file_path.resolve().parts
 
         for i, part in enumerate(parts):
-            if part in self.KNOWN_DEPARTMENTS:
-                department = normalize_department_value(part)
+            normalized_part = normalize_text(part)
+            raw_department = self.KNOWN_DEPARTMENTS.get(normalized_part)
+            if raw_department is not None:
+                department = normalize_department_value(raw_department)
                 # Alt kategori: departman klasöründen sonraki ilk klasör
                 if i + 1 < len(parts) - 1:  # -1: dosya adını hariç tut
                     subcategory = parts[i + 1]
@@ -191,11 +199,11 @@ class DocumentLoader:
             Eşleşme yoksa veya birden fazla bölüm eşleşirse
             ("genel", "Genel") döner.
         """
-        name_lower = filename.lower()
+        name_lower = normalize_text(filename)
         matched_bolumler: list[tuple[str, str]] = []
 
         for bolum_kodu, (bolum_adi, keywords) in self.BOLUM_KEYWORDS.items():
-            if any(keyword in name_lower for keyword in keywords):
+            if any(normalize_text(keyword) in name_lower for keyword in keywords):
                 matched_bolumler.append((bolum_kodu, bolum_adi))
 
         if len(matched_bolumler) == 1:
@@ -209,6 +217,31 @@ class DocumentLoader:
             )
 
         return "genel", "Genel"
+
+    @staticmethod
+    def _is_in_excluded_subdirectory(
+        file_path: Path,
+        root_directory: Path,
+        excluded_subdirectories: tuple[str, ...],
+    ) -> bool:
+        """Return whether a file lives under one of the excluded subdirectories."""
+        if not excluded_subdirectories:
+            return False
+
+        normalized_exclusions = {
+            normalize_text(part)
+            for part in excluded_subdirectories
+            if part and str(part).strip()
+        }
+        if not normalized_exclusions:
+            return False
+
+        try:
+            relative_parts = file_path.relative_to(root_directory).parts[:-1]
+        except ValueError:
+            return False
+
+        return any(normalize_text(part) in normalized_exclusions for part in relative_parts)
 
     def load_file(self, file_path: Path, category: str = "genel") -> Optional[Document]:
         """
@@ -233,8 +266,10 @@ class DocumentLoader:
 
             if suffix == ".pdf":
                 content = self._load_pdf(file_path)
-            else:
+            elif suffix == ".txt":
                 content = self._load_txt(file_path)
+            else:
+                content = self._load_docx(file_path)
 
             content = self._clean_content(content)
 
@@ -288,6 +323,7 @@ class DocumentLoader:
         directory: Path,
         category: Optional[str] = None,
         recursive: bool = True,
+        exclude_subdirectories: tuple[str, ...] = (),
     ) -> List[Document]:
         """
         Klasördeki tüm desteklenen dosyaları yükler.
@@ -309,17 +345,36 @@ class DocumentLoader:
 
         # Dosyaları topla
         if recursive:
-            files = [
-                f for f in directory.rglob("*")
-                if f.suffix.lower() in self.SUPPORTED_EXTENSIONS
-            ]
+            all_files = [f for f in directory.rglob("*") if f.is_file()]
         else:
-            files = [
-                f for f in directory.iterdir()
-                if f.is_file() and f.suffix.lower() in self.SUPPORTED_EXTENSIONS
+            all_files = [f for f in directory.iterdir() if f.is_file()]
+
+        if exclude_subdirectories:
+            all_files = [
+                file_path
+                for file_path in all_files
+                if not self._is_in_excluded_subdirectory(
+                    file_path,
+                    directory,
+                    exclude_subdirectories,
+                )
             ]
 
+        files = [f for f in all_files if f.suffix.lower() in self.SUPPORTED_EXTENSIONS]
+        unsupported_files = [f for f in all_files if f.suffix.lower() not in self.SUPPORTED_EXTENSIONS]
+
         logger.info("scanning_directory", path=str(directory), file_count=len(files))
+        if unsupported_files:
+            unsupported_extensions = Counter(
+                file_path.suffix.lower() or "[no_extension]"
+                for file_path in unsupported_files
+            )
+            logger.warning(
+                "unsupported_files_skipped",
+                path=str(directory),
+                total_unsupported=len(unsupported_files),
+                unsupported_extensions=dict(sorted(unsupported_extensions.items())),
+            )
 
         for file_path in sorted(files):
             # Kategori: belirtilmemişse üst klasör adı
@@ -360,6 +415,35 @@ class DocumentLoader:
             return file_path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             return file_path.read_text(encoding="cp1254")
+
+    def _load_docx(self, file_path: Path) -> str:
+        """DOCX dosyasindan paragraf ve tablo metni cikarir."""
+        try:
+            docx_module = importlib.import_module("docx")
+        except ImportError as exc:
+            raise ValueError(
+                "DOCX destegi icin `python-docx` paketinin kurulu olmasi gerekir."
+            ) from exc
+
+        try:
+            document = docx_module.Document(str(file_path))
+        except Exception as exc:
+            raise ValueError(f"DOCX metni cikarilamadi: {exc}") from exc
+
+        blocks: list[str] = []
+
+        for paragraph in getattr(document, "paragraphs", []):
+            text = paragraph.text.strip()
+            if text:
+                blocks.append(text)
+
+        for table in getattr(document, "tables", []):
+            for row in table.rows:
+                cells = [cell.text.strip() for cell in row.cells if cell.text and cell.text.strip()]
+                if cells:
+                    blocks.append(" | ".join(cells))
+
+        return "\n\n".join(blocks)
 
     _LINK_PLACEHOLDER_PATTERN = re.compile(
         r"(?:Tıklayınız|Tiklayiniz|Tıkla|Buraya Tıklayın|Click Here)[\s.]*",

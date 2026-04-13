@@ -14,6 +14,8 @@ from src.db.conversation_context import (
     ConversationStateData,
 )
 
+pytestmark = pytest.mark.followup
+
 
 def _state(
     *,
@@ -64,7 +66,7 @@ async def test_resolve_query_rewrites_follow_up_with_heuristics(monkeypatch):
     )
 
     assert resolution.is_follow_up is True
-    assert "CAP / Cift Anadal hakkinda" in resolution.effective_query
+    assert resolution.effective_query == "cap basvurusu tarihleri ne zaman?"
     assert Department.STUDENT_AFFAIRS in resolution.department_hints
     assert Department.ACADEMIC_PROGRAMS in resolution.department_hints
 
@@ -75,11 +77,50 @@ async def test_resolve_query_uses_llm_when_available(monkeypatch):
     monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
     fake_llm = SimpleNamespace(
         generate=AsyncMock(
-            return_value=(
+        return_value=(
                 '{"is_follow_up": true, '
                 '"standalone_query": "CAP basvurusu icin not ortalamasi kac olmali?", '
                 '"active_topic": "CAP / Cift Anadal", '
                 '"carry_over_departments": ["student_affairs", "academic_programs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Peki not ortalamasi kac olmali?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "CAP basvurusu icin not ortalamasi kac olmali?"
+    assert resolution.active_topic == "CAP / Cift Anadal"
+    assert resolution.task_type_hint == TaskType.PROCEDURE_QUERY
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_uses_llm_for_short_signal_free_follow_up(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yatay ve Dikey Gecis",
+                departments=[Department.STUDENT_AFFAIRS.value],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Yatay gecis icin not ortalamasi kac olmali?", '
+                '"active_topic": "Yatay ve Dikey Gecis", '
+                '"carry_over_departments": ["student_affairs"], '
                 '"needs_clarification": false, '
                 '"clarification_message": null}'
             )
@@ -94,6 +135,333 @@ async def test_resolve_query_uses_llm_when_available(monkeypatch):
     )
 
     assert resolution.is_follow_up is True
-    assert resolution.effective_query == "CAP basvurusu icin not ortalamasi kac olmali?"
+    assert resolution.effective_query == "Yatay gecis icin not ortalamasi kac olmali?"
+    assert resolution.active_topic == "Yatay ve Dikey Gecis"
+    assert resolution.department_hints == [Department.STUDENT_AFFAIRS]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_does_not_auto_follow_up_for_short_signal_free_query(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Yatay gecis?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "Yatay gecis?"
+    assert resolution.department_hints == []
+    assert resolution.source_hints == []
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_does_not_allow_llm_to_override_strong_followup(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Staj ve Uygulamali Egitim",
+                departments=[Department.STUDENT_AFFAIRS.value],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": false, '
+                '"standalone_query": "Suresi ne kadar?", '
+                '"active_topic": "Harc ve Ogrenim Ucretleri", '
+                '"carry_over_departments": ["finance"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Suresi ne kadar?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "staj suresi ne kadar?"
+    assert resolution.active_topic == "Staj ve Uygulamali Egitim"
+    assert resolution.department_hints == [Department.STUDENT_AFFAIRS]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_treats_topic_changed_weak_marker_query_as_standalone(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Erasmus programina nasil basvururum?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "Erasmus programina nasil basvururum?"
+    assert resolution.active_topic == "Erasmus ve Uluslararasi Surecler"
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_rejects_llm_rewrite_that_drops_needed_context(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yatay ve Dikey Gecis",
+                departments=[Department.STUDENT_AFFAIRS.value],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Kontenjan var mi?", '
+                '"active_topic": "Mezuniyet ve Akademik Durum", '
+                '"carry_over_departments": ["academic_programs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Peki kontenjan var mi?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "yatay gecis icin kontenjan var mi"
+    assert resolution.active_topic == "Yatay ve Dikey Gecis"
+    assert resolution.department_hints == [Department.STUDENT_AFFAIRS]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_rejects_llm_rewrite_that_changes_question_type(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Kayit Dondurma ve Silme",
+                departments=[Department.STUDENT_AFFAIRS.value],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Kayit dondurma nasil yapilir ve ne zaman?", '
+                '"active_topic": "Kayit Dondurma ve Silme", '
+                '"carry_over_departments": ["student_affairs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Ne zaman yapilir?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "kayit dondurma ne zaman yapilir?"
+    assert resolution.active_topic == "Kayit Dondurma ve Silme"
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_rejects_llm_rewrite_with_wrong_short_query_context(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yatay ve Dikey Gecis",
+                departments=[Department.STUDENT_AFFAIRS.value],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Kayit dondurma not ortalamasi kac olmali?", '
+                '"active_topic": "Yatay ve Dikey Gecis", '
+                '"carry_over_departments": ["student_affairs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Not ortalamasi kac olmali?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "yatay gecis icin not ortalamasi kac olmali"
+    assert resolution.active_topic == "Yatay ve Dikey Gecis"
+    assert resolution.department_hints == [Department.STUDENT_AFFAIRS]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_rejects_llm_rewrite_that_changes_intent(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Burs basvurusu ne zaman?", '
+                '"active_topic": "Burs ve Destekler", '
+                '"carry_over_departments": ["finance"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Peki not ortalamasi kac olmali?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "cap basvurusu icin not ortalamasi kac olmali"
     assert resolution.active_topic == "CAP / Cift Anadal"
-    assert resolution.task_type_hint == TaskType.PROCEDURE_QUERY
+    assert resolution.department_hints == [
+        Department.STUDENT_AFFAIRS,
+        Department.ACADEMIC_PROGRAMS,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_ignores_llm_clarification_when_heuristic_can_rewrite(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Harc ve Ogrenim Ucretleri",
+                departments=[Department.FINANCE.value],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Harc ucretini taksitle odeyebilir miyim?", '
+                '"active_topic": "Harc ve Ogrenim Ucretleri", '
+                '"carry_over_departments": ["finance"], '
+                '"needs_clarification": true, '
+                '"clarification_message": "Sorunuzdan kacinacaginiz bilgileri giriniz."}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Taksitle odeyebilir miyim?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "Harc ucretini taksitle odeyebilir miyim?"
+    assert resolution.department_hints == [Department.FINANCE]
+    assert resolution.clarification_message is None
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_rejects_pronoun_rewrite_that_injects_previous_detail(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "CAP basvuru not ortalamasi icin hangi belge gerekli?", '
+                '"active_topic": "CAP / Cift Anadal", '
+                '"carry_over_departments": ["student_affairs", "academic_programs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Bunun icin hangi belge gerekli?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "cap basvurusu icin hangi belge gerekli"
+    assert resolution.active_topic == "CAP / Cift Anadal"
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_rejects_short_followup_rewrite_with_object_drift(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Staj ve Uygulamali Egitim",
+                departments=[Department.STUDENT_AFFAIRS.value],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Staj basvurusu suresine ne kadar zaman var?", '
+                '"active_topic": "Staj ve Uygulamali Egitim", '
+                '"carry_over_departments": ["student_affairs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Suresi ne kadar?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "staj suresi ne kadar?"
+    assert resolution.active_topic == "Staj ve Uygulamali Egitim"

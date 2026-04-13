@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import structlog
 
 from src.core.constants import (
+    ACADEMIC_SCHEDULE_QUERY_MARKERS,
     Department,
     collection_name_for_department,
     get_department_config,
@@ -16,6 +17,12 @@ logger = structlog.get_logger()
 
 
 OFF_TOPIC_PENALTY = 0.75
+_NO_SIGNAL_PRIMARY_DEPARTMENTS = [Department.STUDENT_AFFAIRS]
+_NO_SIGNAL_FALLBACK_DEPARTMENTS = [Department.ACADEMIC_PROGRAMS, Department.FINANCE]
+_CAP_PRIMARY_TOPICS = {
+    normalize_text(topic)
+    for topic in ("çap", "çift anadal", "çift ana dal", "ikinci lisans", "yan dal", "yandal", "ydp")
+}
 
 
 def _turkish_lower(text: str) -> str:
@@ -49,11 +56,15 @@ _TOPIC_SOURCE_PATTERNS: Dict[str, List[str]] = {
     "öğrenci belgesi": ["sik_sorulan_sorular", "ogrenci_belgesi", "ogrenci_isleri", "belge"],
     "burs": ["sik_sorulan_sorular", "burs", "scholarship", "idari_ve_mali", "ogrenci_isleri", "yemek_bursu"],
     "kayit dondurma": ["kayit", "dondurma", "donem_izni", "ogrenci_isleri"],
-    "mezuniyet": ["mezuniyet", "diploma", "ogrenci_isleri"],
+    "mezuniyet": ["mezuniyet", "diploma", "ogrenci_isleri", "ilisik_kesme", "kosul"],
     "azami sure": ["azami", "ogrenim_suresi", "yon_lisans"],
     "devam zorunlulugu": ["devam", "yoklama", "yonetmelik", "on_lisans"],
     "başarısız": ["sik_sorulan", "on_lisans", "lisans", "yonetmelik"],
     "seçmeli ders": ["on_lisans", "lisans", "mufredat", "sik_sorulan"],
+    "ders programi": ["ders_programlari", "ders program", "program"],
+    "ilisik kesme": ["ilisik_kesme", "kayit_sildirme", "ogrenci_isleri"],
+    "ayrilmak": ["ilisik_kesme", "kayit_sildirme", "ogrenci_isleri"],
+    "birakmak": ["ilisik_kesme", "kayit_sildirme", "ogrenci_isleri"],
 }
 
 _LISANSUSTU_INDICATORS = (
@@ -164,7 +175,7 @@ def _candidate_targets_department(
     normalized = normalize_department_value(str(candidate_department))
     if isinstance(normalized, Department):
         return normalized == department
-    return False
+    return normalized == department.value
 
 
 def _looks_like_student_document_query(normalized_query: str) -> bool:
@@ -174,6 +185,17 @@ def _looks_like_student_document_query(normalized_query: str) -> bool:
     return (
         "belge" in normalized_query
         and any(marker in normalized_query for marker in ("ogrenci", "transkript", "diploma"))
+    )
+
+
+def _looks_like_schedule_query(query: str) -> bool:
+    """Return whether the query primarily asks for a timetable/course schedule."""
+    normalized_query = normalize_text(query)
+    if any(normalize_text(marker) in normalized_query for marker in ACADEMIC_SCHEDULE_QUERY_MARKERS):
+        return True
+    return (
+        "ders" in normalized_query
+        and any(marker in normalized_query for marker in ("hangi gun", "hangi gün", "hangi saatte", "saat kacta", "saat kaçta"))
     )
 
 
@@ -214,6 +236,10 @@ def _plan_search_departments(
     if _looks_like_student_document_query(normalized_query):
         return [Department.STUDENT_AFFAIRS], [Department.FINANCE]
 
+    topic = _detect_query_topic(query)
+    if topic and normalize_text(topic) in _CAP_PRIMARY_TOPICS:
+        return [Department.ACADEMIC_PROGRAMS, Department.STUDENT_AFFAIRS], [Department.FINANCE]
+
     if "burs" in normalized_query:
         if any(marker in normalized_query for marker in _FINANCE_INTERNATIONAL_QUERY_MARKERS):
             return [Department.ACADEMIC_PROGRAMS, Department.FINANCE], [Department.STUDENT_AFFAIRS]
@@ -227,7 +253,7 @@ def _plan_search_departments(
     second_department, second_score = ranked[1]
 
     if top_score == 0:
-        return [department for department, _ in ranked], []
+        return _NO_SIGNAL_PRIMARY_DEPARTMENTS, _NO_SIGNAL_FALLBACK_DEPARTMENTS
 
     if second_score > 0 and second_score >= top_score - 1:
         primary = [top_department, second_department]
@@ -290,7 +316,7 @@ def _apply_education_level_penalty(
 
         if not query_is_lisansustu:
             if any(marker in combined for marker in _LISANSUSTU_SOURCE_MARKERS):
-                item["score"] = round(float(item.get("score", 0.0)) * 0.5, 4)
+                item["score"] = round(float(item.get("score", 0.0)) * 0.35, 4)
                 adjusted = True
         else:
             is_lisans_only = (

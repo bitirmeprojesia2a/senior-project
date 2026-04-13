@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 _KEY_PREFIX = "conv:state:"
 _DEFAULT_TTL_SECONDS = settings.conversation.ttl_minutes * 60
+_CACHE_QUERY_MAX_CHARS = 180
+_CACHE_ANSWER_MAX_CHARS = 220
+_CACHE_SOURCE_REF_MAX_CHARS = 80
 
 _redis_pool: aioredis.Redis | None = None
 
@@ -49,20 +52,49 @@ def _cache_key(context_id: str) -> str:
     return f"{_KEY_PREFIX}{context_id}"
 
 
+def _compact_text(value: object, *, max_len: int) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    compacted = " ".join(text.split())
+    if len(compacted) <= max_len:
+        return compacted
+    return compacted[: max_len - 3].rstrip() + "..."
+
+
 def _serialize_state(state_data: Any) -> str:
     """Serialize a ConversationStateData to a JSON string."""
     data = {
         "context_id": state_data.context_id,
         "active_topic": state_data.active_topic,
-        "rolling_summary": state_data.rolling_summary,
+        "rolling_summary": _compact_text(
+            state_data.rolling_summary,
+            max_len=settings.conversation.max_rolling_summary_chars,
+        ),
         "active_entities": list(state_data.active_entities or []),
         "last_departments": list(state_data.last_departments or []),
-        "last_source_refs": list(state_data.last_source_refs or []),
+        "last_source_refs": [
+            ref
+            for ref in (
+                _compact_text(item, max_len=_CACHE_SOURCE_REF_MAX_CHARS)
+                for item in list(state_data.last_source_refs or [])
+            )
+            if ref
+        ][: settings.conversation.max_source_refs],
         "last_task_type": state_data.last_task_type,
         "last_turn_id": state_data.last_turn_id,
-        "last_user_query": state_data.last_user_query,
-        "last_resolved_query": state_data.last_resolved_query,
-        "last_assistant_answer": state_data.last_assistant_answer,
+        "last_user_query": _compact_text(
+            state_data.last_user_query,
+            max_len=_CACHE_QUERY_MAX_CHARS,
+        ),
+        "last_resolved_query": _compact_text(
+            state_data.last_resolved_query,
+            max_len=_CACHE_QUERY_MAX_CHARS,
+        ),
+        "last_assistant_answer": _compact_text(
+            state_data.last_assistant_answer,
+            max_len=_CACHE_ANSWER_MAX_CHARS,
+        ),
         "turn_count": state_data.turn_count,
         "updated_at": state_data.updated_at.isoformat(),
     }

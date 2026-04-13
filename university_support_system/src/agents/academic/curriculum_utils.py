@@ -11,6 +11,32 @@ COURSE_LIST_KEYWORDS = (
     "acik ders", "açık ders", "bu donem", "bu dönem", "hangi dersler", "ders listesi",
     "sinif dersleri", "sınıf dersleri", "bolum dersleri", "bölüm dersleri",
 )
+SCHEDULE_QUERY_MARKERS = (
+    "ders programi",
+    "ders programı",
+    "haftalik program",
+    "haftalık program",
+    "hangi saatte",
+    "hangi gun",
+    "hangi gün",
+    "derslik",
+    "ne zaman",
+)
+SCHEDULE_DAY_MARKERS = {
+    "pazartesi": "Pazartesi",
+    "sali": "Sali",
+    "carsamba": "Carsamba",
+    "persembe": "Persembe",
+    "cuma": "Cuma",
+}
+SCHEDULE_GROUP_MARKERS = {
+    "1. sinif": {"1. SINIF", "I", "I.SINIF"},
+    "2. sinif": {"2. SINIF", "II", "II.SINIF"},
+    "3. sinif": {"3. SINIF", "III", "III.SINIF"},
+    "4. sinif": {"4. SINIF", "IV", "IV.SINIF"},
+    "ek1": {"EK1"},
+    "ek2": {"EK2"},
+}
 PREREQUISITE_KEYWORDS = (
     "onkosul", "önkoşul", "on kosul", "ön koşul", "on sart", "ön şart",
     "onsart", "önşart",
@@ -201,6 +227,39 @@ def format_course_line(course: dict[str, Any]) -> str:
 def is_course_list_query(lowered: str) -> bool:
     """Return whether the query asks for a course list."""
     return any(keyword in lowered for keyword in COURSE_LIST_KEYWORDS)
+
+
+def is_schedule_query(lowered: str) -> bool:
+    """Return whether the query asks about timetable/schedule details."""
+    return any(keyword in lowered for keyword in SCHEDULE_QUERY_MARKERS)
+
+
+def extract_schedule_day(lowered: str) -> str | None:
+    """Extract an explicit weekday marker from the query."""
+    for marker, canonical in SCHEDULE_DAY_MARKERS.items():
+        if marker in lowered:
+            return canonical
+    return None
+
+
+def extract_schedule_groups(lowered: str) -> set[str]:
+    """Extract requested schedule groups such as 1. SINIF or EK1."""
+    matches: set[str] = set()
+    for marker, aliases in SCHEDULE_GROUP_MARKERS.items():
+        if marker in lowered:
+            matches.update(aliases)
+    return matches
+
+
+def wants_specific_schedule_lookup(lowered: str, query_text: str) -> bool:
+    """Return whether a structured timetable lookup is worth attempting."""
+    if COURSE_CODE_PATTERN.search(query_text):
+        return True
+    if extract_schedule_day(lowered):
+        return True
+    if extract_schedule_groups(lowered):
+        return True
+    return any(marker in lowered for marker in ("hangi saatte", "hangi gun", "hangi gün", "derslik"))
 
 
 def is_prerequisite_query(lowered: str) -> bool:

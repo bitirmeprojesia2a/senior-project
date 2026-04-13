@@ -124,6 +124,7 @@ class TestLLMModelResolution:
         monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:7b")
         monkeypatch.setenv("OLLAMA_SECONDARY_MODEL", "qwen2.5:3b")
         monkeypatch.setenv("LLM_PROFILE", "fast")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "ollama")
 
         test_settings = Settings()
 
@@ -135,6 +136,7 @@ class TestLLMModelResolution:
         monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:7b")
         monkeypatch.setenv("OLLAMA_SECONDARY_MODEL", "qwen2.5:3b")
         monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "ollama")
         monkeypatch.setenv("LLM_ROUTING_MODEL", "qwen2.5:3b")
         monkeypatch.setenv("LLM_CONVERSATION_MODEL", "qwen2.5:3b")
         monkeypatch.setenv("LLM_SPECIALIST_SYNTHESIS_MODEL", "")

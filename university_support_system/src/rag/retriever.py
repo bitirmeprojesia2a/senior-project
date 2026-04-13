@@ -21,7 +21,7 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 
 from src.core.config import settings
-from src.core.constants import Department, collection_name_for_department
+from src.core.constants import Department, academic_schedule_collection_name, collection_name_for_department
 from src.rag.candidate_utils import (
     deduplicate_candidate_dicts,
     deduplicate_documents,
@@ -35,6 +35,7 @@ from src.rag.search_planner import (
     OFF_TOPIC_PENALTY as _SHARED_OFF_TOPIC_PENALTY,
     _apply_education_level_penalty as _shared_apply_education_level_penalty,
     _apply_finance_source_penalty as _shared_apply_finance_source_penalty,
+    _looks_like_schedule_query as _shared_looks_like_schedule_query,
     _apply_source_relevance as _shared_apply_source_relevance,
     _apply_student_affairs_faq_bias as _shared_apply_student_affairs_faq_bias,
     _detect_query_topic as _shared_detect_query_topic,
@@ -118,7 +119,8 @@ def turkish_bm25_preprocess(text: str) -> List[str]:
     if not text:
         return []
 
-    normalized_text = text.lower()
+    normalized_text = _BM25_NORMALIZER.normalize_for_bm25(text)
+    normalized_text = normalized_text.lower()
     for compound, split in _COMPOUND_SPLITS.items():
         normalized_text = normalized_text.replace(compound, split)
 
@@ -134,6 +136,8 @@ OFF_TOPIC_PENALTY = _SHARED_OFF_TOPIC_PENALTY
 CONVERSATION_SOURCE_HINT_BOOST = 0.08
 CONVERSATION_TOPIC_HINT_BOOST = 0.04
 _DEPARTMENT_METADATA_BOOST = 0.06
+_RERANKER_MIN_SCORE_THRESHOLD = 0.23
+_BM25_NORMALIZER = QueryPreprocessor(enable_expansion=False)
 
 
 def _detect_query_topic(query: str) -> Optional[str]:
@@ -187,6 +191,39 @@ def _apply_education_level_penalty(
 ) -> List[Dict[str, Any]]:
     """Backward-compatible wrapper for lisans/lisansustu source penalty."""
     return _shared_apply_education_level_penalty(results, query)
+
+
+def _looks_like_schedule_query(query: str) -> bool:
+    """Backward-compatible wrapper for schedule-oriented academic queries."""
+    return _shared_looks_like_schedule_query(query)
+
+
+def _resolve_collection_plan(
+    primary_departments: List[Department],
+    fallback_departments: List[Department],
+    query: str,
+) -> tuple[List[str], List[str]]:
+    """Map department routing into collection routing, with schedule-aware overrides."""
+
+    def _append_unique(target: List[str], collection_name: str) -> None:
+        if collection_name not in target:
+            target.append(collection_name)
+
+    primary_collections: List[str] = []
+    fallback_collections: List[str] = []
+    schedule_query = _looks_like_schedule_query(query)
+
+    for dep in primary_departments:
+        if dep == Department.ACADEMIC_PROGRAMS and schedule_query:
+            _append_unique(primary_collections, academic_schedule_collection_name())
+            _append_unique(fallback_collections, collection_name_for_department(dep))
+        else:
+            _append_unique(primary_collections, collection_name_for_department(dep))
+
+    for dep in fallback_departments:
+        _append_unique(fallback_collections, collection_name_for_department(dep))
+
+    return primary_collections, fallback_collections
 
 
 def _apply_conversation_source_hints(
@@ -272,6 +309,11 @@ def _apply_department_metadata_boost(
             top_sources=[(r.get("source", ""), r.get("score", 0.0)) for r in results[:3]],
         )
     return results
+
+
+def _result_score_type(item: Dict[str, Any]) -> str:
+    metadata = item.get("metadata") or {}
+    return str(metadata.get("score_type", "retrieval")).strip().lower()
 
 
 class ChromaRestRetriever(BaseRetriever):
@@ -538,19 +580,13 @@ class HybridRetriever:
         """Resolve primary and fallback collections for the query."""
         if department is not None:
             primary_departments, fallback_departments = _plan_search_departments(query, department)
-            return (
-                [collection_name_for_department(dep) for dep in primary_departments],
-                [collection_name_for_department(dep) for dep in fallback_departments],
-            )
+            return _resolve_collection_plan(primary_departments, fallback_departments, query)
 
         if self.collection_name is not None:
             return [self.collection_name], []
 
         primary_departments, fallback_departments = _plan_search_departments(query)
-        return (
-            [collection_name_for_department(dep) for dep in primary_departments],
-            [collection_name_for_department(dep) for dep in fallback_departments],
-        )
+        return _resolve_collection_plan(primary_departments, fallback_departments, query)
 
     def _collect_candidates(
         self,
@@ -653,6 +689,13 @@ class HybridRetriever:
         )
         return self.reranker.rerank(clean_query, reranker_candidates, top_k=top_k)
 
+    def _minimum_score_threshold_for(self, item: Dict[str, Any]) -> float:
+        """Resolve score filtering threshold by score type."""
+        score_type = _result_score_type(item)
+        if score_type == "reranker":
+            return max(self.min_score, _RERANKER_MIN_SCORE_THRESHOLD)
+        return self.min_score
+
     def _finalize_results(
         self,
         *,
@@ -666,7 +709,11 @@ class HybridRetriever:
         results = _apply_source_relevance(results, query)
 
         if self.min_score > 0:
-            results = [result for result in results if result["score"] >= self.min_score]
+            results = [
+                result
+                for result in results
+                if float(result.get("score", 0.0)) >= self._minimum_score_threshold_for(result)
+            ]
 
         self._cache.put(cache_key, results)
 
@@ -885,6 +932,7 @@ class HybridRetriever:
         candidates = _apply_student_affairs_faq_bias(candidates, query, search_scope)
         candidates = _apply_finance_source_penalty(candidates, query, search_scope)
         candidates = _apply_education_level_penalty(candidates, query)
+        candidates = _apply_department_metadata_boost(candidates, student_department)
         candidates = self._sort_candidates_by_score(candidates)
         results = self._rank_candidates(
             query=query,
@@ -893,7 +941,6 @@ class HybridRetriever:
             search_scope=search_scope,
             top_k=k,
         )
-        results = _apply_department_metadata_boost(results, student_department)
         return self._finalize_results(
             query=query,
             query_type=query_type,

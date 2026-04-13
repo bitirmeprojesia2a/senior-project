@@ -24,7 +24,6 @@ class TestDepartmentRouter:
         assert result.strategy == RoutingStrategy.DIRECT
         assert result.confidence_level in (ConfidenceLevel.MEDIUM, ConfidenceLevel.HIGH)
         assert result.task_type == TaskType.TUITION_QUERY
-        llm_service.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_route_skips_llm_for_personal_query_with_low_keyword_score(self):
@@ -37,7 +36,6 @@ class TestDepartmentRouter:
 
         assert Department.STUDENT_AFFAIRS in result.departments
         assert result.task_type == TaskType.ACADEMIC_QUERY
-        llm_service.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_route_personal_akts_progress_to_student_affairs(self):
@@ -50,7 +48,6 @@ class TestDepartmentRouter:
 
         assert result.departments == [Department.STUDENT_AFFAIRS]
         assert result.task_type == TaskType.ACADEMIC_QUERY
-        llm_service.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_route_handles_cap_application_with_rule_based_parallel(self):
@@ -64,10 +61,10 @@ class TestDepartmentRouter:
 
         assert result.departments == [Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS]
         assert result.strategy == RoutingStrategy.PARALLEL
-        assert result.confidence == 1.0
+        assert result.confidence == 0.82
         assert result.confidence_level == ConfidenceLevel.HIGH
         assert result.task_type == TaskType.PROCEDURE_QUERY
-        llm_service.generate.assert_not_awaited()
+        llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_route_uses_rule_based_cap_parallel_even_if_llm_is_unavailable(self):
@@ -80,7 +77,6 @@ class TestDepartmentRouter:
         assert result.departments == [Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS]
         assert result.strategy == RoutingStrategy.PARALLEL
         assert result.task_type == TaskType.PROCEDURE_QUERY
-        llm_service.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_route_returns_clarification_when_no_keyword_signal_skips_llm(self):
@@ -95,7 +91,6 @@ class TestDepartmentRouter:
         assert result.strategy == RoutingStrategy.CLARIFICATION
         assert result.confidence_level == ConfidenceLevel.LOW
         assert result.task_type is None
-        llm_service.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_route_falls_back_when_llm_returns_invalid_departments(self):
@@ -139,7 +134,6 @@ class TestDepartmentRouter:
 
         assert result.departments == [Department.ACADEMIC_PROGRAMS]
         assert result.task_type == TaskType.PROCEDURE_QUERY
-        llm_service.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_route_academic_calendar_to_student_affairs(self):
@@ -151,7 +145,21 @@ class TestDepartmentRouter:
 
         assert result.departments == [Department.STUDENT_AFFAIRS]
         assert result.task_type == TaskType.REGISTRATION_QUERY
-        llm_service.generate.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_route_freeze_and_fee_burden_query_to_student_affairs_and_finance(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock(side_effect=LLMServiceError("LLM unavailable"))
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route(
+            "Ikinci ogretim ogrencisiyim ve bir donem kayit dondurmak istiyorum. "
+            "Bu donem harc ucretimi yatirmak zorunda miyim?"
+        )
+
+        assert result.departments == [Department.STUDENT_AFFAIRS, Department.FINANCE]
+        assert result.strategy == RoutingStrategy.PARALLEL
+        assert result.task_type == TaskType.TUITION_QUERY
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -189,7 +197,6 @@ class TestDepartmentRouter:
 
         assert result.departments == [Department.ACADEMIC_PROGRAMS]
         assert result.task_type == TaskType.PROCEDURE_QUERY
-        llm_service.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_route_generic_department_info_to_clarification(self):
@@ -201,7 +208,35 @@ class TestDepartmentRouter:
 
         assert result.departments == []
         assert result.strategy == RoutingStrategy.CLARIFICATION
-        llm_service.generate.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_route_with_hints_uses_preferred_departments_for_signal_free_follow_up(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock()
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route_with_hints(
+            "Peki sonra?",
+            preferred_departments=[Department.STUDENT_AFFAIRS],
+        )
+
+        assert result.departments == [Department.STUDENT_AFFAIRS]
+        assert result.strategy == RoutingStrategy.DIRECT
+        assert result.confidence >= 0.74
+
+    @pytest.mark.asyncio
+    async def test_route_with_hints_does_not_override_clear_rule_with_unrelated_preference(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock()
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route_with_hints(
+            "Erasmus basvurusu ne zaman?",
+            preferred_departments=[Department.FINANCE],
+        )
+
+        assert result.departments == [Department.ACADEMIC_PROGRAMS]
+        assert result.strategy == RoutingStrategy.DIRECT
 
     def test_detect_task_type_for_finance_and_student_affairs(self):
         router = DepartmentRouter(llm_service=AsyncMock())

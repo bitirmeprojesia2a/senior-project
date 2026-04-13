@@ -2,7 +2,7 @@
   "version": "1.0",
   "description": "Reranker kalite degerlendirme soru seti - LLM sentez odakli, cok kaynakli, senaryo bazli",
   "created_at": "2026-04-09",
-  "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
   "total_questions": 25,
   "categories": {
     "A_multi_source_synthesis": {

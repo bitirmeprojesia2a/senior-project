@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from src.core.constants import Department
 from src.core.messages import CONTACT_SEPARATOR, CONTACT_SUGGESTION
+from src.core.text_normalization import normalize_text
 from src.db.schemas import DepartmentResponse, RAGSource
 
 DEPARTMENT_SECTION_TITLES: dict[Department, str] = {
@@ -20,13 +22,21 @@ DEPARTMENT_DISPLAY_ORDER: dict[Department, int] = {
     Department.FINANCE: 2,
 }
 
-LOW_CONFIDENCE_RAG_SCORE_THRESHOLD = 0.02
+LOW_CONFIDENCE_RERANKER_SCORE_THRESHOLD = 0.23
+LOW_CONFIDENCE_RETRIEVAL_SCORE_THRESHOLD = 0.05
 GENERATION_MODE_LABELS = {
     "vt": "VT",
     "rag": "RAG",
     "llm": "LLM",
     "kural": "Kural",
 }
+ANNOUNCEMENT_SURFACE_DEPARTMENT = "announcement"
+_GLOBAL_SYNTHESIS_ALLOWED_ERRORS = frozenset(
+    {
+        "department_context_required",
+        "student_type_context_required",
+    }
+)
 
 
 def split_answer_and_contact_flag(answer: str) -> tuple[str, bool]:
@@ -38,12 +48,199 @@ def split_answer_and_contact_flag(answer: str) -> tuple[str, bool]:
     return core.rstrip(), True
 
 
+def response_core_answer(response: DepartmentResponse) -> str:
+    """DepartmentResponse icin sunum eklerinden arinmis ana cevap govdesi."""
+    core, _ = split_answer_and_contact_flag(response.answer)
+    return core
+
+
+def response_needs_contact_suggestion(response: DepartmentResponse) -> bool:
+    """Yeni yapisal bayrak veya eski gomulu format ile iletisim ekini tanir."""
+    if bool(getattr(response, "include_contact_suggestion", False)):
+        return True
+    _, embedded = split_answer_and_contact_flag(response.answer)
+    return embedded
+
+
 def compact_text(value: str, *, max_len: int = 420) -> str:
     """Bosluklari sikistirir ve gerekirse kisaltir."""
     compact = re.sub(r"\s+", " ", value).strip()
     if len(compact) > max_len:
         return f"{compact[: max_len - 3].rstrip()}..."
     return compact
+
+
+# ── Yabanci dil filtresi ──────────────────────────────────────────
+# LLM bazen Turkce cevaba yabanci kelime sizdirir.
+# CJK, Kiril, yaygin Ingilizce kelimeler ve Turkce'ye ait olmayan aksanlar.
+
+# CJK Unified Ideographs + Hiragana + Katakana
+_CJK_RE = re.compile(r'[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff00-\uffef]+')
+
+# Kiril alfabesi
+_CYRILLIC_RE = re.compile(r'[\u0400-\u04ff\u0500-\u052f]+')
+
+# Yaygin Ingilizce kelimeler ve Turkce karsiliklari
+_EN_TO_TR: dict[str, str] = {
+    "international": "uluslararasi",
+    "specific": "ozel",
+    "required": "gerekli",
+    "needed": "gerekli",
+    "success": "basari",
+    "contribution": "katki",
+    "however": "ancak",
+    "therefore": "bu nedenle",
+    "necessary": "gerekli",
+    "important": "onemli",
+    "information": "bilgi",
+    "application": "basvuru",
+    "process": "surec",
+    "condition": "kosul",
+    "requirement": "gereksinim",
+    "document": "belge",
+    "student": "ogrenci",
+    "university": "universite",
+    "program": "program",
+    "education": "egitim",
+    "academic": "akademik",
+    "must": "zorunlu",
+    "should": "meli",
+    "also": "ayrica",
+    "registration": "kayit",
+    "renewal": "yenileme",
+    "semester": "donem",
+    "fee": "ucret",
+    "fees": "ucretler",
+    "refund": "iade",
+    "refunded": "iade edilir",
+    "cancel": "iptal",
+    "canceled": "iptal edilir",
+    "graduate": "lisansustu",
+    "doctoral": "doktora",
+    "master": "yuksek lisans",
+    "programs": "programlar",
+    "language": "dil",
+    "following": "su sekilde",
+    "several": "birden fazla",
+    "informatie": "bilgi",
+    "details": "detaylar",
+    "detail": "detay",
+    "requirements": "kosullar",
+    "conditions": "kosullar",
+    "overview": "ozet",
+    "timeline": "takvim",
+    "approval": "onay",
+    "approved": "onaylandi",
+    "siguientes": "asagidaki",
+}
+
+# Turkce'ye ait olmayan aksanli harfler (é, è, ê, ñ, å, ø, vb.)
+# Türkçe'de sadece: ç, ğ, ı, ö, ş, ü ve büyük karşılıkları geçerli.
+_NON_TURKISH_ACCENT_RE = re.compile(r'\b\w*[éèêëàáâãåæìíîïòóôõøùúûÿñ\u00df]\w*\b', re.IGNORECASE)
+
+
+_FOREIGN_DIACRITIC_WORD_RE = re.compile(r"\b[^\W\d_]+\b", re.UNICODE)
+_TURKISH_EXTENDED_CHARS = frozenset("abcçdefgğhıijklmnoöprsştuüvyzABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ")
+_ASCII_WORD_RE = re.compile(r"\b[a-z]{2,}\b", re.IGNORECASE)
+_ENGLISH_LINE_HINTS = frozenset(
+    {
+        "the", "and", "for", "with", "that", "this", "from", "after", "before",
+        "during", "will", "would", "should", "could", "must", "is", "are", "was",
+        "were", "be", "been", "being", "if", "then", "than", "into", "through",
+        "because", "while", "where", "when", "which", "registration", "semester",
+        "fee", "fees", "refund", "refunded", "cancel", "canceled", "program", "programs",
+        "language", "student", "students", "application", "required", "however", "therefore",
+    }
+)
+
+
+def _strip_foreign_words(text: str) -> str:
+    """Cevaptaki yabanci dil kalintilarini temizler."""
+    # 1) CJK ve Kiril iceren kelimeleri/kalintileri sil
+    text = _CJK_RE.sub('', text)
+    text = _CYRILLIC_RE.sub('', text)
+
+    # 2) Yaygin Ingilizce kelimeleri Turkce karsiliklariyla degistir.
+
+    def _apply_case_style(match: re.Match, replacement: str) -> str:
+        word = match.group(0)
+        if word.isupper():
+            return replacement.upper()
+        if word[:1].isupper():
+            return replacement[:1].upper() + replacement[1:]
+        return replacement
+
+    for en_word, tr_word in _EN_TO_TR.items():
+        # Tam kelime eslesmesi icin word boundary
+        pattern = re.compile(r'\b' + re.escape(en_word) + r'\b', re.IGNORECASE)
+        text = pattern.sub(lambda match: _apply_case_style(match, tr_word), text)
+
+    text = re.sub(r"\bonce_online\b", "once online", text, flags=re.IGNORECASE)
+    text = re.sub(r"\badem(?:as|\u00e1s)\b", "ayrica", text, flags=re.IGNORECASE)
+    text = re.sub(r"\btambi(?:en|\u00e9n)\b", "ayrica", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bpor favor\b", "lutfen", text, flags=re.IGNORECASE)
+
+    # 3) Turkce'ye ait olmayan aksanli kelimeleri temizle
+    #    Ornek: "konkrét" → "konkret", "éxito" → sil
+    def _replace_non_turkish_accent(m: re.Match) -> str:
+        word = m.group(0)
+        # Basit normalizasyon: aksanli harfleri aksansiz karsiligina cevir
+        accent_map = str.maketrans({
+            'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+            'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
+            'æ': 'ae',
+            'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+            'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o',
+            'ù': 'u', 'ú': 'u', 'û': 'u',
+            'ÿ': 'y', 'ñ': 'n', 'ß': 'ss',
+        })
+        return word.translate(accent_map)
+
+    text = _NON_TURKISH_ACCENT_RE.sub(_replace_non_turkish_accent, text)
+
+    def _normalize_foreign_diacritic_word(match: re.Match) -> str:
+        word = match.group(0)
+        if not any(ord(ch) > 127 for ch in word):
+            return word
+        if all((ch in _TURKISH_EXTENDED_CHARS) or ord(ch) < 128 for ch in word):
+            return word
+        decomposed = unicodedata.normalize("NFKD", word)
+        stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+        ascii_only = stripped.encode("ascii", "ignore").decode("ascii")
+        return ascii_only or stripped or word
+
+    text = _FOREIGN_DIACRITIC_WORD_RE.sub(_normalize_foreign_diacritic_word, text)
+    text = re.sub(r"\bhe\s+thong\w*\b", "sistem", text, flags=re.IGNORECASE)
+
+    # 4) Hala baskin sekilde Ingilizce kalan satirlari tumden at.
+    cleaned_lines: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            cleaned_lines.append(raw_line)
+            continue
+        normalized_line = normalize_text(line)
+        tokens = _ASCII_WORD_RE.findall(normalized_line)
+        english_hits = sum(token in _ENGLISH_LINE_HINTS for token in tokens)
+        if tokens and len(tokens) >= 5 and english_hits >= 3 and (english_hits * 2) >= len(tokens):
+            continue
+        cleaned_lines.append(raw_line)
+    text = "\n".join(cleaned_lines)
+
+    # 5) Temizleme sonrasi olusan cift bosluklari ve bos satirlari duzelt
+    text = re.sub(r'  +', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'\bsu sekilde gibidir\b', 'su sekildedir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bbirden fazla kaynaklardan\b', 'birden fazla kaynaktan', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bbilgi verir misin\b', 'bilgi vereyim', text, flags=re.IGNORECASE)
+    # Yabanci dil sızıntıları
+    text = re.sub(r'\bsiguientes\b', 'asagidaki', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bonce_online\b', 'once online', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bademás\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\btambién\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpor favor\b', 'lutfen', text, flags=re.IGNORECASE)
+
+    return text.strip()
 
 
 def clean_final_answer(answer: str) -> str:
@@ -92,7 +289,13 @@ def clean_final_answer(answer: str) -> str:
         "",
         cleaned,
     )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Kaynaklar|Kanitlar|Sonuc)\s*:\s*",
+        "",
+        cleaned,
+    )
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = _strip_foreign_words(cleaned)
     return cleaned
 
 
@@ -107,11 +310,43 @@ def is_announcement_response(response: DepartmentResponse) -> bool:
     )
 
 
+def response_eligible_for_global_synthesis(response: DepartmentResponse) -> bool:
+    """Return whether a response is safe and useful to include in global synthesis."""
+    if not response.answer.strip() or is_announcement_response(response):
+        return False
+    return bool(response.success) or response.error in _GLOBAL_SYNTHESIS_ALLOWED_ERRORS
+
+
+def surface_department_label(response: DepartmentResponse) -> str:
+    """Internal department kimliginden ayri, kullanici/raporlama yuzey etiketini doner."""
+    if is_announcement_response(response):
+        return ANNOUNCEMENT_SURFACE_DEPARTMENT
+    return response.department.value
+
+
+def collect_surface_departments(responses: list[DepartmentResponse]) -> list[str]:
+    """Response listesinden sira koruyarak yuzey departman etiketlerini cikarir."""
+    return list(
+        dict.fromkeys(
+            surface_department_label(response)
+            for response in responses
+            if response.answer.strip()
+        )
+    )
+
+
 def top_source_score(response: DepartmentResponse) -> float:
     """Bir departman cevabindaki en yuksek kaynak skorunu doner."""
     if not response.sources:
         return 0.0
     return max(float(source.score) for source in response.sources)
+
+
+def _source_low_confidence_threshold(source: RAGSource) -> float:
+    score_type = str((source.metadata or {}).get("score_type", "retrieval")).strip().lower()
+    if score_type == "reranker":
+        return LOW_CONFIDENCE_RERANKER_SCORE_THRESHOLD
+    return LOW_CONFIDENCE_RETRIEVAL_SCORE_THRESHOLD
 
 
 def is_low_confidence_rag_response(response: DepartmentResponse) -> bool:
@@ -122,7 +357,10 @@ def is_low_confidence_rag_response(response: DepartmentResponse) -> bool:
         return False
     if not response.sources:
         return False
-    return top_source_score(response) < LOW_CONFIDENCE_RAG_SCORE_THRESHOLD
+    return all(
+        float(source.score) < _source_low_confidence_threshold(source)
+        for source in response.sources
+    )
 
 
 def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list[DepartmentResponse]:
@@ -232,6 +470,19 @@ def format_generation_summary_lines(responses: list[DepartmentResponse]) -> list
         else:
             lines.append(f"- {label}")
     return lines
+
+
+def collect_generation_modes(responses: list[DepartmentResponse]) -> list[str]:
+    """Yanitlardan yapisal uretim modu listesi uretir."""
+    meaningful = [response for response in responses if response.answer.strip()]
+    if not meaningful:
+        return []
+    return list(
+        dict.fromkeys(
+            _infer_generation_mode(response)
+            for response in meaningful
+        )
+    )
 
 
 def _format_source_label(source: RAGSource) -> str | None:
@@ -352,9 +603,8 @@ def compose_department_answers(responses: list[DepartmentResponse]) -> str:
     multi_department = len({response.department for response in non_announcement}) > 1
 
     for response in meaningful:
-        answer = response.answer.strip()
-        if CONTACT_SEPARATOR in answer:
-            answer = answer.split(CONTACT_SEPARATOR, 1)[0].rstrip()
+        answer = response_core_answer(response).strip()
+        if response_needs_contact_suggestion(response):
             include_contact = True
 
         if multi_department:

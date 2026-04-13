@@ -12,8 +12,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.core.constants import Department
+from src.core.constants import Department, academic_schedule_collection_name
 from src.rag.document_loader import Document, DocumentLoader
+from src.rag.pipeline import IndexingPipeline
 from src.rag.text_preprocessor import TextPreprocessor
 from src.rag.chunker import Chunk, TextChunker
 
@@ -149,6 +150,26 @@ class TestDocumentLoader:
         assert bolum_adi == "Genel"
 
 
+def test_schedule_collection_filter_excludes_non_weekly_program_documents():
+    pipeline = IndexingPipeline(collection_name=academic_schedule_collection_name())
+    pipeline.indexer.collection_name = academic_schedule_collection_name()
+
+    documents = [
+        Document(
+            content="KIMYA BOLUMU LISANS PROGRAMI 2024-2025 DERSIN KODU DERSIN ADI AKTS",
+            metadata={"source": "2024_2025_lisans.pdf"},
+        ),
+        Document(
+            content="MUHENDISLIK BOLUMU 2025-2026 BAHAR HAFTALIK DERS PROGRAMI Pazartesi 08:15-09:00",
+            metadata={"source": "haftalik_program.pdf"},
+        ),
+    ]
+
+    filtered = pipeline._filter_documents_for_collection(documents)
+
+    assert [doc.metadata["source"] for doc in filtered] == ["haftalik_program.pdf"]
+
+
 class TestDocument:
     """Document dataclass testleri."""
 
@@ -185,6 +206,13 @@ class TestTextPreprocessor:
         assert "Sayfa 1" not in result
         assert "İçerik burada" in result
 
+    def test_preserve_standalone_numeric_content_line(self):
+        """Tek başına sayı içeren anlamlı satırlar korunur."""
+        preprocessor = TextPreprocessor()
+        text = "MADDE\n5\nDevam zorunluluğu vardır."
+        result = preprocessor.clean(text)
+        assert "\n5\n" in f"\n{result}\n"
+
     def test_remove_repeated_headers(self):
         """Tekrarlanan header/footer satırları kaldırılır."""
         preprocessor = TextPreprocessor()
@@ -197,6 +225,23 @@ class TestTextPreprocessor:
         ])
         result = preprocessor.clean(text)
         assert result.count(header) == 0  # 4 kez → header kabul edilerek kaldırıldı
+
+    def test_preserve_repeated_sentence_content(self):
+        """Tekrarlayan gerçek içerik cümleleri korunur."""
+        preprocessor = TextPreprocessor()
+        repeated_sentence = "Devam zorunluluğu öğrencinin sorumluluğundadır."
+        text = "\n".join([
+            repeated_sentence,
+            "İçerik 1",
+            "",
+            repeated_sentence,
+            "İçerik 2",
+            "",
+            repeated_sentence,
+            "İçerik 3",
+        ])
+        result = preprocessor.clean(text)
+        assert result.count(repeated_sentence) == 3
 
     def test_empty_input(self):
         """Boş girdi boş string döndürür."""

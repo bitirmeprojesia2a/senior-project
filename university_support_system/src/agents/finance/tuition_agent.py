@@ -120,7 +120,8 @@ class TuitionAgent(BaseSpecialistAgent):
                     "Dogru ucreti paylasabilmem icin Turk ogrenci misiniz, "
                     "uluslararasi ogrenci misiniz? Mumkunse fakulte veya bolum bilginizi de ekleyin."
                 ),
-                success=True,
+                generation_mode="kural",
+                success=False,
                 error="student_type_context_required",
             )
 
@@ -136,6 +137,7 @@ class TuitionAgent(BaseSpecialistAgent):
                         department=self.department,
                         answer=build_catalog_fee_answer(query_text, catalog_entry),
                         db_data=catalog_entry,
+                        generation_mode="vt",
                         success=True,
                     )
                 return DepartmentResponse(
@@ -145,7 +147,8 @@ class TuitionAgent(BaseSpecialistAgent):
                         f"{'Turk ogrenci' if requested_type == 'domestic' else 'uluslararasi ogrenci'} "
                         "icin ogrenim ucreti veritabaninda bulunmuyor."
                     ),
-                    success=True,
+                    generation_mode="kural",
+                    success=False,
                     error="tuition_catalog_missing",
                 )
 

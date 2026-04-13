@@ -21,7 +21,7 @@ Slack, dis HTTP A2A genisletmeleri ve daha ileri dagitim katmanlari halen gelist
 - Announcement kisa yolu: duyuru sorgularini gereksiz akademik retrieval'a sokmadan ayri ele alma
 - Conversation memory: context id uzerinden follow-up cozumleme ve kaynak/topic hint kullanimi
 - Profile/auth akisi: OTP isteme, dogrulama, session resolve ve logout endpoint'leri
-- Telemetry: query log, ajan gorevleri ve orchestrator seviyesinde gozlenebilirlik
+- Telemetry: kisa preview ve yapisal metadata uzerinden query log / ajan gorevi gozlenebilirligi
 - Demo ve benchmark scriptleri: showcase, follow-up ve profile context senaryolari
 - Docker tabanli lokal kurulum ve Azure VM runbook'u
 
@@ -34,7 +34,7 @@ Kullanici / istemci
 FastAPI giris katmani
   - /query
   - /auth/*
-  - /a2a/dispatch
+  - internal /a2a/dispatch
     |
     v
 Query / auth / profile helper akislari
@@ -136,6 +136,7 @@ Not:
 
 - `seed_curriculum_data` `courses` ve `course_prerequisites` tablolarini doldurur.
 - `seed_synthetic_data` `course_registration_periods`, `tuition_fee_catalog`, `students`, `tuition`, `payments`, `installments`, `scholarships`, `announcements` ve `office_contacts` tablolarini demo verilerle doldurur.
+- `seed_synthetic_data` sirasinda `office_contacts tablosu bulunamadi` benzeri bir hata gorurseniz once `python -m alembic upgrade head` calistirin, sonra seed komutunu tekrar deneyin.
 - Duyuru ve iletisim kayitlari demo amaclidir; gercek ortama gecerken gercek kaynaklarla degistirilmelidir.
 
 ### 6. Departman indeksleme
@@ -143,7 +144,36 @@ Not:
 ```powershell
 python scripts/index_documents.py --source data/raw/student_affairs --collection student_affairs_docs --reindex
 python scripts/index_documents.py --source data/raw/academic_programs --collection academic_programs_docs --reindex
+python scripts/index_documents.py --source data/raw/academic_programs/ders_programlari --collection academic_schedules_docs --reindex
 python scripts/index_documents.py --source data/raw/finance --collection finance_docs --reindex
+```
+
+Not: indeksleyici su anda `pdf`, `txt` ve `docx` dosyalarini okur. `doc` ve `xlsx`
+dosyalari loglanir ama indekslenmez.
+Ana `academic_programs_docs` indekslemesinde `ders_programlari` alt klasoru otomatik olarak
+haric tutulur; schedule belgeleri ayri `academic_schedules_docs` koleksiyonuna gitmelidir.
+Yapisal schedule verisi gerekiyorsa `course_schedule_slots` tablosu
+ayri ETL ile beslenmelidir. Ilk adim olarak yerel PDF timetable belgeleri icin:
+
+```powershell
+python scripts/ingest_schedule_slots.py --source data/raw/academic_programs/ders_programlari --dry-run
+python scripts/ingest_schedule_slots.py --source data/raw/academic_programs/ders_programlari
+python scripts/ingest_schedule_slots.py --html-url "https://example.edu/schedule.html" --html-source-name "schedule.html" --dry-run
+```
+
+Bu ETL muhafazakar davranir; gun ve saat bilgisi net olmayan tablolari atlar.
+HTML/tablo kaynakli gelecek akislarda Scrapling ayni tabloyu
+beslemek icin ikinci adapter katmani olarak kullanilabilir. Bu yol opsiyoneldir
+ve yalnizca `scrapling` paketi kuruluysa kullanilir.
+`course_schedule_slots` doldugunda `hangi saatte`, `hangi gun` ve `derslik`
+tipindeki daha net schedule sorulari artik bu yapisal veriyle cevaplanabilir.
+`academic_schedules_docs` indekslemesinde haftalik program olmayan katalog/mufredat
+PDF'leri de otomatik olarak haric tutulur.
+
+Audit icin:
+
+```powershell
+python scripts/audit_document_corpus.py
 ```
 
 ### 7. API'yi calistirma
@@ -158,7 +188,123 @@ Kontrol icin:
 - `GET /health`
 - `GET /docs`
 
+Not:
+
+- `/a2a/dispatch` uygulama ici/internal kullanim icindir; public entegrasyon giris noktasi olarak dusunulmemelidir.
+- `/auth/resolve` session token ile kullanilabilir; sadece `slack_user_id` ile cozumleme internal/trusted cagrilar icin uygundur.
+- Gelistirme sirasinda otomatik yeniden yukleme isterseniz `--reload` kullanabilirsiniz:
+
+```powershell
+uvicorn src.api.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+- Hemen kontrol icin PowerShell ornekleri:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/
+Invoke-RestMethod http://127.0.0.1:8000/health
+```
+
 Detayli kurulum ve sorun giderme icin [docs/KURULUM_VE_CALISTIRMA.md](docs/KURULUM_VE_CALISTIRMA.md) dosyasini kullanin.
+
+## Testler
+
+Projede testleri amaca gore ayirmak daha sagliklidir; `tests/` klasoru icinde
+hem gercek pytest suite'leri hem de benchmark/livetest cikti artefaktlari vardir.
+JSON ve Markdown rapor dosyalari pytest tarafindan kosulan testler degildir.
+
+### Unit / normal testler
+
+Mock bagimliliklarla hizli calisan ana test grubu:
+
+```powershell
+python -m pytest tests/unit -m "not api and not followup" -v --tb=short
+```
+
+Tum unit testleri:
+
+```powershell
+python -m pytest tests/unit -v --tb=short
+```
+
+### API testleri
+
+FastAPI endpoint'lerini `TestClient` ve mock servislerle dogrular:
+
+```powershell
+python -m pytest tests/unit/test_api.py -v --tb=short
+python -m pytest -m api -v --tb=short
+```
+
+Bu testler `uvicorn` gerektirmez.
+
+### Follow-up / conversation testleri
+
+Konusma baglami, follow-up cozumleme ve memory davranisini hedefler:
+
+```powershell
+python -m pytest tests/unit/test_conversation_context.py -v --tb=short
+python -m pytest -m followup -v --tb=short
+```
+
+Bu grup ozellikle su davranislari korur:
+
+- kisa ama bagimsiz sorgularin follow-up'a zorlanmamasi
+- konu degisince stale context'in yeni soruya yapismamasi
+- canonical memory cevabinin presentation eklerinden arinmis kalmasi
+
+### Orchestrator ve ajan testleri
+
+```powershell
+python -m pytest tests/unit/test_orchestrators.py -v --tb=short
+python -m pytest tests/unit/test_all_agents.py -v --tb=short
+python -m pytest tests/unit/test_system_e2e.py -v --tb=short
+```
+
+Bunlar da normalde `uvicorn` istemez; mock bagimliliklarla kosarlar.
+
+### Integration / model testleri
+
+Bu grup ChromaDB, indekslenmis koleksiyonlar ve bazi senaryolarda gercek model cache'i ister:
+
+```powershell
+python -m pytest tests/integration -v --tb=short
+python -m pytest tests/integration -m smoke -v --tb=short
+python -m pytest tests/integration -m model -v --tb=short
+python -m pytest tests/integration -m slow -v --tb=short
+```
+
+Bu grup sunucu acik olmadan kosabilir ama lokal servisler ve indekslenmis veri ister.
+
+### Sik kullanilan tekil test komutlari
+
+```powershell
+python -m pytest tests/unit/test_conversation_context.py -v --tb=short
+python -m pytest tests/unit/test_api.py -v --tb=short
+python -m pytest tests/unit/test_orchestrators.py -v --tb=short
+python -m pytest tests/unit/test_router.py -v --tb=short
+python -m pytest tests/unit/test_retriever.py -v --tb=short
+python -m pytest tests/unit/test_reranker.py -v --tb=short
+```
+
+### Benchmark ve demo scriptleri
+
+Bunlar pytest degildir; `tests/` altinda sonuc JSON'lari uretir:
+
+```powershell
+python scripts/live_question_test.py --benchmark demo_showcase_stable_turk
+python scripts/run_quality_benchmark.py
+```
+
+API uzerinden benchmark denemek isterseniz:
+
+```powershell
+python scripts/live_question_test.py --benchmark demo_showcase_stable_turk --use-api
+```
+
+Sunucu calistirma, manuel endpoint denemeleri ve daha ayrintili test siniflandirmasi icin
+[docs/KURULUM_VE_CALISTIRMA.md](docs/KURULUM_VE_CALISTIRMA.md) dosyasindaki
+`Sunucuyu Calistirma ve Kontrol Etme` ve `Test ve Benchmark Komutlari` bolumlerine bakin.
 
 ## Proje Yapisi
 

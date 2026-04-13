@@ -122,8 +122,6 @@ class ProfileContextService:
             row = result.scalar_one_or_none()
             if row is None:
                 return None
-            row.last_seen_at = self._now_provider()
-            await session.flush()
             return self._to_data(row)
 
     async def upsert_profile(
@@ -164,7 +162,10 @@ class ProfileContextService:
                 row.student_number = student_number or row.student_number
                 row.department = department
                 row.faculty = faculty
-                row.student_type = student_type or row.student_type
+                if is_verified:
+                    row.student_type = student_type
+                else:
+                    row.student_type = student_type or row.student_type
                 row.student_db_id = student_db_id or row.student_db_id
                 row.is_verified = row.is_verified or is_verified
                 row.last_seen_at = self._now_provider()

@@ -11,6 +11,7 @@ from src.agents.announcement import AnnouncementAgent
 from src.core.config import settings
 from src.core.messages import CONTACT_SUGGESTION
 from src.core.profiling import get_current_profiler, profile_stage
+from src.core.text_normalization import normalize_text
 from src.db.conversation_context import ConversationContextService, ConversationResolution
 from src.db.schemas import DepartmentResponse, UserQueryResponse
 from src.db.telemetry import TelemetryService, build_main_orchestrator_identity
@@ -39,12 +40,22 @@ from src.orchestrators.synthesis_utils import (
 from src.orchestrators.user_response_builders import (
     build_clarification_user_response,
     build_final_user_response,
+    build_memory_answer,
 )
 from src.routing import DepartmentRouter
 
 _GLOBAL_SYNTHESIS_TIMEOUT_SECONDS = settings.llm.global_synthesis_timeout_seconds
 
 logger = logging.getLogger(__name__)
+
+_ACK_ONLY_RESPONSES = {
+    "tesekkur": "Rica ederim. Baska bir sorunuz olursa yazabilirsiniz.",
+    "sagol": "Rica ederim. Baska bir sorunuz olursa yazabilirsiniz.",
+    "evet": "Hazirim. Devam etmemi istediginiz konuyu biraz daha acik yazabilirsiniz.",
+    "tamam": "Hazirim. Devam etmemi istediginiz konuyu biraz daha acik yazabilirsiniz.",
+    "anladim": "Hazirim. Devam etmemi istediginiz konuyu biraz daha acik yazabilirsiniz.",
+    "hayir": "Tamam. Farkli bir konuda yardim isterseniz yazabilirsiniz.",
+}
 
 
 class MainOrchestrator:
@@ -68,6 +79,21 @@ class MainOrchestrator:
         self.announcement_agent = announcement_agent or AnnouncementAgent()
         self.llm_service = llm_service or LLMService()
         self.conversation_service = conversation_service
+
+    @staticmethod
+    def _resolve_acknowledgement_message(query: str) -> str | None:
+        normalized = normalize_text(query).strip(" \t\r\n.,!?;:")
+        if not normalized:
+            return None
+        if normalized in {"tesekkurler", "tesekkur ederim", "tesekkur ederiz"}:
+            return _ACK_ONLY_RESPONSES["tesekkur"]
+        if normalized in {"sagol", "sag olun", "sagolun"}:
+            return _ACK_ONLY_RESPONSES["sagol"]
+        if normalized in {"evet", "tamam", "tamamdir", "ok", "anladim"}:
+            return _ACK_ONLY_RESPONSES["tamam" if normalized != "evet" else "evet"]
+        if normalized == "hayir":
+            return _ACK_ONLY_RESPONSES["hayir"]
+        return None
 
     async def handle_query(
         self,
@@ -138,6 +164,16 @@ class MainOrchestrator:
                             full_name=student_full_name,
                         )
 
+                acknowledgement_message = self._resolve_acknowledgement_message(query)
+                if acknowledgement_message is not None and not conversation_resolution.is_follow_up:
+                    response_time_ms = round((perf_counter() - start_time) * 1000, 2)
+                    return build_clarification_user_response(
+                        context_id=context_id,
+                        message=acknowledgement_message,
+                        response_time_ms=response_time_ms,
+                        full_name=student_full_name,
+                    )
+
                 effective_query = conversation_resolution.effective_query
                 with profile_stage("main.router.route"):
                     routing = await self.router.route(
@@ -191,6 +227,7 @@ class MainOrchestrator:
                                 query_log_id=query_log_id,
                                 routing_reasoning=routing.reasoning,
                                 task_type=routing.task_type,
+                                faculty=student_faculty,
                             )
                     return self._build_clarification_response(
                         context_id=context_id,
@@ -276,6 +313,7 @@ class MainOrchestrator:
                             routing_reason=routing.reasoning,
                             query_log_id=query_log_id,
                             task_type=routing.task_type,
+                            faculty=student_faculty,
                         )
                         responses.append(fallback)
                 else:
@@ -293,6 +331,8 @@ class MainOrchestrator:
                                 departments=[
                                     department.value for department in routing.departments
                                 ],
+                                faculty=student_faculty,
+                                allow_latest_fallback=False,
                             )
                     if announcement_response is not None and announcement_response.sources:
                         responses.append(announcement_response)
@@ -304,11 +344,12 @@ class MainOrchestrator:
                     )
 
                 with profile_stage("main.compose_response"):
-                    answer = await self._compose_final_answer(
+                    answer, used_global_synthesis = await self._compose_final_answer(
                         query=effective_query,
                         responses=filtered_responses,
                         llm_profile=llm_profile,
                     )
+                    memory_answer = build_memory_answer(answer=answer)
                     final_response = self._build_user_query_response(
                         answer=answer,
                         responses=filtered_responses,
@@ -316,11 +357,12 @@ class MainOrchestrator:
                         context_id=context_id,
                         start_time=start_time,
                         student_full_name=student_full_name,
+                        used_global_synthesis=used_global_synthesis,
                     )
                 with profile_stage("main.telemetry.finalize_success"):
                     await self.telemetry_service.finalize_query_log(
                         query_log_id=query_log_id,
-                        response_text=final_response.answer,
+                        response_text=memory_answer,
                         response_time_ms=final_response.response_time_ms,
                         status="completed",
                         departments=final_response.departments_involved,
@@ -331,6 +373,7 @@ class MainOrchestrator:
                             context_id=context_id,
                             original_query=query,
                             resolved_query=effective_query,
+                            memory_answer=memory_answer,
                             final_response=final_response,
                             routing_task_type=routing.task_type,
                             conversation_resolution=conversation_resolution,
@@ -353,6 +396,7 @@ class MainOrchestrator:
         context_id: str,
         original_query: str,
         resolved_query: str,
+        memory_answer: str,
         final_response: UserQueryResponse,
         routing_task_type,
         conversation_resolution: ConversationResolution,
@@ -365,7 +409,7 @@ class MainOrchestrator:
                 context_id=context_id,
                 user_query=original_query,
                 resolved_query=resolved_query,
-                assistant_answer=final_response.answer,
+                assistant_answer=memory_answer,
                 departments=final_response.departments_involved,
                 sources=final_response.sources,
                 is_follow_up=conversation_resolution.is_follow_up,
@@ -409,6 +453,7 @@ class MainOrchestrator:
         context_id: str,
         start_time: float,
         student_full_name: str | None,
+        used_global_synthesis: bool = False,
     ) -> UserQueryResponse:
         """Build the final user-facing response payload."""
         response_time_ms = round((perf_counter() - start_time) * 1000, 2)
@@ -419,6 +464,7 @@ class MainOrchestrator:
             context_id=context_id,
             response_time_ms=response_time_ms,
             student_full_name=student_full_name,
+            used_global_synthesis=used_global_synthesis,
         )
 
     def _schedule_query_log_finalization(
@@ -451,9 +497,9 @@ class MainOrchestrator:
         query: str,
         responses: list[DepartmentResponse],
         llm_profile: str | None = None,
-    ) -> str:
+    ) -> tuple[str, bool]:
         if not should_use_global_synthesis(query=query, responses=responses):
-            return self._compose_answers(responses)
+            return self._compose_answers(responses), False
 
         synthesized = await self._synthesize_department_answers(
             query=query,
@@ -461,11 +507,11 @@ class MainOrchestrator:
             llm_profile=llm_profile,
         )
         if not synthesized:
-            return self._compose_answers(responses)
+            return self._compose_answers(responses), False
 
         if responses_need_contact_suggestion(responses):
             synthesized += CONTACT_SUGGESTION
-        return synthesized
+        return synthesized, True
 
     async def _synthesize_department_answers(
         self,

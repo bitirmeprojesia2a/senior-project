@@ -82,24 +82,31 @@ async def dispatch_to_departments(
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         responses: list[DepartmentResponse] = []
+        had_branch_failure = False
         for orchestrator, result in zip(orchestrators, results, strict=False):
             if not isinstance(result, Exception):
                 parsed = extract_department_response(result)
                 if parsed is not None:
                     responses.append(parsed)
                     continue
+                had_branch_failure = True
                 logger.error(
                     "department_branch_invalid_response department=%s query=%r",
                     orchestrator.department.value,
                     query,
                 )
                 continue
+            had_branch_failure = True
             logger.error(
                 "department_branch_failed department=%s query=%r error=%s",
                 orchestrator.department.value,
                 query,
                 result,
                 exc_info=(type(result), result, result.__traceback__),
+            )
+        if not responses and had_branch_failure:
+            raise RuntimeError(
+                "Secili departman ajanlarindan gecerli yanit alinamadi."
             )
         return responses
 

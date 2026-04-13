@@ -5,6 +5,7 @@ BM25 tokenizer, deduplication, source relevance ve HybridRetriever mantığını
 Ağır bağımlılıklar (ChromaDB, Embedder, CrossEncoder) mock'lanır.
 """
 
+import time
 from unittest.mock import MagicMock, patch, call
 
 import pytest
@@ -192,28 +193,7 @@ class TestDeduplicationLogic:
 
     def _run_dedup(self, raw_docs):
         """Retriever'daki dedup mantığını simüle eder."""
-        candidates = []
-        seen_contents = {}
-
-        for doc in raw_docs:
-            content = doc.page_content
-            content_key = content[:200]
-            sim_score = doc.metadata.get("similarity_score", 0.0)
-
-            if content_key in seen_contents:
-                idx = seen_contents[content_key]
-                if sim_score > candidates[idx]["score"]:
-                    candidates[idx]["score"] = sim_score
-                continue
-
-            seen_contents[content_key] = len(candidates)
-            candidates.append({
-                "content": content,
-                "source": doc.metadata.get("source", "bilinmiyor"),
-                "score": sim_score,
-            })
-
-        return candidates
+        return deduplicate_documents(raw_docs)
 
     def test_dedup_removes_duplicate(self):
         docs = [
@@ -250,6 +230,34 @@ class TestDeduplicationLogic:
     def test_dedup_empty_list(self):
         assert self._run_dedup([]) == []
 
+    def test_dedup_keeps_distinct_chunk_identities_with_same_content(self):
+        docs = [
+            Document(
+                page_content="MADDE 5 - Basvuru kosullari",
+                metadata={
+                    "source": "yonerge.pdf",
+                    "similarity_score": 0.51,
+                    "chunk_index": 10,
+                    "sub_chunk": "1/2",
+                    "madde_no": "5",
+                },
+            ),
+            Document(
+                page_content="MADDE 5 - Basvuru kosullari",
+                metadata={
+                    "source": "yonerge.pdf",
+                    "similarity_score": 0.73,
+                    "chunk_index": 11,
+                    "sub_chunk": "2/2",
+                    "madde_no": "5",
+                },
+            ),
+        ]
+
+        results = self._run_dedup(docs)
+
+        assert len(results) == 2
+
     def test_dedup_preserves_score_metadata(self):
         docs = [
             Document(
@@ -277,6 +285,25 @@ class TestQueryCache:
         data = [{"content": "test", "score": 0.9}]
         cache.put("key1", data)
         assert cache.get("key1") == data
+
+    def test_put_stores_copy_of_input(self):
+        cache = _QueryCache(ttl=300)
+        data = [{"content": "test", "metadata": {"score": 0.9}}]
+
+        cache.put("key1", data)
+        data[0]["metadata"]["score"] = 0.1
+
+        assert cache.get("key1")[0]["metadata"]["score"] == 0.9
+
+    def test_get_returns_copy_of_cached_results(self):
+        cache = _QueryCache(ttl=300)
+        cache.put("key1", [{"content": "test", "metadata": {"score": 0.9}}])
+
+        first_read = cache.get("key1")
+        first_read[0]["metadata"]["score"] = 0.1
+
+        second_read = cache.get("key1")
+        assert second_read[0]["metadata"]["score"] == 0.9
 
     def test_miss_returns_none(self):
         cache = _QueryCache(ttl=300)
@@ -574,13 +601,55 @@ class TestHybridRetrieverDepartmentSearch:
         assert enriched[0]["score"] == 0.84
 
 
+class TestHybridRetrieverScoreThresholds:
+    """Score-type bazli final filtreleme davranisini korur."""
+
+    def test_finalize_results_uses_stricter_threshold_for_reranker_scores(self):
+        retriever = object.__new__(HybridRetriever)
+        retriever.min_score = 0.05
+        retriever._cache = _QueryCache(ttl=300)
+
+        finalized = HybridRetriever._finalize_results(
+            retriever,
+            query="merhaba dunya",
+            query_type="general",
+            results=[
+                {
+                    "content": "Retrieval ile bulunan kabul edilebilir sonuc",
+                    "source": "retrieval.pdf",
+                    "score": 0.06,
+                    "metadata": {"score_type": "retrieval"},
+                },
+                {
+                    "content": "Reranker skoru esik altinda sonuc",
+                    "source": "weak_reranker.pdf",
+                    "score": 0.22,
+                    "metadata": {"score_type": "reranker"},
+                },
+                {
+                    "content": "Reranker skoru kabul edilebilir sonuc",
+                    "source": "strong_reranker.pdf",
+                    "score": 0.24,
+                    "metadata": {"score_type": "reranker"},
+                },
+            ],
+            cache_key="threshold-test",
+            start_time=time.perf_counter(),
+        )
+
+        assert [item["source"] for item in finalized] == [
+            "retrieval.pdf",
+            "strong_reranker.pdf",
+        ]
+
+
 class TestDepartmentPlanningFallbacks:
     """Retriever fallback planlama testleri."""
 
     def test_plan_search_departments_without_signal(self):
         primary, fallback = _plan_search_departments("Merhaba bugün nasılsın?")
-        assert primary == list(Department)
-        assert fallback == []
+        assert primary == [Department.STUDENT_AFFAIRS]
+        assert fallback == [Department.ACADEMIC_PROGRAMS, Department.FINANCE]
 
     def test_plan_search_departments_with_close_scores(self):
         primary, fallback = _plan_search_departments("ÇAP ve yatay geçiş koşulları nelerdir?")

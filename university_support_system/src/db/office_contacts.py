@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from time import monotonic
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from src.core.constants import Department
 from src.db.connection import get_session
@@ -15,6 +16,10 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+
+_OFFICE_CONTACTS_MISSING_RECHECK_SECONDS = 300.0
+_office_contacts_table_available: bool | None = None
+_office_contacts_last_check_at: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -35,8 +40,17 @@ async def fetch_office_contacts(
     department: Department | str | None = None,
     agent_id: str | None = None,
     active_only: bool = True,
+    include_generic: bool = True,
 ) -> list[OfficeContactRecord]:
     """Departman veya ajan bazli ofis iletisim kayitlarini getirir."""
+    global _office_contacts_table_available, _office_contacts_last_check_at
+
+    now = monotonic()
+    if (
+        _office_contacts_table_available is False
+        and (now - _office_contacts_last_check_at) < _OFFICE_CONTACTS_MISSING_RECHECK_SECONDS
+    ):
+        return []
 
     try:
         async with get_session() as session:
@@ -49,14 +63,24 @@ async def fetch_office_contacts(
 
             result = await session.execute(query.order_by(OfficeContact.unit_name.asc(), OfficeContact.id.asc()))
             records = result.scalars().all()
-    except ProgrammingError:
-        logger.warning("office_contacts_table_missing_or_unavailable")
+            _office_contacts_table_available = True
+            _office_contacts_last_check_at = now
+    except (ProgrammingError, OperationalError):
+        should_log = _office_contacts_table_available is not False
+        _office_contacts_table_available = False
+        _office_contacts_last_check_at = now
+        if should_log:
+            logger.warning(
+                "office_contacts_table_missing_or_unavailable; contact suggestions disabled until schema is available"
+            )
         return []
 
     filtered: list[OfficeContactRecord] = []
     for record in records:
         related_agents = list(record.related_agents or [])
         if agent_id and related_agents and agent_id not in related_agents:
+            continue
+        if agent_id and not related_agents and not include_generic:
             continue
         filtered.append(
             OfficeContactRecord(

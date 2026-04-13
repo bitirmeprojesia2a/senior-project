@@ -12,7 +12,14 @@ import httpx
 import structlog
 from tqdm import tqdm
 
-from src.core.constants import Department, collection_name_for_department, normalize_department_value
+from src.core.constants import (
+    Department,
+    academic_schedule_collection_name,
+    collection_name_for_department,
+    normalize_department_value,
+)
+from src.core.constants import ACADEMIC_PRIMARY_EXCLUDED_SUBDIRECTORIES
+from src.db.schedule_ingest import classify_schedule_document
 from src.rag.chunker import Chunk, TextChunker
 from src.rag.document_loader import Document, DocumentLoader
 from src.rag.embedder import Embedder
@@ -105,7 +112,14 @@ class IndexingPipeline:
     def _load_documents(self, source_dir: Path) -> list[Document]:
         """Load raw source documents from disk."""
         print("\n[1/5] Dosyalar yukleniyor...")
-        documents = self.loader.load_directory(source_dir)
+        excluded_subdirectories = self._excluded_subdirectories_for_source(source_dir)
+        if excluded_subdirectories:
+            print(f"   Not: su alt klasorler ana koleksiyondan hariç tutuluyor: {', '.join(excluded_subdirectories)}")
+        documents = self.loader.load_directory(
+            source_dir,
+            exclude_subdirectories=excluded_subdirectories,
+        )
+        documents = self._filter_documents_for_collection(documents)
         print(f"   OK: {len(documents)} dosya yuklendi")
         return documents
 
@@ -223,6 +237,41 @@ class IndexingPipeline:
         department = self._detect_department_from_source_dir(source_dir)
         return collection_name_for_department(department)
 
+    def _excluded_subdirectories_for_source(self, source_dir: Path) -> tuple[str, ...]:
+        """Return subdirectories that should stay out of the current collection."""
+        if (
+            self.indexer.collection_name == collection_name_for_department(Department.ACADEMIC_PROGRAMS)
+            and normalize_department_value(source_dir.name) == Department.ACADEMIC_PROGRAMS.value
+        ):
+            return ACADEMIC_PRIMARY_EXCLUDED_SUBDIRECTORIES
+        return ()
+
+    def _filter_documents_for_collection(self, documents: list[Document]) -> list[Document]:
+        """Apply collection-specific document filtering after load."""
+        if self.indexer.collection_name != academic_schedule_collection_name():
+            return documents
+
+        kept: list[Document] = []
+        skipped: list[str] = []
+        for doc in documents:
+            source_name = str(doc.metadata.get("source") or "")
+            classification = classify_schedule_document(source_name, doc.content[:4000])
+            if classification == "non_weekly_program":
+                skipped.append(source_name)
+                continue
+            kept.append(doc)
+
+        if skipped:
+            logger.info(
+                "schedule_non_weekly_documents_excluded",
+                collection=self.indexer.collection_name,
+                excluded_count=len(skipped),
+                excluded_sources=skipped[:20],
+            )
+            print(f"   Not: {len(skipped)} haftalik program olmayan belge schedule koleksiyonundan haric tutuldu")
+
+        return kept
+
     @staticmethod
     def _detect_department_from_source_dir(source_dir: Path) -> Department:
         """Infer the top-level department from the source directory."""
@@ -265,8 +314,12 @@ class IndexingPipeline:
         """Generate deterministic chunk ids from source and content."""
         ids: list[str] = []
         for index, text in enumerate(texts):
-            source = metadatas[index].get("source", "") if index < len(metadatas) else ""
-            raw = f"{source}::{text}"
+            metadata = metadatas[index] if index < len(metadatas) else {}
+            source = metadata.get("source", "")
+            chunk_index = metadata.get("chunk_index", "")
+            sub_chunk = metadata.get("sub_chunk", "")
+            madde_no = metadata.get("madde_no", "")
+            raw = f"{source}::{madde_no}::{chunk_index}::{sub_chunk}::{text}"
             digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
             ids.append(f"chunk_{digest}")
         return ids
@@ -281,7 +334,8 @@ class IndexingPipeline:
         try:
             registry_dir = Path(__file__).parent.parent.parent / "data" / "metadata"
             registry_dir.mkdir(parents=True, exist_ok=True)
-            registry_path = registry_dir / "doc_registry.json"
+            collection_slug = str(self.indexer.collection_name or "unknown_collection").strip()
+            registry_path = registry_dir / f"doc_registry_{collection_slug}.json"
 
             chunks_per_source: dict[str, int] = {}
             for chunk in chunks:

@@ -246,7 +246,37 @@ class LLMService:
 
     async def get_health(self) -> Dict[str, Any]:
         """Sistemin provider bazli saglik durumunu kontrol eder."""
-        model_map = settings.configured_llm_models()
+        def _provider_model_map(provider: str) -> Dict[str, Any]:
+            return {
+                "provider": provider,
+                "profile": settings.normalize_llm_profile(settings.llm.profile),
+                "primary": settings._resolve_provider_primary_model(provider),
+                "secondary": settings._resolve_provider_secondary_model(provider),
+                "routing": settings.resolve_llm_model(role="routing", provider=provider),
+                "conversation": settings.resolve_llm_model(role="conversation", provider=provider),
+                "specialist_synthesis": settings.resolve_llm_model(
+                    role="specialist_synthesis",
+                    provider=provider,
+                ),
+                "global_synthesis": settings.resolve_llm_model(
+                    role="global_synthesis",
+                    provider=provider,
+                ),
+            }
+
+        def _requested_models(model_map: Dict[str, Any]) -> list[str]:
+            keys = (
+                "primary",
+                "secondary",
+                "routing",
+                "conversation",
+                "specialist_synthesis",
+                "global_synthesis",
+            )
+            return list(dict.fromkeys(str(model_map[key]) for key in keys if model_map.get(key)))
+
+        ollama_model_map = _provider_model_map("ollama")
+        openai_model_map = _provider_model_map("openai_compatible")
         ollama_needed = "ollama" in {self.primary_provider, self.fallback_provider}
         openai_needed = "openai_compatible" in {self.primary_provider, self.fallback_provider}
 
@@ -254,26 +284,9 @@ class LLMService:
         openai_health: Dict[str, Any] | None = None
 
         if ollama_needed:
-            ollama_model_map = {
-                "primary": settings._resolve_provider_primary_model("ollama"),
-                "secondary": settings._resolve_provider_secondary_model("ollama"),
-                "routing": settings.resolve_llm_model(role="routing", provider="ollama"),
-                "conversation": settings.resolve_llm_model(role="conversation", provider="ollama"),
-                "specialist_synthesis": settings.resolve_llm_model(role="specialist_synthesis", provider="ollama"),
-                "global_synthesis": settings.resolve_llm_model(role="global_synthesis", provider="ollama"),
-            }
-            ollama_health = await self.ollama.get_health(
-                models=[
-                    ollama_model_map["primary"],
-                    ollama_model_map["secondary"],
-                    ollama_model_map["routing"],
-                    ollama_model_map["conversation"],
-                    ollama_model_map["specialist_synthesis"],
-                    ollama_model_map["global_synthesis"],
-                ]
-            )
+            ollama_health = await self.ollama.get_health(models=_requested_models(ollama_model_map))
         if openai_needed:
-            openai_health = await self.openai.get_health()
+            openai_health = await self.openai.get_health(models=_requested_models(openai_model_map))
 
         def _provider_health_payload(provider: str) -> Dict[str, Any]:
             if provider == "ollama":
@@ -286,7 +299,7 @@ class LLMService:
                     "name": "ollama",
                     "status": payload.get("status", "unhealthy"),
                     "model_loaded": payload.get("model_found", False),
-                    "configured_models": model_map,
+                    "configured_models": payload.get("configured_models", ollama_model_map),
                     "available_models": payload.get("available_models", []),
                     "configured_models_found": payload.get("configured_models_found", {}),
                 }
@@ -301,7 +314,9 @@ class LLMService:
                 "name": payload.get("provider", self.openai.provider_name),
                 "status": payload.get("status", "unhealthy"),
                 "model_loaded": payload.get("model_found", False),
-                "configured_models": model_map,
+                "configured_models": payload.get("configured_models", openai_model_map),
+                "available_models": payload.get("available_models", []),
+                "configured_models_found": payload.get("configured_models_found", {}),
                 "base_url": payload.get("base_url", self.openai.base_url),
             }
 

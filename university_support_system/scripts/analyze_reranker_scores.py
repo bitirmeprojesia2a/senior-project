@@ -1,7 +1,9 @@
 """
 Reranker Skor Dagilim Analizi
 
-Benchmark sorularini calistirarak reranker ham skorlarinin gercek dagilimini olcer.
+Benchmark sorularini calistirarak candidate pool + reranker skor dagilimini olcer.
+Bu script final retrieval pipeline'inin tum post-processing adimlarini tekrar etmez;
+ama reranker kalibrasyonu ve aday havuzu kalitesi icin guclu bir inceleme aracidir.
 Bu verilerle sigmoid kalibrasyon parametreleri ve esik degerleri belirlenir.
 
 Kullanim:
@@ -106,7 +108,7 @@ def analyze_single_query(
     department: str | None = None,
     top_k: int = 10,
 ) -> list[dict[str, Any]]:
-    """Tek bir sorgu icin retrieval + reranking yapip detayli skor bilgisi toplar."""
+    """Tek bir sorgu icin candidate pool + reranking skorlarini toplar."""
     primary_collections, fallback_collections = retriever._resolve_search_collections(
         query=query,
         department=department,
@@ -264,6 +266,7 @@ def generate_markdown_report(
         f"**Kalibrasyon:** shift={_CALIBRATION_SHIFT}, scale={_CALIBRATION_SCALE}",
         f"**Toplam Soru:** {len(query_results)}",
         f"**Toplam Skor Ornegi:** {len(all_raw_scores)}",
+        "**Kapsam:** Candidate pool + reranker analizi; final threshold/filtering adimlari buna dahil degildir.",
         "",
         "---",
         "",
@@ -379,7 +382,9 @@ def generate_markdown_report(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Reranker skor dagilim analizi")
+    parser = argparse.ArgumentParser(
+        description="Candidate pool + reranker skor dagilim analizi"
+    )
     parser.add_argument(
         "--profile",
         type=str,

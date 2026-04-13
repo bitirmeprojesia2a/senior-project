@@ -41,9 +41,14 @@ os.environ["SERVER_DEBUG"] = "true" if _verbose_argv else "false"
 
 from src.db.conversation_context import ConversationContextService
 from src.db.connection import init_engine
+from src.evaluation.key_fact_matching import check_key_facts
 from src.orchestrators.main import MainOrchestrator
 from src.core.profiling import QueryProfiler, activate_profiler
 from src.api.main import app as api_app
+from src.orchestrators.response_utils import (
+    LOW_CONFIDENCE_RERANKER_SCORE_THRESHOLD,
+    LOW_CONFIDENCE_RETRIEVAL_SCORE_THRESHOLD,
+)
 from httpx import ASGITransport, AsyncClient
 
 BENCHMARK_FILE = Path(__file__).resolve().with_name("reranker_quality_benchmark.json")
@@ -99,8 +104,14 @@ def _load_benchmark() -> dict:
     return json.loads(BENCHMARK_FILE.read_text(encoding="utf-8"))
 
 
-def _extract_generation_mode(answer: str) -> str:
-    """Yanit metninin sonundaki 'Uretim Turu:' satirindan mod bilgisini cikarir."""
+def _extract_generation_mode(answer: str, generation_modes: list[str] | None = None) -> str:
+    """Yapisal generation mode varsa onu, yoksa cevap metnini kullanir."""
+    if generation_modes:
+        lowered_modes = " ".join(generation_modes).lower()
+        for token in ("llm", "vt", "rag", "kural"):
+            if token in lowered_modes:
+                return token
+
     match = re.search(r"Uretim Turu:\s*\n(.*?)(?:\n\n|$)", answer, re.DOTALL)
     if not match:
         return "unknown"
@@ -125,16 +136,39 @@ def _extract_departments(answer: str, response_depts: list[str]) -> list[str]:
     return []
 
 
-def _check_key_facts(answer: str, expected_facts: list[str]) -> dict:
-    """Beklenen anahtar bilgilerin yanit icinde olup olmadigini kontrol eder."""
-    lowered = answer.casefold()
-    results = {}
-    for fact in expected_facts:
-        results[fact] = fact.casefold() in lowered
-    return results
+def _source_metadata(source) -> dict:
+    if isinstance(source, dict):
+        return dict(source.get("metadata") or {})
+    return dict(getattr(source, "metadata", {}) or {})
 
 
-def _quality_warnings(answer: str) -> list[str]:
+def _source_score(source) -> float:
+    if isinstance(source, dict):
+        return float(source.get("score", 0.0) or 0.0)
+    return float(getattr(source, "score", 0.0) or 0.0)
+
+
+def _source_low_confidence_threshold(source) -> float:
+    metadata = _source_metadata(source)
+    score_type = str(metadata.get("score_type", "retrieval")).strip().lower()
+    if score_type == "reranker":
+        return LOW_CONFIDENCE_RERANKER_SCORE_THRESHOLD
+    return LOW_CONFIDENCE_RETRIEVAL_SCORE_THRESHOLD
+
+
+def _all_sources_low_confidence(sources: list) -> bool:
+    if not sources:
+        return False
+    try:
+        return all(
+            _source_score(source) < _source_low_confidence_threshold(source)
+            for source in sources
+        )
+    except Exception:
+        return False
+
+
+def _quality_warnings(answer: str, *, sources: list | None = None) -> list[str]:
     warnings: list[str] = []
     lowered = answer.casefold()
     if any(p in lowered for p in _SUSPICIOUS_QUALITY_PATTERNS):
@@ -143,6 +177,8 @@ def _quality_warnings(answer: str) -> list[str]:
         warnings.append("yabanci_dil")
     if any(p in lowered for p in _ROLE_RECITATION_PATTERNS):
         warnings.append("rol_tekrari")
+    if _all_sources_low_confidence(sources or []):
+        warnings.append("zayif_kaynak_destegi")
     if len(answer.strip()) < 30:
         warnings.append("cok_kisa_yanit")
     return warnings
@@ -214,6 +250,7 @@ async def run_single_question(
                 response = SimpleNamespace(
                     answer=body.get("answer", ""),
                     departments_involved=body.get("departments_involved", []),
+                    generation_modes=body.get("generation_modes", []),
                     sources=body.get("sources", []),
                     response_time_ms=body.get("response_time_ms", 0.0),
                     query_id=body.get("query_id", context_id),
@@ -224,11 +261,14 @@ async def run_single_question(
 
         answer_text = response.answer
         actual_depts = list(response.departments_involved)
-        actual_mode = _extract_generation_mode(answer_text)
-        fact_check = _check_key_facts(answer_text, expected_facts)
+        actual_mode = _extract_generation_mode(
+            answer_text,
+            getattr(response, "generation_modes", []),
+        )
+        fact_check = check_key_facts(answer_text, expected_facts)
         facts_found = sum(1 for v in fact_check.values() if v)
         facts_total = len(expected_facts)
-        warnings = _quality_warnings(answer_text)
+        warnings = _quality_warnings(answer_text, sources=list(response.sources))
 
         dept_ok = _dept_match(actual_depts, expected_depts)
         mode_ok = _generation_mode_match(actual_mode, expected_mode)

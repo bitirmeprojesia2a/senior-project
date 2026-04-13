@@ -1,0 +1,186 @@
+{
+  "generated_at": "2026-04-12T19:55:29.611268+00:00",
+  "source_dir": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\academic_programs\\ders_programlari",
+  "total_documents": 22,
+  "total_chunks": 96,
+  "embedding_model": "BAAI/bge-m3",
+  "collection_name": "academic_schedules_docs",
+  "documents": [
+    {
+      "filename": "2025_2026_bahar_ders_programı_güncel_xlsx_ders_programı.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 3182,
+      "chunk_count": 4,
+      "content_hash": "c632f4400c7fdf2c"
+    },
+    {
+      "filename": "2025_2026_bahar_ders_programı_yeni.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 3388,
+      "chunk_count": 4,
+      "content_hash": "13f7a9e08d5bd7ce"
+    },
+    {
+      "filename": "2025_2026_bahar_dönemi_akıllı_sistemler_mühendisliği_abd_lisansüstü_ders.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 1259,
+      "chunk_count": 2,
+      "content_hash": "fdf7cfce03aa76ee"
+    },
+    {
+      "filename": "2025_2026_bahar_dönemi_ders_programı.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 1760,
+      "chunk_count": 2,
+      "content_hash": "f055f26af0e945a2"
+    },
+    {
+      "filename": "2025_2026_bahar_dönemi_endüstri_mühendisliği_abd_lisansüstü_ders_programı_docx.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 763,
+      "chunk_count": 1,
+      "content_hash": "276fdc255d2c946e"
+    },
+    {
+      "filename": "2025_2026_bahar_dönemi_lisansüstü_program_doktora_güncel.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 1000,
+      "chunk_count": 1,
+      "content_hash": "06f86f2e8a3c7f81"
+    },
+    {
+      "filename": "2025_2026_bahar_dönemi_lisansüstü_program_yüksek_lisans.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 1155,
+      "chunk_count": 2,
+      "content_hash": "3144fbe2b324f940"
+    },
+    {
+      "filename": "2025_2026_bahar_inşaat_ders_programi_r0.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 3435,
+      "chunk_count": 4,
+      "content_hash": "2330c7e187369dce"
+    },
+    {
+      "filename": "2025_2026_bahar_yarıyılı_lisansüstü_ders_programı.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 3174,
+      "chunk_count": 4,
+      "content_hash": "73e1103f92638eed"
+    },
+    {
+      "filename": "2025_2026_eem_bahar_ders_programı.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 6403,
+      "chunk_count": 7,
+      "content_hash": "f9cf90e2e8fa9084"
+    },
+    {
+      "filename": "2526baharbiyolojidp.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 2690,
+      "chunk_count": 4,
+      "content_hash": "99d9c149e44949d2"
+    },
+    {
+      "filename": "2526baharfengüncel.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 4372,
+      "chunk_count": 7,
+      "content_hash": "1b71c9f1cc2da2fd"
+    },
+    {
+      "filename": "2526baharfizikson.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 2637,
+      "chunk_count": 4,
+      "content_hash": "3d3e9e4c8e65dce2"
+    },
+    {
+      "filename": "2526baharilkmatsonnn.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 3989,
+      "chunk_count": 6,
+      "content_hash": "37aa92d332876764"
+    },
+    {
+      "filename": "2526baharmat.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 2669,
+      "chunk_count": 4,
+      "content_hash": "aecee4851d437ed0"
+    },
+    {
+      "filename": "25_26_bahar_sınıf_eğt_ders_prog.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 5179,
+      "chunk_count": 6,
+      "content_hash": "5db7f0afac1a170e"
+    },
+    {
+      "filename": "dersprogrami30012026.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 1262,
+      "chunk_count": 2,
+      "content_hash": "7001b02bb85cb267"
+    },
+    {
+      "filename": "fizik_lisans_haftalık_ders_programı_18.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 5728,
+      "chunk_count": 7,
+      "content_hash": "d3aaf867623ea825"
+    },
+    {
+      "filename": "kimya_mühendisliği_bölümü_2025_2026_bahar_yarıyılı_lisansüstü_ders_programı.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 1973,
+      "chunk_count": 3,
+      "content_hash": "da4ca3bd37adc0ab"
+    },
+    {
+      "filename": "lisans_pedagojik_formasyon_ders_programı.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 778,
+      "chunk_count": 1,
+      "content_hash": "4c03a48a932d4af0"
+    },
+    {
+      "filename": "lisansüstü_2025_26_bahar_ders_prog.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 13520,
+      "chunk_count": 16,
+      "content_hash": "483614d081bbad59"
+    },
+    {
+      "filename": "okl_lisans_01_29_26.pdf",
+      "category": "ders_programlari",
+      "file_type": "pdf",
+      "char_count": 4673,
+      "chunk_count": 5,
+      "content_hash": "2fd91c647e6f4177"
+    }
+  ]
+}

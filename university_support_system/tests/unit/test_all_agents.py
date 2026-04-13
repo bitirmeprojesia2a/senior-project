@@ -275,9 +275,14 @@ class TestLLMBypassMechanism:
 
     @pytest.mark.asyncio
     async def test_specialist_llm_prompt_limits_source_chunk_only_in_prompt(self):
+        long_content = (
+            "Madde 5 - CAP basvuru, kabul ve kayit kosullari soyledir. "
+            + ("Basvuru kosulu ayrintisi " * 140)
+            + "SON-BOLUM-TAM-METIN"
+        )
         kwargs = _agent_kwargs()
         kwargs["retriever_factory"] = _mock_retriever_factory(
-            content=_VERY_LONG_SOURCE_CONTENT, score=0.20,
+            content=long_content, score=0.20,
         )
         llm = kwargs["llm_service"]
 
@@ -443,6 +448,7 @@ class TestGraduationAgent:
         assert response.success is True
         assert "GNO: 3.10" in response.answer
         assert "BIL400" in response.answer
+        assert "tam transkript yerine gecmez" in response.answer
 
     @pytest.mark.asyncio
     async def test_personal_query_requires_auth(self):
@@ -618,6 +624,54 @@ class TestCurriculumAgent:
 
         response = await agent.handle_task(
             _task("Bu donem hangi dersler acik?", student_department="Bilgisayar Muhendisligi")
+        )
+
+        assert response.success is True
+
+    @pytest.mark.asyncio
+    async def test_precise_schedule_query_prefers_structured_schedule_rows(self):
+        schedule_rows = [
+            {
+                "course_code": "BIL309",
+                "course_key": "bil309",
+                "course_name": "Yazilim Mimarisi",
+                "schedule_group": "3. SINIF",
+                "section": None,
+                "day_of_week": "Pazartesi",
+                "start_time": "08:15:00",
+                "end_time": "09:00:00",
+                "classroom": "D101",
+                "instructor": "Dr. A",
+            }
+        ]
+        agent = CurriculumAgent(
+            prerequisite_fetcher=AsyncMock(return_value=None),
+            period_fetcher=AsyncMock(return_value=None),
+            schedule_course_fetcher=AsyncMock(return_value=schedule_rows),
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(
+            _task("BIL309 dersi hangi saatte?", student_department="Bilgisayar Muhendisligi")
+        )
+
+        assert response.success is True
+        assert "BIL309 dersi icin bulunan ders programi satirlari" in response.answer
+        assert "Pazartesi 08:15:00-09:00:00" in response.answer
+        assert "Derslik: D101" in response.answer
+
+    @pytest.mark.asyncio
+    async def test_generic_schedule_query_still_falls_through_to_rag(self):
+        agent = CurriculumAgent(
+            prerequisite_fetcher=AsyncMock(return_value=None),
+            period_fetcher=AsyncMock(return_value=None),
+            schedule_course_fetcher=AsyncMock(return_value=[]),
+            schedule_department_fetcher=AsyncMock(return_value=[]),
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(
+            _task("Bilgisayar Muhendisligi ders programi nerede?", student_department="Bilgisayar Muhendisligi")
         )
 
         assert response.success is True
@@ -813,7 +867,9 @@ class TestTuitionAgent:
             _task("Harc ucretleri ne kadar?")
         )
 
-        assert response.success is True
+        assert response.success is False
+        assert response.error == "student_type_context_required"
+        assert "ogrenci turune ve birime gore degisiyor" in response.answer.lower()
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("query", ["Kayit yenileme ucreti ne kadar?", "Kayıt yenileme ücreti ne kadar?"])

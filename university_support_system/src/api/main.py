@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from functools import lru_cache
+from hmac import compare_digest
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from src.agents import AnnouncementAgent
@@ -40,6 +42,7 @@ from src.llm.llm_service import LLMService
 from src.notifications import EmailDeliveryError
 from src.orchestrators.main import MainOrchestrator
 from src.rag.warmup import warm_retrieval_resources
+from src.db.auth_utils import utcnow
 
 
 class A2ADispatchRequest(BaseModel):
@@ -78,6 +81,52 @@ class SystemHealthPayload(BaseModel):
     status: str
     app: dict[str, Any]
     llm: dict[str, Any]
+
+
+def _sanitize_llm_health_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Health endpoint icin provider detaylarini minimum seviyeye indirir."""
+    primary = payload.get("primary") or {}
+    fallback = payload.get("fallback") or {}
+    return {
+        "status": payload.get("status", "unknown"),
+        "primary": {
+            "name": primary.get("name"),
+            "status": primary.get("status"),
+            "model_loaded": primary.get("model_loaded"),
+        },
+        "fallback": {
+            "name": fallback.get("name"),
+            "status": fallback.get("status"),
+            "available": fallback.get("available", True),
+            "model_loaded": fallback.get("model_loaded"),
+        },
+    }
+
+
+def _assert_internal_api_access(api_key: str | None) -> None:
+    """Internal-only endpointler icin paylasilan access kontrolu."""
+    configured_key = settings.server.internal_api_key
+    if not configured_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Internal API erisimi bu ortamda etkinlestirilmemis.",
+        )
+    if not api_key or not compare_digest(api_key, configured_key):
+        raise HTTPException(status_code=403, detail="Internal API erisimi reddedildi.")
+
+
+def _build_generic_otp_request_response() -> OTPRequestResponse:
+    """Enumeration riskini azaltmak icin standart OTP yaniti."""
+    expires_at = (utcnow() + timedelta(minutes=settings.auth.otp_ttl_minutes)).isoformat()
+    return OTPRequestResponse(
+        success=True,
+        message=(
+            "Bilgileriniz dogruysa dogrulama kodu ogrenci e-posta adresinize gonderilecektir. "
+            "Lutfen e-posta kutunuzu kontrol edin."
+        ),
+        expires_at=expires_at,
+        delivery_channel="email_smtp",
+    )
 
 
 @lru_cache
@@ -175,18 +224,13 @@ def create_app() -> FastAPI:
                 "api": "healthy",
                 "runtime": {
                     "label": settings.server.runtime_label,
-                    "host": settings.server.host,
-                    "port": settings.server.port,
-                    "embedding_device": settings.embedding.device,
-                    "reranker_device": settings.reranker.device,
-                    "ollama_host": settings.ollama.host,
                     "llm_profile": settings.normalize_llm_profile(settings.llm.profile),
                 },
                 "active_departments": [department.value for department in Department],
                 "a2a_mode": "internal",
                 "auth_mode": "otp_session",
             },
-            llm=llm_health,
+            llm=_sanitize_llm_health_payload(llm_health),
         )
 
     @app.get("/agents", response_model=list[AgentCardSummary], tags=["agents"])
@@ -205,20 +249,10 @@ def create_app() -> FastAPI:
             )
         except EmailDeliveryError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        if otp_result is None:
-            raise HTTPException(status_code=404, detail="Ogrenci numarasi bulunamadi.")
-        if not otp_result.get("success", True):
-            raise HTTPException(status_code=400, detail=otp_result["message"])
+        if otp_result is None or not otp_result.get("success", True):
+            return _build_generic_otp_request_response()
 
-        return OTPRequestResponse(
-            success=True,
-            message="Dogrulama kodu ogrenci e-posta adresinize gonderildi.",
-            student_number=otp_result["student_number"],
-            masked_email=otp_result["masked_email"],
-            expires_at=otp_result["expires_at"].isoformat(),
-            delivery_channel=otp_result["delivery_channel"],
-            otp_preview_code=otp_result["otp_preview_code"],
-        )
+        return _build_generic_otp_request_response()
 
     @app.post("/auth/verify-otp", response_model=OTPVerifyResponse, tags=["auth"])
     async def verify_otp(
@@ -230,10 +264,11 @@ def create_app() -> FastAPI:
             otp_code=payload.otp_code,
             slack_user_id=payload.slack_user_id,
         )
-        if result is None:
-            raise HTTPException(status_code=404, detail="Ogrenci numarasi bulunamadi.")
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["message"])
+        if result is None or not result["success"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Ogrenci numarasi veya dogrulama kodu gecersiz.",
+            )
 
         return OTPVerifyResponse(
             success=True,
@@ -252,9 +287,12 @@ def create_app() -> FastAPI:
     async def resolve_auth(
         payload: AuthResolvePayload,
         auth_service: AuthService = Depends(get_auth_service),
+        x_internal_api_key: str | None = Header(default=None, alias="X-Internal-API-Key"),
     ) -> AuthResolveResponse:
         if not payload.session_token and not payload.slack_user_id:
             raise HTTPException(status_code=400, detail="session_token veya slack_user_id gereklidir.")
+        if payload.slack_user_id and not payload.session_token:
+            _assert_internal_api_access(x_internal_api_key)
 
         resolved = await auth_service.resolve_auth_context(
             session_token=payload.session_token,
@@ -319,7 +357,9 @@ def create_app() -> FastAPI:
         payload: A2ADispatchRequest,
         orchestrator: MainOrchestrator = Depends(get_main_orchestrator),
         auth_service: AuthService = Depends(get_auth_service),
+        x_internal_api_key: str | None = Header(default=None, alias="X-Internal-API-Key"),
     ) -> DepartmentResponse:
+        _assert_internal_api_access(x_internal_api_key)
         department_orchestrator = orchestrator.department_orchestrators.get(payload.department)
         if department_orchestrator is None:
             raise HTTPException(

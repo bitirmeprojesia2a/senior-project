@@ -55,8 +55,10 @@ DEPARTMENT_CONFIGS: dict[Department, DepartmentConfig] = {
             "Ucret MIKTARLARI, harc tutarlari, burs miktarlari, odeme yontemleri, "
             "taksitlendirme, dekont, banka/havale bilgileri. "
             "'Ne kadar?', 'Nasil odenir?', 'Nereye yatirilir?' tipi sorular bu departmana gider. "
-            "Ucret KURALI veya POLITIKASI (ornegin 'ek surede katki payi odenir mi?') "
-            "bu departmana degil academic_programs departmanina gider."
+            "Odeme veya ucret ile ilgili herhangi bir soru (ornegin 'katki payi oder miyim', "
+            "'ogrenim ucretimi nereye yatirmam', 'harc borcum var') bu departmana DAHIL EDILMELIDIR. "
+            "Ucret KURALI veya POLITIKASI sorularinda (ornegin 'ek surede katki payi odenir mi?') "
+            "hem academic_programs hem finance birlikte route edilmelidir."
         ),
         keywords=(
             "harc", "ucret", "burs", "odeme", "dekont", "taksit",
@@ -172,6 +174,23 @@ def build_department_routing_descriptions() -> list[str]:
 def collection_name_for_department(department: Department | str) -> str:
     """Departman adına göre ChromaDB koleksiyon adını üretir."""
     return f"{normalize_department_value(department)}_docs"
+
+
+ACADEMIC_SCHEDULE_COLLECTION_NAME = "academic_schedules_docs"
+ACADEMIC_PRIMARY_EXCLUDED_SUBDIRECTORIES = ("ders_programlari",)
+ACADEMIC_SCHEDULE_QUERY_MARKERS = (
+    "ders programi",
+    "ders programı",
+    "haftalik program",
+    "haftalık program",
+    "program saatleri",
+    "derslik",
+)
+
+
+def academic_schedule_collection_name() -> str:
+    """Akademik ders programlari icin ayrik koleksiyon adini dondurur."""
+    return ACADEMIC_SCHEDULE_COLLECTION_NAME
 
 
 # ── Görev Tipleri ────────────────────────────────

@@ -45,6 +45,10 @@ from src.db.connection import init_engine
 from src.orchestrators.main import MainOrchestrator
 from src.core.profiling import QueryProfiler, activate_profiler
 from src.api.main import app as api_app
+from src.orchestrators.response_utils import (
+    LOW_CONFIDENCE_RERANKER_SCORE_THRESHOLD,
+    LOW_CONFIDENCE_RETRIEVAL_SCORE_THRESHOLD,
+)
 from httpx import ASGITransport, AsyncClient
 
 BENCHMARK_FILE = Path(__file__).resolve().with_name("profile_benchmarks.json")
@@ -216,10 +220,18 @@ _FOREIGN_LANGUAGE_PATTERNS = (
 )
 
 
-def _quality_warnings(*, answer: str, needs_auth: bool, source_count: int) -> list[str]:
+def _quality_warnings(
+    *,
+    answer: str,
+    needs_auth: bool,
+    source_count: int,
+    sources: list | None = None,
+    generation_modes: list[str] | None = None,
+) -> list[str]:
     warnings: list[str] = []
     lowered = answer.casefold()
-    is_rule_answer = "uretim turu:" in lowered and "- kural" in lowered
+    modes_text = " ".join(generation_modes or []).casefold()
+    is_rule_answer = "kural" in modes_text or ("uretim turu:" in lowered and "- kural" in lowered)
     is_no_announcement_message = "aktif duyuru bulunmuyor" in lowered
 
     if needs_auth and not any(signal in lowered for signal in _AUTH_SIGNALS):
@@ -237,6 +249,9 @@ def _quality_warnings(*, answer: str, needs_auth: bool, source_count: int) -> li
     if any(pattern in lowered for pattern in _ROLE_RECITATION_PATTERNS):
         warnings.append("rol_tekrari")
 
+    if _all_sources_low_confidence(sources or []):
+        warnings.append("zayif_kaynak_destegi")
+
     if (
         source_count == 0
         and "kaynak ozeti:" not in lowered
@@ -247,6 +262,38 @@ def _quality_warnings(*, answer: str, needs_auth: bool, source_count: int) -> li
         warnings.append("kaynak_seffafligi_yok")
 
     return warnings
+
+
+def _source_metadata(source) -> dict:
+    if isinstance(source, dict):
+        return dict(source.get("metadata") or {})
+    return dict(getattr(source, "metadata", {}) or {})
+
+
+def _source_score(source) -> float:
+    if isinstance(source, dict):
+        return float(source.get("score", 0.0) or 0.0)
+    return float(getattr(source, "score", 0.0) or 0.0)
+
+
+def _source_low_confidence_threshold(source) -> float:
+    metadata = _source_metadata(source)
+    score_type = str(metadata.get("score_type", "retrieval")).strip().lower()
+    if score_type == "reranker":
+        return LOW_CONFIDENCE_RERANKER_SCORE_THRESHOLD
+    return LOW_CONFIDENCE_RETRIEVAL_SCORE_THRESHOLD
+
+
+def _all_sources_low_confidence(sources: list) -> bool:
+    if not sources:
+        return False
+    try:
+        return all(
+            _source_score(source) < _source_low_confidence_threshold(source)
+            for source in sources
+        )
+    except Exception:
+        return False
 
 
 def _summarize_profile(snapshot: dict) -> list[dict]:
@@ -430,6 +477,7 @@ async def run_single_question(
                 response = SimpleNamespace(
                     answer=body.get("answer", ""),
                     departments_involved=body.get("departments_involved", []),
+                    generation_modes=body.get("generation_modes", []),
                     sources=body.get("sources", []),
                     response_time_ms=body.get("response_time_ms", 0.0),
                     query_id=body.get("query_id", resolved_context_id),
@@ -450,6 +498,8 @@ async def run_single_question(
             answer=answer_text,
             needs_auth=needs_auth,
             source_count=len(response.sources),
+            sources=list(response.sources),
+            generation_modes=getattr(response, "generation_modes", []),
         )
         kalite_dogru = len(kalite_uyarilari) == 0
 

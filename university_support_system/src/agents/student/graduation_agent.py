@@ -14,7 +14,6 @@ from src.agents.student.graduation_utils import (
     is_graduation_personal_query,
 )
 from src.core.constants import Department, TaskType
-from src.core.messages import CONTACT_SUGGESTION
 from src.db.curriculum_data import fetch_program_akts_summary
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.db.student_academic_data import fetch_student_academic_snapshot
@@ -125,7 +124,6 @@ class GraduationAgent(BaseSpecialistAgent):
                 "Bu toplam, standart mezuniyet planini temel alir; ozel uygulama "
                 "kalemleri ayri izlendiginden hesaplamaya ayrica dahil edilmemistir."
             ),
-            CONTACT_SUGGESTION.strip(),
         ]
 
         return DepartmentResponse(
@@ -133,6 +131,7 @@ class GraduationAgent(BaseSpecialistAgent):
             answer="\n\n".join(answer_lines),
             db_data=summary,
             generation_mode="vt",
+            include_contact_suggestion=True,
             success=True,
         )
 
@@ -147,13 +146,13 @@ class GraduationAgent(BaseSpecialistAgent):
             db_context=db_summary,
             force_llm=True,
         )
-        answer += CONTACT_SUGGESTION
 
         return DepartmentResponse(
             department=self.department,
             answer=answer,
             db_data=snapshot,
             generation_mode=generation_mode,
+            include_contact_suggestion=True,
             sources=[
                 RAGSource(
                     content=item.get("content", ""),

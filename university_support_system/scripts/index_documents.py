@@ -26,7 +26,13 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.core.console import configure_utf8_stdio
-from src.core.constants import Department, collection_name_for_department, normalize_department_value
+from src.core.constants import (
+    Department,
+    academic_schedule_collection_name,
+    collection_name_for_department,
+    normalize_department_value,
+)
+from src.core.text_normalization import normalize_text
 from src.rag.pipeline import IndexingPipeline
 
 configure_utf8_stdio()
@@ -36,6 +42,10 @@ def _resolve_collection_name(source_path: Path, explicit_collection: str | None)
     """Kaynak klasöre göre koleksiyon adını çözümler."""
     if explicit_collection:
         return explicit_collection
+
+    normalized_parts = {normalize_text(part) for part in source_path.resolve().parts}
+    if "ders_programlari" in normalized_parts or "ders programlari" in normalized_parts:
+        return academic_schedule_collection_name()
 
     department_values = {department.value: department for department in Department}
     for part in source_path.resolve().parts:

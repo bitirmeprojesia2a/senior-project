@@ -69,6 +69,7 @@ async def test_announcement_agent_formats_matching_announcements():
         department="academic_programs",
         faculty=None,
         limit=3,
+        allow_latest_fallback=True,
     )
 
 
@@ -113,4 +114,5 @@ async def test_announcement_agent_uses_all_departments_when_multiple_departments
         department=["student_affairs", "finance"],
         faculty=None,
         limit=3,
+        allow_latest_fallback=True,
     )

@@ -17,6 +17,8 @@ from typing import List, Set
 
 import structlog
 
+from src.core.text_normalization import normalize_text
+
 logger = structlog.get_logger()
 
 # ── Üniversite Belgelerinde Sık Tekrar Eden Kalıplar ──────────────────
@@ -46,7 +48,6 @@ RE_PAGE_PATTERNS = [
     re.compile(r"(?m)^\s*\d+\s*/\s*\d+\s*$"),
     re.compile(r"(?m)^\s*-\s*\d+\s*-\s*$"),            # "- 5 -" formatı
     re.compile(r"(?m)^\s*\[\s*\d+\s*\]\s*$"),            # "[5]" formatı
-    re.compile(r"(?m)^\s*\d{1,3}\s*$"),                   # Tek başına sayı
 ]
 
 # Tekrarlayan üniversite başlıkları (sayfa başı header'ları)
@@ -131,13 +132,11 @@ class TextPreprocessor:
         header/footer olarak kabul edilir ve kaldırılır.
         """
         lines = text.split("\n")
-        if len(lines) < 10:
-            return text
 
         line_counts: dict = {}
         for line in lines:
             stripped = line.strip()
-            if stripped and len(stripped) > 5:
+            if stripped and self._looks_like_header_footer_candidate(stripped):
                 line_counts[stripped] = line_counts.get(stripped, 0) + 1
 
         repeated: Set[str] = {
@@ -156,16 +155,64 @@ class TextPreprocessor:
 
         return "\n".join(lines)
 
+    def _looks_like_header_footer_candidate(self, line: str) -> bool:
+        """Yalnızca header/footer benzeri satırları tekrar temizliğine dahil et."""
+        stripped = line.strip()
+        if len(stripped) <= 5 or len(stripped) > 120:
+            return False
+
+        words = stripped.split()
+        if len(words) > 10:
+            return False
+
+        if stripped.endswith((".", "?", "!")) and len(words) > 4:
+            return False
+
+        lowered = normalize_text(stripped)
+        header_tokens = (
+            "universite",
+            "fakulte",
+            "fakultesi",
+            "dekanligi",
+            "mudurlugu",
+            "rektorlugu",
+            "sayfa",
+            "yonerge",
+            "yonetmelik",
+            "formu",
+        )
+        if any(token in lowered for token in header_tokens):
+            return True
+
+        alpha_chars = [char for char in stripped if char.isalpha()]
+        if not alpha_chars:
+            return False
+
+        uppercase_ratio = sum(1 for char in alpha_chars if char.isupper()) / len(alpha_chars)
+        return stripped.isupper() or uppercase_ratio >= 0.6
+
     def _remove_short_lines(self, text: str) -> str:
         """Çok kısa anlamsız satırları kaldırır."""
         lines = text.split("\n")
         cleaned: List[str] = []
 
-        for line in lines:
+        for index, line in enumerate(lines):
             stripped = line.strip()
             if not stripped:
                 cleaned.append("")
                 continue
+            if stripped.isdigit():
+                previous = next((item.strip() for item in reversed(lines[:index]) if item.strip()), "")
+                next_line = next((item.strip() for item in lines[index + 1 :] if item.strip()), "")
+                previous_normalized = previous.casefold()
+                next_normalized = next_line.casefold()
+                if (
+                    previous_normalized in {"madde", "ek", "tablo", "bent", "fikra"}
+                    or previous_normalized.startswith(("madde ", "ek ", "tablo "))
+                    or next_normalized.startswith(("madde", "ek", "tablo", "bent", "fikra"))
+                ):
+                    cleaned.append(line)
+                    continue
             if len(stripped) >= self.min_line_length:
                 cleaned.append(line)
 

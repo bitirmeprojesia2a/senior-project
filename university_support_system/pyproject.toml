@@ -19,6 +19,8 @@ python_functions = "test_*"
 python_classes = "Test*"
 addopts = "-v --tb=short"
 markers = [
+    "api: FastAPI giris noktasi ve HTTP yuzeyi testleri (mock bagimliliklarla)",
+    "followup: Konusma baglami, follow-up cozumleme ve memory davranisi testleri",
     "integration: ChromaDB ve gerçek modeller gerektiren integration testler",
     "smoke: Hızlı bağlantı ve durum kontrolleri (model yüklemesi yok)",
     "model: Gerçek AI modelleri gerektiren testler (embedding, reranker)",

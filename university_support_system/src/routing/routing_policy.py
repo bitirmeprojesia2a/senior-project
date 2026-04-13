@@ -49,6 +49,14 @@ ROUTING_FORMAL_RULE_MARKERS: tuple[str, ...] = (
     "basari notu",
     "sinif tekrari",
     "ders tekrari",
+    # Sınav hakkı/kuralı
+    "sinav hakki",
+    "kac kez sinav",
+    "sinav sayisi",
+    "sinava girme sarti",
+    "final sinavi sart",
+    "butunleme hakki",
+    "sinav hakkina",
 )
 ROUTING_INTERNATIONAL_MARKERS: tuple[str, ...] = (
     "erasmus",
@@ -99,6 +107,10 @@ ROUTING_STUDENT_SERVICES_MARKERS: tuple[str, ...] = (
     "kayit sildirme",
     "sifre sifirlama",
     "giris yapamiyorum",
+    "ayrilmak",
+    "birakmak",
+    "ayrilma",
+    "birakma",
 )
 ROUTING_SCHOLARSHIP_MARKERS: tuple[str, ...] = (
     "burs",
@@ -108,6 +120,14 @@ ROUTING_SCHOLARSHIP_MARKERS: tuple[str, ...] = (
     "burs basvurusu",
     "basari bursu",
     "ihtiyac bursu",
+)
+ROUTING_ANNOUNCEMENT_MARKERS: tuple[str, ...] = (
+    "guncel duyuru",
+    "duyurular neler",
+    "son duyuru",
+    "yeni duyuru",
+    "duyuru var mi",
+    "duyurulari",
 )
 ROUTING_INTERNSHIP_MARKERS: tuple[str, ...] = (
     "staj",
@@ -128,6 +148,7 @@ ROUTING_GENERAL_AKTS_MARKERS: tuple[str, ...] = (
     "mezuniyet kredisi",
 )
 ROUTING_PERSONAL_MARKERS: tuple[str, ...] = (
+    # İyelik ekli kişisel veri kategorileri
     "ortalamam",
     "notlarim",
     "gno",
@@ -148,6 +169,26 @@ ROUTING_PERSONAL_MARKERS: tuple[str, ...] = (
     "kaydim",
     "not ortalamam",
     "stajim",
+    # İyelik ekli ek kalıplar
+    "kac dersim",
+    "kac kredim",
+    "staj durumum",
+    "devamsizligim",
+    "sinav sonucum",
+    "notlarimi",
+    "diplomami",
+    "belgemi",
+    "burs durumum",
+    "odeme durumum",
+    "kayit durumum",
+    "mezuniyet durumum",
+    # İyeliksiz ama kişisel veri talep kalıpları
+    "not ortalama",
+    "kalan ders",
+    "akts durumu",
+    "kredi durumu",
+    "borc sorgula",
+    "harc sorgula",
 )
 NORMALIZED_COURSE_CODE_IN_QUERY = re.compile(r"\b[a-z]{2,}\s?\d{3,4}\b", re.IGNORECASE)
 
@@ -162,10 +203,53 @@ def contains_any(normalized_text: str, markers: tuple[str, ...]) -> bool:
     return any(marker in normalized_text for marker in markers)
 
 
+_PERSONAL_POSSESSIVE_RE = re.compile(
+    r"\b(?:not|gno|kredi|akts|ders|staj|burs|harc|borc|kayit|mezuniyet|diploma|transkript)"
+    r"(?:i[mz]|si[mz]|leri[mz]|lerimiz|imiz|um|un|üm|ün|ım|ın)?\b",
+    re.IGNORECASE,
+)
+
+_PERSONAL_QUESTION_MARKERS = (
+    "kac", "nedir", "nasil", "goster", "sorgula", "ogren",
+    "bilebilirmiyim", "var mi", "ne kadar",
+)
+
+# Kural/fark/karsilastirma sorulari kisisel veri talebi degildir.
+# Bu kalıplar varsa looks_like_personal_data_query False donmeli.
+_NON_PERSONAL_QUERY_PATTERNS = (
+    "fark", "fark nedir", "arasinda fark",
+    "karsilastir", "karsilastirma",
+    "hangi kosullar", "kosullar neler",
+    "kural", "yonerge", "yonetmelik",
+    "ne zamana kadar", "sartlari neler",
+    "adim adim", "surec nasil",
+    # Prosedur/politika sinyalleri — kisisel veri talebi degildir
+    "ne yapabilirim", "ne yapmaliyim", "ne yapmam gerekiyor",
+    "nasil yapabilirim", "nasil yapmaliyim",
+    "kesilir mi", "odenir mi", "sayilir mi",
+    "etkilenir mi", "etkiler mi", "gerekir mi",
+    "zorunda miyim", "muaf miyim",
+)
+
+
 def looks_like_personal_data_query(query: str) -> bool:
     """Return whether query likely asks for personal/private student data."""
     lowered = normalize_routing_text(query)
-    return contains_any(lowered, ROUTING_PERSONAL_MARKERS)
+
+    # Kural/fark/karsilastirma sorulari kisisel veri talebi degildir.
+    # Ornek: "kayit dondurma ile kayit yaptirmamak arasinda fark" → kural sorusu
+    # Ornek: "mezuniyet icin gerekli kosullar" → kural sorusu
+    if contains_any(lowered, _NON_PERSONAL_QUERY_PATTERNS):
+        return False
+
+    # Marker tabanli kontrol
+    if contains_any(lowered, ROUTING_PERSONAL_MARKERS):
+        return True
+    # İyelik eki + soru kalıbı kombinasyonu
+    if _PERSONAL_POSSESSIVE_RE.search(lowered):
+        if any(m in lowered for m in _PERSONAL_QUESTION_MARKERS):
+            return True
+    return False
 
 
 def has_payment_registration_timing_overlap(normalized_text: str) -> bool:
@@ -174,6 +258,14 @@ def has_payment_registration_timing_overlap(normalized_text: str) -> bool:
         contains_any(normalized_text, ROUTING_PAYMENT_MARKERS)
         and contains_any(normalized_text, ROUTING_REGISTRATION_MARKERS)
         and contains_any(normalized_text, ROUTING_TIMING_MARKERS)
+    )
+
+
+def has_student_services_payment_overlap(normalized_text: str) -> bool:
+    """Return whether student-services flow is mixed with an explicit payment burden."""
+    return has_student_services_markers(normalized_text) and contains_any(
+        normalized_text,
+        ROUTING_PAYMENT_MARKERS,
     )
 
 
@@ -223,6 +315,11 @@ def has_student_services_markers(normalized_text: str) -> bool:
 def has_scholarship_markers(normalized_text: str) -> bool:
     """Return whether query is about scholarship-like topics."""
     return contains_any(normalized_text, ROUTING_SCHOLARSHIP_MARKERS)
+
+
+def has_announcement_markers(normalized_text: str) -> bool:
+    """Return whether query asks for announcements / duyuru."""
+    return contains_any(normalized_text, ROUTING_ANNOUNCEMENT_MARKERS)
 
 
 def has_internship_markers(normalized_text: str) -> bool:

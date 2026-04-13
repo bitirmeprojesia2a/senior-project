@@ -1,5 +1,6 @@
 """FastAPI giris noktasi testleri."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import (
@@ -11,8 +12,11 @@ from src.api.main import (
     get_main_orchestrator,
     get_profile_context_service,
 )
+from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.db.schemas import DepartmentResponse, RAGSource, UserQueryResponse
+
+pytestmark = pytest.mark.api
 
 
 class _FakeLLMService:
@@ -220,6 +224,7 @@ def test_health_endpoint_returns_llm_status():
     payload = response.json()
     assert payload["status"] == "healthy"
     assert payload["llm"]["primary"]["status"] == "healthy"
+    assert payload["llm"]["primary"]["name"] == "ollama"
     assert payload["app"]["a2a_mode"] == "internal"
     assert payload["app"]["auth_mode"] == "otp_session"
 
@@ -236,8 +241,9 @@ def test_request_otp_endpoint_returns_masked_email_and_preview_code():
     assert response.status_code == 200
     payload = response.json()
     assert payload["success"] is True
-    assert payload["student_number"] == "20210001"
+    assert payload["student_number"] is None
     assert payload["otp_preview_code"] is None
+    assert "dogruysa" in payload["message"].lower()
 
 
 def test_verify_otp_endpoint_returns_session_token():
@@ -258,6 +264,23 @@ def test_verify_otp_endpoint_returns_session_token():
     assert payload["session_token"] == "session-xyz"
 
 
+def test_auth_resolve_requires_internal_key_for_slack_only_resolution():
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    client = TestClient(app)
+    previous_key = settings.server.internal_api_key
+    settings.server.internal_api_key = "test-internal-key"
+
+    try:
+        response = client.post(
+            "/auth/resolve",
+            json={"slack_user_id": "U123"},
+        )
+    finally:
+        settings.server.internal_api_key = previous_key
+
+    assert response.status_code == 403
+
+
 def test_query_endpoint_resolves_session_token_before_orchestration():
     app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
@@ -276,6 +299,7 @@ def test_query_endpoint_resolves_session_token_before_orchestration():
     assert response.status_code == 200
     payload = response.json()
     assert payload["answer"] == "yanit: Cap basvurusu nasil yapilir?"
+    assert payload["generation_modes"] == []
     assert payload["sources"][0]["metadata"]["student_id"] == 42
     assert payload["sources"][0]["metadata"]["student_department"] == "bilgisayar_muhendisligi"
     assert payload["sources"][0]["metadata"]["student_faculty"] == "Muhendislik Fakultesi"
@@ -283,27 +307,80 @@ def test_query_endpoint_resolves_session_token_before_orchestration():
     assert payload["sources"][0]["metadata"]["user_id"] == "U123"
 
 
+def test_query_endpoint_verified_session_ignores_payload_student_type_override():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_profile_context_service] = lambda: _FakeProfileContextService()
+    client = TestClient(app)
+
+    response = client.post(
+        "/query",
+        json={
+            "query": "Cap basvurusu nasil yapilir?",
+            "context_id": "ctx-api-verified-type",
+            "session_token": "session-xyz",
+            "student_type": "uluslararasi ogrenci",
+            "is_authenticated": True,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sources"][0]["metadata"]["is_authenticated"] is True
+    assert payload["sources"][0]["metadata"]["student_type"] is None
+
+
 def test_a2a_dispatch_endpoint_routes_to_department_orchestrator_with_auth_resolution():
     app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     client = TestClient(app)
+    previous_key = settings.server.internal_api_key
+    settings.server.internal_api_key = "test-internal-key"
 
-    response = client.post(
-        "/a2a/dispatch",
-        json={
-            "department": "finance",
-            "query": "Harc dekontu nasil alinir?",
-            "context_id": "ctx-a2a-1",
-            "task_type": "tuition_query",
-            "session_token": "session-xyz",
-        },
-    )
+    try:
+        response = client.post(
+            "/a2a/dispatch",
+            json={
+                "department": "finance",
+                "query": "Harc dekontu nasil alinir?",
+                "context_id": "ctx-a2a-1",
+                "task_type": "tuition_query",
+                "session_token": "session-xyz",
+            },
+            headers={"X-Internal-API-Key": "test-internal-key"},
+        )
+    finally:
+        settings.server.internal_api_key = previous_key
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["department"] == "finance"
     assert "finance cevabi" in payload["answer"]
     assert payload["sources"][0]["metadata"]["student_id"] == 42
+
+
+def test_a2a_dispatch_endpoint_rejects_requests_without_internal_key():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    client = TestClient(app)
+    previous_key = settings.server.internal_api_key
+    settings.server.internal_api_key = "test-internal-key"
+
+    try:
+        response = client.post(
+            "/a2a/dispatch",
+            json={
+                "department": "finance",
+                "query": "Harc dekontu nasil alinir?",
+                "context_id": "ctx-a2a-2",
+                "task_type": "tuition_query",
+                "session_token": "session-xyz",
+            },
+        )
+    finally:
+        settings.server.internal_api_key = previous_key
+
+    assert response.status_code == 403
 
 
 def test_query_endpoint_requests_profile_before_answering():
@@ -355,6 +432,32 @@ def test_query_endpoint_saves_profile_and_personalizes_answer():
     payload = response.json()
     assert payload["sources"][0]["metadata"]["student_full_name"] == "Ahmet Yilmaz"
     assert payload["sources"][0]["metadata"]["student_department"] == "Bilgisayar Muhendisligi"
+
+
+def test_query_endpoint_does_not_trust_client_authenticated_flags_without_session():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_profile_context_service] = lambda: _FakeProfileContextService()
+    client = TestClient(app)
+
+    response = client.post(
+        "/query",
+        json={
+            "query": "Not ortalamam kac?",
+            "context_id": "ctx-auth-spoof",
+            "full_name": "Test Ogrenci",
+            "student_number": "22060388",
+            "student_department": "Bilgisayar Muhendisligi",
+            "student_faculty": "Muhendislik Fakultesi",
+            "student_id": 999,
+            "is_authenticated": True,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sources"][0]["metadata"]["student_id"] is None
+    assert payload["sources"][0]["metadata"]["is_authenticated"] is False
 
 
 def test_agents_endpoint_lists_active_agent_cards():

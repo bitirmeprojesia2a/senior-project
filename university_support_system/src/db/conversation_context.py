@@ -28,6 +28,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_STATE_QUERY_PREVIEW_MAX_CHARS = 180
+_TURN_QUERY_PREVIEW_MAX_CHARS = 240
+_TURN_ANSWER_PREVIEW_MAX_CHARS = 420
+
 _COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
 _FOLLOW_UP_PREFIXES = (
     "peki",
@@ -93,15 +97,80 @@ _FOLLOW_UP_PRONOUNS = {
     "orada", "burada", "oraya", "buraya",
     "aynisi", "kendisi",
 }
+_PRONOUN_LED_PREFIXES = (
+    "bunun",
+    "bunun icin",
+    "bunlar",
+    "bunlar icin",
+    "onun",
+    "onun icin",
+    "onlar",
+    "onlar icin",
+    "bunu",
+    "onu",
+)
 _TURBO_WORDS = {
     "evet", "hayir", "tamam", "tesekkurler", "ok", "sagol",
     "baska", "anladim", "tamamdir", "sagolun", "tesekkur",
     "iyi", "guzel", "oldu", "peki",
 }
 _MIN_CONTENT_WORD_OVERLAP = 0.35
+_WORD_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+_INTENT_STOP_WORDS = {
+    "bir", "bu", "su", "o", "ve", "ile", "icin", "ne", "nasil",
+    "nedir", "mi", "mu", "da", "de", "den", "dan",
+    "ya", "veya", "ama", "fakat", "gibi", "kadar", "en", "cok",
+    "az", "hangi", "kim", "nere", "nerede", "zaman", "ise",
+    "bunun", "bunu", "buna", "bundan", "bunlar", "bunlari", "bunlarin",
+    "onun", "onu", "ona", "ondan", "onlar", "onlari", "onlarin",
+    "peki", "hakkinda",
+}
 
 
-def _rewrite_preserves_intent(original: str, rewritten: str) -> bool:
+def _normalized_tokens(text: str) -> list[str]:
+    return _WORD_TOKEN_PATTERN.findall(normalize_text(text))
+
+
+def _content_tokens(text: str) -> set[str]:
+    return set(_normalized_tokens(text)) - _INTENT_STOP_WORDS
+
+
+def _count_token_overlap(base_tokens: set[str], candidate_tokens: set[str]) -> int:
+    return len(base_tokens & candidate_tokens)
+
+
+def _query_depends_on_context(query: str, *, context_texts: Sequence[str] = ()) -> bool:
+    normalized_query = normalize_text(query)
+    query_tokens = _normalized_tokens(query)
+    query_content_tokens = _content_tokens(query)
+    context_tokens = {
+        token
+        for text in context_texts
+        for token in _content_tokens(text)
+    }
+
+    mentions_context = bool(
+        context_tokens
+        and _count_token_overlap(query_content_tokens, context_tokens) > 0
+    )
+    if mentions_context:
+        return False
+
+    has_follow_up_style = (
+        any(normalized_query.startswith(prefix) for prefix in _FOLLOW_UP_PREFIXES)
+        or any(token in _FOLLOW_UP_PRONOUNS for token in query_tokens[:4])
+        or any(marker in normalized_query for marker in _STRONG_FOLLOW_UP_MARKERS)
+        or any(marker in normalized_query for marker in _WEAK_FOLLOW_UP_MARKERS)
+    )
+    return has_follow_up_style or len(query_content_tokens) <= 4
+
+
+def _rewrite_preserves_intent(
+    original: str,
+    rewritten: str,
+    *,
+    context_texts: Sequence[str] = (),
+) -> bool:
     """Check that the LLM rewrite did not completely change the query topic.
 
     Returns True when the rewritten query shares enough content words with
@@ -118,13 +187,13 @@ def _rewrite_preserves_intent(original: str, rewritten: str) -> bool:
         "onun", "onu", "ona", "ondan", "onlar", "onlari", "onlarin",
         "peki", "hakkinda",
     }
-    orig_tokens = set(normalize_text(original).split()) - stop_words
-    rew_tokens = set(normalize_text(rewritten).split()) - stop_words
+    orig_tokens = _content_tokens(original)
+    rew_tokens = _content_tokens(rewritten)
     if not orig_tokens:
         return True
 
     # Birebir eslesen tokenlar
-    overlap = len(orig_tokens & rew_tokens)
+    overlap = _count_token_overlap(orig_tokens, rew_tokens)
 
     # Turkcede cogul/hal eki farkliliklari icin kok benzerligi:
     # 'belge'≈'belgeler', 'staj'≈'staji' gibi durumlari yakala
@@ -137,7 +206,223 @@ def _rewrite_preserves_intent(original: str, rewritten: str) -> bool:
                 break
 
     ratio = overlap / len(orig_tokens)
-    return ratio >= _MIN_CONTENT_WORD_OVERLAP
+    if ratio >= _MIN_CONTENT_WORD_OVERLAP:
+        return True
+
+    context_tokens = {
+        token
+        for text in context_texts
+        for token in _content_tokens(text)
+    }
+    if not context_tokens:
+        return False
+
+    if not _query_depends_on_context(original, context_texts=context_texts):
+        return False
+
+    return _count_token_overlap(context_tokens, rew_tokens) > 0
+
+
+def _rewrite_supplies_needed_context(
+    original: str,
+    rewritten: str,
+    *,
+    context_texts: Sequence[str] = (),
+) -> bool:
+    if not context_texts:
+        return True
+
+    if not _query_depends_on_context(original, context_texts=context_texts):
+        return True
+
+    context_tokens = {
+        token
+        for text in context_texts
+        for token in _content_tokens(text)
+    }
+    if not context_tokens:
+        return True
+
+    rewritten_tokens = _content_tokens(rewritten)
+    return _count_token_overlap(context_tokens, rewritten_tokens) > 0
+
+
+_QUESTION_TYPE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("ne_zaman", ("ne zaman", "hangi tarihte", "son tarihi", "son tarih")),
+    ("ne_kadar", ("ne kadar", "kac tl", "kac para")),
+    ("var_mi", ("var mi", "gerekli mi", "zorunlu mu", "olur mu", "odenir mi", "odeyebilir miyim")),
+    ("nedir", ("nedir", "ne demek", "ne oluyor")),
+    ("nasil", ("nasil", "nasil yapilir", "nasil basvurulur")),
+    ("nereden", ("nereden", "nereye", "kimden")),
+)
+
+
+def _extract_question_signatures(text: str) -> list[str]:
+    normalized_text = normalize_text(text)
+    signatures: list[str] = []
+    for signature, patterns in _QUESTION_TYPE_PATTERNS:
+        if any(pattern in normalized_text for pattern in patterns):
+            signatures.append(signature)
+    return signatures
+
+
+def _rewrite_preserves_question_type(original: str, rewritten: str) -> bool:
+    original_signatures = _extract_question_signatures(original)
+    if not original_signatures:
+        return True
+
+    rewritten_signatures = _extract_question_signatures(rewritten)
+    if not rewritten_signatures:
+        return False
+
+    if any(signature not in rewritten_signatures for signature in original_signatures):
+        return False
+
+    extra_signatures = [
+        signature for signature in rewritten_signatures
+        if signature not in original_signatures
+    ]
+    return not extra_signatures
+
+
+def _topic_rewrite_seed(topic: str | None) -> str:
+    if not topic:
+        return ""
+    return _TOPIC_REWRITE_SEEDS.get(topic, normalize_text(topic))
+
+
+def _strip_follow_up_prefixes(query: str) -> str:
+    normalized_query = normalize_text(query).strip(" \t\r\n?.!,;:")
+    prefixes = sorted(
+        (normalize_text(prefix) for prefix in _FOLLOW_UP_PREFIXES),
+        key=len,
+        reverse=True,
+    )
+    for prefix in prefixes:
+        if normalized_query == prefix:
+            return ""
+        if normalized_query.startswith(f"{prefix} "):
+            normalized_query = normalized_query[len(prefix):].strip()
+            break
+    return re.sub(r"\s+", " ", normalized_query).strip()
+
+
+def _build_heuristic_follow_up_query(query: str, *, topic: str | None) -> str:
+    topic_seed = _topic_rewrite_seed(topic)
+    if not topic_seed:
+        return query
+
+    original_query = normalize_text(query).strip()
+    stripped_query = _strip_follow_up_prefixes(query)
+    if not stripped_query:
+        return f"{topic_seed} hakkinda"
+
+    if normalize_text(topic_seed) in stripped_query:
+        return stripped_query
+
+    signatures = set(_extract_question_signatures(stripped_query))
+
+    if original_query.startswith("bu durumda"):
+        return f"{topic_seed} durumunda {stripped_query}"
+    if original_query.startswith(("bunun icin", "onun icin", "bunlar icin")):
+        return f"{topic_seed} icin {stripped_query}"
+
+    if "ne_zaman" in signatures and "tarih" in stripped_query:
+        return f"{topic_seed} tarihleri ne zaman?"
+    if "ne_zaman" in signatures and "yapilir" in stripped_query:
+        return f"{topic_seed} ne zaman yapilir?"
+    if "ne_kadar" in signatures and "sure" in stripped_query:
+        return f"{topic_seed} suresi ne kadar?"
+    if "ne_kadar" in signatures and "oden" in stripped_query:
+        return f"{topic_seed} icin ne kadar odenir?"
+    if "var_mi" in signatures:
+        return f"{topic_seed} icin {stripped_query}"
+    if "nedir" in signatures:
+        return f"{topic_seed} icin {stripped_query}"
+    if "nereden" in signatures:
+        return f"{topic_seed} ile ilgili {stripped_query}"
+    if "nasil" in signatures and "yapilir" in stripped_query:
+        return f"{topic_seed} nasil yapilir?"
+
+    if _query_depends_on_context(query, context_texts=[topic]):
+        return f"{topic_seed} icin {stripped_query}"
+
+    return f"{topic_seed} hakkinda: {stripped_query}"
+
+
+def _query_is_pronoun_led_follow_up(query: str) -> bool:
+    normalized_query = normalize_text(query).strip()
+    return any(
+        normalized_query == prefix or normalized_query.startswith(f"{prefix} ")
+        for prefix in _PRONOUN_LED_PREFIXES
+    )
+
+
+def _query_is_short_object_sensitive_follow_up(query: str) -> bool:
+    content_tokens = _content_tokens(query)
+    if not content_tokens or len(content_tokens) > 3:
+        return False
+    signatures = set(_extract_question_signatures(query))
+    return bool(signatures & {"ne_kadar", "ne_zaman", "nedir", "nereden", "var_mi"})
+
+
+def _token_is_scoped(token: str, allowed_tokens: set[str]) -> bool:
+    if token in allowed_tokens:
+        return True
+    for allowed in allowed_tokens:
+        shorter = min(token, allowed, key=len)
+        longer = max(token, allowed, key=len)
+        if len(shorter) >= 4 and longer.startswith(shorter):
+            return True
+    return False
+
+
+def _rewrite_adds_unscoped_detail_tokens(
+    *,
+    query: str,
+    rewritten: str,
+    heuristic_query: str,
+    topic: str | None,
+) -> bool:
+    if not (
+        _query_is_pronoun_led_follow_up(query)
+        or _query_is_short_object_sensitive_follow_up(query)
+    ):
+        return False
+    if normalize_text(heuristic_query) == normalize_text(query):
+        return False
+
+    allowed_tokens = _content_tokens(heuristic_query)
+    if topic:
+        allowed_tokens.update(_content_tokens(topic))
+    if not allowed_tokens:
+        return False
+
+    rewritten_tokens = _content_tokens(rewritten)
+    injected_tokens = {
+        token
+        for token in rewritten_tokens
+        if not _token_is_scoped(token, allowed_tokens)
+    }
+    return bool(injected_tokens)
+
+
+def _should_accept_llm_clarification(
+    *,
+    query: str,
+    state: "ConversationStateData",
+    is_follow_up: bool,
+    clarification_message: str | None,
+) -> bool:
+    if not clarification_message:
+        return False
+    if not is_follow_up:
+        return True
+
+    heuristic_query = _build_heuristic_follow_up_query(query, topic=state.active_topic)
+    if normalize_text(heuristic_query) != normalize_text(query):
+        return False
+    return True
 
 
 _TOPIC_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -158,6 +443,25 @@ _TOPIC_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Yaz Okulu", ("yaz okulu", "yaz donemi")),
     ("Devamsizlik", ("devamsizlik", "devam zorunlulugu", "yoklama")),
 )
+
+_TOPIC_REWRITE_SEEDS: dict[str, str] = {
+    "CAP / Cift Anadal": "cap basvurusu",
+    "Yandal": "yandal basvurusu",
+    "Erasmus ve Uluslararasi Surecler": "erasmus basvurusu",
+    "Harc ve Ogrenim Ucretleri": "harc ucreti",
+    "Burs ve Destekler": "burs",
+    "Kayit ve Akademik Takvim": "kayit islemi",
+    "Kayit Dondurma ve Silme": "kayit dondurma",
+    "Mezuniyet ve Akademik Durum": "mezuniyet",
+    "Staj ve Uygulamali Egitim": "staj",
+    "Sinav ve Degerlendirme": "sinav",
+    "Yatay ve Dikey Gecis": "yatay gecis",
+    "Mufredat ve Ders Yapisi": "mufredat",
+    "Mevzuat ve Yonergeler": "yonetmelik",
+    "Belgeler": "belge",
+    "Yaz Okulu": "yaz okulu",
+    "Devamsizlik": "devamsizlik",
+}
 
 
 @dataclass(frozen=True)
@@ -298,6 +602,7 @@ class ConversationContextService:
                 student_department=student_department,
                 student_faculty=student_faculty,
                 student_type=student_type,
+                allow_follow_up_downgrade=bool(heuristic.get("allow_llm_downgrade")),
             )
             if llm_resolution is not None:
                 rewrite_method = "llm"
@@ -353,6 +658,26 @@ class ConversationContextService:
         if not settings.conversation.enabled or not context_id or not user_query.strip():
             return
 
+        compact_user_query = _compact_text(
+            user_query,
+            max_len=_STATE_QUERY_PREVIEW_MAX_CHARS,
+        )
+        compact_resolved_query = _compact_text(
+            resolved_query,
+            max_len=_STATE_QUERY_PREVIEW_MAX_CHARS,
+        )
+        stored_user_query = _compact_text(
+            user_query,
+            max_len=_TURN_QUERY_PREVIEW_MAX_CHARS,
+        )
+        stored_resolved_query = _compact_text(
+            resolved_query,
+            max_len=_TURN_QUERY_PREVIEW_MAX_CHARS,
+        )
+        stored_assistant_answer = _compact_text(
+            assistant_answer,
+            max_len=_TURN_ANSWER_PREVIEW_MAX_CHARS,
+        )
         answer_summary = _compact_text(
             assistant_answer,
             max_len=settings.conversation.max_answer_summary_chars,
@@ -364,9 +689,9 @@ class ConversationContextService:
             turn = ConversationTurn(
                 context_id=context_id,
                 turn_index=turn_index,
-                user_query=user_query,
-                resolved_query=resolved_query,
-                assistant_answer=assistant_answer,
+                user_query=stored_user_query,
+                resolved_query=stored_resolved_query,
+                assistant_answer=stored_assistant_answer,
                 answer_summary=answer_summary,
                 active_topic=topic,
                 task_type=task_type.value if task_type else None,
@@ -375,6 +700,9 @@ class ConversationContextService:
                 source_refs=source_refs,
                 turn_metadata={
                     "source_count": len(sources),
+                    "user_query_length": len((user_query or "").strip()),
+                    "resolved_query_length": len((resolved_query or "").strip()),
+                    "assistant_answer_length": len((assistant_answer or "").strip()),
                     "recorded_at": self._now_provider().isoformat(),
                 },
             )
@@ -397,8 +725,8 @@ class ConversationContextService:
             state.last_source_refs = source_refs
             state.last_task_type = task_type.value if task_type else None
             state.last_turn_id = turn.id
-            state.last_user_query = user_query
-            state.last_resolved_query = resolved_query
+            state.last_user_query = compact_user_query
+            state.last_resolved_query = compact_resolved_query
             state.last_assistant_answer = answer_summary
             state.turn_count = turn_index
             await session.flush()
@@ -414,8 +742,8 @@ class ConversationContextService:
                 last_source_refs=source_refs,
                 last_task_type=task_type.value if task_type else None,
                 last_turn_id=turn.id,
-                last_user_query=user_query,
-                last_resolved_query=resolved_query,
+                last_user_query=compact_user_query,
+                last_resolved_query=compact_resolved_query,
                 last_assistant_answer=answer_summary,
                 turn_count=turn_index,
                 updated_at=self._now_provider(),
@@ -449,7 +777,7 @@ class ConversationContextService:
         state: ConversationStateData,
     ) -> dict[str, str | bool | None]:
         normalized_query = normalize_text(query)
-        query_tokens = [token for token in normalized_query.split() if token]
+        query_tokens = _normalized_tokens(query)
 
         # Kısa / yanıt niteliğinde ifadeler follow-up olarak değerlendirilmez
         if len(query_tokens) <= 2 and any(t in _TURBO_WORDS for t in query_tokens):
@@ -483,29 +811,26 @@ class ConversationContextService:
         )
 
         signal_based = starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like
+        short_context_follow_up = (
+            state.turn_count > 0
+            and not signal_based
+            and 2 < len(query_tokens) <= 4
+        )
 
         is_follow_up = bool(
             state.turn_count > 0
-            and signal_based
+            and (signal_based or short_context_follow_up)
         )
 
         # Kisa sorgularda (<=4 kelime) state varsa ve hic sinyal yoksa
         # yine follow-up olarak degerlendir — LLM karar versin.
         # "Taksitle odeyebilir miyim?" gibi semantik follow-up'lari yakalar.
-        auto_followup = False
-        if (
-            not is_follow_up
-            and state.turn_count > 0
-            and len(query_tokens) <= 4
-        ):
-            is_follow_up = True
-            auto_followup = True
-
         # Konu degisimi kontrolu: SADECE sinyal-tabanli, marker-only follow-up'larda uygula.
-        # Auto-followup, prefix ve zamir durumlarinda konu kontrolu ATLANIR.
+        # Prefix ve zamir durumlarinda konu kontrolu ATLANIR.
+        # Konu degisimi kontrolu: sadece marker tabanli follow-up'larda uygulanir.
         marker_only_follow_up = (
             is_follow_up
-            and not auto_followup
+            and signal_based
             and not starts_with_follow_up
             and not pronoun_like
         )
@@ -520,6 +845,9 @@ class ConversationContextService:
 
         return {
             "is_follow_up": is_follow_up,
+            "allow_llm_downgrade": (
+                short_context_follow_up
+            ),
             "topic": state.active_topic if is_follow_up else self._infer_topic(query),
         }
 
@@ -533,6 +861,7 @@ class ConversationContextService:
         student_department: str | None,
         student_faculty: str | None,
         student_type: str | None,
+        allow_follow_up_downgrade: bool,
     ) -> ConversationResolution | None:
         prompt = self._build_follow_up_prompt(
             query=query,
@@ -565,11 +894,27 @@ class ConversationContextService:
         standalone_query = str(payload.get("standalone_query") or query).strip() or query
         is_follow_up = bool(payload.get("is_follow_up", True))
 
-        if not is_follow_up:
+        if not is_follow_up and not allow_follow_up_downgrade:
+            is_follow_up = True
+            standalone_query = query
+        elif not is_follow_up:
             standalone_query = query
 
-        if is_follow_up and standalone_query != query:
-            if not _rewrite_preserves_intent(query, standalone_query):
+        if is_follow_up:
+            context_texts = [state.active_topic] if state.active_topic else []
+            heuristic_query = self._rewrite_with_heuristics(query=query, state=state)
+            if not _rewrite_preserves_question_type(query, standalone_query):
+                logger.warning(
+                    "conversation_rewrite_changed_question_type original=%r rewritten=%r -> heuristic_fallback",
+                    query,
+                    standalone_query,
+                )
+                return None
+            if not _rewrite_preserves_intent(
+                query,
+                standalone_query,
+                context_texts=context_texts,
+            ):
                 logger.warning(
                     "conversation_rewrite_rejected original=%r rewritten=%r → heuristic_fallback",
                     query,
@@ -579,8 +924,39 @@ class ConversationContextService:
                 # None dondurup heuristik fallback'e dusur.
                 return None
 
+            if not _rewrite_supplies_needed_context(
+                query,
+                standalone_query,
+                context_texts=context_texts,
+            ):
+                logger.warning(
+                    "conversation_rewrite_missing_context original=%r rewritten=%r â†’ heuristic_fallback",
+                    query,
+                    standalone_query,
+                )
+                return None
+            if _rewrite_adds_unscoped_detail_tokens(
+                query=query,
+                rewritten=standalone_query,
+                heuristic_query=heuristic_query,
+                topic=state.active_topic,
+            ):
+                logger.warning(
+                    "conversation_rewrite_added_unscoped_details original=%r rewritten=%r -> heuristic_fallback",
+                    query,
+                    standalone_query,
+                )
+                return None
+
         carry_over_departments = self._parse_departments(payload.get("carry_over_departments") or [])
-        clarification_message = payload.get("clarification_message")
+        clarification_message = str(payload.get("clarification_message") or "").strip() or None
+        if payload.get("needs_clarification") and not _should_accept_llm_clarification(
+            query=query,
+            state=state,
+            is_follow_up=is_follow_up,
+            clarification_message=clarification_message,
+        ):
+            clarification_message = None
         return ConversationResolution(
             original_query=query,
             effective_query=standalone_query,
@@ -591,9 +967,7 @@ class ConversationContextService:
             source_hints=list(state.last_source_refs) if is_follow_up else [],
             task_type_hint=self._parse_task_type(state.last_task_type) if is_follow_up else None,
             clarification_message=(
-                str(clarification_message).strip()
-                if payload.get("needs_clarification") and clarification_message
-                else None
+                clarification_message if payload.get("needs_clarification") and clarification_message else None
             ),
         )
 
@@ -606,10 +980,14 @@ class ConversationContextService:
         if not state.active_topic:
             return query
         lowered = normalize_text(query)
+        topic_seed = _topic_rewrite_seed(state.active_topic)
         normalized_topic = normalize_text(state.active_topic)
-        if normalized_topic and normalized_topic in lowered:
+        normalized_seed = normalize_text(topic_seed)
+        if (normalized_topic and normalized_topic in lowered) or (
+            normalized_seed and normalized_seed in lowered
+        ):
             return query
-        return f"{state.active_topic} hakkinda: {query}"
+        return _build_heuristic_follow_up_query(query, topic=state.active_topic)
 
     def _build_follow_up_prompt(
         self,
@@ -704,10 +1082,16 @@ class ConversationContextService:
         if course_code_match:
             return f"{course_code_match.group(0).replace(' ', '')} dersi"
 
+        # En uzun/spesifik marker eslesmesini onceliklendir.
+        # "kayit dondurma" > "kayit" gibi generic eslesmelerin spesifik olanlari yutmasini onle.
+        best_topic: str | None = None
+        best_marker_len = 0
         for topic, markers in _TOPIC_PATTERNS:
-            if any(marker in normalized_query for marker in markers):
-                return topic
-        return None
+            for marker in markers:
+                if marker in normalized_query and len(marker) > best_marker_len:
+                    best_topic = topic
+                    best_marker_len = len(marker)
+        return best_topic
 
     @staticmethod
     def _extract_source_refs(sources: Sequence[RAGSource]) -> list[str]:

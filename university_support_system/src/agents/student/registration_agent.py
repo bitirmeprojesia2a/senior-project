@@ -11,10 +11,10 @@ from src.agents.student.registration_utils import (
     build_registration_intro,
     is_registration_timing_query,
     pick_preferred_registration_result,
+    should_reject_registration_source_only_result,
     should_skip_registration_llm_synthesis,
 )
 from src.core.constants import Department, TaskType
-from src.core.messages import CONTACT_SUGGESTION
 from src.db.registration_data import RegistrationPeriodInfo, fetch_preferred_registration_period
 from src.db.schemas import DepartmentResponse
 from src.llm.prompt_templates import REGISTRATION_AGENT_SYSTEM_PROMPT
@@ -69,10 +69,9 @@ class RegistrationAgent(BaseSpecialistAgent):
                         f"{start} - {end} tarihleri arasindaydi. "
                         "Yeni donem tarihi su anda ayrica tanimli degil."
                     )
-                answer = f"{message}\n\n{CONTACT_SUGGESTION}"
                 return DepartmentResponse(
                     department=self.department,
-                    answer=answer,
+                    answer=message,
                     db_data={
                         "semester": period.semester,
                         "start": start,
@@ -80,6 +79,7 @@ class RegistrationAgent(BaseSpecialistAgent):
                         "timing_status": period.timing_status,
                     },
                     sources=[],
+                    include_contact_suggestion=True,
                     success=True,
                 )
             return DepartmentResponse(
@@ -87,10 +87,10 @@ class RegistrationAgent(BaseSpecialistAgent):
                 answer=(
                     "Kayit donemi tarihleri su anda veritabaninda tanimli degil. "
                     "En guncel tarih bilgisi yayinlandiginda dogrudan paylasabilirim."
-                    f"\n\n{CONTACT_SUGGESTION}"
                 ),
                 db_data={"registration_period_configured": False},
                 sources=[],
+                include_contact_suggestion=True,
                 success=True,
             )
 
@@ -128,6 +128,21 @@ class RegistrationAgent(BaseSpecialistAgent):
         preferred = self._pick_preferred_result(query_text, results)
         if preferred is None:
             return super()._build_source_only_answer(query_text, results, db_context=db_context)
+        if should_reject_registration_source_only_result(query_text, preferred):
+            safer_results = [
+                item
+                for item in results
+                if not should_reject_registration_source_only_result(query_text, item)
+            ]
+            if safer_results:
+                preferred = self._pick_preferred_result(query_text, safer_results)
+            else:
+                prefix = f"{db_context}\n\n" if db_context else ""
+                return (
+                    prefix
+                    + "Bu konuda ogrenci isleri kaynaklarinda dogrudan teyit edebildigim net bir cevap bulamadim. "
+                    "Soruyu biraz daha acik sorarsan zaman, belge veya kosul bilgisini daha dogru daraltabilirim."
+                )
 
         content = self._compact_source_content(preferred.get("content", ""), max_len=None)
         source = preferred.get("source", "bilinmiyor")

@@ -54,14 +54,18 @@ SYNONYM_MAP: Dict[str, List[str]] = {
     "kayıt yenileme": ["ders kaydı yenileme", "kayıt yenilemek"],
     "ders kaydı": ["kayıt yenileme", "ders seçimi", "ders kaydı yenileme"],
     "kayıt silme": ["kayıt sildirme", "kaydını silme"],
-    "ilişik kesme": ["ilişik kesmek", "ayrılma", "kaydını silme"],
+    "ilişik kesme": ["ilişik kesmek", "ayrılma", "kaydını silme", "kayıt sildirme"],
+    "ayrılmak": ["ilişik kesme", "kayıt sildirme", "ayrılma"],
+    "bırakmak": ["ilişik kesme", "kayıt sildirme", "ayrılma"],
 
     # Akademik Terimler
     "gno": ["genel not ortalaması", "not ortalaması", "GNO", "akademik ortalama"],
     "not ortalaması": ["GNO", "genel not ortalaması"],
     "akts": ["kredi", "AKTS", "ects"],
     "transkript": ["not belgesi", "transkript belgesi", "not dökümü"],
-    "mezuniyet": ["diploma", "mezun olma", "mezuniyet belgesi", "mezun olmak"],
+    "mezuniyet": ["diploma", "mezun olma", "mezuniyet belgesi", "mezun olmak", "mezuniyet koşulları", "mezuniyet şartları"],
+    "mezuniyet koşulları": ["mezuniyet şartları", "mezun olmak için", "mezuniyet gereksinimleri"],
+    "mezuniyet şartları": ["mezuniyet koşulları", "mezun olmak için", "mezuniyet gereksinimleri"],
     "diploma": ["mezuniyet belgesi", "lisans diploması", "diploma eki"],
     "önkoşul": ["ön koşul", "ön şart", "önşart"],
     "müfredat": ["ders planı", "ders programı", "öğretim programı"],
@@ -271,7 +275,7 @@ class QueryPreprocessor:
     def _expand_synonyms(self, text: str) -> Set[str]:
         """
         Metindeki terimleri sinonim sözlüğünden genişletir.
-        Kesin eşleşme yapar (alt string değil, tam terim).
+        Uzun terim öncelikli ifade eşleşmesi yapar ve kelime/parça sınırlarını korur.
         """
         expanded: Set[str] = set()
         text_lower = text.lower()
@@ -282,7 +286,8 @@ class QueryPreprocessor:
 
         matched_keys: Set[str] = set()
         for key in sorted_keys:
-            if key in text_lower and key not in matched_keys:
+            pattern = re.compile(rf"(?<!\w){re.escape(key)}(?!\w)")
+            if pattern.search(text_lower) and key not in matched_keys:
                 synonyms = self._lower_synonym_map[key]
                 expanded.update(synonyms)
                 matched_keys.add(key)

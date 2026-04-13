@@ -27,20 +27,9 @@ async def resolve_auth_inputs(
     session_token: str | None,
     slack_user_id: str | None,
     auth_service: AuthService,
+    allow_slack_identity: bool = False,
 ) -> dict[str, Any]:
     """Gelen API istegi icin auth baglamini cozumler."""
-    if student_id is not None and is_authenticated:
-        return {
-            "student_id": student_id,
-            "student_department": student_department,
-            "student_faculty": student_faculty,
-            "student_type": student_type,
-            "full_name": full_name,
-            "student_number": student_number,
-            "is_authenticated": True,
-            "slack_user_id": slack_user_id,
-        }
-
     if session_token:
         resolved = await auth_service.resolve_auth_context(session_token=session_token)
         if resolved is None:
@@ -49,36 +38,56 @@ async def resolve_auth_inputs(
             "student_id": resolved.student_db_id,
             "student_department": resolved.student_department,
             "student_faculty": resolved.student_faculty,
-            "student_type": student_type,
+            "student_type": None,
             "full_name": resolved.full_name,
             "student_number": resolved.student_number,
             "is_authenticated": True,
             "slack_user_id": resolved.slack_user_id or slack_user_id,
+            "auth_state": "verified",
+            "verification_source": "session_token",
         }
 
-    if slack_user_id:
+    if slack_user_id and allow_slack_identity:
         resolved = await auth_service.resolve_auth_context(slack_user_id=slack_user_id)
         if resolved is not None:
             return {
                 "student_id": resolved.student_db_id,
                 "student_department": resolved.student_department,
                 "student_faculty": resolved.student_faculty,
-                "student_type": student_type,
+                "student_type": None,
                 "full_name": resolved.full_name,
                 "student_number": resolved.student_number,
                 "is_authenticated": True,
                 "slack_user_id": resolved.slack_user_id,
+                "auth_state": "verified",
+                "verification_source": "slack_mapping",
             }
 
+    auth_state = (
+        "declared"
+        if any(
+            value
+            for value in (
+                student_department,
+                student_faculty,
+                student_type,
+                full_name,
+                student_number,
+            )
+        )
+        else "anonymous"
+    )
     return {
-        "student_id": student_id,
+        "student_id": None,
         "student_department": student_department,
         "student_faculty": student_faculty,
         "student_type": student_type,
         "full_name": full_name,
         "student_number": student_number,
-        "is_authenticated": is_authenticated,
+        "is_authenticated": False,
         "slack_user_id": slack_user_id,
+        "auth_state": auth_state,
+        "verification_source": None,
     }
 
 

@@ -83,6 +83,17 @@ class AuthService:
                     ),
                 }
 
+            latest_otp = await find_latest_otp(session, student.id)
+            if self._is_otp_request_throttled(latest_otp):
+                return {
+                    "success": False,
+                    "reason": "otp_recently_requested",
+                    "message": (
+                        "Yakinda bir dogrulama kodu gonderildi. "
+                        "Lutfen kisa bir sure bekleyip tekrar deneyin."
+                    ),
+                }
+
             now = self._now_provider()
             expires_at = now + timedelta(minutes=settings.auth.otp_ttl_minutes)
             otp_code = self._otp_generator(settings.auth.otp_length)
@@ -254,26 +265,28 @@ class AuthService:
 
             if slack_user_id:
                 result = await session.execute(
-                    select(SlackStudentMapping, Student)
-                    .join(Student, Student.id == SlackStudentMapping.student_id)
+                    select(VerificationSession, Student)
+                    .join(Student, Student.id == VerificationSession.student_id)
                     .where(
-                        SlackStudentMapping.slack_user_id == slack_user_id,
-                        SlackStudentMapping.is_active.is_(True),
+                        VerificationSession.slack_user_id == slack_user_id,
+                        VerificationSession.is_active.is_(True),
+                        VerificationSession.expires_at > self._now_provider(),
                     )
+                    .order_by(VerificationSession.expires_at.desc())
                 )
                 row = result.first()
                 if row is None:
                     return None
-                mapping, student = row
+                session_row, student = row
                 return AuthContext(
                     student_db_id=student.id,
                     student_number=student.student_id,
                     full_name=student.full_name,
                     student_department=student.department,
                     student_faculty=student.faculty,
-                    slack_user_id=mapping.slack_user_id,
-                    session_token=None,
-                    expires_at=None,
+                    slack_user_id=session_row.slack_user_id,
+                    session_token=session_row.session_token,
+                    expires_at=ensure_aware(session_row.expires_at),
                 )
 
         return None
@@ -304,3 +317,12 @@ class AuthService:
         domain = email.partition("@")[2].lower()
         allowed = settings.auth.allowed_student_email_domain.lower()
         return domain == allowed
+
+    def _is_otp_request_throttled(self, latest_otp: OTPCode | None) -> bool:
+        if latest_otp is None:
+            return False
+        created_at = ensure_aware(getattr(latest_otp, "created_at", None))
+        if created_at is None:
+            return False
+        cooldown = timedelta(seconds=settings.auth.otp_request_cooldown_seconds)
+        return created_at + cooldown > self._now_provider()

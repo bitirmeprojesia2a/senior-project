@@ -62,17 +62,52 @@ class OpenAIClient:
             "Content-Type": "application/json",
         }
 
-    async def get_health(self) -> Dict[str, Any]:
+    @staticmethod
+    def _extract_available_models(payload: Any) -> list[str]:
+        """Normalize model-list payloads returned by OpenAI-compatible providers."""
+        raw_models: Any
+        if isinstance(payload, dict):
+            raw_models = payload.get("data")
+            if raw_models is None:
+                raw_models = payload.get("models", [])
+        elif isinstance(payload, list):
+            raw_models = payload
+        else:
+            raw_models = []
+
+        available_models: list[str] = []
+        for item in raw_models or []:
+            if isinstance(item, str):
+                available_models.append(item)
+                continue
+            if isinstance(item, dict):
+                model_name = item.get("id") or item.get("name")
+                if model_name:
+                    available_models.append(str(model_name))
+
+        return list(dict.fromkeys(available_models))
+
+    async def get_health(self, *, models: list[str] | None = None) -> Dict[str, Any]:
         """
         API baglantisini kontrol eder.
         Basit bir model listesi sorgusu ile key/gecerlilik testi yapar.
         """
+        configured_models = list(dict.fromkeys(model for model in (models or []) if model))
+        if not configured_models:
+            configured_models = [self.model]
+
         if not self._api_keys:
             return {
                 "status": "unhealthy",
                 "reason": "API_KEY_MISSING",
                 "model_found": False,
                 "provider": self.provider_name,
+                "base_url": self.base_url,
+                "available_models": [],
+                "configured_models": configured_models,
+                "configured_models_found": {
+                    model_name: False for model_name in configured_models
+                },
             }
 
         try:
@@ -82,11 +117,21 @@ class OpenAIClient:
                     headers=self._get_headers(),
                 )
                 response.raise_for_status()
+                payload = response.json()
+                available_models = self._extract_available_models(payload)
+                found_models = {
+                    model_name: model_name in available_models
+                    for model_name in configured_models
+                }
+                default_model_found = found_models.get(self.model, all(found_models.values()))
                 return {
-                    "status": "healthy",
-                    "model_found": True,
+                    "status": "healthy" if all(found_models.values()) else "model_missing",
+                    "model_found": default_model_found,
                     "provider": self.provider_name,
                     "base_url": self.base_url,
+                    "available_models": available_models,
+                    "configured_models": configured_models,
+                    "configured_models_found": found_models,
                 }
         except (httpx.HTTPError, OpenAIClientError) as exc:
             return {
@@ -96,6 +141,11 @@ class OpenAIClient:
                 "model_found": False,
                 "provider": self.provider_name,
                 "base_url": self.base_url,
+                "available_models": [],
+                "configured_models": configured_models,
+                "configured_models_found": {
+                    model_name: False for model_name in configured_models
+                },
             }
 
     async def generate(

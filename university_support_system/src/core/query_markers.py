@@ -94,4 +94,10 @@ GLOBAL_SYNTHESIS_QUERY_MARKERS: tuple[str, ...] = (
     "dikey gecis",
     "kayit dondurma",
     "staj",
+    "ilisik kesme",
+    "mezuniyet",
+    "ayrilma",
+    "ayrilmak",
+    "birak",
+    "birakmak",
 )

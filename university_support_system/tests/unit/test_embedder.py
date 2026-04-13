@@ -83,7 +83,11 @@ class TestEmbedderInit:
             embedder = Embedder(model_name="BAAI/bge-m3", device="cpu")
             _ = embedder.model
 
-        mock_transformer.assert_called_once_with("BAAI/bge-m3", device="cpu")
+        mock_transformer.assert_called_once_with(
+            "BAAI/bge-m3",
+            device="cpu",
+            local_files_only=True,
+        )
 
 
 class TestEmbedTexts:

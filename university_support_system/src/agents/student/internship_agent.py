@@ -47,34 +47,18 @@ class InternshipAgent(BaseSpecialistAgent):
         if not query_text:
             query_text = self._extract_query_from_task(task)
 
-        student_id = metadata.get("student_id")
-        is_authenticated = bool(metadata.get("is_authenticated", False))
-
-        dept_context = ""
-        if student_id and is_authenticated:
-            snapshot = await self._student_fetcher(int(student_id))
-            if snapshot is not None:
-                student_dept = snapshot.get("department")
-                registration_status = snapshot.get("registration_status", "bilinmiyor")
-                parts = []
-                if student_dept:
-                    parts.append(f"Ogrencinin bolumu: {student_dept}. ")
-                parts.append(f"Kayit durumu: {registration_status}. ")
-                dept_context = "".join(parts)
-
         response = await super().handle_department_task(task)
 
-        if response.success:
-            parts = []
-            if dept_context:
-                parts.append(dept_context)
-            parts.append(response.answer)
-            if self._needs_cross_reference(query_text):
-                parts.append(
-                    "\n\nNot: Staj ucreti geri odemesi veya mali detaylar icin "
-                    "finans birimi (scholarship_agent) ile iletisime gecmeniz onerilir."
-                )
-            response = response.model_copy(update={"answer": "".join(parts)})
+        if response.success and self._needs_cross_reference(query_text):
+            response = response.model_copy(
+                update={
+                    "answer": (
+                        f"{response.answer}\n\n"
+                        "Not: Staj ucreti geri odemesi veya mali detaylar icin "
+                        "finans birimi (scholarship_agent) ile iletisime gecmeniz onerilir."
+                    )
+                }
+            )
 
         return response
 

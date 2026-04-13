@@ -19,17 +19,19 @@ from src.core.constants import (
     get_department_config,
 )
 from src.db.schemas import IntentAnalysis, RoutingResult
-from src.llm.prompt_templates import DEPARTMENT_ROUTING_SYSTEM_PROMPT
+from src.llm.prompt_templates import DEPARTMENT_ROUTING_SYSTEM_PROMPT, build_routing_user_prompt
 from src.routing.routing_policy import (
     NORMALIZED_COURSE_CODE_IN_QUERY,
     contains_any,
     detect_task_type as detect_task_type_by_policy,
     has_academic_calendar_markers,
+    has_announcement_markers,
     has_cap_markers,
     has_general_akts_markers,
     has_internship_markers,
     has_formal_rule_markers,
     has_international_markers,
+    has_student_services_payment_overlap,
     has_scholarship_markers,
     has_student_services_markers,
     has_student_document_markers,
@@ -240,6 +242,20 @@ class DepartmentRouter:
                 intent=intent,
             )
 
+        if has_student_services_payment_overlap(lowered):
+            confidence = max(decision.confidence, 0.87)
+            return _RuleRoutingDecision(
+                departments=[Department.STUDENT_AFFAIRS, Department.FINANCE],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.PARALLEL,
+                reasoning=(
+                    "Kayit dondurma veya benzeri idari surec, odeme yukumluluguyle birlikte soruluyor; "
+                    "ogrenci isleri ve finans paralel ele alinmali."
+                ),
+                intent=intent,
+            )
+
         if has_student_services_markers(lowered):
             confidence = max(decision.confidence, 0.84)
             return _RuleRoutingDecision(
@@ -248,6 +264,16 @@ class DepartmentRouter:
                 confidence_level=self._confidence_level(confidence),
                 strategy=RoutingStrategy.DIRECT,
                 reasoning="UBYS, sifre, kayit/donem dondurma veya ilisik kesme odakli soru; ogrenci isleri oncelikli.",
+                intent=intent,
+            )
+
+        if has_announcement_markers(lowered):
+            return _RuleRoutingDecision(
+                departments=[Department.STUDENT_AFFAIRS],
+                confidence=0.70,
+                confidence_level=ConfidenceLevel.MEDIUM,
+                strategy=RoutingStrategy.CLARIFICATION,
+                reasoning="Duyuru sorusu; canli veri gerektirir, mevcut kaynaklarda yanitlanamaz.",
                 intent=intent,
             )
 
@@ -346,7 +372,7 @@ class DepartmentRouter:
                 intent=intent,
             )
 
-        if has_cap_markers(lowered):
+        if has_cap_markers(lowered) and not has_international_markers(lowered):
             confidence = max(decision.confidence, 0.82)
             if contains_any(lowered, ("basvuru", "ne zaman", "takvim", "tarih", "surec")):
                 return _RuleRoutingDecision(
@@ -408,6 +434,20 @@ class DepartmentRouter:
                         decision.reasoning
                         + " Kisisel AKTS/kredi ilerlemesi; ogrenci isleri oncelikli."
                     ),
+                    intent=intent,
+                )
+
+        # Kisisel veri sinyali: not ortalamam, borcum, transkript vb.
+        # Bu sorular academic_programs'e degil student_affairs'e yonlendirilmeli
+        if looks_like_personal_data_query_by_policy(lowered):
+            if Department.ACADEMIC_PROGRAMS in decision.departments:
+                confidence = max(decision.confidence, 0.78)
+                return _RuleRoutingDecision(
+                    departments=[Department.STUDENT_AFFAIRS],
+                    confidence=confidence,
+                    confidence_level=self._confidence_level(confidence),
+                    strategy=RoutingStrategy.DIRECT,
+                    reasoning="Kisisel veri sinyali; ogrenci isleri oncelikli.",
                     intent=intent,
                 )
 
@@ -506,11 +546,16 @@ class DepartmentRouter:
                 reasoning=f"Kural tabanli yonlendirme en guclu eslesme olarak {best_department.value} secti.",
             )
 
+        _SECONDARY_DEPT_MIN_SCORE = 0.25
+        _SECONDARY_DEPT_MAX_GAP = 0.15
         close_departments = [
             department
             for department, score in ordered
-            if score > 0 and (best_score - score) <= 0.2
+            if score >= _SECONDARY_DEPT_MIN_SCORE
+            and (best_score - score) <= _SECONDARY_DEPT_MAX_GAP
         ]
+        if not close_departments:
+            close_departments = [best_department]
         strategy = RoutingStrategy.PARALLEL if len(close_departments) > 1 else RoutingStrategy.DIRECT
 
         return _RuleRoutingDecision(
@@ -520,6 +565,27 @@ class DepartmentRouter:
             strategy=strategy,
             reasoning="Kural tabanli yonlendirme birden fazla yakin eslesme buldu.",
         )
+
+    @staticmethod
+    def _extract_json_from_response(response: str) -> dict | None:
+        """Groq JSON mode bozulduğunda regex ile JSON bloğu çıkar."""
+        import re as _re
+        # Yöntem 1: { ... } bloğu bul (iç içe geçmemiş)
+        brace_match = _re.search(r'\{[^{}]*\}', response, _re.DOTALL)
+        if brace_match:
+            try:
+                return json.loads(brace_match.group(0))
+            except json.JSONDecodeError:
+                pass
+        # Yöntem 2: Kaçış karakterlerini temizle ve tekrar dene
+        cleaned = response.replace('\\"', '"').replace('\\\\', '\\')
+        brace_match = _re.search(r'\{[^{}]*\}', cleaned, _re.DOTALL)
+        if brace_match:
+            try:
+                return json.loads(brace_match.group(0))
+            except json.JSONDecodeError:
+                pass
+        return None
 
     async def _analyze_intent_with_llm(
         self,
@@ -531,10 +597,18 @@ class DepartmentRouter:
         """LLM ile niyet analizi yapar: departman + complexity + is_personal + force_llm."""
         from src.llm.llm_service import LLMServiceError
 
+        # Kural tabanli is_personal ipucu hesapla
+        rule_is_personal = self._looks_like_personal_data_query(query)
+
+        user_prompt = build_routing_user_prompt(
+            query,
+            rule_is_personal_hint=rule_is_personal,
+        )
+
         try:
             response = await asyncio.wait_for(
                 self.llm_service.generate(
-                    prompt=query,
+                    prompt=user_prompt,
                     system=DEPARTMENT_ROUTING_SYSTEM_PROMPT,
                     json_mode=True,
                     model_role="routing",
@@ -542,7 +616,14 @@ class DepartmentRouter:
                 ),
                 timeout=LLM_ROUTING_TIMEOUT_SECONDS,
             )
-            payload = json.loads(response)
+            try:
+                payload = json.loads(response)
+            except json.JSONDecodeError:
+                payload = self._extract_json_from_response(response)
+                if payload is None:
+                    logger.warning("groq_json_parse_failed_fallback response=%r", response[:200])
+                    return fallback
+                logger.info("groq_json_recovered_via_regex")
             departments = self._parse_departments(payload.get("departments", []))
             confidence = float(payload.get("confidence", 0.0))
             reasoning = payload.get("reasoning") or "LLM tabanli niyet analizi karari."

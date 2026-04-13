@@ -12,13 +12,14 @@ from src.core.profiling import profile_stage
 
 logger = structlog.get_logger()
 
-DEFAULT_RERANKER_MODEL = "seroe/bge-reranker-v2-m3-turkish-triplet"
+DEFAULT_RERANKER_MODEL = "nreimers/mmarco-mMiniLMv2-L6-H384-v1"
 
-# ms-marco-MiniLM-L-6-v2 logit dagilimina gore kalibre sigmoid parametreleri.
-# analyze_reranker_scores.py (40 soru, 400 aday) ciktisina dayanir.
-# shift = tum adaylarin logit medyani, scale = IQR (Q75 - Q25).
-_CALIBRATION_SHIFT = 1.2356
-_CALIBRATION_SCALE = 6.0418
+# Reranker logit kalibrasyon parametreleri.
+# nreimers/mmarco-mMiniLMv2-L6-H384-v1 icin hesaplandi (40 soru, 400 aday).
+# analyze_reranker_scores.py --all-profiles ciktisina dayanir.
+# Eski degerler (ms-marco-MiniLM-L-6-v2): shift=1.2356, scale=6.0418
+_CALIBRATION_SHIFT = 0.0687
+_CALIBRATION_SCALE = 0.5
 
 
 class CrossEncoderReranker:

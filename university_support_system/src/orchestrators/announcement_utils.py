@@ -9,6 +9,7 @@ from src.db.telemetry import (
     build_main_orchestrator_identity,
     build_specialist_agent_identity,
 )
+from src.orchestrators.response_utils import ANNOUNCEMENT_SURFACE_DEPARTMENT
 from src.orchestrators.task_builders import build_announcement_request_task
 from src.orchestrators.user_response_builders import build_announcement_user_response
 
@@ -23,6 +24,8 @@ async def request_announcement_response(
     query_log_id: int | None,
     task_type,
     departments: list[str] | None = None,
+    faculty: str | None = None,
+    allow_latest_fallback: bool = True,
 ):
     """Call the announcement agent and record telemetry for the exchange."""
     announcement_task = build_announcement_request_task(
@@ -30,7 +33,9 @@ async def request_announcement_response(
         context_id=context_id,
         routing_reason=routing_reason,
         departments=departments,
+        faculty=faculty,
     )
+    announcement_task.metadata["allow_latest_fallback"] = allow_latest_fallback
 
     response_task = await announcement_agent.handle_task(announcement_task)
     response = extract_department_response(response_task)
@@ -59,6 +64,7 @@ async def build_announcement_response(
     query_log_id: int | None,
     routing_reasoning: str | None,
     task_type,
+    faculty: str | None = None,
 ):
     """Build a full user-facing response for announcement-only requests."""
     response = await request_announcement_response(
@@ -69,6 +75,7 @@ async def build_announcement_response(
         routing_reason=routing_reasoning,
         query_log_id=query_log_id,
         task_type=task_type,
+        faculty=faculty,
     )
     response_time_ms = round((perf_counter() - start_time) * 1000, 2)
     await telemetry_service.finalize_query_log(
@@ -76,7 +83,7 @@ async def build_announcement_response(
         response_text=response.answer,
         response_time_ms=response_time_ms,
         status="completed",
-        departments=["announcement"] if response.sources else [],
+        departments=[ANNOUNCEMENT_SURFACE_DEPARTMENT],
     )
     return build_announcement_user_response(
         context_id=context_id,

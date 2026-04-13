@@ -9,7 +9,8 @@ from src.db.student_models import Course, Student, StudentCourse
 
 
 async def fetch_student_academic_snapshot(student_id: int) -> dict[str, object] | None:
-    """Ogrencinin akademik durum ozetini getirir."""
+    """Ogrencinin hizli akademik ozetini getirir; tam transkript yerine gecmez."""
+    recent_course_limit = 8
     async with get_session() as session:
         student = await session.get(Student, student_id)
         if student is None:
@@ -20,7 +21,7 @@ async def fetch_student_academic_snapshot(student_id: int) -> dict[str, object] 
             .join(Course, StudentCourse.course_id == Course.id)
             .where(StudentCourse.student_id == student_id)
             .order_by(desc(StudentCourse.id))
-            .limit(8)
+            .limit(recent_course_limit)
         )
         course_rows = (await session.execute(courses_stmt)).all()
 
@@ -32,6 +33,9 @@ async def fetch_student_academic_snapshot(student_id: int) -> dict[str, object] 
             "completed_credits": student.completed_credits,
             "total_credits": student.total_credits,
             "registration_status": student.registration_status,
+            "snapshot_scope": "recent_summary",
+            "recent_course_limit": recent_course_limit,
+            "recent_course_count": len(course_rows),
             "recent_courses": [
                 {
                     "course_code": course.course_code,

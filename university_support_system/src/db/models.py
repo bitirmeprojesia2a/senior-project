@@ -13,6 +13,7 @@ from src.db.student_models import (
     Course,
     CoursePrerequisite,
     CourseRegistrationPeriod,
+    CourseScheduleSlot,
     Student,
     StudentCourse,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "Course",
     "CoursePrerequisite",
     "CourseRegistrationPeriod",
+    "CourseScheduleSlot",
     "Installment",
     "OfficeContact",
     "OTPCode",

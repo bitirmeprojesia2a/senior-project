@@ -24,10 +24,12 @@ def test_build_text_message_creates_user_message():
 
 def test_build_query_task_sets_metadata_and_state():
     payload = A2AQueryPayload(
-        query_text="Harç borcum var mı?",
+        query_text="Harc borcum var mi?",
         context_id="ctx-2",
         task_type="tuition_query",
         student_id=42,
+        student_number="20210001",
+        student_full_name="Ahmet Yilmaz",
         is_authenticated=True,
     )
 
@@ -35,8 +37,10 @@ def test_build_query_task_sets_metadata_and_state():
 
     assert task.contextId == "ctx-2"
     assert task.status.state == TaskState.submitted
-    assert task.metadata["query_text"] == "Harç borcum var mı?"
+    assert task.metadata["query_text"] == "Harc borcum var mi?"
     assert task.metadata["student_id"] == 42
+    assert "student_number" not in task.metadata
+    assert "student_full_name" not in task.metadata
 
 
 def test_build_agent_card_creates_skillful_card():

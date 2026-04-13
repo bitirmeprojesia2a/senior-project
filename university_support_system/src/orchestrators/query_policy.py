@@ -14,6 +14,7 @@ from src.core.query_markers import (
 )
 from src.core.text_normalization import contains_any_normalized, normalize_text
 from src.db.schemas import DepartmentResponse
+from src.orchestrators.response_utils import response_eligible_for_global_synthesis
 
 CLARIFICATION_MESSAGE = (
     "Sorunuzun hangi alana ait oldugunu net olarak belirleyemedim. "
@@ -160,10 +161,16 @@ def should_use_global_synthesis(*, query: str, responses: list[DepartmentRespons
     """Return whether final answer composition should use global synthesis."""
     if looks_like_contact_query(query):
         return False
-    meaningful = [response for response in responses if response.answer.strip() and response.success]
+    meaningful = [
+        response
+        for response in responses
+        if response_eligible_for_global_synthesis(response)
+    ]
     departments = {response.department for response in meaningful}
     if len(departments) < 2:
         return False
     if not any(response.sources or response.db_data for response in meaningful):
         return False
-    return query_prefers_global_synthesis(query)
+    # 2+ departman + anlamlı kaynak varsa global sentez varsayılan olarak aktif.
+    # Marker eşleşmesi opsiyonel — tüm çok-departmanlı sorular tek bütün cevap almalı.
+    return True

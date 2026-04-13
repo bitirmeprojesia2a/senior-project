@@ -380,6 +380,9 @@ class TestClarificationRouting:
         response = await orchestrator.handle_query("Merhaba", context_id="e2e-clar-1")
 
         assert response.answer is not None and len(response.answer) > 0
+        assert response.departments_involved == []
+        assert response.generation_modes == ["kural"]
+        assert response.sources == []
 
 
 # ══════════════════════════════════════════════════════════
@@ -522,3 +525,6 @@ class TestAnnouncementIntegration:
         )
 
         assert response.answer is not None
+        assert response.departments_involved == ["announcement"]
+        assert response.generation_modes == ["vt"]
+        assert "duyuru" in response.answer.lower()

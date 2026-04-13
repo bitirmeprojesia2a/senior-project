@@ -200,8 +200,9 @@ class DepartmentOrchestrator:
     ) -> BaseSpecialistAgent:
         if query_text and self.keyword_routing and self.agents_by_id:
             lowered = _normalize_text(query_text)
-            for keyword, agent_id in self.keyword_routing.items():
-                if _normalize_text(keyword) in lowered:
+            for keyword, agent_id in _iter_keyword_routes(self.keyword_routing):
+                normalized_keyword = _normalize_text(keyword)
+                if normalized_keyword and normalized_keyword in lowered:
                     matched = self.agents_by_id.get(agent_id)
                     if matched is not None:
                         return matched
@@ -216,6 +217,23 @@ class DepartmentOrchestrator:
 
 def _normalize_text(text: str) -> str:
     return normalize_text(text)
+
+
+def _iter_keyword_routes(keyword_routing: dict[str, str]) -> list[tuple[str, str]]:
+    ranked_routes: list[tuple[int, int, int, str, str]] = []
+    for index, (keyword, agent_id) in enumerate(keyword_routing.items()):
+        normalized_keyword = _normalize_text(keyword)
+        ranked_routes.append(
+            (
+                -len(normalized_keyword.split()),
+                -len(normalized_keyword),
+                index,
+                keyword,
+                agent_id,
+            )
+        )
+    ranked_routes.sort()
+    return [(keyword, agent_id) for _, _, _, keyword, agent_id in ranked_routes]
 
 
 __all__ = [

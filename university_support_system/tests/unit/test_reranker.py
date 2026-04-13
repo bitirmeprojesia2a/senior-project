@@ -9,7 +9,22 @@ import numpy as np
 
 import pytest
 
-from src.rag.reranker import CrossEncoderReranker
+from src.core.config import settings
+from src.rag.reranker import (
+    CrossEncoderReranker,
+    _CALIBRATION_SCALE,
+    _CALIBRATION_SHIFT,
+)
+
+
+def _calibrated_score(raw_logit: float) -> float:
+    adjusted = (raw_logit - _CALIBRATION_SHIFT) / _CALIBRATION_SCALE
+    if adjusted >= 0:
+        prob = 1.0 / (1.0 + np.exp(-adjusted))
+    else:
+        exp_adjusted = np.exp(adjusted)
+        prob = exp_adjusted / (1.0 + exp_adjusted)
+    return round(float(prob), 4)
 
 
 @pytest.fixture
@@ -60,10 +75,11 @@ class TestRerankerRerank:
 
         results = reranker.rerank("ÇAP başvurusu", sample_candidates, top_k=5)
 
-        assert results[0]["score"] == 0.9
-        assert results[1]["score"] == 0.7
+        assert results[0]["score"] == _calibrated_score(0.9)
+        assert results[1]["score"] == _calibrated_score(0.7)
         assert results[0]["metadata"]["score_type"] == "reranker"
-        assert results[0]["metadata"]["reranker_score"] == 0.9
+        assert results[0]["metadata"]["raw_reranker_logit"] == 0.9
+        assert results[0]["metadata"]["reranker_score"] == _calibrated_score(0.9)
         assert results[0]["metadata"]["pre_rerank_score"] == 0.0
 
     def test_empty_candidates(self, mock_cross_encoder):
@@ -86,7 +102,7 @@ class TestRerankerRerank:
         results = reranker.rerank("test", candidates, top_k=5)
 
         assert len(results) == 1
-        assert results[0]["score"] == 0.85
+        assert results[0]["score"] == _calibrated_score(0.85)
         assert reranker.last_run_succeeded is True
 
     def test_preserves_metadata(self, mock_cross_encoder, sample_candidates):
@@ -117,7 +133,7 @@ class TestRerankerInit:
 
     def test_default_model_from_config(self):
         reranker = CrossEncoderReranker()
-        assert "reranker" in reranker.model_name.lower() or "bge" in reranker.model_name.lower()
+        assert reranker.model_name == settings.reranker.model
 
     def test_custom_model(self):
         reranker = CrossEncoderReranker(model_name="custom/model")

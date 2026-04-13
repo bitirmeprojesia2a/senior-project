@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, time
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, SmallInteger, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, SmallInteger, String, Time, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.model_base import Base, TimestampMixin
@@ -171,3 +171,41 @@ class CourseRegistrationPeriod(TimestampMixin, Base):
     start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class CourseScheduleSlot(TimestampMixin, Base):
+    """Structured department timetable rows for future hybrid schedule answers."""
+
+    __tablename__ = "course_schedule_slots"
+    __table_args__ = (
+        UniqueConstraint(
+            "academic_year",
+            "term",
+            "department",
+            "course_key",
+            "schedule_group",
+            "section",
+            "day_of_week",
+            "start_time",
+            "classroom",
+            name="uq_course_schedule_slot_identity",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    academic_year: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    term: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    department: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    course_code: Mapped[Optional[str]] = mapped_column(String(20), index=True)
+    course_key: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    course_name: Mapped[Optional[str]] = mapped_column(String(200))
+    schedule_group: Mapped[str] = mapped_column(String(40), nullable=False, default="", index=True)
+    section: Mapped[str] = mapped_column(String(20), nullable=False, default="", index=True)
+    day_of_week: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    start_time: Mapped[time] = mapped_column(Time(), nullable=False)
+    end_time: Mapped[Optional[time]] = mapped_column(Time())
+    classroom: Mapped[Optional[str]] = mapped_column(String(100))
+    instructor: Mapped[Optional[str]] = mapped_column(String(120))
+    source_document: Mapped[Optional[str]] = mapped_column(String(255))
+    source_url: Mapped[Optional[str]] = mapped_column(String(500))
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

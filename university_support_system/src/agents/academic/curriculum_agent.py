@@ -10,6 +10,8 @@ from a2a.types import Task
 from src.agents.academic.curriculum_utils import (
     COURSE_CODE_PATTERN,
     DEPARTMENT_CONTEXT_MESSAGE,
+    extract_schedule_day,
+    extract_schedule_groups,
     extract_curriculum_semester,
     format_course_line,
     format_course_lines,
@@ -17,12 +19,13 @@ from src.agents.academic.curriculum_utils import (
     is_course_list_query,
     is_personal_progress_query,
     is_prerequisite_query,
+    is_schedule_query,
     needs_department_context,
     partition_courses_for_department,
+    wants_specific_schedule_lookup,
 )
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.core.constants import Department, TaskType
-from src.core.messages import CONTACT_SUGGESTION
 from src.core.text_normalization import normalize_text
 from src.db.curriculum_data import (
     fetch_course_prerequisites,
@@ -30,6 +33,10 @@ from src.db.curriculum_data import (
     fetch_courses_by_semester,
 )
 from src.db.registration_data import fetch_active_registration_period
+from src.db.schedule_data import (
+    fetch_schedule_slots_by_department,
+    fetch_schedule_slots_for_course,
+)
 from src.db.schemas import DepartmentResponse
 from src.llm.prompt_templates import CURRICULUM_AGENT_SYSTEM_PROMPT
 
@@ -42,6 +49,8 @@ class CurriculumAgent(BaseSpecialistAgent):
         curriculum_course_fetcher: Callable[[int, str | None], Awaitable[list[dict[str, Any]]]] | None = None,
         prerequisite_fetcher: Callable[[str], Awaitable[dict[str, Any] | None]] | None = None,
         period_fetcher: Callable[[], Awaitable[Any]] | None = None,
+        schedule_department_fetcher: Callable[..., Awaitable[list[dict[str, Any]]]] | None = None,
+        schedule_course_fetcher: Callable[..., Awaitable[list[dict[str, Any]]]] | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -63,6 +72,8 @@ class CurriculumAgent(BaseSpecialistAgent):
         )
         self._prerequisite_fetcher = prerequisite_fetcher or fetch_course_prerequisites
         self._period_fetcher = period_fetcher or fetch_active_registration_period
+        self._schedule_department_fetcher = schedule_department_fetcher or fetch_schedule_slots_by_department
+        self._schedule_course_fetcher = schedule_course_fetcher or fetch_schedule_slots_for_course
 
     async def handle_department_task(self, task: Task) -> DepartmentResponse:
         metadata = task.metadata or {}
@@ -105,6 +116,15 @@ class CurriculumAgent(BaseSpecialistAgent):
                 error="department_context_required",
             )
 
+        if is_schedule_query(lowered) and wants_specific_schedule_lookup(lowered, query_text):
+            schedule_response = await self._try_build_schedule_response(
+                query_text,
+                lowered,
+                student_department=student_department or None,
+            )
+            if schedule_response is not None:
+                return schedule_response
+
         if is_prerequisite_query(lowered):
             code_match = COURSE_CODE_PATTERN.search(query_text)
             if code_match:
@@ -116,8 +136,8 @@ class CurriculumAgent(BaseSpecialistAgent):
                     answer=(
                         f"{code_match.group(0).upper().replace(' ', '')} dersi icin kayitli bir onkosul bilgisi bulunamadi. "
                         "Ders kodu guncellenmis olabilir; ilgili bolum sekreterligi ile dogrulaman iyi olur."
-                        + CONTACT_SUGGESTION
                     ),
+                    include_contact_suggestion=True,
                     success=True,
                 )
 
@@ -136,8 +156,8 @@ class CurriculumAgent(BaseSpecialistAgent):
                 answer=(
                     f"{student_department} icin {curriculum_semester}. yariyilda kayitli ders bulunamadi. "
                     "Mufredat verisini bolum sekreterligi ile dogrulaman iyi olur."
-                    + CONTACT_SUGGESTION
                 ),
+                include_contact_suggestion=True,
                 success=True,
             )
 
@@ -156,6 +176,90 @@ class CurriculumAgent(BaseSpecialistAgent):
         if student_department and normalize_text(student_department) not in lowered:
             metadata["query_text"] = f"{student_department} bolumu/programi icin: {query_text}"
         return await super().handle_department_task(task)
+
+    async def _try_build_schedule_response(
+        self,
+        query_text: str,
+        lowered: str,
+        *,
+        student_department: str | None,
+    ) -> DepartmentResponse | None:
+        day_filter = extract_schedule_day(lowered)
+        group_filters = {normalize_text(value) for value in extract_schedule_groups(lowered)}
+
+        code_match = COURSE_CODE_PATTERN.search(query_text)
+        schedule_rows: list[dict[str, Any]] = []
+        if code_match:
+            schedule_rows = await self._schedule_course_fetcher(
+                code_match.group(0).upper().replace(" ", ""),
+                department=student_department or None,
+                academic_year=None,
+                term=None,
+            )
+        elif student_department:
+            schedule_rows = await self._schedule_department_fetcher(
+                student_department,
+                academic_year=None,
+                term=None,
+            )
+
+        if not schedule_rows:
+            return None
+
+        filtered_rows = schedule_rows
+        if day_filter:
+            filtered_rows = [row for row in filtered_rows if row.get("day_of_week") == day_filter]
+        if group_filters:
+            filtered_rows = [
+                row for row in filtered_rows
+                if normalize_text(row.get("schedule_group")) in group_filters
+            ]
+
+        if not filtered_rows:
+            return None
+
+        if not code_match and not day_filter and not group_filters:
+            return None
+
+        lines: list[str] = []
+        if code_match:
+            header = f"{code_match.group(0).upper().replace(' ', '')} dersi icin bulunan ders programi satirlari:"
+        else:
+            header = "Bulunan ders programi satirlari:"
+        lines.append(header)
+
+        def _sort_key(row: dict[str, Any]) -> tuple[str, str, str, str]:
+            return (
+                str(row.get("day_of_week") or ""),
+                str(row.get("start_time") or ""),
+                str(row.get("schedule_group") or ""),
+                str(row.get("course_key") or ""),
+            )
+
+        for row in sorted(filtered_rows, key=_sort_key)[:16]:
+            group_text = f" | {row['schedule_group']}" if row.get("schedule_group") else ""
+            classroom_text = f" | Derslik: {row['classroom']}" if row.get("classroom") else ""
+            instructor_text = f" | Ogretim Elemani: {row['instructor']}" if row.get("instructor") else ""
+            course_label = row.get("course_code") or row.get("course_name") or row.get("course_key")
+            lines.append(
+                f"- {row['day_of_week']} {row['start_time']}-{row['end_time']} | {course_label}{group_text}{classroom_text}{instructor_text}"
+            )
+
+        if len(filtered_rows) > 16:
+            lines.append(f"... ve {len(filtered_rows) - 16} satir daha bulundu.")
+
+        return DepartmentResponse(
+            department=self.department,
+            answer="\n".join(lines),
+            db_data={
+                "query_type": "schedule_lookup",
+                "match_count": len(filtered_rows),
+                "rows": filtered_rows[:32],
+            },
+            sources=[],
+            include_contact_suggestion=True,
+            success=True,
+        )
 
     async def _build_prerequisite_response(
         self,
@@ -196,12 +300,13 @@ class CurriculumAgent(BaseSpecialistAgent):
                 "dersinin kayitli onkosulu bulunmamaktadir."
             )
 
-        answer = redirect_prefix + db_info + CONTACT_SUGGESTION
+        answer = redirect_prefix + db_info
         return DepartmentResponse(
             department=self.department,
             answer=answer,
             db_data=prereq_data,
             sources=[],
+            include_contact_suggestion=True,
             success=True,
         )
 
@@ -224,7 +329,6 @@ class CurriculumAgent(BaseSpecialistAgent):
                 department=self.department,
                 answer=(
                     f"{student_department} icin {semester} ders/mufredat bilgisi veritabaninda bulunmuyor."
-                    + CONTACT_SUGGESTION
                 ),
                 db_data={
                     "semester": semester,
@@ -234,6 +338,7 @@ class CurriculumAgent(BaseSpecialistAgent):
                     "data_available": False,
                 },
                 sources=[],
+                include_contact_suggestion=True,
                 success=True,
             )
 
@@ -263,11 +368,12 @@ class CurriculumAgent(BaseSpecialistAgent):
                     lines.append(f"  Secenekler: {option_summary}")
 
         db_info = "\n".join(lines)
-        answer = db_info + CONTACT_SUGGESTION
+        answer = db_info
         return DepartmentResponse(
             department=self.department,
             answer=answer,
             db_data={"semester": semester, "course_count": len(courses), "courses": courses},
             sources=[],
+            include_contact_suggestion=True,
             success=True,
         )
