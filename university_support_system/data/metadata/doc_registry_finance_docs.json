@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-04-13T22:38:33.516331+00:00",
+  "source_dir": "C:\\Users\\tubas\\Documents\\GitHub\\senior-project\\university_support_system\\data\\raw\\finance",
+  "total_documents": 5,
+  "total_chunks": 57,
+  "embedding_model": "BAAI/bge-m3",
+  "collection_name": "finance_docs",
+  "documents": [
+    {
+      "filename": "idari_ve_mali_işler_birimi.txt",
+      "category": "birimler",
+      "file_type": "txt",
+      "char_count": 4358,
+      "chunk_count": 6,
+      "content_hash": "c1d63386caa753c0"
+    },
+    {
+      "filename": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 2720,
+      "chunk_count": 3,
+      "content_hash": "488369c610841e61"
+    },
+    {
+      "filename": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 4245,
+      "chunk_count": 6,
+      "content_hash": "8f2d0ebb151b64f9"
+    },
+    {
+      "filename": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 12462,
+      "chunk_count": 24,
+      "content_hash": "9d313d211e746aff"
+    },
+    {
+      "filename": "öğrenci_yemek_bursu_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 7142,
+      "chunk_count": 18,
+      "content_hash": "9ab74539cb296bfc"
+    }
+  ]
+}
