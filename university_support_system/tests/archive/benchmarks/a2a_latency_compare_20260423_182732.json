@@ -1,0 +1,136 @@
+{
+  "run_timestamp": "20260423_182732",
+  "questions": [
+    "Q5"
+  ],
+  "llm_profile": "fast",
+  "warmups": 0,
+  "repeats": 1,
+  "disable_cache": true,
+  "summaries": {
+    "http_a2a": {
+      "count": 1,
+      "avg_ms": 4173.5,
+      "median_ms": 4173.5,
+      "min_ms": 4173.5,
+      "max_ms": 4173.5
+    }
+  },
+  "http_to_inprocess_median_ratio": null,
+  "results": [
+    {
+      "mode": "http_a2a",
+      "health": {
+        "status": "healthy",
+        "app": {
+          "api": "healthy",
+          "build": {
+            "version": "1.0.0",
+            "build_id": "codex-20260423-180227",
+            "build_timestamp": "2026-04-23T18:02:27.951470+03:00",
+            "git_sha": "local",
+            "image_ref": "university_support_system-app:latest"
+          },
+          "runtime": {
+            "label": "api-a2a-http",
+            "llm_profile": "balanced"
+          },
+          "active_departments": [
+            "finance",
+            "student_affairs",
+            "academic_programs"
+          ],
+          "a2a_mode": "http",
+          "a2a_transport_protocol": "jsonrpc",
+          "auth_mode": "otp_session"
+        },
+        "llm": {
+          "status": "healthy",
+          "primary": {
+            "name": "groq",
+            "status": "healthy",
+            "model_loaded": true
+          },
+          "fallback": {
+            "name": "none",
+            "status": "disabled",
+            "available": false,
+            "model_loaded": null
+          }
+        }
+      },
+      "runs": [
+        {
+          "question_id": "Q5",
+          "elapsed_ms": 4173.5,
+          "response_time_ms": 4084.95,
+          "departments": [
+            "academic_programs",
+            "student_affairs",
+            "finance"
+          ],
+          "generation_modes": [
+            "llm",
+            "rag+llm",
+            "vt"
+          ],
+          "source_count": 10,
+          "answer_preview": "Benchmark, Uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretini nereye yatırmanız gerektiği ve ikamet izin için hangi belgeleri hazırlamalıyım sorularına yanıt olarak:\n\nÖğrenim ücreti, herhangi bir Ziraat Bankası şubesinden öğrenci numaranızla harç ücretini yatırabilirs"
+        }
+      ],
+      "diagnostics": {
+        "overview_before": {
+          "query_count": 59,
+          "query_failure_count": 0,
+          "agent_task_count": 108,
+          "agent_task_failure_count": 4
+        },
+        "overview_after": {
+          "query_count": 60,
+          "query_failure_count": 0,
+          "agent_task_count": 111,
+          "agent_task_failure_count": 4
+        },
+        "overview_delta": {
+          "query_count": 1,
+          "query_failure_count": 0,
+          "agent_task_count": 3,
+          "agent_task_failure_count": 0
+        },
+        "agent_deltas": [
+          {
+            "agent_id": "international_agent",
+            "department": "academic_programs",
+            "role": "specialist_agent",
+            "task_delta": 1,
+            "failed_delta": 0,
+            "last_error": "a2a_specialist_transport_failed",
+            "avg_latency_ms": 19545.2,
+            "max_latency_ms": 61691.05
+          },
+          {
+            "agent_id": "registration_agent",
+            "department": "student_affairs",
+            "role": "specialist_agent",
+            "task_delta": 1,
+            "failed_delta": 0,
+            "last_error": "a2a_specialist_transport_failed",
+            "avg_latency_ms": 13969.78,
+            "max_latency_ms": 61007.98
+          },
+          {
+            "agent_id": "tuition_agent",
+            "department": "finance",
+            "role": "specialist_agent",
+            "task_delta": 1,
+            "failed_delta": 0,
+            "last_error": null,
+            "avg_latency_ms": 3882.5,
+            "max_latency_ms": 31054.83
+          }
+        ],
+        "new_recent_failures": []
+      }
+    }
+  ]
+}

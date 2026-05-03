@@ -19,6 +19,9 @@ SPECIALIST_METADATA_PASSTHROUGH_KEYS = (
     "conversation_is_follow_up",
     "conversation_topic",
     "conversation_source_refs",
+    "trace_id",
+    "span_id",
+    "parent_span_id",
 )
 
 
@@ -68,6 +71,9 @@ def build_request_task(
         force_llm_synthesis=bool(meta.get("force_llm_synthesis", False)),
         query_complexity=meta.get("query_complexity"),
         is_personal_query=bool(meta.get("is_personal_query", False)),
+        trace_id=meta.get("trace_id"),
+        span_id=meta.get("span_id"),
+        parent_span_id=meta.get("parent_span_id"),
     )
     return build_query_task(payload)
 
@@ -101,6 +107,9 @@ def build_specialist_task(
         force_llm_synthesis=bool(metadata.get("force_llm_synthesis", False)),
         query_complexity=metadata.get("query_complexity"),
         is_personal_query=bool(metadata.get("is_personal_query", False)),
+        trace_id=metadata.get("trace_id"),
+        span_id=metadata.get("span_id"),
+        parent_span_id=metadata.get("parent_span_id"),
     )
     task = build_query_task(payload)
     for key in SPECIALIST_METADATA_PASSTHROUGH_KEYS:

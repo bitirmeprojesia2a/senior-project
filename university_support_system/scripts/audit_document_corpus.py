@@ -33,6 +33,12 @@ EXPECTED_REGISTRY_FILES = {
     "doc_registry_academic_schedules_docs.json",
     "doc_registry_finance_docs.json",
 }
+EXPECTED_REGISTRY_SOURCE_ROOTS = {
+    "student_affairs_docs": "data/raw/student_affairs",
+    "academic_programs_docs": "data/raw/academic_programs",
+    "academic_schedules_docs": "data/raw/academic_programs/ders_programlari",
+    "finance_docs": "data/raw/finance",
+}
 NOISY_PATH_MARKERS = {
     "ders_programlari": "ders_programlari klasoru",
     "lisansustu": "lisansustu dosyalari",
@@ -113,12 +119,27 @@ def _load_registry_preview(path: Path) -> dict[str, object]:
         return {"path": _relative(path), "status": f"okunamadi: {exc}"}
 
     has_mojibake = any(marker in content for marker in MOJIBAKE_MARKERS)
+    collection_name = data.get("collection_name")
+    source_dir = str(data.get("source_dir") or "")
+    expected_source = EXPECTED_REGISTRY_SOURCE_ROOTS.get(str(collection_name))
+    source_warning = None
+    if expected_source:
+        expected_abs = (project_root / expected_source).resolve()
+        try:
+            source_abs = Path(source_dir).resolve()
+        except OSError:
+            source_abs = Path(source_dir)
+        if source_abs != expected_abs:
+            source_warning = f"source_dir beklenen kok degil: expected={expected_source}"
     return {
         "path": _relative(path),
         "status": "ok",
         "total_documents": data.get("total_documents"),
-        "collection_name": data.get("collection_name"),
+        "total_chunks": data.get("total_chunks"),
+        "collection_name": collection_name,
+        "source_dir": source_dir,
         "has_mojibake_markers": has_mojibake,
+        "source_warning": source_warning,
     }
 
 
@@ -137,10 +158,13 @@ def _print_registry_status(metadata_dir: Path) -> None:
     for path in registry_files:
         preview = _load_registry_preview(path)
         print(
-            "- {path} | status={status} | collection={collection_name} | total_documents={total_documents} | mojibake={has_mojibake_markers}".format(
+            "- {path} | status={status} | collection={collection_name} | total_documents={total_documents} | total_chunks={total_chunks} | mojibake={has_mojibake_markers}".format(
                 **preview
             )
         )
+        if preview.get("source_warning"):
+            print(f"  - uyari: {preview['source_warning']}")
+            print(f"  - source_dir: {preview.get('source_dir')}")
 
     if has_legacy and missing_expected:
         print("- uyari: legacy doc_registry.json var, ama collection-bazli registry'ler eksik gorunuyor")
@@ -151,6 +175,49 @@ def _print_registry_status(metadata_dir: Path) -> None:
         print("- eksik beklenen registry dosyalari:")
         for name in missing_expected:
             print(f"  - {name}")
+    print()
+
+
+def _print_chroma_registry_consistency(metadata_dir: Path) -> None:
+    """Compare live Chroma collection counts with registry totals when Chroma is reachable."""
+    print("=== Chroma / Registry Tutarliligi ===")
+    try:
+        from src.rag.indexer import ChromaIndexer
+    except Exception as exc:
+        print(f"- Chroma client yuklenemedi: {type(exc).__name__}: {exc}")
+        print()
+        return
+
+    for registry_name in sorted(EXPECTED_REGISTRY_FILES):
+        registry_path = metadata_dir / registry_name
+        if not registry_path.exists():
+            print(f"- {registry_name}: registry yok")
+            continue
+
+        try:
+            registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            print(f"- {registry_name}: registry okunamadi: {exc}")
+            continue
+
+        collection_name = str(registry.get("collection_name") or "")
+        registry_chunks = registry.get("total_chunks")
+        if not collection_name:
+            print(f"- {registry_name}: collection_name yok")
+            continue
+
+        indexer = ChromaIndexer(collection_name=collection_name)
+        try:
+            chroma_count = indexer.count()
+        except Exception as exc:
+            print(f"- {collection_name}: Chroma sayimi alinamadi ({type(exc).__name__})")
+        else:
+            status = "OK" if chroma_count == registry_chunks else "UYARI"
+            print(
+                f"- {collection_name}: chroma={chroma_count} registry_chunks={registry_chunks} status={status}"
+            )
+        finally:
+            indexer.close()
     print()
 
 
@@ -207,6 +274,7 @@ def main() -> None:
     _print_unsupported_files(files, supported_extensions)
     _print_noise_markers(files)
     _print_registry_status(metadata_dir)
+    _print_chroma_registry_consistency(metadata_dir)
     _print_schedule_source_classification(raw_dir)
 
 

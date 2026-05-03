@@ -23,10 +23,18 @@ from a2a.types import (
 )
 from pydantic import ValidationError
 
+from src.a2a.responses import (
+    AgentResponse,
+    agent_response_to_department_response,
+    department_response_to_agent_response,
+    validate_agent_response,
+    validate_legacy_department_response,
+)
+from src.a2a.schemas import AGENT_RESPONSE_SCHEMA, DEPARTMENT_RESPONSE_SCHEMA
+from src.a2a.state import STATE_TRANSITIONS_METADATA_KEY, build_state_transition, response_state_transitions
+from src.a2a.tracing import ensure_trace_metadata, trace_metadata
 from src.db.schemas import DepartmentResponse
 from src.orchestrators.response_utils import response_core_answer
-
-_DEPARTMENT_RESPONSE_SCHEMA = "omu.department_response.v1"
 
 
 @dataclass(frozen=True)
@@ -54,6 +62,9 @@ class A2AQueryPayload:
     force_llm_synthesis: bool = False
     query_complexity: str | None = None
     is_personal_query: bool = False
+    trace_id: str | None = None
+    span_id: str | None = None
+    parent_span_id: str | None = None
 
     def to_metadata(self) -> dict[str, Any]:
         return {
@@ -76,6 +87,9 @@ class A2AQueryPayload:
             "force_llm_synthesis": self.force_llm_synthesis,
             "query_complexity": self.query_complexity,
             "is_personal_query": self.is_personal_query,
+            "trace_id": self.trace_id,
+            "span_id": self.span_id,
+            "parent_span_id": self.parent_span_id,
         }
 
 
@@ -121,28 +135,44 @@ def build_query_task(
 ) -> Task:
     """Kullanıcı sorgusu için A2A task oluşturur."""
     task_id = task_id or str(uuid4())
+    metadata = ensure_trace_metadata(
+        payload.to_metadata(),
+        trace_id=payload.trace_id,
+        span_id=payload.span_id,
+        parent_span_id=payload.parent_span_id,
+    )
     message = build_text_message(
         payload.query_text,
         context_id=payload.context_id,
         role=Role.user,
         task_id=task_id,
-        metadata=payload.to_metadata(),
+        metadata=metadata,
     )
     status = TaskStatus(
         state=state,
         message=message,
         timestamp=datetime.now(UTC).isoformat(),
     )
+    metadata[STATE_TRANSITIONS_METADATA_KEY] = [
+        build_state_transition(
+            state,
+            actor_id="user",
+            actor_role="user",
+            task_id=task_id,
+            message_id=message.messageId,
+            timestamp=status.timestamp,
+        )
+    ]
     return Task(
         id=task_id,
         contextId=payload.context_id,
         status=status,
-        metadata=payload.to_metadata(),
+        metadata=metadata,
     )
 
 
-def build_department_response_task(
-    response: DepartmentResponse,
+def build_agent_response_task(
+    response: DepartmentResponse | AgentResponse,
     *,
     request_task: Task,
     emitter_id: str,
@@ -150,18 +180,37 @@ def build_department_response_task(
     task_id: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> Task:
-    """DepartmentResponse nesnesini A2A tamamlanmis task'ine sarar."""
+    """Wrap the shared agent response payload in an A2A task."""
     response_task_id = task_id or str(uuid4())
-    response_payload = response.model_dump(mode="json")
-    response_text = response_core_answer(response)
+    response = department_response_to_agent_response(
+        response,
+        agent_id=emitter_id,
+        agent_name=emitter_name,
+        agent_role=(metadata or {}).get("agent_role"),
+        capability=(metadata or {}).get("capability"),
+        metadata=metadata,
+    )
+    legacy_response = agent_response_to_department_response(response)
+    response_payload = response.model_dump(mode="json", exclude_none=True)
+    response_text = response_core_answer(legacy_response) if legacy_response else response.answer
+    response_target = (
+        response.department.value
+        if response.department is not None
+        else response.capability or response.agent_id or "agent"
+    )
+    inherited_trace = trace_metadata(request_task.metadata)
     merged_metadata = {
         "parent_task_id": request_task.id,
         "emitter_id": emitter_id,
         "emitter_name": emitter_name,
-        "response_schema": _DEPARTMENT_RESPONSE_SCHEMA,
+        "response_schema": AGENT_RESPONSE_SCHEMA,
+        "agent_response_schema": AGENT_RESPONSE_SCHEMA,
+        "legacy_response_schema": DEPARTMENT_RESPONSE_SCHEMA,
     }
+    merged_metadata.update(inherited_trace)
     if metadata:
         merged_metadata.update(metadata)
+    output_trace = trace_metadata(merged_metadata)
 
     message = build_text_message(
         response_text,
@@ -169,10 +218,16 @@ def build_department_response_task(
         role=Role.agent,
         task_id=response_task_id,
         metadata={
-            "department": response.department.value,
+            "agent_id": response.agent_id,
+            "agent_name": response.agent_name,
+            "agent_role": response.agent_role,
+            "capability": response.capability,
+            "department": response.department.value if response.department else None,
             "success": response.success,
             "emitter_id": emitter_id,
             "emitter_name": emitter_name,
+            "response_schema": AGENT_RESPONSE_SCHEMA,
+            **output_trace,
         },
     )
     status = TaskStatus(
@@ -180,35 +235,60 @@ def build_department_response_task(
         message=message,
         timestamp=datetime.now(UTC).isoformat(),
     )
+    merged_metadata[STATE_TRANSITIONS_METADATA_KEY] = response_state_transitions(
+        request_task,
+        response_task_id=response_task_id,
+        response_message_id=message.messageId,
+        actor_id=emitter_id,
+    )
     artifact = build_text_artifact(
         response_text,
-        name=f"{response.department.value}_response_text",
+        name=f"{response_target}_response_text",
         metadata={
-            "department": response.department.value,
+            "agent_id": response.agent_id,
+            "agent_name": response.agent_name,
+            "agent_role": response.agent_role,
+            "capability": response.capability,
+            "department": response.department.value if response.department else None,
             "success": response.success,
             "emitter_id": emitter_id,
             "emitter_name": emitter_name,
             "schema": "text/plain",
+            **output_trace,
         },
     )
     structured_artifact = Artifact(
         artifactId=str(uuid4()),
-        name=f"{response.department.value}_response_data",
-        description="Structured department response payload",
-        extensions=[_DEPARTMENT_RESPONSE_SCHEMA],
+        name=f"{response_target}_agent_response_data",
+        description="Structured agent response payload",
+        extensions=[AGENT_RESPONSE_SCHEMA, DEPARTMENT_RESPONSE_SCHEMA],
         metadata={
-            "department": response.department.value,
+            "agent_id": response.agent_id,
+            "agent_name": response.agent_name,
+            "agent_role": response.agent_role,
+            "capability": response.capability,
+            "department": response.department.value if response.department else None,
             "success": response.success,
             "emitter_id": emitter_id,
             "emitter_name": emitter_name,
-            "schema": _DEPARTMENT_RESPONSE_SCHEMA,
+            "schema": AGENT_RESPONSE_SCHEMA,
+            "agent_response_schema": AGENT_RESPONSE_SCHEMA,
+            "legacy_schema": DEPARTMENT_RESPONSE_SCHEMA,
+            **output_trace,
         },
         parts=[
             DataPart(
                 data=response_payload,
                 metadata={
-                    "schema": _DEPARTMENT_RESPONSE_SCHEMA,
-                    "department": response.department.value,
+                    "schema": AGENT_RESPONSE_SCHEMA,
+                    "agent_response_schema": AGENT_RESPONSE_SCHEMA,
+                    "legacy_schema": DEPARTMENT_RESPONSE_SCHEMA,
+                    "agent_id": response.agent_id,
+                    "agent_name": response.agent_name,
+                    "agent_role": response.agent_role,
+                    "capability": response.capability,
+                    "department": response.department.value if response.department else None,
+                    **output_trace,
                 },
             )
         ],
@@ -223,26 +303,70 @@ def build_department_response_task(
     )
 
 
-def extract_department_response(task: Task) -> DepartmentResponse | None:
-    """A2A response task artifact veya legacy metadata'sindan DepartmentResponse cikarir."""
+def build_department_response_task(
+    response: DepartmentResponse | AgentResponse,
+    *,
+    request_task: Task,
+    emitter_id: str,
+    emitter_name: str,
+    task_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> Task:
+    """Backward-compatible alias for the generic AgentResponse task builder."""
+    return build_agent_response_task(
+        response,
+        request_task=request_task,
+        emitter_id=emitter_id,
+        emitter_name=emitter_name,
+        task_id=task_id,
+        metadata=metadata,
+    )
+
+
+def extract_agent_response(task: Task) -> AgentResponse | None:
+    """A2A AgentResponse artifact veya legacy payload'dan generic response cikarir."""
     for artifact in getattr(task, "artifacts", None) or []:
+        artifact_metadata = getattr(artifact, "metadata", None) or {}
+        artifact_extensions = set(getattr(artifact, "extensions", None) or [])
         for part in getattr(artifact, "parts", None) or []:
             root = getattr(part, "root", part)
             data = getattr(root, "data", None)
             if isinstance(data, dict):
                 metadata = getattr(root, "metadata", {}) or {}
-                schema = metadata.get("schema") or (getattr(artifact, "metadata", None) or {}).get("schema")
-                if schema in {_DEPARTMENT_RESPONSE_SCHEMA, None}:
+                schema = metadata.get("schema") or artifact_metadata.get("schema")
+                legacy_schema = metadata.get("legacy_schema") or artifact_metadata.get("legacy_schema")
+                known_schema = (
+                    schema in {AGENT_RESPONSE_SCHEMA, DEPARTMENT_RESPONSE_SCHEMA, None}
+                    or legacy_schema == DEPARTMENT_RESPONSE_SCHEMA
+                    or AGENT_RESPONSE_SCHEMA in artifact_extensions
+                    or DEPARTMENT_RESPONSE_SCHEMA in artifact_extensions
+                )
+                if known_schema:
                     try:
-                        return DepartmentResponse.model_validate(data)
+                        return validate_agent_response(data)
                     except ValidationError:
-                        continue
+                        try:
+                            legacy_response = validate_legacy_department_response(data)
+                            return department_response_to_agent_response(legacy_response)
+                        except ValidationError:
+                            continue
 
     metadata = getattr(task, "metadata", None) or {}
     payload = metadata.get("department_response")
     if isinstance(payload, dict):
-        return DepartmentResponse.model_validate(payload)
+        try:
+            return validate_agent_response(payload)
+        except ValidationError:
+            return department_response_to_agent_response(validate_legacy_department_response(payload))
     return None
+
+
+def extract_department_response(task: Task) -> DepartmentResponse | None:
+    """Legacy DepartmentResponse modelini A2A AgentResponse artifact'inden cikarir."""
+    response = extract_agent_response(task)
+    if response is None:
+        return None
+    return agent_response_to_department_response(response)
 
 
 def build_agent_card(

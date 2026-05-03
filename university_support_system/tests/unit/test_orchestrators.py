@@ -7,14 +7,33 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.a2a import A2AQueryPayload, build_department_response_task, build_query_task
+from src.cache import question_cache
+from src.core.config import settings
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.core.messages import CONTACT_SUGGESTION
+from src.core.profiling import QueryProfiler, activate_profiler
 from src.db.conversation_context import ConversationResolution
-from src.db.schemas import DepartmentResponse, RAGSource, RoutingResult
+from src.db.events import EventLinkRecord, EventRecord
+from src.db.schemas import DepartmentResponse, IntentAnalysis, RAGSource, RoutingResult
 from src.orchestrators.department import DepartmentOrchestrator
+from src.orchestrators.defaults import RemoteDepartmentTarget
 from src.orchestrators.department_dispatch import dispatch_to_departments
+from src.orchestrators.department_factories import build_student_affairs_orchestrator
+from src.orchestrators.announcement_utils import request_announcement_response
+from src.orchestrators.event_utils import request_event_response
 from src.orchestrators.main import MainOrchestrator
-from src.orchestrators.query_policy import should_use_global_synthesis
+import src.orchestrators.main as main_module
+from src.orchestrators.query_policy import (
+    augment_query_for_department,
+    build_missing_slot_clarification_message,
+    looks_like_announcement_query,
+    looks_like_event_query,
+    requires_academic_department_clarification,
+    should_allow_announcement_latest_fallback,
+    should_fetch_related_announcements,
+    should_keep_announcement_follow_up,
+    should_use_global_synthesis,
+)
 from src.orchestrators.response_utils import filter_low_confidence_responses
 from src.orchestrators.synthesis_utils import build_global_synthesis_prompt
 from src.orchestrators.user_response_builders import build_final_user_response
@@ -66,6 +85,50 @@ class _FakeDepartmentOrchestrator:
             )
 
         self.handle_task = AsyncMock(side_effect=_handle_task)
+
+
+class _FakeDepartmentTransport:
+    def __init__(self):
+        self.calls = []
+
+    async def dispatch(
+        self,
+        *,
+        department,
+        orchestrator,
+        query,
+        context_id,
+        task_type,
+        metadata,
+        disable_specialist_llm,
+    ):
+        self.calls.append(
+            {
+                "department": department,
+                "query": query,
+                "context_id": context_id,
+                "task_type": task_type,
+                "metadata": dict(metadata or {}),
+                "disable_specialist_llm": disable_specialist_llm,
+            }
+        )
+        request_task = build_query_task(
+            A2AQueryPayload(
+                query_text=query,
+                context_id=context_id,
+                task_type=task_type.value if task_type else None,
+            )
+        )
+        return build_department_response_task(
+            DepartmentResponse(
+                department=department,
+                answer=f"{department.value} transport cevabi",
+                sources=[],
+            ),
+            request_task=request_task,
+            emitter_id=f"{department.value}_transport",
+            emitter_name=f"{department.value} Transport",
+        )
 
 
 @pytest.mark.asyncio
@@ -138,6 +201,8 @@ async def test_department_orchestrator_passes_conversation_metadata_without_unus
             "student_id": 42,
             "student_number": "20210001",
             "student_full_name": "Ahmet Yilmaz",
+            "trace_id": "trace-department-1",
+            "span_id": "span-department-1",
         },
     )
 
@@ -148,6 +213,9 @@ async def test_department_orchestrator_passes_conversation_metadata_without_unus
     assert task.metadata["student_id"] == 42
     assert "student_number" not in task.metadata
     assert "student_full_name" not in task.metadata
+    assert task.metadata["trace_id"] == "trace-department-1"
+    assert task.metadata["parent_span_id"] == "span-department-1"
+    assert task.metadata["span_id"] != "span-department-1"
 
 
 @pytest.mark.asyncio
@@ -181,6 +249,182 @@ async def test_dispatch_to_departments_raises_when_all_parallel_branches_fail():
             routing=routing,
             metadata={},
         )
+
+
+@pytest.mark.asyncio
+async def test_dispatch_to_departments_uses_transport_abstraction():
+    orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(side_effect=AssertionError("direct call should not be used")),
+    )
+    routing = RoutingResult(
+        departments=[Department.STUDENT_AFFAIRS],
+        confidence=0.88,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.DIRECT,
+        reasoning="Kayit sorgusu",
+        task_type=TaskType.REGISTRATION_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    responses = await dispatch_to_departments(
+        department_orchestrators={Department.STUDENT_AFFAIRS: orchestrator},
+        query="Ders kaydi nasil yapilir?",
+        context_id="ctx-a2a-transport",
+        routing=routing,
+        metadata={},
+        transport=transport,
+    )
+
+    assert responses[0].answer == "student_affairs transport cevabi"
+    assert transport.calls[0]["department"] == Department.STUDENT_AFFAIRS
+    orchestrator.handle_task.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_to_departments_recomputes_branch_task_types_per_department():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    finance_orchestrator = SimpleNamespace(
+        department=Department.FINANCE,
+        handle_task=AsyncMock(),
+    )
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[
+            Department.ACADEMIC_PROGRAMS,
+            Department.STUDENT_AFFAIRS,
+            Department.FINANCE,
+        ],
+        confidence=0.91,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.PARALLEL,
+        reasoning="Uluslararasi kayit ve ucret sorgusu",
+        task_type=TaskType.TUITION_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    await dispatch_to_departments(
+        department_orchestrators={
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+            Department.FINANCE: finance_orchestrator,
+        },
+        query=(
+            "Uluslararasi ogrenci kayit olurken ogrenim ucretini nereye yatirir "
+            "ve ikamet belgesi gerekir mi?"
+        ),
+        context_id="ctx-branch-task-types",
+        routing=routing,
+        metadata={},
+        transport=transport,
+    )
+
+    calls_by_department = {
+        call["department"]: call["task_type"]
+        for call in transport.calls
+    }
+
+    assert calls_by_department[Department.FINANCE] == TaskType.TUITION_QUERY
+    assert calls_by_department[Department.STUDENT_AFFAIRS] == TaskType.REGISTRATION_QUERY
+    assert calls_by_department[Department.ACADEMIC_PROGRAMS] == TaskType.PROCEDURE_QUERY
+    assert all(call["disable_specialist_llm"] is True for call in transport.calls)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_keeps_specialist_llm_disabled_for_multi_department_force_llm():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    finance_orchestrator = SimpleNamespace(
+        department=Department.FINANCE,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[Department.STUDENT_AFFAIRS, Department.FINANCE],
+        confidence=0.91,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.PARALLEL,
+        reasoning="Kayit ve ucret birlikte soruldu",
+        task_type=TaskType.PROCEDURE_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    await dispatch_to_departments(
+        department_orchestrators={
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+            Department.FINANCE: finance_orchestrator,
+        },
+        query="Kayit yenileme ve harc odeme sureci nasil isler?",
+        context_id="ctx-multi-force-llm",
+        routing=routing,
+        metadata={"force_llm_synthesis": True},
+        transport=transport,
+    )
+
+    assert len(transport.calls) == 2
+    assert all(call["disable_specialist_llm"] is True for call in transport.calls)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_allows_force_llm_for_single_department():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[Department.STUDENT_AFFAIRS],
+        confidence=0.9,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.DIRECT,
+        reasoning="Tek departmanli surec sorusu",
+        task_type=TaskType.REGISTRATION_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    await dispatch_to_departments(
+        department_orchestrators={Department.STUDENT_AFFAIRS: student_orchestrator},
+        query="Ders kaydi surecini ayrintili anlatir misin?",
+        context_id="ctx-single-force-llm",
+        routing=routing,
+        metadata={"force_llm_synthesis": True},
+        transport=transport,
+    )
+
+    assert len(transport.calls) == 1
+    assert transport.calls[0]["disable_specialist_llm"] is False
+
+
+@pytest.mark.asyncio
+async def test_student_affairs_factory_prefers_registration_agent_for_admin_workflows():
+    registration = _FakeAgent("registration", Department.STUDENT_AFFAIRS)
+    graduation = _FakeAgent("graduation", Department.STUDENT_AFFAIRS)
+    internship = _FakeAgent("internship", Department.STUDENT_AFFAIRS)
+    student_life = _FakeAgent("student_life", Department.STUDENT_AFFAIRS)
+    orchestrator = build_student_affairs_orchestrator(
+        [registration, graduation, internship, student_life]
+    )
+
+    assert (
+        orchestrator._select_agent(
+            TaskType.PROCEDURE_QUERY,
+            "Sinav notuma itiraz etmek istiyorum.",
+        ).agent_id
+        == "registration_agent"
+    )
+    assert (
+        orchestrator._select_agent(
+            TaskType.PROCEDURE_QUERY,
+            "Staj sureci nasil isler?",
+        ).agent_id
+        == "internship_agent"
+    )
 
 
 @pytest.mark.asyncio
@@ -223,8 +467,24 @@ async def test_main_orchestrator_combines_parallel_department_responses():
     telemetry.finalize_query_log.assert_awaited_once()
 
 
+def test_main_orchestrator_http_mode_uses_remote_department_targets(monkeypatch):
+    monkeypatch.setattr(settings.a2a, "mode", "http")
+
+    orchestrator = MainOrchestrator(
+        router=AsyncMock(),
+        announcement_agent=_FakeAgent("announcement", Department.STUDENT_AFFAIRS),
+        telemetry_service=AsyncMock(),
+    )
+
+    assert set(orchestrator.department_orchestrators) == set(Department)
+    assert all(
+        isinstance(target, RemoteDepartmentTarget)
+        for target in orchestrator.department_orchestrators.values()
+    )
+
+
 @pytest.mark.asyncio
-async def test_main_orchestrator_appends_related_announcements_when_available():
+async def test_main_orchestrator_filters_related_announcements_when_strong_answer_exists():
     router = AsyncMock()
     router.route = AsyncMock(
         return_value=RoutingResult(
@@ -265,11 +525,6 @@ async def test_main_orchestrator_appends_related_announcements_when_available():
     telemetry.create_query_log = AsyncMock(return_value=303)
     telemetry.finalize_query_log = AsyncMock()
     telemetry.record_agent_task = AsyncMock()
-    llm_service = AsyncMock()
-    llm_service.generate = AsyncMock(
-        return_value="Akademik program cevabi\n\nIlgili duyurular:\n1. Cap Basvurulari Acildi"
-    )
-
     orchestrator = MainOrchestrator(
         router=router,
         department_orchestrators={
@@ -277,19 +532,308 @@ async def test_main_orchestrator_appends_related_announcements_when_available():
         },
         announcement_agent=announcement_agent,
         telemetry_service=telemetry,
-        llm_service=llm_service,
     )
 
     response = await orchestrator.handle_query("Cap basvurulari ne zaman?", context_id="ctx-announce")
 
     assert "Akademik program cevabi" in response.answer
-    assert "Ilgili duyurular" in response.answer
-    assert "Kaynak Ozeti:" in response.answer
-    assert "Duyuru kaydi:" in response.answer
-    assert response.departments_involved == ["academic_programs", "announcement"]
-    assert any(source.metadata.get("record_type") == "announcement" for source in response.sources)
+    assert "Ilgili duyurular" not in response.answer
+    assert "Duyuru kaydi:" not in response.answer
+    assert response.departments_involved == ["academic_programs"]
+    assert all(source.metadata.get("record_type") != "announcement" for source in response.sources)
     announcement_agent.handle_task.assert_awaited_once()
     telemetry.record_agent_task.assert_awaited_once()
+
+
+def test_should_fetch_related_announcements_requires_subject_signal():
+    assert should_fetch_related_announcements(
+        "Bilgisayar muhendisligi ara sinav programi nereden takip edilir?"
+    )
+    assert not should_fetch_related_announcements("Ders kaydi ne zaman basliyor?")
+    assert not should_fetch_related_announcements(
+        "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?"
+    )
+    assert not should_fetch_related_announcements("Final sinavlari ne zaman?")
+    assert not should_fetch_related_announcements(
+        "Final sinavlarinin girilmesinin son gunu ne zaman?"
+    )
+
+
+def test_announcement_latest_fallback_is_only_for_generic_latest_queries():
+    assert looks_like_announcement_query("Sinav programi var mi?")
+    assert looks_like_announcement_query("Bahar donemi final sinavi programi")
+    assert looks_like_announcement_query("Guncel duyur")
+    assert should_allow_announcement_latest_fallback("Guncel duyurular neler?")
+    assert not should_allow_announcement_latest_fallback("Sinav takvimi var mi?")
+    assert not looks_like_announcement_query("Final sinavlarinin girilmesinin son gunu ne zaman?")
+
+
+def test_announcement_follow_up_stops_on_clear_topic_shift():
+    assert should_keep_announcement_follow_up("Detay linki var mi?")
+    assert not should_keep_announcement_follow_up("Staj basvurusu nasil yapilir?")
+    assert not should_keep_announcement_follow_up("Kayit tarihleri ne zaman?")
+    assert not should_keep_announcement_follow_up("Final sinavlari ne zaman?")
+    assert not should_allow_announcement_latest_fallback("Sinav programi var mi?")
+
+
+def test_finance_query_augmentation_does_not_override_explicit_fee_unit():
+    query = "Dis hekimligi donem ucreti ne kadar Turk ogrenciyim"
+
+    augmented = augment_query_for_department(
+        Department.FINANCE,
+        query,
+        {"student_faculty": "Muhendislik Fakultesi"},
+    )
+
+    assert augmented == query
+
+
+def test_finance_query_augmentation_uses_profile_for_generic_fee_query():
+    augmented = augment_query_for_department(
+        Department.FINANCE,
+        "Donem ucreti ne kadar?",
+        {"student_faculty": "Muhendislik Fakultesi"},
+    )
+
+    assert augmented == "Muhendislik Fakultesi icin: Donem ucreti ne kadar?"
+
+
+def test_build_missing_slot_clarification_uses_llm_slot_metadata():
+    intent = IntentAnalysis(
+        primary_intent="tuition",
+        required_slots=["student_type", "faculty_or_program"],
+        missing_slots=["student_type"],
+    )
+
+    message = build_missing_slot_clarification_message(intent=intent, metadata={})
+
+    assert message is not None
+    assert "Turk ogrenci" in message
+    assert "uluslararasi ogrenci" in message
+
+
+def test_build_missing_slot_clarification_ignores_session_filled_slots():
+    intent = IntentAnalysis(
+        primary_intent="tuition",
+        required_slots=["student_type"],
+        missing_slots=["student_type"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={"student_type": "Turk ogrenci"},
+    )
+
+    assert message is None
+
+
+def test_build_missing_slot_clarification_ignores_academic_calendar_slots():
+    intent = IntentAnalysis(
+        primary_intent="academic_calendar",
+        required_slots=["faculty_or_program"],
+        missing_slots=["faculty_or_program"],
+    )
+
+    message = build_missing_slot_clarification_message(intent=intent, metadata={})
+
+    assert message is None
+
+
+@pytest.mark.asyncio
+async def test_announcement_http_mode_keeps_remote_failure_without_local_fallback(monkeypatch):
+    import src.orchestrators.announcement_utils as announcement_utils_module
+
+    class _FailingCapabilityTransport:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        async def dispatch(self, *, capability, payload):
+            return DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Duyuru remote hata cevabi",
+                sources=[],
+                success=False,
+                error="a2a_capability_transport_failed",
+            )
+
+    monkeypatch.setattr(settings.a2a, "mode", "http")
+    monkeypatch.setattr(
+        announcement_utils_module,
+        "HttpA2ACapabilityTransport",
+        _FailingCapabilityTransport,
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+
+    response = await request_announcement_response(
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        query="Guncel duyurular neler?",
+        context_id="ctx-ann-http-failure",
+        routing_reason=None,
+        query_log_id=None,
+        task_type=TaskType.PROCEDURE_QUERY,
+    )
+
+    assert response.success is False
+    assert response.error == "a2a_capability_transport_failed"
+    announcement_agent.handle_task.assert_not_awaited()
+    telemetry.record_agent_task.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_event_http_mode_keeps_remote_failure_without_local_fallback(monkeypatch):
+    import src.orchestrators.event_utils as event_utils_module
+
+    class _FailingCapabilityTransport:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        async def dispatch(self, *, capability, payload):
+            return DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Etkinlik remote hata cevabi",
+                sources=[],
+                success=False,
+                error="a2a_capability_transport_failed",
+            )
+
+    monkeypatch.setattr(settings.a2a, "mode", "http")
+    monkeypatch.setattr(
+        event_utils_module,
+        "HttpA2ACapabilityTransport",
+        _FailingCapabilityTransport,
+    )
+    event_agent = _FakeAgent("event", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+
+    response = await request_event_response(
+        event_agent=event_agent,
+        telemetry_service=telemetry,
+        query="Bu hafta etkinlik var mi?",
+        context_id="ctx-event-http-failure",
+        routing_reason=None,
+        query_log_id=None,
+        task_type=TaskType.PROCEDURE_QUERY,
+    )
+
+    assert response.success is False
+    assert response.error == "a2a_capability_transport_failed"
+    event_agent.handle_task.assert_not_awaited()
+    telemetry.record_agent_task.assert_awaited_once()
+
+
+def test_announcement_scope_uses_student_unit_for_exam_schedule_queries():
+    scope = MainOrchestrator._resolve_announcement_scope(
+        query="Sinav takvimi var mi?",
+        conversation_resolution=ConversationResolution(
+            original_query="Sinav takvimi var mi?",
+            effective_query="Sinav takvimi var mi?",
+            is_follow_up=False,
+            used_context=False,
+            active_topic=None,
+            department_hints=[],
+            source_hints=[],
+        ),
+        student_department="Bilgisayar Muhendisligi",
+        student_faculty="Muhendislik Fakultesi",
+    )
+
+    assert scope == {
+        "faculty": "Muhendislik Fakultesi",
+        "unit_name": "Bilgisayar Muhendisligi",
+    }
+
+
+def test_announcement_scope_prefers_explicit_unit_over_student_profile():
+    scope = MainOrchestrator._resolve_announcement_scope(
+        query="Elektrik elektronik muhendisligi ders programi var mi?",
+        conversation_resolution=ConversationResolution(
+            original_query="Elektrik elektronik muhendisligi ders programi var mi?",
+            effective_query="Elektrik elektronik muhendisligi ders programi var mi?",
+            is_follow_up=False,
+            used_context=False,
+            active_topic=None,
+            department_hints=[],
+            source_hints=[],
+        ),
+        student_department="Bilgisayar Muhendisligi",
+        student_faculty="Muhendislik Fakultesi",
+    )
+
+    assert scope == {
+        "faculty": None,
+        "unit_name": "Elektrik Elektronik Muhendisligi",
+    }
+
+
+def test_announcement_scope_does_not_mix_explicit_other_unit_with_profile_faculty():
+    scope = MainOrchestrator._resolve_announcement_scope(
+        query="Fizik ders programi var mi?",
+        conversation_resolution=ConversationResolution(
+            original_query="Fizik ders programi var mi?",
+            effective_query="Fizik ders programi var mi?",
+            is_follow_up=False,
+            used_context=False,
+            active_topic=None,
+            department_hints=[],
+            source_hints=[],
+        ),
+        student_department="Bilgisayar Muhendisligi",
+        student_faculty="Muhendislik Fakultesi",
+    )
+
+    assert scope == {
+        "faculty": None,
+        "unit_name": "Fizik",
+    }
+
+
+def test_looks_like_event_query_requires_explicit_event_intent():
+    assert looks_like_event_query("Muhendislik fakultesindeki etkinlikler neler?")
+    assert looks_like_event_query("Bu hafta seminer var mi?")
+    assert not looks_like_event_query("Ders kaydi ne zaman basliyor?")
+
+
+def test_event_scope_does_not_force_student_unit_for_other_units():
+    scope = MainOrchestrator._resolve_event_scope(
+        query="Fizik etkinlikleri neler?",
+        student_department="Bilgisayar Muhendisligi",
+        student_faculty="Muhendislik Fakultesi",
+    )
+
+    assert scope == {
+        "faculty": None,
+        "unit_name": None,
+    }
+
+
+def test_event_scope_uses_student_unit_only_when_query_mentions_it():
+    scope = MainOrchestrator._resolve_event_scope(
+        query="Bilgisayar Muhendisligi etkinlikleri neler?",
+        student_department="Bilgisayar Muhendisligi",
+        student_faculty="Muhendislik Fakultesi",
+    )
+
+    assert scope == {
+        "faculty": None,
+        "unit_name": "Bilgisayar Muhendisligi",
+    }
+
+
+def test_academic_department_clarification_accepts_known_program_name():
+    assert not requires_academic_department_clarification(
+        query="Matematik Ogretmenligi 4. yariyil dersleri nelerdir?",
+        departments=[Department.ACADEMIC_PROGRAMS],
+        task_type=TaskType.COURSE_QUERY,
+        student_department=None,
+    )
+    assert requires_academic_department_clarification(
+        query="4. yariyil dersleri nelerdir?",
+        departments=[Department.ACADEMIC_PROGRAMS],
+        task_type=TaskType.COURSE_QUERY,
+        student_department=None,
+    )
 
 
 @pytest.mark.asyncio
@@ -406,6 +950,62 @@ async def test_main_orchestrator_skips_related_announcements_for_contact_queries
 
 
 @pytest.mark.asyncio
+async def test_main_orchestrator_records_a2a_department_transport_failure():
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.ACADEMIC_PROGRAMS],
+            confidence=0.91,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Akademik sorgu",
+            task_type=TaskType.PROCEDURE_QUERY,
+        )
+    )
+
+    class _FailedDepartmentOrchestrator:
+        department = Department.ACADEMIC_PROGRAMS
+
+        async def handle_task(self, task, *args, **kwargs):
+            return build_department_response_task(
+                DepartmentResponse(
+                    department=Department.ACADEMIC_PROGRAMS,
+                    answer="Akademik Programlar agent servisi zamaninda yanit veremedi.",
+                    generation_mode="kural",
+                    success=False,
+                    error="a2a_transport_failed",
+                ),
+                request_task=task,
+                emitter_id="academic_programs_orchestrator",
+                emitter_name="academic_programs Orchestrator",
+            )
+
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=306)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={
+            Department.ACADEMIC_PROGRAMS: _FailedDepartmentOrchestrator(),
+        },
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    await orchestrator.handle_query("Formasyon dersleri nasil islenir?", context_id="ctx-a2a-fail")
+
+    telemetry.record_agent_task.assert_awaited_once()
+    kwargs = telemetry.record_agent_task.await_args.kwargs
+    assert kwargs["sender"].agent_id == "main_orchestrator"
+    assert kwargs["receiver"].agent_id == "academic_programs_orchestrator"
+    assert kwargs["response"].error == "a2a_transport_failed"
+    assert kwargs["payload"]["query_text"] == "Formasyon dersleri nasil islenir?"
+
+
+@pytest.mark.asyncio
 async def test_main_orchestrator_skips_related_announcements_for_static_queries():
     router = AsyncMock()
     router.route = AsyncMock(
@@ -483,7 +1083,7 @@ def test_filter_low_confidence_responses_drops_weak_rag_noise_when_strong_answer
 
     assert weak not in filtered
     assert strong in filtered
-    assert announcement in filtered
+    assert announcement not in filtered
 
 
 def test_filter_low_confidence_responses_respects_score_type_thresholds():
@@ -566,6 +1166,30 @@ def test_build_global_synthesis_prompt_keeps_substantial_department_context():
     assert "Departman ozeti:" not in prompt
 
 
+def test_build_global_synthesis_prompt_generates_prompt_for_single_department():
+    prompt, meaningful = build_global_synthesis_prompt(
+        "Ders kaydini nasil yapacagim?",
+        [
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Ders kaydi ogrenci bilgi sistemi uzerinden yapilir ve danisman onayi gerekir.",
+                sources=[
+                    RAGSource(
+                        content="Ders kaydi ogrenci bilgi sistemi uzerinden yapilir. Danisman onayi gerekir.",
+                        score=0.82,
+                        metadata={"source": "sik_sorulan_sorular.txt"},
+                    )
+                ],
+            )
+        ],
+    )
+
+    assert len(meaningful) == 1
+    # Tek departman icin de sentez promptu uretiliyor
+    assert prompt != ""
+    assert "Kullanici sorusu" in prompt
+
+
 def test_global_synthesis_accepts_context_required_clarification_response():
     responses = [
         DepartmentResponse(
@@ -641,6 +1265,227 @@ def test_build_final_user_response_marks_global_synthesis_as_llm():
     assert "llm" in response.generation_modes
 
 
+def test_build_final_user_response_includes_llm_diagnostics_from_profiler():
+    profiler = QueryProfiler(label="response-diagnostics")
+    profiler.append_attribute_list(
+        "llm_usage",
+        {
+            "kind": "generate",
+            "model_role": "routing",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": True,
+        },
+    )
+
+    with activate_profiler(profiler):
+        response = build_final_user_response(
+            answer="Birlesik final cevap.",
+            responses=[
+                DepartmentResponse(
+                    department=Department.STUDENT_AFFAIRS,
+                    answer="Ogrenci isleri yaniti",
+                    sources=[],
+                    generation_mode="rag",
+                )
+            ],
+            department_responses=[],
+            context_id="ctx-diagnostics",
+            response_time_ms=10.0,
+            student_full_name=None,
+        )
+
+    assert response.diagnostics is not None
+    assert response.diagnostics.llm_usage[0]["model_role"] == "routing"
+    assert response.diagnostics.llm_usage[0]["provider_label"] == "groq"
+    assert response.diagnostics.llm_usage[0]["model"] == "llama-3.1-8b-instant"
+
+
+def test_should_use_global_synthesis_skips_when_all_meaningful_answers_are_non_rag():
+    responses = [
+        DepartmentResponse(
+            department=Department.STUDENT_AFFAIRS,
+            answer="Veritabanindaki en yakin kayit donemi 2026-Guz icin 26.08.2026 - 06.09.2026 tarihleri arasinda planlanmistir.",
+            db_data={"semester": "2026-Guz"},
+            sources=[],
+            success=True,
+        ),
+        DepartmentResponse(
+            department=Department.FINANCE,
+            answer="Ogrenim ucreti ogrenci turune ve birime gore degisiyor.",
+            sources=[],
+            success=False,
+            error="student_type_context_required",
+        ),
+    ]
+
+    assert should_use_global_synthesis(
+        query="Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        responses=responses,
+    ) is False
+
+
+def test_filter_low_confidence_responses_drops_no_source_no_info_branch():
+    academic = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Erasmus basvurulari duyurularda belirtilen tarihler arasinda online yapilir.",
+        sources=[
+            RAGSource(
+                content="Erasmus basvurulari online yapilir.",
+                score=0.63,
+                metadata={"score_type": "reranker", "source": "erasmus.pdf"},
+            )
+        ],
+        generation_mode="rag",
+    )
+    finance_no_info = DepartmentResponse(
+        department=Department.FINANCE,
+        answer=(
+            "Bu konuda elimde yeterli kaynak bulunamadi. "
+            "Soruyu biraz daha detaylandirirsan veya ilgili birimle iletisime gecersen daha net yardimci olabilirim."
+        ),
+        generation_mode="kural",
+    )
+
+    filtered = filter_low_confidence_responses([academic, finance_no_info])
+
+    assert filtered == [academic]
+    # Tek departman + kaynak varsa artik global synthesis aktif
+    # (ancak _compose_final_answer basarili cevabi tekrar senteze gondermez)
+    assert should_use_global_synthesis(
+        query="Erasmus bursu ne kadar ve nasil basvurulur?",
+        responses=filtered,
+    ) is True
+
+
+@pytest.mark.asyncio
+async def test_compose_final_answer_skips_global_synthesis_for_single_department_response():
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(return_value="Final LLM cevabi.")
+    orchestrator = MainOrchestrator(
+        router=AsyncMock(),
+        department_orchestrators={},
+        announcement_agent=_FakeAgent("announcement", Department.STUDENT_AFFAIRS),
+        telemetry_service=AsyncMock(),
+        llm_service=llm_service,
+    )
+
+    responses = [
+        DepartmentResponse(
+            department=Department.STUDENT_AFFAIRS,
+            answer="Ders kaydi ogrenci bilgi sistemi uzerinden yapilir.",
+            sources=[
+                RAGSource(
+                    content="Ders kaydi ogrenci bilgi sistemi uzerinden yapilir.",
+                    score=0.84,
+                    metadata={"source": "sik_sorulan_sorular.txt", "score_type": "reranker"},
+                )
+            ],
+            success=True,
+            generation_mode="rag",
+        )
+    ]
+
+    answer, used_global_synthesis = await orchestrator._compose_final_answer(
+        query="Ders kaydini nasil yapacagim?",
+        responses=responses,
+        llm_profile="balanced",
+    )
+
+    assert used_global_synthesis is False
+    assert "Ders kaydi ogrenci bilgi sistemi uzerinden yapilir." in answer
+    llm_service.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_compose_final_answer_keeps_global_synthesis_role_for_multi_department_response():
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(return_value="Birlesik final LLM cevabi.")
+    orchestrator = MainOrchestrator(
+        router=AsyncMock(),
+        department_orchestrators={},
+        announcement_agent=_FakeAgent("announcement", Department.STUDENT_AFFAIRS),
+        telemetry_service=AsyncMock(),
+        llm_service=llm_service,
+    )
+
+    responses = [
+        DepartmentResponse(
+            department=Department.STUDENT_AFFAIRS,
+            answer="Kayit islemleri ogrenci bilgi sistemi uzerinden yapilir.",
+            sources=[
+                RAGSource(
+                    content="Kayit islemleri ogrenci bilgi sistemi uzerinden yapilir.",
+                    score=0.84,
+                    metadata={"source": "sik_sorulan_sorular.txt", "score_type": "reranker"},
+                )
+            ],
+            success=True,
+            generation_mode="rag",
+        ),
+        DepartmentResponse(
+            department=Department.FINANCE,
+            answer="Ogrenim ucreti ogrenci turune gore degisir.",
+            sources=[
+                RAGSource(
+                    content="Ogrenim ucreti ogrenci turune gore degisir.",
+                    score=0.79,
+                    metadata={"source": "ucret_tablosu.pdf", "score_type": "reranker"},
+                )
+            ],
+            success=True,
+            generation_mode="rag",
+        ),
+    ]
+
+    answer, used_global_synthesis = await orchestrator._compose_final_answer(
+        query="Kayit yenileme ucreti ne kadar ve ders kaydi nasil yapilir?",
+        responses=responses,
+        llm_profile="balanced",
+    )
+
+    assert used_global_synthesis is True
+    assert answer.startswith("Birlesik final LLM cevabi.")
+    llm_service.generate.assert_awaited_once()
+    assert llm_service.generate.await_args.kwargs["model_role"] == "global_synthesis"
+
+
+def test_build_final_user_response_keeps_routed_departments_after_answer_filtering():
+    academic = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Erasmus basvurulari duyurularda belirtilen tarihler arasinda online yapilir.",
+        sources=[
+            RAGSource(
+                content="Erasmus basvurulari online yapilir.",
+                score=0.63,
+                metadata={"score_type": "reranker", "source": "erasmus.pdf"},
+            )
+        ],
+        generation_mode="rag",
+    )
+    finance_no_info = DepartmentResponse(
+        department=Department.FINANCE,
+        answer="Bu konuda elimde yeterli kaynak bulunamadi.",
+        generation_mode="kural",
+    )
+
+    response = build_final_user_response(
+        answer=academic.answer,
+        responses=[academic],
+        department_responses=[academic, finance_no_info],
+        context_id="ctx-surface-departments",
+        response_time_ms=12.5,
+        student_full_name=None,
+    )
+
+    assert set(response.departments_involved) == {"academic_programs", "finance"}
+    assert "Bu konuda elimde yeterli kaynak bulunamadi" not in response.answer
+
+
 @pytest.mark.asyncio
 async def test_main_orchestrator_returns_clarification_when_no_department_selected():
     router = AsyncMock()
@@ -676,6 +1521,52 @@ async def test_main_orchestrator_returns_clarification_when_no_department_select
 
 
 @pytest.mark.asyncio
+async def test_main_orchestrator_uses_missing_slot_clarification_before_dispatch():
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.FINANCE],
+            confidence=0.86,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Ucret sorgusu ogrenci turu eksik",
+            task_type=TaskType.TUITION_QUERY,
+            intent=IntentAnalysis(
+                primary_intent="tuition",
+                required_slots=["student_type", "faculty_or_program"],
+                missing_slots=["student_type"],
+            ),
+        )
+    )
+    finance_orchestrator = _FakeDepartmentOrchestrator(
+        Department.FINANCE,
+        "Finans cevabi",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=203)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.FINANCE: finance_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    response = await orchestrator.handle_query(
+        "Elektrik elektronik muhendisligi ogrenim ucreti ne kadar?",
+        context_id="ctx-missing-slot",
+    )
+
+    assert "Turk ogrenci" in response.answer
+    assert "uluslararasi ogrenci" in response.answer
+    assert response.departments_involved == [Department.FINANCE.value]
+    finance_orchestrator.handle_task.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_main_orchestrator_returns_acknowledgement_for_thanks_without_routing():
     router = AsyncMock()
     router.route = AsyncMock()
@@ -694,6 +1585,30 @@ async def test_main_orchestrator_returns_acknowledgement_for_thanks_without_rout
     response = await orchestrator.handle_query("Tesekkurler", context_id="ctx-ack-1")
 
     assert "Rica ederim" in response.answer
+    assert response.departments_involved == []
+    router.route.assert_not_awaited()
+    announcement_agent.handle_task.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_returns_smalltalk_for_naber_without_routing():
+    router = AsyncMock()
+    router.route = AsyncMock()
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=204)
+    telemetry.finalize_query_log = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    response = await orchestrator.handle_query("Naber", context_id="ctx-smalltalk")
+
+    assert "Iyiyim" in response.answer
     assert response.departments_involved == []
     router.route.assert_not_awaited()
     announcement_agent.handle_task.assert_not_awaited()
@@ -721,3 +1636,584 @@ async def test_main_orchestrator_returns_acknowledgement_for_short_confirmation_
     assert response.departments_involved == []
     router.route.assert_not_awaited()
     announcement_agent.handle_task.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_uses_question_cache_when_enabled(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.STUDENT_AFFAIRS],
+            confidence=0.92,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Kayit sorusu",
+            task_type=TaskType.REGISTRATION_QUERY,
+        )
+    )
+    student_orchestrator = _FakeDepartmentOrchestrator(
+        Department.STUDENT_AFFAIRS,
+        "Kayit cevabi",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(side_effect=[501, 502])
+    telemetry.finalize_query_log = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.STUDENT_AFFAIRS: student_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    first = await orchestrator.handle_query("Ders kaydi ne zaman basliyor?", context_id="ctx-cache-1")
+    second = await orchestrator.handle_query("Ders kaydi ne zaman basliyor?", context_id="ctx-cache-2")
+
+    assert "Kayit cevabi" in first.answer
+    assert "Kayit cevabi" in second.answer
+    assert first.query_id == "ctx-cache-1"
+    assert second.query_id == "ctx-cache-2"
+    assert router.route.await_count == 1
+    assert student_orchestrator.handle_task.await_count == 1
+    assert telemetry.finalize_query_log.await_count == 2
+    assert telemetry.create_query_log.await_args_list[0].kwargs["metadata_extra"]["cache"]["question_cache"] == "miss"
+    assert telemetry.create_query_log.await_args_list[1].kwargs["metadata_extra"]["cache"]["question_cache"] == "hit"
+
+    question_cache.clear()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_skips_question_cache_when_disabled(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", False)
+
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.STUDENT_AFFAIRS],
+            confidence=0.92,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Kayit sorusu",
+            task_type=TaskType.REGISTRATION_QUERY,
+        )
+    )
+    student_orchestrator = _FakeDepartmentOrchestrator(
+        Department.STUDENT_AFFAIRS,
+        "Kayit cevabi",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(side_effect=[601, 602])
+    telemetry.finalize_query_log = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.STUDENT_AFFAIRS: student_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    await orchestrator.handle_query("Ders kaydi ne zaman basliyor?", context_id="ctx-nocache-1")
+    await orchestrator.handle_query("Ders kaydi ne zaman basliyor?", context_id="ctx-nocache-2")
+
+    assert router.route.await_count == 2
+    assert student_orchestrator.handle_task.await_count == 2
+
+    question_cache.clear()
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_skips_question_cache_when_request_disabled(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.STUDENT_AFFAIRS],
+            confidence=0.92,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Kayit sorusu",
+            task_type=TaskType.REGISTRATION_QUERY,
+        )
+    )
+    student_orchestrator = _FakeDepartmentOrchestrator(
+        Department.STUDENT_AFFAIRS,
+        "Kayit cevabi",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(side_effect=[651, 652])
+    telemetry.finalize_query_log = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.STUDENT_AFFAIRS: student_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    await orchestrator.handle_query(
+        "Ders kaydi ne zaman basliyor?",
+        context_id="ctx-request-nocache-1",
+        disable_cache=True,
+    )
+    await orchestrator.handle_query(
+        "Ders kaydi ne zaman basliyor?",
+        context_id="ctx-request-nocache-2",
+        disable_cache=True,
+    )
+
+    assert router.route.await_count == 2
+    assert student_orchestrator.handle_task.await_count == 2
+    assert question_cache.size == 0
+    assert telemetry.create_query_log.await_args_list[0].kwargs["metadata_extra"]["cache"]["question_cache"] == "bypass"
+    assert telemetry.create_query_log.await_args_list[1].kwargs["metadata_extra"]["cache"]["question_cache"] == "bypass"
+
+    question_cache.clear()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_does_not_question_cache_announcement_queries(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+    router = AsyncMock()
+    router.route = AsyncMock()
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=701)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    async def _announcement_handle_task(task):
+        return build_department_response_task(
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Ilgili duyurular:\n1. Guncel duyuru",
+                sources=[
+                    RAGSource(
+                        content="Guncel duyuru icerigi",
+                        score=1.0,
+                        metadata={"record_type": "announcement"},
+                    )
+                ],
+            ),
+            request_task=task,
+            emitter_id=announcement_agent.agent_id,
+            emitter_name=announcement_agent.definition.name,
+        )
+
+    announcement_agent.handle_task = AsyncMock(side_effect=_announcement_handle_task)
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    await orchestrator.handle_query("Son duyurular neler?", context_id="ctx-ann-cache-1")
+    await orchestrator.handle_query("Son duyurular neler?", context_id="ctx-ann-cache-2")
+
+    assert announcement_agent.handle_task.await_count == 2
+    assert question_cache.size == 0
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_normalizes_short_announcement_before_routing(monkeypatch):
+    monkeypatch.setattr(settings.llm, "query_normalization_enabled", True)
+    router = AsyncMock()
+    router.route = AsyncMock(side_effect=AssertionError("announcement should short-circuit"))
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(
+        return_value=(
+            '{"canonical_query":"Guncel duyurular nelerdir?",'
+            '"is_personal":false,'
+            '"primary_intent":"announcement",'
+            '"target_capability":"announcement",'
+            '"confidence":0.91,'
+            '"reasoning":"duyuru sorgusu"}'
+        )
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=705)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    async def _announcement_handle_task(task):
+        return build_department_response_task(
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Ilgili duyurular:\n1. Guncel duyuru",
+                sources=[
+                    RAGSource(
+                        content="Guncel duyuru icerigi",
+                        score=1.0,
+                        metadata={"record_type": "announcement"},
+                    )
+                ],
+            ),
+            request_task=task,
+            emitter_id=announcement_agent.agent_id,
+            emitter_name=announcement_agent.definition.name,
+        )
+
+    announcement_agent.handle_task = AsyncMock(side_effect=_announcement_handle_task)
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        llm_service=llm_service,
+    )
+
+    response = await orchestrator.handle_query("Guncel duyur", context_id="ctx-ann-normalize")
+
+    assert "Guncel duyuru" in response.answer
+    assert response.departments_involved == ["announcement"]
+    router.route.assert_not_awaited()
+    announcement_agent.handle_task.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_short_circuits_event_queries(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+    router = AsyncMock()
+    router.route = AsyncMock()
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=702)
+    telemetry.finalize_query_log = AsyncMock()
+
+    monkeypatch.setattr(
+        "src.agents.event.agent.fetch_relevant_events",
+        AsyncMock(
+            return_value=[
+                EventRecord(
+                    id=1,
+                    title="Yapay Zeka Semineri",
+                    display_summary="Bolume ozel seminer",
+                    summary="Bolume ozel seminer",
+                    original_text="Bolume ozel seminer",
+                    source_url="https://omu.edu.tr/tr/etkinlikler/yapay-zeka-semineri",
+                    faculty="Muhendislik Fakultesi",
+                    unit_name="Bilgisayar Muhendisligi",
+                    department="academic_programs",
+                    event_type="seminer",
+                    location="Mavi Salon",
+                    organizer="Bilgisayar Muhendisligi Bolumu",
+                    starts_at=None,
+                    ends_at=None,
+                    all_day=True,
+                    links=(
+                        EventLinkRecord(
+                            label="Program PDF",
+                            url="https://omu.edu.tr/program.pdf",
+                            link_type="attachment",
+                        ),
+                    ),
+                )
+            ]
+        ),
+    )
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    response = await orchestrator.handle_query(
+        "Bilgisayar muhendisligindeki etkinlikler neler?",
+        context_id="ctx-event-1",
+    )
+
+    assert "Yapay Zeka Semineri" in response.answer
+    assert "Mavi Salon" in response.answer
+    assert response.departments_involved == ["event"]
+    assert response.generation_modes == ["vt"]
+    assert router.route.await_count == 0
+    assert announcement_agent.handle_task.await_count == 0
+    assert question_cache.size == 0
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_explicit_event_query_skips_conversation_resolution(monkeypatch):
+    router = AsyncMock()
+    router.route = AsyncMock()
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=703)
+    telemetry.finalize_query_log = AsyncMock()
+    conversation_service = AsyncMock()
+    conversation_service.resolve_query = AsyncMock(
+        side_effect=AssertionError("explicit event query should not wait for conversation LLM")
+    )
+    conversation_service.record_turn = AsyncMock()
+
+    monkeypatch.setattr(
+        "src.agents.event.agent.fetch_relevant_events",
+        AsyncMock(return_value=[]),
+    )
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        conversation_service=conversation_service,
+    )
+
+    response = await orchestrator.handle_query(
+        "Bu hafta seminer var mi?",
+        context_id="ctx-event-no-conv",
+    )
+
+    assert "etkinlik bulamadim" in response.answer
+    assert "Kaynak Ozeti:" in response.answer
+    assert "etkinlik aramasi" in response.answer
+    assert response.departments_involved == ["event"]
+    router.route.assert_not_awaited()
+    conversation_service.resolve_query.assert_not_awaited()
+    conversation_service.record_turn.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_explicit_personal_query_skips_conversation_resolution():
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.FINANCE],
+            confidence=0.9,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Kisisel finans sorgusu",
+            task_type=TaskType.SCHOLARSHIP_QUERY,
+        )
+    )
+    finance_orchestrator = _FakeDepartmentOrchestrator(
+        Department.FINANCE,
+        "Kisisel sorunuza yanit verebilmem icin kimliginizi dogrulamam gerekiyor.",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=704)
+    telemetry.finalize_query_log = AsyncMock()
+    conversation_service = AsyncMock()
+    conversation_service.resolve_query = AsyncMock(
+        side_effect=AssertionError("explicit personal query should not wait for conversation LLM")
+    )
+    conversation_service.record_turn = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.FINANCE: finance_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        conversation_service=conversation_service,
+    )
+
+    response = await orchestrator.handle_query(
+        "Burs aliyor muyum?",
+        context_id="ctx-personal-no-conv",
+    )
+
+    assert "kimliginizi dogrulamam" in response.answer
+    router.route.assert_awaited_once()
+    conversation_service.resolve_query.assert_not_awaited()
+    conversation_service.record_turn.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_does_not_use_question_cache_for_follow_up(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.STUDENT_AFFAIRS],
+            confidence=0.92,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Kayit sorusu",
+            task_type=TaskType.REGISTRATION_QUERY,
+        )
+    )
+    student_orchestrator = _FakeDepartmentOrchestrator(
+        Department.STUDENT_AFFAIRS,
+        "Kayit cevabi",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(side_effect=[801, 802])
+    telemetry.finalize_query_log = AsyncMock()
+    conversation_service = AsyncMock()
+    conversation_service.resolve_query = AsyncMock(
+        return_value=ConversationResolution(
+            original_query="Peki ne zaman?",
+            effective_query="Ders kaydi ne zaman basliyor?",
+            is_follow_up=True,
+            used_context=True,
+            active_topic="Kayit",
+            department_hints=[Department.STUDENT_AFFAIRS],
+            source_hints=[],
+        )
+    )
+    conversation_service.record_turn = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.STUDENT_AFFAIRS: student_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        conversation_service=conversation_service,
+    )
+
+    await orchestrator.handle_query("Peki ne zaman?", context_id="ctx-followup-cache-1")
+    await orchestrator.handle_query("Peki ne zaman?", context_id="ctx-followup-cache-2")
+
+    assert router.route.await_count == 2
+    assert student_orchestrator.handle_task.await_count == 2
+    assert question_cache.size == 0
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_does_not_store_question_cache_for_parallel_queries(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.STUDENT_AFFAIRS, Department.FINANCE],
+            confidence=0.91,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.PARALLEL,
+            reasoning="Coklu departman sorgusu",
+            task_type=TaskType.REGISTRATION_QUERY,
+        )
+    )
+    student_orchestrator = _FakeDepartmentOrchestrator(
+        Department.STUDENT_AFFAIRS,
+        "Kayit donemi bilgisi",
+    )
+    finance_orchestrator = _FakeDepartmentOrchestrator(
+        Department.FINANCE,
+        "Ucret bilgisi icin ogrenci tipi gerekir",
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(side_effect=[901, 902])
+    telemetry.finalize_query_log = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+            Department.FINANCE: finance_orchestrator,
+        },
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    await orchestrator.handle_query(
+        "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        context_id="ctx-parallel-cache-1",
+    )
+    await orchestrator.handle_query(
+        "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+        context_id="ctx-parallel-cache-2",
+    )
+
+    assert router.route.await_count == 2
+    assert student_orchestrator.handle_task.await_count == 2
+    assert finance_orchestrator.handle_task.await_count == 2
+    assert question_cache.size == 0
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_does_not_store_question_cache_for_llm_answers(monkeypatch):
+    question_cache.clear()
+    question_cache.configure(ttl_seconds=300, enabled=True)
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.ACADEMIC_PROGRAMS],
+            confidence=0.88,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Akademik sorgu",
+            task_type=TaskType.COURSE_QUERY,
+        )
+    )
+    llm_response = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="LLM destekli akademik cevap",
+        sources=[],
+        generation_mode="llm",
+    )
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(
+            side_effect=lambda task, *args, **kwargs: build_department_response_task(
+                llm_response,
+                request_task=task,
+                emitter_id="academic_programs_orchestrator",
+                emitter_name="academic_programs Orchestrator",
+            )
+        ),
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(side_effect=[1001, 1002])
+    telemetry.finalize_query_log = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.ACADEMIC_PROGRAMS: academic_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    await orchestrator.handle_query(
+        "BIL104 dersinin kapsamli aciklamasi nedir?",
+        context_id="ctx-llm-cache-1",
+    )
+    await orchestrator.handle_query(
+        "BIL104 dersinin kapsamli aciklamasi nedir?",
+        context_id="ctx-llm-cache-2",
+    )
+
+    assert router.route.await_count == 2
+    assert academic_orchestrator.handle_task.await_count == 2
+    assert question_cache.size == 0

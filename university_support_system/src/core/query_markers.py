@@ -30,10 +30,34 @@ ANNOUNCEMENT_QUERY_MARKERS: tuple[str, ...] = (
     "haber",
     "haberler",
     "guncel duyuru",
+    "guncel duyur",
     "son aciklanan",
+    "son duyur",
     "ilan",
     "ilanlar",
     "bilgilendirme",
+)
+
+EVENT_QUERY_MARKERS: tuple[str, ...] = (
+    "etkinlik",
+    "etkinlikler",
+    "seminer",
+    "konferans",
+    "soylesi",
+    "söylesi",
+    "panel",
+    "workshop",
+    "atolye",
+    "atölye",
+    "fuar",
+    "sergi",
+    "senlik",
+    "şenlik",
+    "zirve",
+    "kariyer gunu",
+    "kariyer gunleri",
+    "konser",
+    "hackathon",
 )
 
 RELATED_ANNOUNCEMENT_QUERY_MARKERS: tuple[str, ...] = (
@@ -51,6 +75,14 @@ RELATED_ANNOUNCEMENT_QUERY_MARKERS: tuple[str, ...] = (
     "kapandi mi",
     "suresi doldu",
     "son basvuru",
+    "duyurusu var mi",
+    "duyurusu",
+    "nereden takip",
+    "nereden ogren",
+    "programi duyurusu",
+    "sinav duyurusu",
+    "ders programi duyurusu",
+    "linki olan",
 )
 
 CONTACT_QUERY_MARKERS: tuple[str, ...] = (

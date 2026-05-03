@@ -47,19 +47,29 @@ class AnnouncementAgent(BaseSpecialistAgent):
             query_text,
             department=self._resolve_department_filter(metadata),
             faculty=self._normalize_optional_text(metadata.get("faculty")),
-            limit=3,
+            unit_name=self._normalize_optional_text(metadata.get("unit_name")),
+            limit=6,  # +1 to detect if there are more results
             allow_latest_fallback=bool(metadata.get("allow_latest_fallback", True)),
         )
 
+        has_more = len(announcements) > 5
+        display_items = announcements[:5]
+
         if not announcements:
-            answer = (
-                "Su anda sistemde kayitli aktif duyuru bulunmuyor. "
-                "Duyuru verileri yuklendiginde en guncel duyurulari dogrudan listeleyebilirim."
-            )
+            if bool(metadata.get("allow_latest_fallback", True)):
+                answer = (
+                    "Su anda sistemde kayitli aktif duyuru bulunmuyor. "
+                    "Duyuru verileri yuklendiginde en guncel duyurulari dogrudan listeleyebilirim."
+                )
+            else:
+                answer = (
+                    "Bu arama icin ilgili aktif duyuru bulunamadi. "
+                    "Daha genel duyurulari listelemek isterseniz 'guncel duyurular neler?' diye sorabilirsiniz."
+                )
             sources: list[RAGSource] = []
         else:
-            answer = self._format_announcements(announcements)
-            sources = [self._build_source(item) for item in announcements]
+            answer = self._format_announcements(display_items, has_more=has_more)
+            sources = [self._build_source(item) for item in display_items]
 
         return DepartmentResponse(
             department=self.department,
@@ -92,11 +102,16 @@ class AnnouncementAgent(BaseSpecialistAgent):
         text = str(value).strip() if value is not None else ""
         return text or None
 
-    def _format_announcements(self, announcements: list[AnnouncementRecord]) -> str:
+    def _format_announcements(self, announcements: list[AnnouncementRecord], *, has_more: bool = False) -> str:
         lines = ["Ilgili duyurular:"]
 
-        for index, item in enumerate(announcements, start=1):
-            summary = (item.summary or item.original_text or "Ozet bilgisi bulunmuyor.").strip()
+        for index, item in enumerate(announcements[:5], start=1):
+            summary = (
+                item.display_summary
+                or item.summary
+                or item.original_text
+                or "Ozet bilgisi bulunmuyor."
+            ).strip()
             if len(summary) > 280:
                 summary = f"{summary[:277].rstrip()}..."
 
@@ -108,7 +123,11 @@ class AnnouncementAgent(BaseSpecialistAgent):
             lines.append(f"   {summary}")
             if item.source_url:
                 lines.append(f"   Detay: {item.source_url}")
+            for link in item.links[:3]:
+                lines.append(f"   Ek baglanti: {link.label} - {link.url}")
 
+        if has_more:
+            lines.append("   ... ve daha fazla duyuru var. Tumunu gormek icin ilgili birim sayfasini ziyaret edin.")
         return "\n".join(lines)
 
     def _build_source(self, item: AnnouncementRecord) -> RAGSource:
@@ -119,7 +138,17 @@ class AnnouncementAgent(BaseSpecialistAgent):
                 "record_type": "announcement",
                 "announcement_id": item.id,
                 "title": item.title,
+                "display_summary": item.display_summary,
                 "source_url": item.source_url,
+                "unit_name": item.unit_name,
+                "links": [
+                    {
+                        "label": link.label,
+                        "url": link.url,
+                        "link_type": link.link_type,
+                    }
+                    for link in item.links
+                ],
                 "faculty": item.faculty,
                 "department": item.department,
                 "published_at": item.published_at.isoformat() if item.published_at else None,

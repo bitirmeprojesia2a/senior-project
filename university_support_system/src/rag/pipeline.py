@@ -12,6 +12,7 @@ import httpx
 import structlog
 from tqdm import tqdm
 
+from src.core.config import settings
 from src.core.constants import (
     Department,
     academic_schedule_collection_name,
@@ -43,7 +44,11 @@ class IndexingPipeline:
         self._explicit_collection_name = collection_name
         self.loader = DocumentLoader()
         self.preprocessor = TextPreprocessor()
-        self.chunker = TextChunker(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        self.chunker = TextChunker(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            min_chunk_chars=settings.rag.min_chunk_chars,
+        )
         self.embedder = Embedder(model_name=embedding_model)
         self.indexer = ChromaIndexer(
             base_url=chroma_url,
@@ -72,13 +77,19 @@ class IndexingPipeline:
         if not chunks:
             return {"error": "Chunk olusturulamadi"}
 
+        metadatas = [chunk.metadata for chunk in chunks]
         chunk_texts = [chunk.content for chunk in chunks]
+        ids = self._generate_content_hash_ids(chunk_texts, metadatas)
+        try:
+            self._validate_unique_ids(ids)
+        except ValueError:
+            logger.exception("duplicate_chunk_ids_generated")
+            return {"error": "Tekrarlanan chunk ID uretildi"}
+
         embeddings = self._generate_embeddings(chunk_texts)
         if embeddings is None:
             return {"error": "Embedding uretimi basarisiz"}
 
-        metadatas = [chunk.metadata for chunk in chunks]
-        ids = self._generate_content_hash_ids(chunk_texts, metadatas)
         total_in_db = self._index_chunks(
             ids=ids,
             chunk_texts=chunk_texts,
@@ -89,7 +100,8 @@ class IndexingPipeline:
         if total_in_db is None:
             return {"error": "ChromaDB indeksleme basarisiz"}
 
-        self._write_doc_registry(source_dir, documents, chunks)
+        self._invalidate_retrieval_caches()
+        self._write_doc_registry(source_dir, documents, chunks, reindex=reindex)
 
         chunk_stats = self.chunker.get_stats(chunks)
         stats = self._build_stats(
@@ -150,6 +162,25 @@ class IndexingPipeline:
         print(f"   Model: {self.embedder.model_name}")
         try:
             embeddings = self.embedder.embed_texts(chunk_texts, is_query=False)
+            if len(embeddings) != len(chunk_texts):
+                raise ValueError(
+                    f"Embedding count mismatch: chunks={len(chunk_texts)}, embeddings={len(embeddings)}"
+                )
+            expected_dimension = self.embedder.dimension
+            bad_embedding = next(
+                (
+                    (index, len(vector))
+                    for index, vector in enumerate(embeddings)
+                    if len(vector) != expected_dimension
+                ),
+                None,
+            )
+            if bad_embedding is not None:
+                index, actual_dimension = bad_embedding
+                raise ValueError(
+                    "Embedding dimension mismatch: "
+                    f"expected={expected_dimension}, index={index}, actual={actual_dimension}"
+                )
         except (OSError, RuntimeError, ValueError):
             logger.exception("embedding_generation_failed")
             return None
@@ -190,6 +221,19 @@ class IndexingPipeline:
 
         print(f"   OK: {total_in_db} chunk ChromaDB'ye kaydedildi")
         return total_in_db
+
+    @staticmethod
+    def _invalidate_retrieval_caches() -> None:
+        """Clear retrieval caches that may contain pre-index search results."""
+        try:
+            from src.rag.query_cache import clear_shared_query_cache
+            from src.rag.retriever import HybridRetriever
+
+            clear_shared_query_cache()
+            HybridRetriever.clear_resource_cache()
+            logger.info("retrieval_caches_invalidated_after_indexing")
+        except Exception:
+            logger.warning("retrieval_cache_invalidation_failed_after_indexing", exc_info=True)
 
     def _build_stats(
         self,
@@ -315,7 +359,7 @@ class IndexingPipeline:
         ids: list[str] = []
         for index, text in enumerate(texts):
             metadata = metadatas[index] if index < len(metadatas) else {}
-            source = metadata.get("source", "")
+            source = IndexingPipeline._metadata_identity_key(metadata)
             chunk_index = metadata.get("chunk_index", "")
             sub_chunk = metadata.get("sub_chunk", "")
             madde_no = metadata.get("madde_no", "")
@@ -324,11 +368,37 @@ class IndexingPipeline:
             ids.append(f"chunk_{digest}")
         return ids
 
+    @staticmethod
+    def _metadata_identity_key(metadata: dict[str, Any]) -> str:
+        """Return the stable document identity used for chunk ids and registries."""
+        return str(
+            metadata.get("relative_path")
+            or metadata.get("file_path")
+            or metadata.get("source")
+            or ""
+        )
+
+    @staticmethod
+    def _validate_unique_ids(ids: list[str]) -> None:
+        """Fail before Chroma writes if deterministic chunk id generation collided."""
+        if len(ids) == len(set(ids)):
+            return
+
+        seen: set[str] = set()
+        duplicates: list[str] = []
+        for chunk_id in ids:
+            if chunk_id in seen and chunk_id not in duplicates:
+                duplicates.append(chunk_id)
+            seen.add(chunk_id)
+        raise ValueError(f"Duplicate chunk ids generated: {duplicates[:10]}")
+
     def _write_doc_registry(
         self,
         source_dir: Path,
         documents: list[Document],
         chunks: list[Chunk],
+        *,
+        reindex: bool,
     ) -> None:
         """Write a registry file for indexed source documents."""
         try:
@@ -339,32 +409,60 @@ class IndexingPipeline:
 
             chunks_per_source: dict[str, int] = {}
             for chunk in chunks:
-                source = chunk.metadata.get("source", "bilinmiyor")
+                source = self._metadata_identity_key(chunk.metadata) or "bilinmiyor"
                 chunks_per_source[source] = chunks_per_source.get(source, 0) + 1
 
-            doc_entries = []
+            previous_entries: dict[str, dict[str, Any]] = {}
+            previous_registry: dict[str, Any] = {}
+            if not reindex and registry_path.exists():
+                try:
+                    previous_registry = json.loads(registry_path.read_text(encoding="utf-8"))
+                    for entry in previous_registry.get("documents", []):
+                        document_key = str(entry.get("relative_path") or entry.get("filename") or "")
+                        if document_key:
+                            previous_entries[document_key] = dict(entry)
+                except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                    logger.warning("doc_registry_merge_skipped", path=str(registry_path))
+
+            doc_entries: dict[str, dict[str, Any]] = {}
             for doc in documents:
                 source_name = doc.metadata.get("source", "bilinmiyor")
+                document_key = self._metadata_identity_key(doc.metadata) or str(source_name)
                 content_hash = hashlib.sha256(doc.content.encode("utf-8")).hexdigest()[:16]
-                doc_entries.append(
-                    {
-                        "filename": source_name,
-                        "category": doc.metadata.get("category", "genel"),
-                        "file_type": doc.metadata.get("file_type", "unknown"),
-                        "char_count": len(doc.content),
-                        "chunk_count": chunks_per_source.get(source_name, 0),
-                        "content_hash": content_hash,
-                    }
-                )
+                doc_entries[document_key] = {
+                    "filename": source_name,
+                    "relative_path": doc.metadata.get("relative_path", ""),
+                    "category": doc.metadata.get("category", "genel"),
+                    "file_type": doc.metadata.get("file_type", "unknown"),
+                    "char_count": len(doc.content),
+                    "chunk_count": chunks_per_source.get(document_key, 0),
+                    "content_hash": content_hash,
+                }
+
+            merged_entries = (
+                doc_entries
+                if reindex
+                else {**previous_entries, **doc_entries}
+            )
+            merged_document_list = sorted(
+                merged_entries.values(),
+                key=lambda entry: str(entry.get("relative_path") or entry.get("filename") or ""),
+            )
+            merged_total_chunks = sum(
+                int(entry.get("chunk_count") or 0)
+                for entry in merged_document_list
+            )
+            if not reindex and previous_registry.get("total_chunks") and not previous_entries:
+                merged_total_chunks = max(merged_total_chunks, int(previous_registry["total_chunks"]))
 
             registry = {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "source_dir": str(source_dir),
-                "total_documents": len(documents),
-                "total_chunks": len(chunks),
+                "total_documents": len(merged_document_list),
+                "total_chunks": merged_total_chunks,
                 "embedding_model": self.embedder.model_name,
                 "collection_name": self.indexer.collection_name,
-                "documents": doc_entries,
+                "documents": merged_document_list,
             }
 
             registry_path.write_text(

@@ -51,12 +51,73 @@ SYNONYM_MAP: Dict[str, List[str]] = {
     # Kayıt İşlemleri
     "kayıt dondurma": ["kayıt dondurmak", "dönem izni", "kayıt dondurulması", "kayıt dondurmak istiyorum"],
     "dönem dondurma": ["kayıt dondurma", "dönem izni"],
-    "kayıt yenileme": ["ders kaydı yenileme", "kayıt yenilemek"],
-    "ders kaydı": ["kayıt yenileme", "ders seçimi", "ders kaydı yenileme"],
+    "kayıt yenileme": [
+        "ders kaydı yenileme",
+        "kayıt yenilemek",
+        "ubys.omu.edu.tr",
+        "danışman onayı",
+        "sınıf yoklama listesi",
+    ],
+    "ders kaydı": [
+        "kayıt yenileme",
+        "ders seçimi",
+        "ders kaydı yenileme",
+        "ubys.omu.edu.tr",
+        "danışman onayı",
+        "sınıf yoklama listesi",
+    ],
     "kayıt silme": ["kayıt sildirme", "kaydını silme"],
     "ilişik kesme": ["ilişik kesmek", "ayrılma", "kaydını silme", "kayıt sildirme"],
     "ayrılmak": ["ilişik kesme", "kayıt sildirme", "ayrılma"],
     "bırakmak": ["ilişik kesme", "kayıt sildirme", "ayrılma"],
+    "muafiyet": [
+        "ders muafiyeti",
+        "intibak",
+        "muafiyet dilekçesi",
+        "muafiyet komisyonu",
+        "derslere devam",
+        "üç hafta",
+        "transkript",
+        "ders içerikleri",
+    ],
+    "intibak": [
+        "muafiyet",
+        "ders muafiyeti",
+        "intibak komisyonu",
+        "muafiyet dilekçesi",
+        "üç hafta",
+        "transkript",
+    ],
+    "itiraz": ["dilekçe", "beş iş günü", "bölüm başkanlığı", "maddi hata", "ilgili birim"],
+    "notuma itiraz": [
+        "beş iş günü",
+        "dilekçe",
+        "bölüm başkanlığı",
+        "maddi hata",
+        "ilgili birim",
+        "öğrenci otomasyon sistemi",
+    ],
+    "not girmemiş": ["oidb@omu.edu.tr", "bölüm başkanı", "danışman", "not düzeltme"],
+    "sisteme girmemiş": ["oidb@omu.edu.tr", "bölüm başkanı", "danışman", "not düzeltme"],
+    "notlarımı nereden": ["öğrenci bilgi sistemi", "öğrenci otomasyon sistemi", "UBYS", "sınav sonucu"],
+    "notlarimi nereden": ["ogrenci bilgi sistemi", "ogrenci otomasyon sistemi", "UBYS", "sinav sonucu"],
+    "sınav notlarımı": ["öğrenci bilgi sistemi", "öğrenci otomasyon sistemi", "UBYS", "sınav sonucu"],
+    "sinav notlarimi": ["ogrenci bilgi sistemi", "ogrenci otomasyon sistemi", "UBYS", "sinav sonucu"],
+    "kopya": [
+        "disiplin suçu",
+        "kopya muamelesi",
+        "sınav kuralları",
+        "öğrenci disiplin yönetmeliği",
+        "yükseköğretim kurumları öğrenci disiplin yönetmeliği",
+    ],
+    "disiplin": [
+        "disiplin cezası",
+        "disiplin soruşturması",
+        "disiplin kurulu",
+        "sınav kuralları",
+        "öğrenci disiplin yönetmeliği",
+        "yükseköğretim kurumları öğrenci disiplin yönetmeliği",
+    ],
 
     # Akademik Terimler
     "gno": ["genel not ortalaması", "not ortalaması", "GNO", "akademik ortalama"],
@@ -122,13 +183,36 @@ SYNONYM_MAP: Dict[str, List[str]] = {
 
     # Devamsızlık ve Kurallar
     "devamsızlık": ["devam zorunluluğu", "yoklama", "devam durumu"],
-    "bağıl değerlendirme": ["bağıl not sistemi", "not sistemi"],
+    "bağıl değerlendirme": [
+        "bağıl değerlendirme yönergesi",
+        "bağıl not sistemi",
+        "mutlak değerlendirme",
+        "öğrenci sayısı",
+    ],
+    "bagil degerlendirme": [
+        "bağıl değerlendirme yönergesi",
+        "bağıl not sistemi",
+        "mutlak değerlendirme",
+        "öğrenci sayısı",
+    ],
+    "mutlak degerlendirme": [
+        "bağıl değerlendirme yönergesi",
+        "bağıl değerlendirme",
+        "mutlak not sistemi",
+        "öğrenci sayısı",
+    ],
+    "ogrenci sayisi": ["bağıl değerlendirme yönergesi", "bağıl değerlendirme", "mutlak değerlendirme"],
     "azami süre": ["azami öğrenim süresi", "maksimum süre"],
 
     # Belgeler
     "öğrenci belgesi": ["öğrenci durum belgesi", "kayıt belgesi"],
     "askerlik belgesi": ["askerlik tecil belgesi", "tecil belgesi"],
-    "disiplin": ["disiplin cezası", "disiplin soruşturması", "disiplin kurulu"],
+    "disiplin": [
+        "disiplin cezası",
+        "disiplin soruşturması",
+        "disiplin kurulu",
+        "öğrenci disiplin yönetmeliği",
+    ],
 
     # Üniversite
     "omü": ["ondokuz mayıs üniversitesi", "OMÜ"],
@@ -162,6 +246,8 @@ PROCEDURAL_KEYWORDS = {
     "nereye başvurulur", "kimden alınır",
 }
 
+_TURKISH_SUFFIX_CHARS = "abcçdefgğhıijklmnoöprsştuüvyz"
+
 
 class QueryPreprocessor:
     """
@@ -186,9 +272,9 @@ class QueryPreprocessor:
         self.synonym_map = synonym_map or SYNONYM_MAP
         self.enable_expansion = enable_expansion
 
-        # Küçük harfli lookup tablosu oluştur
-        self._lower_synonym_map: Dict[str, List[str]] = {
-            k.lower(): v for k, v in self.synonym_map.items()
+        # ASCII/Turkish-agnostic lookup tablosu oluştur.
+        self._normalized_synonym_map: Dict[str, List[str]] = {
+            normalize_text(k): v for k, v in self.synonym_map.items()
         }
 
     def preprocess(self, query: str) -> str:
@@ -221,11 +307,10 @@ class QueryPreprocessor:
         # 3. Sonuç: orijinal (normalize edilmiş) + genişletilmiş terimler
         if expanded_terms:
             # Orijinal sorguda zaten geçenleri çıkar
-            normalized_lower = normalized.lower()
-            new_terms = [
-                t for t in expanded_terms
-                if t.lower() not in normalized_lower
-            ]
+            new_terms = self._dedupe_expanded_terms(
+                normalized_query=normalized,
+                terms=sorted(expanded_terms, key=lambda value: (normalize_text(value), value)),
+            )
             if new_terms:
                 result = f"{normalized} {' '.join(new_terms)}"
                 # Genişletilmiş terimlere de bileşik kelime ayırma uygula
@@ -278,17 +363,16 @@ class QueryPreprocessor:
         Uzun terim öncelikli ifade eşleşmesi yapar ve kelime/parça sınırlarını korur.
         """
         expanded: Set[str] = set()
-        text_lower = text.lower()
+        normalized_text_value = normalize_text(text)
 
         # Uzun terimlerden kısa terimlere doğru kontrol et
         # (Böylece "çift ana dal programı" önce "çift ana dal"den kontrol edilir)
-        sorted_keys = sorted(self._lower_synonym_map.keys(), key=len, reverse=True)
+        sorted_keys = sorted(self._normalized_synonym_map.keys(), key=len, reverse=True)
 
         matched_keys: Set[str] = set()
         for key in sorted_keys:
-            pattern = re.compile(rf"(?<!\w){re.escape(key)}(?!\w)")
-            if pattern.search(text_lower) and key not in matched_keys:
-                synonyms = self._lower_synonym_map[key]
+            if self._matches_synonym_key(normalized_text_value, key) and key not in matched_keys:
+                synonyms = self._normalized_synonym_map[key]
                 expanded.update(synonyms)
                 matched_keys.add(key)
                 # Alt terimleri de işaretleyerek çift genişletme önle
@@ -297,6 +381,46 @@ class QueryPreprocessor:
                         matched_keys.add(other_key)
 
         return expanded
+
+    def _dedupe_expanded_terms(
+        self,
+        *,
+        normalized_query: str,
+        terms: List[str],
+    ) -> List[str]:
+        """Remove duplicate expansions after compound-word normalization."""
+        normalized_query_value = normalize_text(normalized_query)
+        seen: Set[str] = set()
+        deduped: List[str] = []
+
+        for term in terms:
+            split_term = self._split_compound_words(term).strip()
+            if not split_term:
+                continue
+
+            key = normalize_text(split_term)
+            if key in seen or key in normalized_query_value:
+                continue
+
+            seen.add(key)
+            deduped.append(split_term)
+
+        return deduped
+
+    def _matches_synonym_key(self, text_lower: str, key: str) -> bool:
+        exact_pattern = re.compile(rf"(?<!\w){re.escape(key)}(?!\w)")
+        if exact_pattern.search(text_lower):
+            return True
+
+        if " " not in key:
+            return False
+
+        # Turkish process phrases are often inflected on the final word:
+        # "ders kaydı" -> "ders kaydından", "kayıt yenileme" -> "kayıt yenilemede".
+        suffix_pattern = re.compile(
+            rf"(?<!\w){re.escape(key)}[{_TURKISH_SUFFIX_CHARS}]*(?!\w)"
+        )
+        return bool(suffix_pattern.search(text_lower))
 
     def detect_query_type(self, query: str) -> str:
         """

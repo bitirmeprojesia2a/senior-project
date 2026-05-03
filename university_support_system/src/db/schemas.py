@@ -51,6 +51,17 @@ class IntentAnalysis(BaseModel):
     force_llm_synthesis: bool = False
     query_type: Literal["factual", "procedural", "comparative", "conditional"] = "factual"
     reasoning: Optional[str] = None
+    canonical_query: Optional[str] = None
+    primary_intent: Optional[str] = None
+    target_capability: Optional[Literal["announcement", "event", "none"]] = None
+    required_slots: list[str] = Field(
+        default_factory=list,
+        description="Niyeti guvenle islemek icin gerekli bilgi alanlari",
+    )
+    missing_slots: list[str] = Field(
+        default_factory=list,
+        description="Kullanici sorusunda eksik kalan gerekli bilgi alanlari",
+    )
 
 
 class RoutingResult(BaseModel):
@@ -77,6 +88,7 @@ class DepartmentResponse(BaseModel):
     success: bool = True
     response_time_ms: Optional[float] = None
     error: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class UserQueryRequest(BaseModel):
@@ -100,6 +112,18 @@ class AuthenticatedUserQueryRequest(UserQueryRequest):
     is_authenticated: bool = Field(False, description="Kimlik dogrulama durumu")
     session_token: Optional[str] = Field(None, description="Dogrulama oturum anahtari")
     slack_user_id: Optional[str] = Field(None, description="Slack kullanici kimligi")
+    trace_id: Optional[str] = Field(None, description="A2A izleme korelasyon kimligi")
+    span_id: Optional[str] = Field(None, description="A2A hop/span kimligi")
+    parent_span_id: Optional[str] = Field(None, description="Ust A2A hop/span kimligi")
+    disable_cache: bool = Field(False, description="Bu istek icin question cache lookup/storage kapatilsin")
+
+
+class QueryDiagnostics(BaseModel):
+    """Opsiyonel benchmark/debug gozlemlenebilirlik alani."""
+
+    llm_usage: list[dict[str, Any]] = Field(default_factory=list)
+    local_profile: dict[str, Any] | None = None
+    remote_profiles: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class UserQueryResponse(BaseModel):
@@ -111,6 +135,7 @@ class UserQueryResponse(BaseModel):
     sources: list[RAGSource] = Field(default_factory=list)
     response_time_ms: float
     query_id: str
+    diagnostics: QueryDiagnostics | None = None
 
 
 class OTPRequestPayload(BaseModel):

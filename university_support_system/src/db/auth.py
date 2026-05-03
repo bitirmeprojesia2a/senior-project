@@ -37,6 +37,7 @@ class AuthContext:
     session_token: str | None
     expires_at: datetime | None
     is_authenticated: bool = True
+    student_type: str | None = None
 
 
 class AuthService:
@@ -131,6 +132,7 @@ class AuthService:
                 "full_name": student.full_name,
                 "student_department": student.department,
                 "student_faculty": student.faculty,
+                "student_type": student.student_type,
                 "masked_email": mask_email(student.email),
                 "delivery_channel": "email_smtp",
                 "expires_at": expires_at,
@@ -223,6 +225,7 @@ class AuthService:
                 "full_name": student.full_name,
                 "student_department": student.department,
                 "student_faculty": student.faculty,
+                "student_type": student.student_type,
                 "session_token": session_token,
                 "expires_at": session_expires_at,
                 "slack_user_id": slack_user_id,
@@ -261,6 +264,7 @@ class AuthService:
                     slack_user_id=session_row.slack_user_id,
                     session_token=session_row.session_token,
                     expires_at=ensure_aware(session_row.expires_at),
+                    student_type=student.student_type,
                 )
 
             if slack_user_id:
@@ -287,6 +291,7 @@ class AuthService:
                     slack_user_id=session_row.slack_user_id,
                     session_token=session_row.session_token,
                     expires_at=ensure_aware(session_row.expires_at),
+                    student_type=student.student_type,
                 )
 
         return None
@@ -302,6 +307,21 @@ class AuthService:
                 .returning(VerificationSession.id)
             )
             return result.scalar_one_or_none() is not None
+
+    async def invalidate_slack_sessions(self, slack_user_id: str) -> bool:
+        """Slack kullanicisinin tum aktif dogrulama oturumlarini pasif hale getirir."""
+
+        async with self._session_provider() as session:
+            result = await session.execute(
+                update(VerificationSession)
+                .where(
+                    VerificationSession.slack_user_id == slack_user_id,
+                    VerificationSession.is_active.is_(True),
+                )
+                .values(is_active=False)
+                .returning(VerificationSession.id)
+            )
+            return bool(result.scalars().all())
 
     @staticmethod
     def _default_otp_generator(length: int) -> str:

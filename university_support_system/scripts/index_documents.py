@@ -33,7 +33,6 @@ from src.core.constants import (
     normalize_department_value,
 )
 from src.core.text_normalization import normalize_text
-from src.rag.pipeline import IndexingPipeline
 
 configure_utf8_stdio()
 
@@ -97,6 +96,14 @@ def main():
         help="Mevcut koleksiyonu silip yeniden oluştur",
     )
     parser.add_argument(
+        "--allow-partial-reindex",
+        action="store_true",
+        help=(
+            "Alt klasor kaynagi ile --reindex calistirmaya bilincli olarak izin ver. "
+            "Normalde bu korunur, cunku tum koleksiyonu yalnizca alt klasor icerigiyle degistirebilir."
+        ),
+    )
+    parser.add_argument(
         "--test-query",
         type=str,
         default=None,
@@ -118,6 +125,24 @@ def main():
         sys.exit(1)
 
     resolved_collection = _resolve_collection_name(source_path, args.collection)
+    normalized_source_name = normalize_department_value(source_path.name)
+    is_department_root = normalized_source_name in {department.value for department in Department}
+    is_schedule_source = resolved_collection == academic_schedule_collection_name()
+    if (
+        args.reindex
+        and not args.allow_partial_reindex
+        and not is_department_root
+        and not is_schedule_source
+    ):
+        print(
+            "❌ Guvenlik korumasi: alt klasor kaynagi ile --reindex calistiriyorsunuz.\n"
+            f"   Kaynak: {source_path}\n"
+            f"   Hedef koleksiyon: {resolved_collection}\n"
+            "   Bu islem tum koleksiyonu sadece bu alt klasor icerigiyle degistirebilir.\n"
+            "   Tum departmani yeniden indekslemek icin departman kok klasorunu verin.\n"
+            "   Gercekten partial reindex istiyorsaniz --allow-partial-reindex ekleyin."
+        )
+        sys.exit(2)
 
     print("=" * 50)
     print("🚀 RAG İndeksleme Pipeline")
@@ -130,6 +155,8 @@ def main():
     print("=" * 50)
 
     # Pipeline oluştur ve çalıştır
+    from src.rag.pipeline import IndexingPipeline
+
     pipeline = IndexingPipeline(
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,

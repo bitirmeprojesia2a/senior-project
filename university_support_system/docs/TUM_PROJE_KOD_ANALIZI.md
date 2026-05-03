@@ -1,6 +1,6 @@
 # ÜNİVERSİTE KURUMSAL DESTEK SİSTEMİ 
 
-> Durum Notu (Nisan 2026): Bu belge genis kapsamli bir tarihsel kod referansidir. Kod tabani sonradan modulerlestigi icin burada anlatilan bazi dosya dagilimlari ve sorumluluklar bire bir guncel durumu yansitmayabilir. Guncel modul haritasi icin `docs/PROJE_ANATOMISI_KILAVUZU.md` kullanilmalidir.
+> Durum Notu (Nisan 2026): Bu belge genis kapsamli bir tarihsel kod referansidir. Kod tabani sonradan modulerlestigi ve A2A servis topolojisi, merkezi `retrieval-service`, Slack A2A runtime ve capability agent'lari eklendigi icin burada anlatilan bazi dosya dagilimlari ve sorumluluklar bire bir guncel durumu yansitmayabilir. Guncel modul haritasi icin `docs/PROJE_ANATOMISI_KILAVUZU.md`, nihai mimari icin `docs/A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md` kullanilmalidir.
 
 # KÜLLİYAT: TÜM PROJE KOD ANALİZİ VE METOD REFERANS REHBERİ
 
@@ -146,9 +146,9 @@ Arama yapıldı. Getirilen 20 metin gerçekten öğrencinin yazdığı yediğimi
 RAG ile oynadığımız geliştirici / otomasyon araçlarıdır.
 
 *   **`scripts/index_documents.py`:** Konsoldan veritabanı kurulumu yapar. Argparse kural kütüphanesi ile `python index_documents.py --chunk-size 512 --reindex` gibi argümanları alır ve asıl RAG `pipeline.run()` fonksiyonunu işletir.
-*   **`scripts/evaluate_rag.py`:** Otomatik zeka (RAGTest) test sistemidir. Güncel durumda departman etiketli ortak soru havuzunu kullanır; havuz 30 sorudan oluşur (20 `student_affairs`, 10 `academic_programs`). `compute_metrics()` altında *Precision@1* ve *Precision@3* metriklerini orantılayıp `docs/rag_evaluation_report.md` rapor dosyasını üretir.
+*   **`scripts/evaluate_rag.py`:** Otomatik zeka (RAGTest) test sistemidir. Güncel durumda departman etiketli ortak soru havuzunu kullanır; havuz 30 sorudan oluşur (20 `student_affairs`, 10 `academic_programs`). `compute_metrics()` altında *Precision@1* ve *Precision@3* metriklerini orantılayıp `docs/archive/benchmarks/rag_evaluation_report.md` rapor dosyasını üretir.
 *   **`scripts/query_db.py`:** Saf arama denemesidir. Kelimelere, reranker'a falan takılmadan ChromaDB vektör uzayında E5 Prefix ekleyerek ham sorgu testleri atar geliştiriciye CLI çıktıları (Console prints) yollar.
-*   **`scripts/test_hybrid_search.py`:** En ileri sistem sorgucusudur. BM25 (Kelime) ve Vector (Anlam) ağırlıklarını dengeler. Terminale "Kayıt dondurma nasıl yapılır?" yazınca, Sinonim sözlüğünün (genişletmenin) kelimeye eklenip eklenmediğini (Debug/Verbose modda) gösterir ve 1-den-5'e kadar skorlayarak Terminaldeki en güzel görünümü basar.
+*   **`scripts/hybrid_search_probe.py`:** En ileri sistem sorgucusudur. BM25 (Kelime) ve Vector (Anlam) ağırlıklarını dengeler. Terminale "Kayıt dondurma nasıl yapılır?" yazınca, Sinonim sözlüğünün (genişletmenin) kelimeye eklenip eklenmediğini (Debug/Verbose modda) gösterir ve 1-den-5'e kadar skorlayarak Terminaldeki en güzel görünümü basar.
 *   **`scripts/compare_collections.py`:** Bilimsel analiz aracı. Veritabanını 3 farklı şekilde (256, 512, 1024 boyutla) kestiğimizde paralel bağlayıp "Hangi kesintide LLM daha nokta atışı hit buldu?" diye tablolaşmış çıktı üretmeye yarar. (Araştırma modülü).
 
 ### SONUÇ / PROJE DEĞERLENDİRMESİ

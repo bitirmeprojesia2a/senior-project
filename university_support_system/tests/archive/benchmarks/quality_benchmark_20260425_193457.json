@@ -1,0 +1,315 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "run_timestamp": "20260425_193457",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 0.0,
+    "clean_quality_pct": 0.0,
+    "avg_time_ms": 54111.2,
+    "median_time_ms": 54111.2,
+    "intent_analysis_active": 1,
+    "force_llm_synthesis_count": 1,
+    "a2a_query_failure_delta": 0,
+    "a2a_agent_task_failure_delta": 2
+  },
+  "results": [
+    {
+      "id": "Q17",
+      "category": "E_process_chain",
+      "question": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "kural",
+      "mode_match": false,
+      "expected_key_facts": [
+        "UBYS",
+        "ders seçimi",
+        "danışman",
+        "onay",
+        "yoklama"
+      ],
+      "key_fact_results": {
+        "UBYS": false,
+        "ders seçimi": false,
+        "danışman": false,
+        "onay": false,
+        "yoklama": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 54111.2,
+      "reported_response_time_ms": 54004.0,
+      "source_count": 0,
+      "quality_warnings": [
+        "a2a_transport_fallback"
+      ],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Kayit Agent agent servisine su anda ulasilamadi. Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin.\n\nUretim Turu:\n- Kural\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenci isleri",
+      "profiling": {
+        "total_ms": 54111.177,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q17-193403",
+          "total_ms": 54104.018,
+          "attributes": {
+            "context_id": "qbench-Q17-193403",
+            "query": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+            "a2a_trace": {
+              "trace_id": "516f1d25a84b4d8ea8e3a2fb43e18d12",
+              "span_id": "a57743bb67a0413e"
+            },
+            "conversation_resolution": {
+              "effective_query": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "registration_query",
+              "confidence": 0.84,
+              "intent": {
+                "complexity": "process_chain",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "procedural"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.031,
+              "ended_at_ms": 54104.002,
+              "duration_ms": 54103.971,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 49.151,
+              "ended_at_ms": 54103.978,
+              "duration_ms": 54054.827,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q17-193403"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 49.529,
+              "ended_at_ms": 59.613,
+              "duration_ms": 10.084,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 60.063,
+              "ended_at_ms": 62.24,
+              "duration_ms": 2.177,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 62.307,
+              "ended_at_ms": 94.175,
+              "duration_ms": 31.868,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 94.234,
+              "ended_at_ms": 54008.654,
+              "duration_ms": 53914.419,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.record_department_transport_failure",
+              "started_at_ms": 54008.703,
+              "ended_at_ms": 54044.335,
+              "duration_ms": 35.632,
+              "parent": "main.handle_query",
+              "meta": {
+                "department": "student_affairs"
+              }
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 54044.496,
+              "ended_at_ms": 54044.509,
+              "duration_ms": 0.013,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 54044.517,
+              "ended_at_ms": 54053.642,
+              "duration_ms": 9.125,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 54053.66,
+              "ended_at_ms": 54063.737,
+              "duration_ms": 10.077,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 54063.799,
+              "ended_at_ms": 54103.953,
+              "duration_ms": 40.154,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 53821.674,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.406,
+                  "ended_at_ms": 53821.566,
+                  "duration_ms": 53821.16,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.447,
+                  "ended_at_ms": 0.678,
+                  "duration_ms": 0.231,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.985,
+                  "ended_at_ms": 53784.871,
+                  "duration_ms": 53783.885,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 53784.93,
+                  "ended_at_ms": 53821.2,
+                  "duration_ms": 36.27,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    }
+  ],
+  "diagnostics": {
+    "overview_before": {
+      "query_count": 82,
+      "query_failure_count": 3,
+      "agent_task_count": 143,
+      "agent_task_failure_count": 35
+    },
+    "overview_after": {
+      "query_count": 83,
+      "query_failure_count": 3,
+      "agent_task_count": 145,
+      "agent_task_failure_count": 37
+    },
+    "overview_delta": {
+      "query_count": 1,
+      "query_failure_count": 0,
+      "agent_task_count": 2,
+      "agent_task_failure_count": 2
+    },
+    "agent_deltas": [
+      {
+        "agent_id": "registration_agent",
+        "department": "student_affairs",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 1,
+        "last_error": "a2a_specialist_transport_failed",
+        "avg_latency_ms": 2998.54,
+        "max_latency_ms": 53783.71
+      },
+      {
+        "agent_id": "student_affairs_orchestrator",
+        "department": "student_affairs",
+        "role": "department_orchestrator",
+        "task_delta": 1,
+        "failed_delta": 1,
+        "last_error": "a2a_specialist_transport_failed",
+        "avg_latency_ms": null,
+        "max_latency_ms": null
+      }
+    ],
+    "new_recent_failures": [
+      {
+        "task_id": "qbench-Q17-193403:department:student_affairs",
+        "sender_agent_id": "main_orchestrator",
+        "receiver_agent_id": "student_affairs_orchestrator",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:34:57.762264+00:00",
+        "trace_id": null,
+        "query_preview": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?"
+      },
+      {
+        "task_id": "beb63e56-cc82-44c1-9c95-3e8829c60503",
+        "sender_agent_id": "student_affairs_orchestrator",
+        "receiver_agent_id": "registration_agent",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:34:57.720570+00:00",
+        "trace_id": "516f1d25a84b4d8ea8e3a2fb43e18d12",
+        "query_preview": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?"
+      }
+    ]
+  }
+}

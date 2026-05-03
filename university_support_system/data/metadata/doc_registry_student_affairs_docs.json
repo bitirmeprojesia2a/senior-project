@@ -1,0 +1,964 @@
+{
+  "generated_at": "2026-04-30T11:38:29.543727+00:00",
+  "source_dir": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs",
+  "total_documents": 106,
+  "total_chunks": 1802,
+  "embedding_model": "BAAI/bge-m3",
+  "collection_name": "student_affairs_docs",
+  "documents": [
+    {
+      "filename": "daire_başkanlığı.txt",
+      "relative_path": "birimler/daire_başkanlığı.txt",
+      "category": "birimler",
+      "file_type": "txt",
+      "char_count": 218,
+      "chunk_count": 1,
+      "content_hash": "f48274272bb2cb50"
+    },
+    {
+      "filename": "öğrenci_işleri_birimi.txt",
+      "relative_path": "birimler/öğrenci_işleri_birimi.txt",
+      "category": "birimler",
+      "file_type": "txt",
+      "char_count": 23489,
+      "chunk_count": 29,
+      "content_hash": "99b10fd39e403965"
+    },
+    {
+      "filename": "4_eem350_staj_ölçme_ve_değerlendirme_formu.docx",
+      "relative_path": "formlar/4_eem350_staj_ölçme_ve_değerlendirme_formu.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 2225,
+      "chunk_count": 3,
+      "content_hash": "0e509ebb57957b33"
+    },
+    {
+      "filename": "bitirme_çalışması_sunum_değerlendirme_formu.pdf",
+      "relative_path": "formlar/bitirme_çalışması_sunum_değerlendirme_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 460,
+      "chunk_count": 1,
+      "content_hash": "7795198d841677d8"
+    },
+    {
+      "filename": "bitirme_çalışması_teslim_formu.pdf",
+      "relative_path": "formlar/bitirme_çalışması_teslim_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 455,
+      "chunk_count": 1,
+      "content_hash": "6d99eec0a9cb1110"
+    },
+    {
+      "filename": "danışman_staj_uygunluk_görüşü_bildirimi.docx",
+      "relative_path": "formlar/danışman_staj_uygunluk_görüşü_bildirimi.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 517,
+      "chunk_count": 1,
+      "content_hash": "d421bcffd98c2473"
+    },
+    {
+      "filename": "document.pdf",
+      "relative_path": "formlar/document.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 2721,
+      "chunk_count": 4,
+      "content_hash": "0ce6127af47b985b"
+    },
+    {
+      "filename": "güz_bahar_dönemi_staj_yapma_talebi_dilekçesi.docx",
+      "relative_path": "formlar/güz_bahar_dönemi_staj_yapma_talebi_dilekçesi.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 488,
+      "chunk_count": 1,
+      "content_hash": "5fc71d39e72e0393"
+    },
+    {
+      "filename": "güz_bahar_dönemi_staj_yapma_talebi_dilekçesi_v2.docx",
+      "relative_path": "formlar/güz_bahar_dönemi_staj_yapma_talebi_dilekçesi_v2.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 488,
+      "chunk_count": 1,
+      "content_hash": "5fc71d39e72e0393"
+    },
+    {
+      "filename": "güz_bahar_dönemi_staj_yapma_talebi_dilekçesi_v3.docx",
+      "relative_path": "formlar/güz_bahar_dönemi_staj_yapma_talebi_dilekçesi_v3.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 488,
+      "chunk_count": 1,
+      "content_hash": "5fc71d39e72e0393"
+    },
+    {
+      "filename": "kayıt_sildirme_formu_lisans_önlisans.pdf",
+      "relative_path": "formlar/kayıt_sildirme_formu_lisans_önlisans.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 495,
+      "chunk_count": 1,
+      "content_hash": "d1a7e45b51d95d57"
+    },
+    {
+      "filename": "mbm_salgın_dönemi_staj_yapma_taahhütnamesi_2020_2021.pdf",
+      "relative_path": "formlar/mbm_salgın_dönemi_staj_yapma_taahhütnamesi_2020_2021.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 1658,
+      "chunk_count": 2,
+      "content_hash": "6a71f5b874e6928d"
+    },
+    {
+      "filename": "mbm_staj_değerlendirme_formu_güncel.pdf",
+      "relative_path": "formlar/mbm_staj_değerlendirme_formu_güncel.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 2337,
+      "chunk_count": 4,
+      "content_hash": "12b9118ec7a310c7"
+    },
+    {
+      "filename": "mbm_staj_program_çıktıları_değerlendirme_formu_güncel.pdf",
+      "relative_path": "formlar/mbm_staj_program_çıktıları_değerlendirme_formu_güncel.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 3145,
+      "chunk_count": 4,
+      "content_hash": "c3fe344d7c6418b8"
+    },
+    {
+      "filename": "proje_ekibi_formu.docx",
+      "relative_path": "formlar/proje_ekibi_formu.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 618,
+      "chunk_count": 1,
+      "content_hash": "2bc0f60096874bea"
+    },
+    {
+      "filename": "staj_degerlendirme_formu.pdf",
+      "relative_path": "formlar/staj_degerlendirme_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 3176,
+      "chunk_count": 8,
+      "content_hash": "b48dce4d698d6853"
+    },
+    {
+      "filename": "staj_değerlendirme_formu.pdf",
+      "relative_path": "formlar/staj_değerlendirme_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 932,
+      "chunk_count": 1,
+      "content_hash": "c164c006c7408aeb"
+    },
+    {
+      "filename": "staj_değerlendirme_formu_v2.pdf",
+      "relative_path": "formlar/staj_değerlendirme_formu_v2.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 932,
+      "chunk_count": 1,
+      "content_hash": "c164c006c7408aeb"
+    },
+    {
+      "filename": "staj_ücreti_geri_ödemesi_dilekçe.docx",
+      "relative_path": "formlar/staj_ücreti_geri_ödemesi_dilekçe.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 486,
+      "chunk_count": 1,
+      "content_hash": "43bc12fe46b2c07c"
+    },
+    {
+      "filename": "staj_ücreti_geri_ödemesi_dilekçe_v2.docx",
+      "relative_path": "formlar/staj_ücreti_geri_ödemesi_dilekçe_v2.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 486,
+      "chunk_count": 1,
+      "content_hash": "43bc12fe46b2c07c"
+    },
+    {
+      "filename": "tercih_bildirim_formu.docx",
+      "relative_path": "formlar/tercih_bildirim_formu.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 475,
+      "chunk_count": 1,
+      "content_hash": "4723f00da0af512d"
+    },
+    {
+      "filename": "zorunlu_gönüllü_staj_başvuru_formu.pdf",
+      "relative_path": "formlar/zorunlu_gönüllü_staj_başvuru_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 1981,
+      "chunk_count": 3,
+      "content_hash": "03794bffeeb4c716"
+    },
+    {
+      "filename": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+      "relative_path": "formlar/ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 40501,
+      "chunk_count": 63,
+      "content_hash": "23406833159005c3"
+    },
+    {
+      "filename": "öğrenci_staj_raporu.docx",
+      "relative_path": "formlar/öğrenci_staj_raporu.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 3823,
+      "chunk_count": 5,
+      "content_hash": "97b7a98fb76f1c5a"
+    },
+    {
+      "filename": "öğrenci_staj_raporu_v2.docx",
+      "relative_path": "formlar/öğrenci_staj_raporu_v2.docx",
+      "category": "formlar",
+      "file_type": "docx",
+      "char_count": 3823,
+      "chunk_count": 5,
+      "content_hash": "97b7a98fb76f1c5a"
+    },
+    {
+      "filename": "2025_2026_bahar_yatay_geçiş_kontenjanları.pdf",
+      "relative_path": "listeler/2025_2026_bahar_yatay_geçiş_kontenjanları.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 5287,
+      "chunk_count": 6,
+      "content_hash": "745f286c255419a6"
+    },
+    {
+      "filename": "2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+      "relative_path": "listeler/2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 530,
+      "chunk_count": 1,
+      "content_hash": "2c3adde21cb0aae9"
+    },
+    {
+      "filename": "2025_2026_güz_dönemi_kurumlararası_ve_kurum_ı̇çi_yatay_geçiş_kontenjanları.pdf",
+      "relative_path": "listeler/2025_2026_güz_dönemi_kurumlararası_ve_kurum_ı̇çi_yatay_geçiş_kontenjanları.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 11202,
+      "chunk_count": 14,
+      "content_hash": "7f313f5a167ca7ea"
+    },
+    {
+      "filename": "2025_2026_güz_yatay_geçiş_takvimi.pdf",
+      "relative_path": "listeler/2025_2026_güz_yatay_geçiş_takvimi.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 654,
+      "chunk_count": 1,
+      "content_hash": "bb34e4317d9cef26"
+    },
+    {
+      "filename": "2025_2026_yılı_bahar_yarıyılı_ön_lisans_için_kurumiçikurumlararası_yatay_geçiş.pdf",
+      "relative_path": "listeler/2025_2026_yılı_bahar_yarıyılı_ön_lisans_için_kurumiçikurumlararası_yatay_geçiş.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 3977,
+      "chunk_count": 5,
+      "content_hash": "f5ddac6a87dcb6f7"
+    },
+    {
+      "filename": "2025_2026_ön_lisans_yatay_geçiş_başvuru_listesi_gerçek_olan.pdf",
+      "relative_path": "listeler/2025_2026_ön_lisans_yatay_geçiş_başvuru_listesi_gerçek_olan.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 37814,
+      "chunk_count": 45,
+      "content_hash": "4bf1f976089b44c0"
+    },
+    {
+      "filename": "merkezi_yerleştirme_sonuç_listesi.pdf",
+      "relative_path": "listeler/merkezi_yerleştirme_sonuç_listesi.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 170411,
+      "chunk_count": 200,
+      "content_hash": "740e3b25dbcba7fc"
+    },
+    {
+      "filename": "staj_iş_akışı.pdf",
+      "relative_path": "listeler/staj_iş_akışı.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 2334,
+      "chunk_count": 3,
+      "content_hash": "9d6f84ca673e1632"
+    },
+    {
+      "filename": "stajyer_öğrenci_devam_takip_çizelgesi.pdf",
+      "relative_path": "listeler/stajyer_öğrenci_devam_takip_çizelgesi.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 396,
+      "chunk_count": 1,
+      "content_hash": "b20c48af90e05118"
+    },
+    {
+      "filename": "yedekten_kayıt_hakkı_kazanan_öğrenci_listesi.pdf",
+      "relative_path": "listeler/yedekten_kayıt_hakkı_kazanan_öğrenci_listesi.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 2677,
+      "chunk_count": 3,
+      "content_hash": "dfda2105ab1c92d6"
+    },
+    {
+      "filename": "yks_taban_puan_tablosu.pdf",
+      "relative_path": "listeler/yks_taban_puan_tablosu.pdf",
+      "category": "listeler",
+      "file_type": "pdf",
+      "char_count": 22529,
+      "chunk_count": 27,
+      "content_hash": "dffbbf64006fcbe0"
+    },
+    {
+      "filename": "2025_2026_bahar_lisans_ders_programı.pdf",
+      "relative_path": "takvimler/2025_2026_bahar_lisans_ders_programı.pdf",
+      "category": "takvimler",
+      "file_type": "pdf",
+      "char_count": 2682,
+      "chunk_count": 3,
+      "content_hash": "b5405cffa7020574"
+    },
+    {
+      "filename": "2025_2026_bahar_lisansüstü_ders_programı.pdf",
+      "relative_path": "takvimler/2025_2026_bahar_lisansüstü_ders_programı.pdf",
+      "category": "takvimler",
+      "file_type": "pdf",
+      "char_count": 2547,
+      "chunk_count": 3,
+      "content_hash": "5aa09db4fd9b74aa"
+    },
+    {
+      "filename": "2025_2026_genel_akademik_takvim.pdf",
+      "relative_path": "takvimler/2025_2026_genel_akademik_takvim.pdf",
+      "category": "takvimler",
+      "file_type": "pdf",
+      "char_count": 2683,
+      "chunk_count": 3,
+      "content_hash": "980dd3d182251838"
+    },
+    {
+      "filename": "1_elektrik_elektronik_staj_ilkeleri_ve_uygulama_esasları.pdf",
+      "relative_path": "uygulama esasları/1_elektrik_elektronik_staj_ilkeleri_ve_uygulama_esasları.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 11174,
+      "chunk_count": 15,
+      "content_hash": "44cde97b16a69b35"
+    },
+    {
+      "filename": "bitirme_projesi_bildirim_formu.docx",
+      "relative_path": "uygulama esasları/bitirme_projesi_bildirim_formu.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 798,
+      "chunk_count": 1,
+      "content_hash": "a8d6603097accdf7"
+    },
+    {
+      "filename": "bitirme_projesi_hazırlama_sunma_ve_değerlendirme_ilkeleri_taslak.docx",
+      "relative_path": "uygulama esasları/bitirme_projesi_hazırlama_sunma_ve_değerlendirme_ilkeleri_taslak.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 5279,
+      "chunk_count": 11,
+      "content_hash": "2666a329100be755"
+    },
+    {
+      "filename": "bitirme_projesi_sunum_değerlendirme_formu.docx",
+      "relative_path": "uygulama esasları/bitirme_projesi_sunum_değerlendirme_formu.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 744,
+      "chunk_count": 1,
+      "content_hash": "2e188e0ca1e5958a"
+    },
+    {
+      "filename": "bitirme_projesi_teslim_formu.docx",
+      "relative_path": "uygulama esasları/bitirme_projesi_teslim_formu.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 571,
+      "chunk_count": 1,
+      "content_hash": "8a14f8755fc5e0b1"
+    },
+    {
+      "filename": "bitirme_projesi_teslim_formu_v2.docx",
+      "relative_path": "uygulama esasları/bitirme_projesi_teslim_formu_v2.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 571,
+      "chunk_count": 1,
+      "content_hash": "8a14f8755fc5e0b1"
+    },
+    {
+      "filename": "bitirme_projesi_şablon.docx",
+      "relative_path": "uygulama esasları/bitirme_projesi_şablon.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 5364,
+      "chunk_count": 7,
+      "content_hash": "e38d3a81d2d8fe33"
+    },
+    {
+      "filename": "end_454_sanayi_uygulaması_ders_ilkeleri_dönüştürüldü.pdf",
+      "relative_path": "uygulama esasları/end_454_sanayi_uygulaması_ders_ilkeleri_dönüştürüldü.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 4220,
+      "chunk_count": 13,
+      "content_hash": "76a42c26a7916b71"
+    },
+    {
+      "filename": "endüstri_mühendisliği_tasarımı_yaptırma_ve_değerlendirme_ı̇lkeleri_güncel.pdf",
+      "relative_path": "uygulama esasları/endüstri_mühendisliği_tasarımı_yaptırma_ve_değerlendirme_ı̇lkeleri_güncel.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 8864,
+      "chunk_count": 12,
+      "content_hash": "bb456f83c4eebfb9"
+    },
+    {
+      "filename": "engelli_öğrenciler_eğitim_öğretim_uygulamaları.pdf",
+      "relative_path": "uygulama esasları/engelli_öğrenciler_eğitim_öğretim_uygulamaları.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 6631,
+      "chunk_count": 13,
+      "content_hash": "ad257be498210aa2"
+    },
+    {
+      "filename": "fef_kimya_mup_başvuru_formuek1.docx",
+      "relative_path": "uygulama esasları/fef_kimya_mup_başvuru_formuek1.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 6088,
+      "chunk_count": 8,
+      "content_hash": "d075a0835cec3708"
+    },
+    {
+      "filename": "fef_kimya_mup_protokolü.docx",
+      "relative_path": "uygulama esasları/fef_kimya_mup_protokolü.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 4970,
+      "chunk_count": 13,
+      "content_hash": "35f46e4eb3ac2ed9"
+    },
+    {
+      "filename": "fef_kimya_mup_sözleşmesiek2.docx",
+      "relative_path": "uygulama esasları/fef_kimya_mup_sözleşmesiek2.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 2277,
+      "chunk_count": 3,
+      "content_hash": "9d9d4327483c5a25"
+    },
+    {
+      "filename": "işyeri_staj_sözleşmesi.pdf",
+      "relative_path": "uygulama esasları/işyeri_staj_sözleşmesi.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 9336,
+      "chunk_count": 23,
+      "content_hash": "55ce7e88dd6a9bb9"
+    },
+    {
+      "filename": "mat_bitirme_çalışması_ilkeleri.pdf",
+      "relative_path": "uygulama esasları/mat_bitirme_çalışması_ilkeleri.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 14393,
+      "chunk_count": 35,
+      "content_hash": "d342e156d6682cfa"
+    },
+    {
+      "filename": "mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+      "relative_path": "uygulama esasları/mbm_güncel_staj_ilkeleri_ve_uygulama_esasları_güncel.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 11659,
+      "chunk_count": 21,
+      "content_hash": "c08d6a6479028745"
+    },
+    {
+      "filename": "mup_ilke_ve_esasları.pdf",
+      "relative_path": "uygulama esasları/mup_ilke_ve_esasları.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 7656,
+      "chunk_count": 19,
+      "content_hash": "e020e5c6c2b5260c"
+    },
+    {
+      "filename": "mup_ilke_ve_esasları_kimya_düz_11_docx_son.docx",
+      "relative_path": "uygulama esasları/mup_ilke_ve_esasları_kimya_düz_11_docx_son.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 8731,
+      "chunk_count": 20,
+      "content_hash": "280072c0fa43b6e2"
+    },
+    {
+      "filename": "mup_uygulanacak_firmalar.docx",
+      "relative_path": "uygulama esasları/mup_uygulanacak_firmalar.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 197,
+      "chunk_count": 1,
+      "content_hash": "8c67a8759065fa48"
+    },
+    {
+      "filename": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+      "relative_path": "uygulama esasları/mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 4615,
+      "chunk_count": 6,
+      "content_hash": "5b5569fb0b1d5809"
+    },
+    {
+      "filename": "ogrenci_staj_degerlendirme_anketi.pdf",
+      "relative_path": "uygulama esasları/ogrenci_staj_degerlendirme_anketi.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 1909,
+      "chunk_count": 3,
+      "content_hash": "e15da4e278146d2a"
+    },
+    {
+      "filename": "staj_esaslar.pdf",
+      "relative_path": "uygulama esasları/staj_esaslar.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 10830,
+      "chunk_count": 22,
+      "content_hash": "899a9fad6b0a4c9f"
+    },
+    {
+      "filename": "staj_ıs_yeri_egitimi_degerlendirme_anketi_ogrenci.pdf",
+      "relative_path": "uygulama esasları/staj_ıs_yeri_egitimi_degerlendirme_anketi_ogrenci.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 1502,
+      "chunk_count": 2,
+      "content_hash": "5e3278446f0e77b8"
+    },
+    {
+      "filename": "staj_ıs_yeri_egitimi_degerlendirme_anketi_ısveren.pdf",
+      "relative_path": "uygulama esasları/staj_ıs_yeri_egitimi_degerlendirme_anketi_ısveren.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 1402,
+      "chunk_count": 2,
+      "content_hash": "efdc443c4d2e3359"
+    },
+    {
+      "filename": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+      "relative_path": "uygulama esasları/uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 12853,
+      "chunk_count": 25,
+      "content_hash": "88000a6848e78bc2"
+    },
+    {
+      "filename": "çevre_mühendisliği_bölümü_staj_ilkeleri.docx",
+      "relative_path": "uygulama esasları/çevre_mühendisliği_bölümü_staj_ilkeleri.docx",
+      "category": "uygulama esasları",
+      "file_type": "docx",
+      "char_count": 13612,
+      "chunk_count": 23,
+      "content_hash": "7c2428ec10f5cf33"
+    },
+    {
+      "filename": "endüstri_mühendisliği_bölümü_staj_ilkeleri_06_01_2022.pdf",
+      "relative_path": "uygulama/endüstri_mühendisliği_bölümü_staj_ilkeleri_06_01_2022.pdf",
+      "category": "uygulama",
+      "file_type": "pdf",
+      "char_count": 10657,
+      "chunk_count": 21,
+      "content_hash": "60244d0d46ce271e"
+    },
+    {
+      "filename": "staj_adımları.pdf",
+      "relative_path": "uygulama/staj_adımları.pdf",
+      "category": "uygulama",
+      "file_type": "pdf",
+      "char_count": 2474,
+      "chunk_count": 4,
+      "content_hash": "ff8c4559bfa82e7d"
+    },
+    {
+      "filename": "staj_bilgilendirme_toplantısı_sunumu_2024_2025.pdf",
+      "relative_path": "uygulama/staj_bilgilendirme_toplantısı_sunumu_2024_2025.pdf",
+      "category": "uygulama",
+      "file_type": "pdf",
+      "char_count": 2436,
+      "chunk_count": 3,
+      "content_hash": "18a51b8df92fecad"
+    },
+    {
+      "filename": "staj_ilkeleri_23122019_inş_müh.pdf",
+      "relative_path": "uygulama/staj_ilkeleri_23122019_inş_müh.pdf",
+      "category": "uygulama",
+      "file_type": "pdf",
+      "char_count": 10542,
+      "chunk_count": 22,
+      "content_hash": "aed96df1c09edfe7"
+    },
+    {
+      "filename": "staj_sıkça_sorulanlar.pdf",
+      "relative_path": "uygulama/staj_sıkça_sorulanlar.pdf",
+      "category": "uygulama",
+      "file_type": "pdf",
+      "char_count": 3888,
+      "chunk_count": 8,
+      "content_hash": "313b6a1b7d75120e"
+    },
+    {
+      "filename": "sık_sorulan_sorular.txt",
+      "relative_path": "uygulama/sık_sorulan_sorular.txt",
+      "category": "uygulama",
+      "file_type": "txt",
+      "char_count": 36276,
+      "chunk_count": 116,
+      "content_hash": "31d5f87981112337"
+    },
+    {
+      "filename": "zorunlu_stajda_izlenecek_yol.pdf",
+      "relative_path": "uygulama/zorunlu_stajda_izlenecek_yol.pdf",
+      "category": "uygulama",
+      "file_type": "pdf",
+      "char_count": 1546,
+      "chunk_count": 2,
+      "content_hash": "aee94cbb225f5ffc"
+    },
+    {
+      "filename": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+      "relative_path": "yönergeler/2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 5553,
+      "chunk_count": 7,
+      "content_hash": "92f0daf66360aa93"
+    },
+    {
+      "filename": "2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+      "relative_path": "yönergeler/2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 2470,
+      "chunk_count": 3,
+      "content_hash": "eefbe0498405bd31"
+    },
+    {
+      "filename": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+      "relative_path": "yönergeler/2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 8314,
+      "chunk_count": 10,
+      "content_hash": "c01c7f18d03ac0bc"
+    },
+    {
+      "filename": "3_a_önlisans_program_açma_ornegi.pdf",
+      "relative_path": "yönergeler/3_a_önlisans_program_açma_ornegi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 2809,
+      "chunk_count": 4,
+      "content_hash": "af9557e05dd67c21"
+    },
+    {
+      "filename": "3_c_gerontoloji_lisans_programı_açma_teklifi.pdf",
+      "relative_path": "yönergeler/3_c_gerontoloji_lisans_programı_açma_teklifi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 4769,
+      "chunk_count": 7,
+      "content_hash": "c5625268cd582c5f"
+    },
+    {
+      "filename": "bağıl_değerlendirme_yönergesi.pdf",
+      "relative_path": "yönergeler/bağıl_değerlendirme_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 9872,
+      "chunk_count": 18,
+      "content_hash": "2216a4d7d0164853"
+    },
+    {
+      "filename": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+      "relative_path": "yönergeler/ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 11149,
+      "chunk_count": 21,
+      "content_hash": "14ed469bd2f053e9"
+    },
+    {
+      "filename": "ders_yeterlilik_sınavı_uygulama_yönergesi.pdf",
+      "relative_path": "yönergeler/ders_yeterlilik_sınavı_uygulama_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 4263,
+      "chunk_count": 12,
+      "content_hash": "169d13f0f79737cc"
+    },
+    {
+      "filename": "kimlik_kartı_yönergesi.pdf",
+      "relative_path": "yönergeler/kimlik_kartı_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 9831,
+      "chunk_count": 21,
+      "content_hash": "d5834311b7d889d8"
+    },
+    {
+      "filename": "staj_yönergesi.pdf",
+      "relative_path": "yönergeler/staj_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 11190,
+      "chunk_count": 22,
+      "content_hash": "a44b5cbd9555ff6f"
+    },
+    {
+      "filename": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+      "relative_path": "yönergeler/uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 12853,
+      "chunk_count": 25,
+      "content_hash": "88000a6848e78bc2"
+    },
+    {
+      "filename": "yaz_okulu_eğitim_öğretim.pdf",
+      "relative_path": "yönergeler/yaz_okulu_eğitim_öğretim.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 10050,
+      "chunk_count": 22,
+      "content_hash": "e8921306a9b044ca"
+    },
+    {
+      "filename": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+      "relative_path": "yönergeler/yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 10113,
+      "chunk_count": 22,
+      "content_hash": "4e17c4562440e8b0"
+    },
+    {
+      "filename": "yonerge_bagil_degerlendirme.pdf",
+      "relative_path": "yönergeler/yonerge_bagil_degerlendirme.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 9872,
+      "chunk_count": 18,
+      "content_hash": "2216a4d7d0164853"
+    },
+    {
+      "filename": "yonerge_ders_yeterlik_muafiyet_intibak.pdf",
+      "relative_path": "yönergeler/yonerge_ders_yeterlik_muafiyet_intibak.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 11149,
+      "chunk_count": 21,
+      "content_hash": "14ed469bd2f053e9"
+    },
+    {
+      "filename": "yonerge_ders_yeterlilik_sinavi_uygulama.pdf",
+      "relative_path": "yönergeler/yonerge_ders_yeterlilik_sinavi_uygulama.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 4263,
+      "chunk_count": 12,
+      "content_hash": "169d13f0f79737cc"
+    },
+    {
+      "filename": "yonerge_onlisans_lisans_staj.pdf",
+      "relative_path": "yönergeler/yonerge_onlisans_lisans_staj.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 7474,
+      "chunk_count": 21,
+      "content_hash": "ad55a3355f414e23"
+    },
+    {
+      "filename": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+      "relative_path": "yönergeler/yonerge_onlisans_lisans_yatay_gecis.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 14971,
+      "chunk_count": 27,
+      "content_hash": "abb97e5f7e1be2e6"
+    },
+    {
+      "filename": "yonerge_yaz_okulu_egitim_ogretim.pdf",
+      "relative_path": "yönergeler/yonerge_yaz_okulu_egitim_ogretim.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 10050,
+      "chunk_count": 22,
+      "content_hash": "e8921306a9b044ca"
+    },
+    {
+      "filename": "yonerge_yuzde_on_basari_degerlendirme.pdf",
+      "relative_path": "yönergeler/yonerge_yuzde_on_basari_degerlendirme.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 8106,
+      "chunk_count": 18,
+      "content_hash": "613f53c55328cb61"
+    },
+    {
+      "filename": "yüzde_on_başarı_değerlendirme_yönergesi.pdf",
+      "relative_path": "yönergeler/yüzde_on_başarı_değerlendirme_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 8106,
+      "chunk_count": 18,
+      "content_hash": "613f53c55328cb61"
+    },
+    {
+      "filename": "ön_lisans_ve_lisans_akademik_danışmanlık.pdf",
+      "relative_path": "yönergeler/ön_lisans_ve_lisans_akademik_danışmanlık.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 9969,
+      "chunk_count": 19,
+      "content_hash": "2c4c6452fed23955"
+    },
+    {
+      "filename": "ön_lisans_ve_lisans_yatay_geçiş_yönergesi.pdf",
+      "relative_path": "yönergeler/ön_lisans_ve_lisans_yatay_geçiş_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 14971,
+      "chunk_count": 27,
+      "content_hash": "abb97e5f7e1be2e6"
+    },
+    {
+      "filename": "ön_lisans_ve_lisans_yatay_geçiş_yönergesi2.pdf",
+      "relative_path": "yönergeler/ön_lisans_ve_lisans_yatay_geçiş_yönergesi2.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 14971,
+      "chunk_count": 27,
+      "content_hash": "abb97e5f7e1be2e6"
+    },
+    {
+      "filename": "önlisans_lisans_öğretimi_staj_yönergesi.pdf",
+      "relative_path": "yönergeler/önlisans_lisans_öğretimi_staj_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 7474,
+      "chunk_count": 21,
+      "content_hash": "ad55a3355f414e23"
+    },
+    {
+      "filename": "önlısans_lısans_öğretımı_uygulamalı_dersler.pdf",
+      "relative_path": "yönergeler/önlısans_lısans_öğretımı_uygulamalı_dersler.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 6086,
+      "chunk_count": 19,
+      "content_hash": "f12ebc4c0b62fe07"
+    },
+    {
+      "filename": "öğrenci_kalite_komisyonu_yönergesi.pdf",
+      "relative_path": "yönergeler/öğrenci_kalite_komisyonu_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 7994,
+      "chunk_count": 15,
+      "content_hash": "d97424855867a986"
+    },
+    {
+      "filename": "öğrenci_konseyi_yönergesi.pdf",
+      "relative_path": "yönergeler/öğrenci_konseyi_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 20012,
+      "chunk_count": 36,
+      "content_hash": "135289369a9707ec"
+    },
+    {
+      "filename": "öğrenci_konukevi_uygulama_yönergesi.pdf",
+      "relative_path": "yönergeler/öğrenci_konukevi_uygulama_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 38769,
+      "chunk_count": 74,
+      "content_hash": "fe6e47278ff9f10e"
+    },
+    {
+      "filename": "öğrenci_toplulukları_yönergesi.pdf",
+      "relative_path": "yönergeler/öğrenci_toplulukları_yönergesi.pdf",
+      "category": "yönergeler",
+      "file_type": "pdf",
+      "char_count": 26033,
+      "chunk_count": 46,
+      "content_hash": "2d4f4707deb1e60f"
+    },
+    {
+      "filename": "kalite_el_kitabı_r1.pdf",
+      "relative_path": "yönetmelikler/kalite_el_kitabı_r1.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 90661,
+      "chunk_count": 49,
+      "content_hash": "94bc78c5e8a842c2"
+    },
+    {
+      "filename": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+      "relative_path": "yönetmelikler/yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 11931,
+      "chunk_count": 24,
+      "content_hash": "0ada1ba28217b325"
+    },
+    {
+      "filename": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+      "relative_path": "yönetmelikler/yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 48466,
+      "chunk_count": 79,
+      "content_hash": "0fc211b9ad96b365"
+    },
+    {
+      "filename": "ön_lisans_ve_lisans.pdf",
+      "relative_path": "yönetmelikler/ön_lisans_ve_lisans.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 48466,
+      "chunk_count": 79,
+      "content_hash": "0fc211b9ad96b365"
+    }
+  ]
+}

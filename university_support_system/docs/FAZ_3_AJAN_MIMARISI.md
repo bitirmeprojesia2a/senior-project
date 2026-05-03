@@ -1,6 +1,19 @@
 # FAZ 3 — Çok Ajanlı Sistem Mimarisi: Teknik Dokümantasyon
 
-> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 3 tasarim/snapshot kaydidir. Ajan ve orchestrator implementasyonu bu dokuman yazildiktan sonra daha moduler hale gelmistir; "temel iskelet" ibareleri bugunku kodun tam karsiligi degildir. Guncel gorunum icin `README.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` okunmalidir.
+> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 3 tasarim/snapshot kaydidir. Arsivlenecek/cop belge degildir; cok ajanli mimariye gecisin ilk buyuk tasarimini anlatir. Ajan ve orchestrator implementasyonu bu dokuman yazildiktan sonra daha moduler ve daha dagitik hale gelmistir; "temel iskelet" ibareleri bugunku kodun tam karsiligi degildir. Guncel gorunum icin `README.md`, `docs/A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md` ve `docs/KURULUM_VE_CALISTIRMA.md` okunmalidir.
+
+## Guncel Konumlandirma (Nisan 2026)
+
+FAZ 3, departman orchestrator'leri ve uzman ajanlar fikrinin ilk kapsamli mimari anlatimidir. Bugunku sistem bu fikri korur, fakat daha ileri tasimistir: agent'lar sadece ayni process icindeki siniflar degil, Docker Compose uzerinde ayri A2A servisleri olarak da calisabilir.
+
+Bu fazdan sonra sistem su yonde evrildi:
+
+- `student_affairs`, `academic_programs` ve `finance` departman orchestrator'leri HTTP/JSON-RPC A2A transport ile cagrilabilir hale geldi.
+- `registration`, `graduation`, `internship`, `student_life`, `curriculum`, `regulation`, `international`, `tuition`, `scholarship` uzmanlari ayri servis olarak kaldirilabilir hale geldi.
+- `announcement` ve `event` departman degil, capability agent olarak ayrildi.
+- Merkezi `retrieval-service` eklendi; agent servislerinin her biri kendi embedding/reranker modelini isitmak zorunda kalmadi.
+- Slack `a2a` runtime, kullanici mesajlarini dagitik agent topolojisine baglayan edge kanal olarak eklendi.
+- Routing ve clarification katmani, LLM'in urettigi missing-slot bilgisini deterministic guard'larla birlestirmeye basladi.
 
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 17 Mart 2026  

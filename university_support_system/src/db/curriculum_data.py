@@ -31,8 +31,32 @@ _SHARED_CURRICULUM_DEPARTMENT_MARKERS = (
     "muhendislik fakultesi ortak",
     "sosyal secmeli",
 )
-_ELECTIVE_COURSE_TYPES = {"teknik_secmeli", "lab_secmeli", "secmeli_grup", "sosyal_secmeli"}
+_ELECTIVE_COURSE_TYPES = {
+    "teknik_secmeli",
+    "lab_secmeli",
+    "secmeli_grup",
+    "sosyal_secmeli",
+    "universite_secmeli",
+}
 _PROGRAM_TOTAL_EXCLUDED_TYPES = {"staj", "mup", "sanayi"}
+_COURSE_TITLE_STOPWORDS = {
+    "ders",
+    "dersi",
+    "hangi",
+    "kacinci",
+    "kac",
+    "sinif",
+    "sinifta",
+    "yariyil",
+    "donem",
+    "mi",
+    "ne",
+    "neler",
+    "nelerdir",
+    "ve",
+    "ile",
+    "icin",
+}
 _COURSE_CODE_NORMALIZE_MAP = str.maketrans(
     {
         "Ç": "C",
@@ -62,6 +86,16 @@ def _normalize_text(value: str | None) -> str:
     return normalize_text(value)
 
 
+def _title_tokens(value: str | None) -> set[str]:
+    normalized = _normalize_text(value)
+    return {
+        token.strip(" \t\r\n?.!,;:()[]{}\"'")
+        for token in normalized.split()
+        if len(token.strip(" \t\r\n?.!,;:()[]{}\"'")) >= 3
+        and token.strip(" \t\r\n?.!,;:()[]{}\"'") not in _COURSE_TITLE_STOPWORDS
+    }
+
+
 def _should_include_course_for_department(
     course: dict[str, Any],
     normalized_department: str,
@@ -75,9 +109,6 @@ def _should_include_course_for_department(
     if any(marker in course_department for marker in _SHARED_CURRICULUM_DEPARTMENT_MARKERS):
         return True
 
-    course_type = _normalize_text(course.get("course_type"))
-    if course_type in _ELECTIVE_COURSE_TYPES:
-        return True
     return False
 
 
@@ -142,7 +173,7 @@ def _course_counts_for_program_total(course: dict[str, Any]) -> bool:
     if course_type in {"teknik_secmeli", "lab_secmeli"} and elective_group:
         return False
 
-    if course_type == "sosyal_secmeli":
+    if course_type in {"sosyal_secmeli", "universite_secmeli"}:
         return "grup" in course_name or not elective_group
 
     return True
@@ -150,10 +181,37 @@ def _course_counts_for_program_total(course: dict[str, Any]) -> bool:
 
 def resolve_course_code(code: str) -> tuple[str, str | None]:
     """Ders kodunu cozumler. Alias varsa (guncel_kod, eski_kod) doner."""
-    upper = code.translate(_COURSE_CODE_NORMALIZE_MAP).upper().replace(" ", "")
+    upper = _normalize_course_code_key(code)
     if upper in COURSE_CODE_ALIASES:
         return COURSE_CODE_ALIASES[upper], upper
     return upper, None
+
+
+def _normalize_course_code_key(code: str | None) -> str:
+    """Ders kodlarini Turkce harf/encoding farklarindan bagimsiz karsilastir."""
+    if not code:
+        return ""
+    normalized = str(code).translate(_COURSE_CODE_NORMALIZE_MAP)
+    normalized = normalize_text(normalized).upper().replace(" ", "")
+    return "".join(ch for ch in normalized if ch.isalnum() or ch == "-")
+
+
+async def _fetch_course_by_code(session: Any, course_code: str) -> Course | None:
+    """Exact lookup yetmezse FIZ/FİZ gibi kod varyantlarini normalizasyonla bul."""
+    stmt = select(Course).where(Course.course_code == course_code)
+    course = (await session.execute(stmt)).scalar_one_or_none()
+    if course is not None:
+        return course
+
+    normalized_target = _normalize_course_code_key(course_code)
+    if not normalized_target:
+        return None
+
+    candidates = (await session.execute(select(Course))).scalars().all()
+    for candidate in candidates:
+        if _normalize_course_code_key(candidate.course_code) == normalized_target:
+            return candidate
+    return None
 
 
 async def fetch_courses_by_semester(
@@ -229,6 +287,60 @@ async def fetch_courses_by_curriculum_semester(
             return []
 
 
+async def fetch_courses_by_title(
+    query_text: str,
+    department: str | None = None,
+    *,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Find catalog courses whose title is explicitly mentioned in a query."""
+    query_tokens = _title_tokens(query_text)
+    if not query_tokens:
+        return []
+
+    async with get_session() as session:
+        normalized_department = _normalize_text(department)
+        try:
+            courses = (await session.execute(select(Course))).scalars().all()
+            payload = [_course_to_dict(course) for course in courses]
+        except (ProgrammingError, DBAPIError) as exc:
+            if not _is_missing_column_error(exc):
+                raise
+            await session.rollback()
+            logger.warning("legacy_course_title_lookup")
+            rows = (await session.execute(_legacy_course_select())).mappings().all()
+            payload = [_legacy_course_mapping_to_dict(row) for row in rows]
+
+    if normalized_department:
+        payload = [
+            course
+            for course in payload
+            if _should_include_course_for_department(course, normalized_department)
+        ]
+
+    ranked: list[tuple[float, dict[str, Any]]] = []
+    for course in payload:
+        title_tokens = _title_tokens(course.get("course_name"))
+        if not title_tokens:
+            continue
+        overlap = query_tokens & title_tokens
+        coverage = len(overlap) / max(1, len(title_tokens))
+        precision = len(overlap) / max(1, len(query_tokens))
+        score = (coverage * 0.7) + (precision * 0.3)
+        if coverage >= 0.66 and len(overlap) >= min(2, len(title_tokens)):
+            ranked.append((score, course))
+
+    ranked.sort(
+        key=lambda item: (
+            -item[0],
+            str(item[1].get("department") or ""),
+            int(item[1].get("curriculum_semester") or 99),
+            str(item[1].get("course_code") or ""),
+        )
+    )
+    return [course for _, course in ranked[:limit]]
+
+
 async def fetch_courses_by_elective_group(group_code: str) -> list[dict[str, Any]]:
     """Belirli bir secmeli grup koduna ait dersleri getirir."""
     async with get_session() as session:
@@ -260,8 +372,7 @@ async def fetch_course_prerequisites(course_code: str) -> dict[str, Any] | None:
 
     async with get_session() as session:
         try:
-            stmt = select(Course).where(Course.course_code == resolved_code)
-            course = (await session.execute(stmt)).scalar_one_or_none()
+            course = await _fetch_course_by_code(session, resolved_code)
             if course is None:
                 return None
 
@@ -304,6 +415,17 @@ async def fetch_course_prerequisites(course_code: str) -> dict[str, Any] | None:
 
             course_stmt = _legacy_course_select().where(Course.course_code == resolved_code)
             course_row = (await session.execute(course_stmt)).mappings().first()
+            if course_row is None:
+                normalized_target = _normalize_course_code_key(resolved_code)
+                legacy_rows = (await session.execute(_legacy_course_select())).mappings().all()
+                course_row = next(
+                    (
+                        row
+                        for row in legacy_rows
+                        if _normalize_course_code_key(row["course_code"]) == normalized_target
+                    ),
+                    None,
+                )
             if course_row is None:
                 return None
 

@@ -15,8 +15,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.core.config import settings
-from src.core.profiling import profile_stage
+from src.core.config import LLMProvider, settings
+from src.core.profiling import get_current_profiler, profile_stage
 from src.llm.ollama_client import OllamaClient, OllamaClientError
 from src.llm.openai_client import OpenAIClient, OpenAIClientError
 
@@ -56,15 +56,27 @@ class LLMService:
     def __init__(self):
         self.ollama = OllamaClient()
         self.openai = OpenAIClient()
+        self.google_ai = OpenAIClient(
+            settings.google_ai,
+            api_key_env_name="GOOGLE_AI_API_KEY",
+        )
         self.primary_provider = settings.llm.primary_provider
         self.fallback_provider = settings.llm.fallback_provider
+
+    def _openai_client_for_provider(self, provider: str) -> OpenAIClient:
+        """Return the OpenAI-compatible client backing a provider."""
+        if provider == "openai_compatible":
+            return self.openai
+        if provider == "google_ai":
+            return self.google_ai
+        raise LLMServiceError(f"Provider OpenAI-compatible degil: {provider}")
 
     def _is_provider_available(self, provider: str) -> bool:
         """Return whether a configured provider can be used."""
         if provider == "ollama":
             return True
-        if provider == "openai_compatible":
-            return self.openai.is_available
+        if provider in {"openai_compatible", "google_ai"}:
+            return self._openai_client_for_provider(provider).is_available
         return False
 
     def _has_fallback(self) -> bool:
@@ -75,13 +87,14 @@ class LLMService:
             return False
         return self._is_provider_available(self.fallback_provider)
 
-    @staticmethod
-    def _provider_display_name(provider: str) -> str:
+    def _provider_display_name(self, provider: str) -> str:
         """Render a human-friendly provider label for logs/errors."""
         if provider == "ollama":
             return "Ollama"
         if provider == "openai_compatible":
-            return "OpenAI-compatible"
+            return self.openai.provider_name or "OpenAI-compatible"
+        if provider == "google_ai":
+            return self.google_ai.provider_name or "Google AI"
         return provider
 
     @staticmethod
@@ -89,9 +102,61 @@ class LLMService:
         """Return whether exception belongs to the selected provider type."""
         if provider == "ollama":
             return isinstance(exc, OllamaClientError)
-        if provider == "openai_compatible":
+        if provider in {"openai_compatible", "google_ai"}:
             return isinstance(exc, OpenAIClientError)
         return False
+
+    def _provider_usage_label(self, provider: str) -> str:
+        """Return a stable provider label for profiler/debug output."""
+        if provider == "openai_compatible":
+            return self.openai.provider_name or "openai_compatible"
+        if provider == "google_ai":
+            return self.google_ai.provider_name or "google_ai"
+        return provider
+
+    def _record_llm_usage(
+        self,
+        *,
+        kind: str,
+        model_role: str,
+        provider: str,
+        model: str,
+        path: str,
+        status: str,
+        json_mode: bool = False,
+        llm_profile: str | None = None,
+        fallback_from: str | None = None,
+        fallback_from_model: str | None = None,
+        error: BaseException | None = None,
+    ) -> None:
+        """Attach provider/model usage metadata to the active query profiler."""
+        profiler = get_current_profiler()
+        if profiler is None:
+            return
+
+        entry: dict[str, Any] = {
+            "kind": kind,
+            "model_role": model_role,
+            "provider": provider,
+            "provider_label": self._provider_usage_label(provider),
+            "display_name": self._provider_display_name(provider),
+            "model": model,
+            "path": path,
+            "status": status,
+            "json_mode": json_mode,
+        }
+        if llm_profile:
+            entry["llm_profile"] = settings.normalize_llm_profile(llm_profile)
+        if fallback_from:
+            entry["fallback_from"] = fallback_from
+            entry["fallback_from_label"] = self._provider_usage_label(fallback_from)
+        if fallback_from_model:
+            entry["fallback_from_model"] = fallback_from_model
+        if error is not None:
+            entry["error_type"] = type(error).__name__
+            entry["error_message"] = str(error)
+
+        profiler.append_attribute_list("llm_usage", entry)
 
     def _check_token_limit(self, prompt: str, system: Optional[str] = None) -> None:
         """Metin uzunlugunu kontrol eder ve limite yaklasilirsa uyari verir."""
@@ -129,7 +194,7 @@ class LLMService:
 
     def _resolve_provider_model(
         self,
-        provider: str,
+        provider: LLMProvider,
         *,
         model: str | None = None,
         model_role: str = "default",
@@ -138,11 +203,11 @@ class LLMService:
         """Resolve model name for a specific provider."""
         if model:
             return model
-        if provider == "openai_compatible":
+        if provider in {"openai_compatible", "google_ai"}:
             return settings.resolve_llm_model(
                 role=model_role,
                 profile=llm_profile,
-                provider="openai_compatible",
+                provider=provider,
             )
         return self._resolve_ollama_model(
             model=model,
@@ -190,9 +255,11 @@ class LLMService:
         json_mode: bool = False,
         *,
         model: str | None = None,
+        provider: str = "openai_compatible",
     ) -> str:
         """OpenAI-compatible provider uzerinden retry mantigi ile uretim yapar."""
-        return await self.openai.generate(
+        client = self._openai_client_for_provider(provider)
+        return await client.generate(
             prompt=prompt,
             system=system,
             json_mode=json_mode,
@@ -216,12 +283,13 @@ class LLMService:
                 json_mode=json_mode,
                 model=model,
             )
-        if provider == "openai_compatible":
+        if provider in {"openai_compatible", "google_ai"}:
             return await self._generate_openai_with_retry(
                 prompt=prompt,
                 system=system,
                 json_mode=json_mode,
                 model=model,
+                provider=provider,
             )
         raise LLMServiceError(f"Desteklenmeyen LLM provider: {provider}")
 
@@ -238,8 +306,9 @@ class LLMService:
             async for chunk in self.ollama.generate_stream(prompt, system, model=model):
                 yield chunk
             return
-        if provider == "openai_compatible":
-            async for chunk in self.openai.generate_stream(prompt, system, model=model):
+        if provider in {"openai_compatible", "google_ai"}:
+            client = self._openai_client_for_provider(provider)
+            async for chunk in client.generate_stream(prompt, system, model=model):
                 yield chunk
             return
         raise LLMServiceError(f"Desteklenmeyen LLM provider: {provider}")
@@ -254,6 +323,10 @@ class LLMService:
                 "secondary": settings._resolve_provider_secondary_model(provider),
                 "routing": settings.resolve_llm_model(role="routing", provider=provider),
                 "conversation": settings.resolve_llm_model(role="conversation", provider=provider),
+                "query_expansion": settings.resolve_llm_model(
+                    role="query_expansion",
+                    provider=provider,
+                ),
                 "specialist_synthesis": settings.resolve_llm_model(
                     role="specialist_synthesis",
                     provider=provider,
@@ -270,27 +343,43 @@ class LLMService:
                 "secondary",
                 "routing",
                 "conversation",
+                "query_expansion",
                 "specialist_synthesis",
                 "global_synthesis",
             )
             return list(dict.fromkeys(str(model_map[key]) for key in keys if model_map.get(key)))
 
-        ollama_model_map = _provider_model_map("ollama")
-        openai_model_map = _provider_model_map("openai_compatible")
-        ollama_needed = "ollama" in {self.primary_provider, self.fallback_provider}
-        openai_needed = "openai_compatible" in {self.primary_provider, self.fallback_provider}
+        provider_model_maps: Dict[str, Dict[str, Any]] = {
+            "ollama": _provider_model_map("ollama"),
+            "openai_compatible": _provider_model_map("openai_compatible"),
+            "google_ai": _provider_model_map("google_ai"),
+        }
+        needed_providers = {
+            provider
+            for provider in {self.primary_provider, self.fallback_provider}
+            if provider and provider != "none"
+        }
 
-        ollama_health: Dict[str, Any] | None = None
-        openai_health: Dict[str, Any] | None = None
+        provider_healths: Dict[str, Dict[str, Any] | None] = {
+            "ollama": None,
+            "openai_compatible": None,
+            "google_ai": None,
+        }
 
-        if ollama_needed:
-            ollama_health = await self.ollama.get_health(models=_requested_models(ollama_model_map))
-        if openai_needed:
-            openai_health = await self.openai.get_health(models=_requested_models(openai_model_map))
+        if "ollama" in needed_providers:
+            provider_healths["ollama"] = await self.ollama.get_health(
+                models=_requested_models(provider_model_maps["ollama"])
+            )
+        for provider in ("openai_compatible", "google_ai"):
+            if provider in needed_providers:
+                client = self._openai_client_for_provider(provider)
+                provider_healths[provider] = await client.get_health(
+                    models=_requested_models(provider_model_maps[provider])
+                )
 
         def _provider_health_payload(provider: str) -> Dict[str, Any]:
             if provider == "ollama":
-                payload = ollama_health or {
+                payload = provider_healths["ollama"] or {
                     "status": "unhealthy",
                     "reason": "NOT_CHECKED",
                     "model_found": False,
@@ -299,25 +388,26 @@ class LLMService:
                     "name": "ollama",
                     "status": payload.get("status", "unhealthy"),
                     "model_loaded": payload.get("model_found", False),
-                    "configured_models": payload.get("configured_models", ollama_model_map),
+                    "configured_models": payload.get("configured_models", provider_model_maps["ollama"]),
                     "available_models": payload.get("available_models", []),
                     "configured_models_found": payload.get("configured_models_found", {}),
                 }
 
-            payload = openai_health or {
+            client = self._openai_client_for_provider(provider)
+            payload = provider_healths.get(provider) or {
                 "status": "unhealthy",
                 "reason": "NOT_CHECKED",
                 "model_found": False,
-                "provider": self.openai.provider_name,
+                "provider": client.provider_name,
             }
             return {
-                "name": payload.get("provider", self.openai.provider_name),
+                "name": payload.get("provider", client.provider_name),
                 "status": payload.get("status", "unhealthy"),
                 "model_loaded": payload.get("model_found", False),
-                "configured_models": payload.get("configured_models", openai_model_map),
+                "configured_models": payload.get("configured_models", provider_model_maps[provider]),
                 "available_models": payload.get("available_models", []),
                 "configured_models_found": payload.get("configured_models_found", {}),
-                "base_url": payload.get("base_url", self.openai.base_url),
+                "base_url": payload.get("base_url", client.base_url),
             }
 
         primary_health = _provider_health_payload(self.primary_provider)
@@ -382,9 +472,31 @@ class LLMService:
                         json_mode=json_mode,
                         model=resolved_model,
                     )
+                self._record_llm_usage(
+                    kind="generate",
+                    model_role=model_role,
+                    provider=primary_provider,
+                    model=resolved_model,
+                    path="primary",
+                    status="success",
+                    json_mode=json_mode,
+                    llm_profile=llm_profile,
+                )
             except Exception as primary_error:
                 if not self._is_provider_exception(primary_provider, primary_error):
                     raise
+
+                self._record_llm_usage(
+                    kind="generate",
+                    model_role=model_role,
+                    provider=primary_provider,
+                    model=resolved_model,
+                    path="primary",
+                    status="error",
+                    json_mode=json_mode,
+                    llm_profile=llm_profile,
+                    error=primary_error,
+                )
 
                 if primary_provider == "ollama":
                     ollama_error = primary_error
@@ -411,6 +523,17 @@ class LLMService:
                                 json_mode=json_mode,
                                 model=primary_model,
                             )
+                        self._record_llm_usage(
+                            kind="generate",
+                            model_role=model_role,
+                            provider=primary_provider,
+                            model=primary_model,
+                            path="primary_model_fallback",
+                            status="success",
+                            json_mode=json_mode,
+                            llm_profile=llm_profile,
+                            fallback_from_model=resolved_model,
+                        )
                     except OllamaClientError as primary_error:
                         ollama_error = primary_error
                     else:
@@ -444,7 +567,11 @@ class LLMService:
                         llm_profile=llm_profile,
                     )
                     logger.info("Fallback provider devrede. provider=%s model=%s", fallback_provider, fallback_model)
-                    with profile_stage(f"llm.generate.{fallback_provider}_fallback"):
+                    with profile_stage(
+                        f"llm.generate.{fallback_provider}_fallback",
+                        model=fallback_model,
+                        role=model_role,
+                    ):
                         response_text = await self._generate_with_provider(
                             provider=fallback_provider,
                             prompt=prompt,
@@ -452,9 +579,34 @@ class LLMService:
                             json_mode=json_mode,
                             model=fallback_model,
                         )
+                    self._record_llm_usage(
+                        kind="generate",
+                        model_role=model_role,
+                        provider=fallback_provider,
+                        model=fallback_model,
+                        path="fallback",
+                        status="success",
+                        json_mode=json_mode,
+                        llm_profile=llm_profile,
+                        fallback_from=primary_provider,
+                        fallback_from_model=resolved_model,
+                    )
                 except Exception as fallback_error:
                     if not self._is_provider_exception(self.fallback_provider, fallback_error):
                         raise
+                    self._record_llm_usage(
+                        kind="generate",
+                        model_role=model_role,
+                        provider=self.fallback_provider,
+                        model=fallback_model,
+                        path="fallback",
+                        status="error",
+                        json_mode=json_mode,
+                        llm_profile=llm_profile,
+                        fallback_from=primary_provider,
+                        fallback_from_model=resolved_model,
+                        error=fallback_error,
+                    )
                     logger.error(
                         "Fallback provider de basarisiz oldu. provider=%s error=%s",
                         self.fallback_provider,
@@ -499,9 +651,29 @@ class LLMService:
                 model=resolved_model,
             ):
                 yield chunk
+            self._record_llm_usage(
+                kind="stream",
+                model_role=model_role,
+                provider=primary_provider,
+                model=resolved_model,
+                path="primary",
+                status="success",
+                llm_profile=llm_profile,
+            )
         except Exception as primary_error:
             if not self._is_provider_exception(primary_provider, primary_error):
                 raise
+
+            self._record_llm_usage(
+                kind="stream",
+                model_role=model_role,
+                provider=primary_provider,
+                model=resolved_model,
+                path="primary",
+                status="error",
+                llm_profile=llm_profile,
+                error=primary_error,
+            )
 
             if primary_provider == "ollama":
                 ollama_error = primary_error
@@ -523,6 +695,16 @@ class LLMService:
                 try:
                     async for chunk in self.ollama.generate_stream(prompt, system, model=primary_model):
                         yield chunk
+                    self._record_llm_usage(
+                        kind="stream",
+                        model_role=model_role,
+                        provider=primary_provider,
+                        model=primary_model,
+                        path="primary_model_fallback",
+                        status="success",
+                        llm_profile=llm_profile,
+                        fallback_from_model=resolved_model,
+                    )
                     return
                 except OllamaClientError as primary_error:
                     ollama_error = primary_error
@@ -555,9 +737,32 @@ class LLMService:
                     model=fallback_model,
                 ):
                     yield chunk
+                self._record_llm_usage(
+                    kind="stream",
+                    model_role=model_role,
+                    provider=fallback_provider,
+                    model=fallback_model,
+                    path="fallback",
+                    status="success",
+                    llm_profile=llm_profile,
+                    fallback_from=primary_provider,
+                    fallback_from_model=resolved_model,
+                )
             except Exception as fallback_error:
                 if not self._is_provider_exception(self.fallback_provider, fallback_error):
                     raise
+                self._record_llm_usage(
+                    kind="stream",
+                    model_role=model_role,
+                    provider=self.fallback_provider,
+                    model=fallback_model,
+                    path="fallback",
+                    status="error",
+                    llm_profile=llm_profile,
+                    fallback_from=primary_provider,
+                    fallback_from_model=resolved_model,
+                    error=fallback_error,
+                )
                 raise LLMServiceError(
                     "Stream: Tum LLM servisleri coktu. "
                     f"{self._provider_display_name(primary_provider)}: {str(primary_error)} | "

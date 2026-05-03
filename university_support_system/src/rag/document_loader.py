@@ -26,7 +26,7 @@ import pdfplumber
 import structlog
 
 from src.core.constants import known_department_directory_names, normalize_department_value
-from src.core.text_normalization import normalize_text
+from src.core.text_normalization import iter_alias_matches_longest_first, normalize_text
 
 logger = structlog.get_logger()
 
@@ -200,20 +200,44 @@ class DocumentLoader:
             ("genel", "Genel") döner.
         """
         name_lower = normalize_text(filename)
-        matched_bolumler: list[tuple[str, str]] = []
+        matched_bolumler: dict[str, tuple[int, str, str]] = {}
 
-        for bolum_kodu, (bolum_adi, keywords) in self.BOLUM_KEYWORDS.items():
-            if any(normalize_text(keyword) in name_lower for keyword in keywords):
-                matched_bolumler.append((bolum_kodu, bolum_adi))
-
-        if len(matched_bolumler) == 1:
-            return matched_bolumler[0]
+        alias_groups = (
+            ((bolum_kodu, bolum_adi), keywords)
+            for bolum_kodu, (bolum_adi, keywords) in self.BOLUM_KEYWORDS.items()
+        )
+        for (bolum_kodu, bolum_adi), keyword in iter_alias_matches_longest_first(alias_groups):
+            if keyword in name_lower:
+                previous = matched_bolumler.get(bolum_kodu)
+                if previous is None or len(keyword) > previous[0]:
+                    matched_bolumler[bolum_kodu] = (len(keyword), bolum_kodu, bolum_adi)
 
         if len(matched_bolumler) > 1:
             logger.info(
                 "multiple_bolum_matches",
                 filename=filename,
-                matches=[bolum_kodu for bolum_kodu, _ in matched_bolumler],
+                matches=[bolum_kodu for _, bolum_kodu, _ in matched_bolumler.values()],
+            )
+            return "genel", "Genel"
+
+        if matched_bolumler:
+            best_len = max(item[0] for item in matched_bolumler.values())
+            best_matches = [
+                item for item in matched_bolumler.values()
+                if item[0] == best_len
+            ]
+        else:
+            best_matches = []
+
+        if len(best_matches) == 1:
+            _keyword_len, bolum_kodu, bolum_adi = best_matches[0]
+            return bolum_kodu, bolum_adi
+
+        if len(best_matches) > 1:
+            logger.info(
+                "multiple_bolum_matches",
+                filename=filename,
+                matches=[bolum_kodu for _, bolum_kodu, _ in best_matches],
             )
 
         return "genel", "Genel"
@@ -381,6 +405,8 @@ class DocumentLoader:
             file_category = category or file_path.parent.name
             doc = self.load_file(file_path, category=file_category)
             if doc is not None:
+                relative_path = file_path.relative_to(directory).as_posix()
+                doc.metadata["relative_path"] = unicodedata.normalize("NFC", relative_path)
                 documents.append(doc)
 
         logger.info(

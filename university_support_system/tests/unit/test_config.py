@@ -130,6 +130,7 @@ class TestLLMModelResolution:
 
         assert test_settings.resolve_llm_model(role="routing") == "qwen2.5:3b"
         assert test_settings.resolve_llm_model(role="conversation") == "qwen2.5:3b"
+        assert test_settings.resolve_llm_model(role="query_expansion") == "qwen2.5:3b"
         assert test_settings.resolve_llm_model(role="global_synthesis") == "qwen2.5:3b"
 
     def test_balanced_profile_uses_role_overrides_before_primary_model(self, monkeypatch):
@@ -139,6 +140,7 @@ class TestLLMModelResolution:
         monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "ollama")
         monkeypatch.setenv("LLM_ROUTING_MODEL", "qwen2.5:3b")
         monkeypatch.setenv("LLM_CONVERSATION_MODEL", "qwen2.5:3b")
+        monkeypatch.setenv("LLM_QUERY_EXPANSION_MODEL", "qwen2.5:7b")
         monkeypatch.setenv("LLM_SPECIALIST_SYNTHESIS_MODEL", "")
         monkeypatch.setenv("LLM_GLOBAL_SYNTHESIS_MODEL", "")
 
@@ -146,5 +148,112 @@ class TestLLMModelResolution:
 
         assert test_settings.resolve_llm_model(role="routing") == "qwen2.5:3b"
         assert test_settings.resolve_llm_model(role="conversation") == "qwen2.5:3b"
+        assert test_settings.resolve_llm_model(role="query_expansion") == "qwen2.5:7b"
         assert test_settings.resolve_llm_model(role="specialist_synthesis") == "qwen2.5:7b"
         assert test_settings.resolve_llm_model(role="global_synthesis") == "qwen2.5:7b"
+
+    def test_google_ai_provider_uses_its_own_model_namespace(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "google_ai")
+        monkeypatch.setenv("LLM_ROUTING_MODEL", "llama-3.1-8b-instant")
+        monkeypatch.setenv("OPENAI_MODEL", "llama-3.1-70b-versatile")
+        monkeypatch.setenv("OPENAI_SECONDARY_MODEL", "llama-3.1-8b-instant")
+        monkeypatch.setenv("GOOGLE_AI_MODEL", "gemini-2.5-flash")
+        monkeypatch.setenv("GOOGLE_AI_SECONDARY_MODEL", "gemini-2.5-flash-lite")
+        monkeypatch.delenv("GOOGLE_AI_ROUTING_MODEL", raising=False)
+
+        test_settings = Settings()
+
+        assert (
+            test_settings.resolve_llm_model(role="routing", provider="openai_compatible")
+            == "llama-3.1-8b-instant"
+        )
+        assert (
+            test_settings.resolve_llm_model(role="routing", provider="google_ai")
+            == "gemini-2.5-flash-lite"
+        )
+        assert (
+            test_settings.resolve_llm_model(role="global_synthesis", provider="google_ai")
+            == "gemini-2.5-flash"
+        )
+
+    def test_provider_specific_query_expansion_override_wins(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
+        monkeypatch.setenv("OPENAI_SECONDARY_MODEL", "llama-3.1-8b-instant")
+        monkeypatch.setenv("OPENAI_QUERY_EXPANSION_MODEL", "llama-3.3-70b-versatile")
+
+        test_settings = Settings()
+
+        assert (
+            test_settings.resolve_llm_model(role="query_expansion", provider="openai_compatible")
+            == "llama-3.3-70b-versatile"
+        )
+
+    def test_google_ai_provider_specific_role_override_wins(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("GOOGLE_AI_MODEL", "gemini-2.5-flash")
+        monkeypatch.setenv("GOOGLE_AI_SECONDARY_MODEL", "gemini-2.5-flash-lite")
+        monkeypatch.setenv("GOOGLE_AI_ROUTING_MODEL", "gemini-2.5-flash")
+
+        test_settings = Settings()
+
+        assert (
+            test_settings.resolve_llm_model(role="routing", provider="google_ai")
+            == "gemini-2.5-flash"
+        )
+
+
+class TestSlackSettings:
+    """Slack config yardimcilari."""
+
+    def test_socket_mode_requires_all_three_tokens(self, monkeypatch):
+        monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+        monkeypatch.setenv("SLACK_SIGNING_SECRET", "secret")
+        monkeypatch.setenv("SLACK_APP_TOKEN", "")
+
+        assert Settings().slack.is_configured is True
+        assert Settings().slack.socket_mode_configured is False
+
+        monkeypatch.setenv("SLACK_APP_TOKEN", "xapp-test")
+
+        assert Settings().slack.socket_mode_configured is True
+
+
+class TestA2ASettings:
+    """A2A transport config yardimcilari."""
+
+    def test_a2a_defaults_to_inprocess(self):
+        test_settings = Settings()
+
+        assert test_settings.a2a.mode == "inprocess"
+
+    def test_a2a_endpoint_for_department_trims_trailing_slash(self, monkeypatch):
+        monkeypatch.setenv("A2A_MODE", "http")
+        monkeypatch.setenv("A2A_STUDENT_AFFAIRS_URL", "http://localhost:8101/")
+
+        test_settings = Settings()
+
+        assert test_settings.a2a.mode == "http"
+        assert test_settings.a2a.endpoint_for("student_affairs") == "http://localhost:8101"
+        assert test_settings.a2a.endpoint_for("unknown") is None
+
+    def test_a2a_department_timeout_can_be_configured_independently(self, monkeypatch):
+        monkeypatch.setenv("A2A_TIMEOUT_SECONDS", "10")
+        monkeypatch.setenv("A2A_DEPARTMENT_TIMEOUT_SECONDS", "75")
+
+        test_settings = Settings()
+
+        assert test_settings.a2a.timeout_seconds == 10
+        assert test_settings.a2a.effective_department_timeout_seconds() == 75
+
+    def test_a2a_department_timeout_falls_back_to_generic_timeout(self, monkeypatch):
+        monkeypatch.setenv("A2A_TIMEOUT_SECONDS", "12")
+        monkeypatch.delenv("A2A_DEPARTMENT_TIMEOUT_SECONDS", raising=False)
+
+        test_settings = Settings()
+
+        assert test_settings.a2a.effective_department_timeout_seconds() == 12

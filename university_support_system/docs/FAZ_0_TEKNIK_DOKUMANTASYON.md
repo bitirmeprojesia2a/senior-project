@@ -1,6 +1,19 @@
 # FAZ 0 — Kuruluş ve Ortak Altyapı: Teknik Dokümantasyon
 
-> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 0 kaydidir. Bugunku kurulum, modul dagilimi ve operasyon adimlari icin once `README.md`, `docs/KURULUM_VE_CALISTIRMA.md`, `docs/PROJE_ANATOMISI_KILAVUZU.md` ve `docs/DOKUMANTASYON_OKUMA_SIRASI.md` okunmalidir.
+> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 0 kaydidir. Arsivlenecek/cop belge degildir; projenin kurulus kararlarini ve altyapi temelini anlatir. Bugunku nihai mimari ve calistirma akisi icin once `README.md`, `docs/A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/DOKUMANTASYON_OKUMA_SIRASI.md` okunmalidir.
+
+## Guncel Konumlandirma (Nisan 2026)
+
+FAZ 0, bugunku sistemin veritabani, konfig, Docker, migration, test ve A2A sozlesme temelini kurdugu donemi temsil eder. Bu dosya "bugun sistemi nasil calistiririm?" sorusunun cevabi degil, "bu sistemin zemini nasil atildi?" sorusunun cevabidir.
+
+Bu fazdan sonra sistem su yonde evrildi:
+
+- RAG pipeline'i ve Chroma tabanli belge indeksleme FAZ 1'de olgunlasti.
+- LLM servis katmani FAZ 2'de ayrildi.
+- Cok ajanli orkestrasyon FAZ 3'te sekillendi.
+- Nisan 2026 itibariyla A2A servisleri Docker Compose uzerinde dagitik calisabilir hale geldi.
+- Retrieval/reranking agirligi merkezi `retrieval-service` uzerine tasindi.
+- Slack A2A runtime, announcement/event capability agent'lari ve specialist agent servisleri eklendi.
 
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 25 Şubat 2026  

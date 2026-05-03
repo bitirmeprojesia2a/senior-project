@@ -68,6 +68,13 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     """Return the shared async session factory, creating it lazily."""
     global _session_factory
     if _session_factory is None:
+        # Import the full ORM model graph before the first session is created.
+        # Some services only import a narrow slice of the codebase; without this,
+        # SQLAlchemy can fail to resolve cross-module relationship targets
+        # (for example `Student -> Tuition`) during the first query and the
+        # registry lookup silently degrades into missing-endpoint fallbacks.
+        import src.db.models  # noqa: F401
+
         _session_factory = async_sessionmaker(
             get_engine(),
             class_=AsyncSession,

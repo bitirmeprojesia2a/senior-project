@@ -1,0 +1,23 @@
+{
+  "department": "Test Bolum",
+  "courses": [
+    {
+      "course_code": " tst101 ",
+      "course_name": "Temel Ders",
+      "credits": 3,
+      "akts": 5,
+      "curriculum_semester": 1
+    }
+  ],
+  "prerequisites": [
+    {
+      "course_code": " tst201 ",
+      "prerequisites": [
+        {
+          "course_code": " tst101 ",
+          "group": 1
+        }
+      ]
+    }
+  ]
+}

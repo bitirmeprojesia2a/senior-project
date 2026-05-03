@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from datetime import datetime
+import re
 from typing import Any
 
 from a2a.types import Task
@@ -16,12 +18,15 @@ from src.agents.academic.curriculum_utils import (
     format_course_line,
     format_course_lines,
     has_department_specific_content,
+    infer_department_from_query,
     is_course_list_query,
+    is_generic_schedule_listing_query,
     is_personal_progress_query,
     is_prerequisite_query,
     is_schedule_query,
     needs_department_context,
     partition_courses_for_department,
+    split_language_choice_courses,
     wants_specific_schedule_lookup,
 )
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
@@ -29,6 +34,7 @@ from src.core.constants import Department, TaskType
 from src.core.text_normalization import normalize_text
 from src.db.curriculum_data import (
     fetch_course_prerequisites,
+    fetch_courses_by_title,
     fetch_courses_by_curriculum_semester,
     fetch_courses_by_semester,
 )
@@ -36,6 +42,7 @@ from src.db.registration_data import fetch_active_registration_period
 from src.db.schedule_data import (
     fetch_schedule_slots_by_department,
     fetch_schedule_slots_for_course,
+    schedule_row_sort_key,
 )
 from src.db.schemas import DepartmentResponse
 from src.llm.prompt_templates import CURRICULUM_AGENT_SYSTEM_PROMPT
@@ -47,6 +54,7 @@ class CurriculumAgent(BaseSpecialistAgent):
         *,
         course_fetcher: Callable[[str], Awaitable[list[dict[str, Any]]]] | None = None,
         curriculum_course_fetcher: Callable[[int, str | None], Awaitable[list[dict[str, Any]]]] | None = None,
+        course_title_fetcher: Callable[..., Awaitable[list[dict[str, Any]]]] | None = None,
         prerequisite_fetcher: Callable[[str], Awaitable[dict[str, Any] | None]] | None = None,
         period_fetcher: Callable[[], Awaitable[Any]] | None = None,
         schedule_department_fetcher: Callable[..., Awaitable[list[dict[str, Any]]]] | None = None,
@@ -70,6 +78,7 @@ class CurriculumAgent(BaseSpecialistAgent):
         self._curriculum_course_fetcher = (
             curriculum_course_fetcher or fetch_courses_by_curriculum_semester
         )
+        self._course_title_fetcher = course_title_fetcher or fetch_courses_by_title
         self._prerequisite_fetcher = prerequisite_fetcher or fetch_course_prerequisites
         self._period_fetcher = period_fetcher or fetch_active_registration_period
         self._schedule_department_fetcher = schedule_department_fetcher or fetch_schedule_slots_by_department
@@ -84,6 +93,8 @@ class CurriculumAgent(BaseSpecialistAgent):
         lowered = normalize_text(query_text)
         student_id = metadata.get("student_id")
         student_department = str(metadata.get("student_department", "") or "").strip()
+        explicit_department = infer_department_from_query(query_text)
+        effective_department = explicit_department or student_department or ""
         is_authenticated = bool(metadata.get("is_authenticated", False))
 
         if is_personal_progress_query(lowered):
@@ -108,7 +119,15 @@ class CurriculumAgent(BaseSpecialistAgent):
                     error="student_id_required",
                 )
 
-        if needs_department_context(lowered, query_text, student_department):
+        if self._is_course_title_metadata_query(lowered):
+            title_lookup_courses = await self._course_title_fetcher(
+                query_text,
+                effective_department or None,
+            )
+            if title_lookup_courses:
+                return await self._build_course_title_lookup_response(title_lookup_courses)
+
+        if needs_department_context(lowered, query_text, effective_department):
             return DepartmentResponse(
                 department=self.department,
                 answer=DEPARTMENT_CONTEXT_MESSAGE,
@@ -120,10 +139,22 @@ class CurriculumAgent(BaseSpecialistAgent):
             schedule_response = await self._try_build_schedule_response(
                 query_text,
                 lowered,
-                student_department=student_department or None,
+                student_department=effective_department or None,
             )
             if schedule_response is not None:
                 return schedule_response
+            if effective_department and is_generic_schedule_listing_query(lowered):
+                return DepartmentResponse(
+                    department=self.department,
+                    answer=(
+                        f"{effective_department} icin kayitli yapilandirilmis ders programi satiri bulunamadi. "
+                        "Ders programi bolum/fakulte duyurularinda PDF veya duyuru olarak yayinlanmis olabilir; "
+                        "bu durumda ilgili bolum duyurularini kontrol etmek gerekir."
+                    ),
+                    generation_mode="kural",
+                    include_contact_suggestion=True,
+                    success=True,
+                )
 
         if is_prerequisite_query(lowered):
             code_match = COURSE_CODE_PATTERN.search(query_text)
@@ -142,19 +173,19 @@ class CurriculumAgent(BaseSpecialistAgent):
                 )
 
         curriculum_semester = extract_curriculum_semester(query_text)
-        if curriculum_semester is not None and student_department:
-            courses = await self._curriculum_course_fetcher(curriculum_semester, student_department)
+        if curriculum_semester is not None and effective_department:
+            courses = await self._curriculum_course_fetcher(curriculum_semester, effective_department)
             if courses:
                 return await self._build_course_list_response(
                     query_text,
                     courses,
                     f"{curriculum_semester}. yariyil",
-                    student_department=student_department,
+                    student_department=effective_department,
                 )
             return DepartmentResponse(
                 department=self.department,
                 answer=(
-                    f"{student_department} icin {curriculum_semester}. yariyilda kayitli ders bulunamadi. "
+                    f"{effective_department} icin {curriculum_semester}. yariyilda kayitli ders bulunamadi. "
                     "Mufredat verisini bolum sekreterligi ile dogrulaman iyi olur."
                 ),
                 include_contact_suggestion=True,
@@ -164,18 +195,184 @@ class CurriculumAgent(BaseSpecialistAgent):
         if is_course_list_query(lowered):
             period = await self._period_fetcher()
             if period is not None:
-                courses = await self._course_fetcher(period.semester, student_department or None)
+                courses = await self._course_fetcher(period.semester, effective_department or None)
                 if courses:
                     return await self._build_course_list_response(
                         query_text,
                         courses,
                         period.semester,
-                        student_department=student_department or None,
+                        student_department=effective_department or None,
                     )
 
-        if student_department and normalize_text(student_department) not in lowered:
-            metadata["query_text"] = f"{student_department} bolumu/programi icin: {query_text}"
+        if effective_department and normalize_text(effective_department) not in lowered:
+            metadata["query_text"] = f"{effective_department} bolumu/programi icin: {query_text}"
         return await super().handle_department_task(task)
+
+    @staticmethod
+    def _is_course_title_metadata_query(lowered: str) -> bool:
+        return any(
+            marker in lowered
+            for marker in (
+                "hangi sinif",
+                "kacinci sinif",
+                "sinifta",
+                "hangi yariyil",
+                "kacinci yariyil",
+                "hangi donem",
+                "kacinci donem",
+            )
+        )
+
+    @staticmethod
+    def _semester_to_year_text(semester: int | None) -> str:
+        """Convert semester number to year + semester text.
+
+        semester 1-2 -> 1. sinif, 3-4 -> 2. sinif, etc.
+        """
+        if semester is None:
+            return "donem bilgisi kayitli degil"
+        year = (semester + 1) // 2  # 1->1, 2->1, 3->2, 4->2, ...
+        return f"{year}. sinif, {semester}. yariyil"
+
+    async def _build_course_title_lookup_response(self, courses: list[dict[str, Any]]) -> DepartmentResponse:
+        if len(courses) == 1:
+            course = courses[0]
+            semester = course.get("curriculum_semester")
+            semester_text = self._semester_to_year_text(semester)
+            answer = (
+                f"{course['course_code']} {course['course_name']} dersi "
+                f"{course.get('department') or 'ilgili program'} mufredatinda {semester_text} icinde gorunuyor."
+            )
+            # Derslik bilgisini de ekle
+            course_dept = course.get("department")
+            schedule_info = await self._fetch_course_schedule_summary(
+                course["course_code"],
+                department=course_dept,
+                course_name=course.get("course_name"),
+                semester=semester,
+            )
+            if schedule_info:
+                answer += f"\nDerslik: {schedule_info}"
+            else:
+                answer += "\nDerslik bilgisi ders programi verisinde bulunamadi."
+        else:
+            lines = ["Bu ders adi icin birden fazla kayit bulundu:"]
+            for course in courses:
+                semester = course.get("curriculum_semester")
+                semester_text = self._semester_to_year_text(semester)
+                course_dept = course.get("department")
+                schedule_info = await self._fetch_course_schedule_summary(
+                    course["course_code"],
+                    department=course_dept,
+                    course_name=course.get("course_name"),
+                    semester=semester,
+                )
+                schedule_suffix = f" | Derslik: {schedule_info}" if schedule_info else " | Derslik bilgisi bulunamadi"
+                lines.append(
+                    f"- {course['course_code']} {course['course_name']} | "
+                    f"{course.get('department') or 'Program bilinmiyor'} | {semester_text}{schedule_suffix}"
+                )
+            answer = "\n".join(lines)
+        return DepartmentResponse(
+            department=self.department,
+            answer=answer,
+            db_data={"courses": courses, "query_type": "course_title_lookup"},
+            generation_mode="vt",
+            success=True,
+        )
+
+    async def _fetch_course_schedule_summary(
+        self,
+        course_code: str,
+        department: str | None = None,
+        *,
+        course_name: str | None = None,
+        semester: int | None = None,
+    ) -> str | None:
+        """Fetch a compact schedule summary (day + classroom) for a course code.
+
+        Fallback chain when course_code lookup returns no results:
+        1. course_code + department (primary)
+        2. department schedule rows filtered by normalized course name
+        3. department schedule rows filtered by semester
+
+        Telemetry is logged for each attempt.
+        """
+        lookup_method = "course_code"
+        rows: list[dict[str, Any]] = []
+
+        # Attempt 1: course_code lookup
+        try:
+            rows = await self._schedule_course_fetcher(
+                course_code.upper().replace(" ", ""),
+                department=department,
+                academic_year=None,
+                term=None,
+            )
+        except Exception:
+            rows = []
+
+        # Attempt 2: department schedule filtered by course name
+        if not rows and department and course_name:
+            lookup_method = "course_name_department"
+            try:
+                dept_rows = await self._schedule_department_fetcher(
+                    department,
+                    academic_year=None,
+                    term=None,
+                )
+                normalized_name = normalize_text(course_name)
+                name_tokens = set(normalized_name.split()) - {"ve", "ile", "icin", "bir"}
+                for row in dept_rows:
+                    row_name = normalize_text(str(row.get("course_name") or ""))
+                    row_tokens = set(row_name.split())
+                    if name_tokens & row_tokens:
+                        rows.append(row)
+            except Exception:
+                rows = []
+
+        # Attempt 3: department schedule filtered by semester
+        if not rows and department and semester is not None:
+            lookup_method = "department_semester"
+            try:
+                dept_rows = await self._schedule_department_fetcher(
+                    department,
+                    academic_year=None,
+                    term=None,
+                )
+                for row in dept_rows:
+                    row_sem = row.get("curriculum_semester")
+                    if row_sem is not None and int(row_sem) == semester:
+                        rows.append(row)
+            except Exception:
+                rows = []
+
+        logger.info(
+            "schedule_lookup course_code=%s department=%s method=%s rows_found=%d",
+            course_code, department, lookup_method, len(rows),
+        )
+
+        if not rows:
+            return None
+        # Compact: "Pazartesi MF104, Sali L244" gibi
+        parts: list[str] = []
+        seen: set[str] = set()
+        for row in rows:
+            day = str(row.get("day_of_week") or "").strip()
+            classroom = str(row.get("classroom") or row.get("derslik") or "").strip()
+            if not day and not classroom:
+                continue
+            key = f"{day}|{classroom}"
+            if key in seen:
+                continue
+            seen.add(key)
+            if day and classroom:
+                parts.append(f"{day} {classroom}")
+            elif classroom:
+                parts.append(classroom)
+        if not parts:
+            return None
+        return ", ".join(parts[:6])  # max 6 entry
 
     async def _try_build_schedule_response(
         self,
@@ -206,7 +403,10 @@ class CurriculumAgent(BaseSpecialistAgent):
         if not schedule_rows:
             return None
 
-        filtered_rows = schedule_rows
+        filtered_rows, term_context = self._select_schedule_rows_for_term(
+            query_text,
+            schedule_rows,
+        )
         if day_filter:
             filtered_rows = [row for row in filtered_rows if row.get("day_of_week") == day_filter]
         if group_filters:
@@ -218,35 +418,21 @@ class CurriculumAgent(BaseSpecialistAgent):
         if not filtered_rows:
             return None
 
-        if not code_match and not day_filter and not group_filters:
-            return None
-
         lines: list[str] = []
         if code_match:
             header = f"{code_match.group(0).upper().replace(' ', '')} dersi icin bulunan ders programi satirlari:"
+        elif not day_filter and not group_filters:
+            term_suffix = f" ({term_context})" if term_context else ""
+            header = f"{student_department} icin bulunan ders programi satirlari{term_suffix}:"
         else:
-            header = "Bulunan ders programi satirlari:"
+            term_suffix = f" ({term_context})" if term_context else ""
+            header = f"Bulunan ders programi satirlari{term_suffix}:"
         lines.append(header)
 
-        def _sort_key(row: dict[str, Any]) -> tuple[str, str, str, str]:
-            return (
-                str(row.get("day_of_week") or ""),
-                str(row.get("start_time") or ""),
-                str(row.get("schedule_group") or ""),
-                str(row.get("course_key") or ""),
-            )
-
-        for row in sorted(filtered_rows, key=_sort_key)[:16]:
-            group_text = f" | {row['schedule_group']}" if row.get("schedule_group") else ""
-            classroom_text = f" | Derslik: {row['classroom']}" if row.get("classroom") else ""
-            instructor_text = f" | Ogretim Elemani: {row['instructor']}" if row.get("instructor") else ""
-            course_label = row.get("course_code") or row.get("course_name") or row.get("course_key")
-            lines.append(
-                f"- {row['day_of_week']} {row['start_time']}-{row['end_time']} | {course_label}{group_text}{classroom_text}{instructor_text}"
-            )
-
-        if len(filtered_rows) > 16:
-            lines.append(f"... ve {len(filtered_rows) - 16} satir daha bulundu.")
+        if code_match or day_filter or group_filters:
+            lines.extend(self._format_schedule_rows_flat(filtered_rows, max_rows=16))
+        else:
+            lines.extend(self._format_schedule_rows_by_group(filtered_rows, max_rows_per_group=5))
 
         return DepartmentResponse(
             department=self.department,
@@ -256,10 +442,179 @@ class CurriculumAgent(BaseSpecialistAgent):
                 "match_count": len(filtered_rows),
                 "rows": filtered_rows[:32],
             },
+            generation_mode="vt",
             sources=[],
             include_contact_suggestion=True,
             success=True,
         )
+
+    @classmethod
+    def _select_schedule_rows_for_term(
+        cls,
+        query_text: str,
+        rows: list[dict[str, Any]],
+        *,
+        default_term_key: str | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        requested_term_key = cls._extract_schedule_term_key(query_text)
+        if requested_term_key is None and cls._has_multiple_schedule_terms(rows):
+            requested_term_key = default_term_key or cls._default_schedule_term_key()
+
+        if requested_term_key:
+            matching_rows = [
+                row for row in rows
+                if cls._schedule_term_key(row.get("term")) == requested_term_key
+            ]
+            if matching_rows:
+                return matching_rows, cls._schedule_term_context(matching_rows)
+
+        return rows, cls._schedule_term_context(rows)
+
+    @staticmethod
+    def _has_multiple_schedule_terms(rows: list[dict[str, Any]]) -> bool:
+        terms = {
+            (
+                str(row.get("academic_year") or "").strip(),
+                normalize_text(row.get("term") or ""),
+            )
+            for row in rows
+            if row.get("term") or row.get("academic_year")
+        }
+        return len(terms) > 1
+
+    @staticmethod
+    def _extract_schedule_term_key(query_text: str) -> str | None:
+        normalized = normalize_text(query_text)
+        if any(
+            marker in normalized
+            for marker in (
+                "bahar",
+                "2 donem",
+                "ikinci donem",
+                "2 yariyil",
+                "ikinci yariyil",
+            )
+        ):
+            return "bahar"
+        if any(
+            marker in normalized
+            for marker in (
+                "guz",
+                "1 donem",
+                "birinci donem",
+                "1 yariyil",
+                "birinci yariyil",
+            )
+        ):
+            return "guz"
+        return None
+
+    @staticmethod
+    def _default_schedule_term_key() -> str:
+        month = datetime.now().month
+        if 2 <= month <= 7:
+            return "bahar"
+        return "guz"
+
+    @staticmethod
+    def _schedule_term_key(raw_term: Any) -> str:
+        normalized = normalize_text(raw_term or "")
+        if "bahar" in normalized:
+            return "bahar"
+        if "guz" in normalized:
+            return "guz"
+        return normalized
+
+    @classmethod
+    def _schedule_term_context(cls, rows: list[dict[str, Any]]) -> str | None:
+        contexts: list[tuple[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+        for row in rows:
+            academic_year = str(row.get("academic_year") or "").strip()
+            term = str(row.get("term") or "").strip()
+            key = (academic_year, cls._schedule_term_key(term))
+            if not term or key in seen:
+                continue
+            seen.add(key)
+            contexts.append((academic_year, term))
+        if len(contexts) != 1:
+            return None
+        academic_year, term = contexts[0]
+        return f"{academic_year} {term}".strip()
+
+    @classmethod
+    def _format_schedule_rows_by_group(
+        cls,
+        rows: list[dict[str, Any]],
+        *,
+        max_rows_per_group: int,
+    ) -> list[str]:
+        grouped: dict[tuple[int, str], list[dict[str, Any]]] = {}
+        for row in sorted(rows, key=schedule_row_sort_key):
+            group_key = cls._schedule_group_key(row.get("schedule_group"))
+            grouped.setdefault(group_key, []).append(row)
+
+        lines: list[str] = []
+        for group_key in sorted(grouped):
+            group_rows = grouped[group_key]
+            lines.append(f"\n{group_key[1]}:")
+            for row in group_rows[:max_rows_per_group]:
+                lines.append(cls._format_schedule_row(row, include_group=False))
+            if len(group_rows) > max_rows_per_group:
+                lines.append(f"... bu grupta {len(group_rows) - max_rows_per_group} satir daha var.")
+        return lines
+
+    @classmethod
+    def _format_schedule_rows_flat(
+        cls,
+        rows: list[dict[str, Any]],
+        *,
+        max_rows: int,
+    ) -> list[str]:
+        lines = [
+            cls._format_schedule_row(row, include_group=True)
+            for row in sorted(rows, key=schedule_row_sort_key)[:max_rows]
+        ]
+        if len(rows) > max_rows:
+            lines.append(f"... ve {len(rows) - max_rows} satir daha bulundu.")
+        return lines
+
+    @staticmethod
+    def _format_schedule_row(row: dict[str, Any], *, include_group: bool) -> str:
+        group_text = (
+            f" | {row['schedule_group']}"
+            if include_group and row.get("schedule_group")
+            else ""
+        )
+        classroom_text = f" | Derslik: {row['classroom']}" if row.get("classroom") else ""
+        instructor_text = f" | Ogretim Elemani: {row['instructor']}" if row.get("instructor") else ""
+        course_label = row.get("course_code") or row.get("course_name") or row.get("course_key")
+        return (
+            f"- {row['day_of_week']} {row['start_time']}-{row['end_time']} | "
+            f"{course_label}{group_text}{classroom_text}{instructor_text}"
+        )
+
+    @staticmethod
+    def _schedule_group_key(raw_group: Any) -> tuple[int, str]:
+        group_text = str(raw_group or "").strip()
+        normalized = (
+            normalize_text(group_text)
+            .replace(".", " ")
+            .replace("s i n i f", "sinif")
+        )
+        normalized = " ".join(normalized.split())
+        class_markers = (
+            ("4", (r"\b4\s*sinif\b", r"\b4sinif\b", r"\biv\s*sinif\b")),
+            ("3", (r"\b3\s*sinif\b", r"\b3sinif\b", r"\biii\s*sinif\b")),
+            ("2", (r"\b2\s*sinif\b", r"\b2sinif\b", r"\bii\s*sinif\b")),
+            ("1", (r"\b1\s*sinif\b", r"\b1sinif\b", r"\bi\s*sinif\b")),
+        )
+        for class_no, patterns in class_markers:
+            if any(re.search(pattern, normalized) for pattern in patterns):
+                return int(class_no), f"{class_no}. sinif"
+        if group_text:
+            return 90, group_text
+        return 99, "Sinif/grup belirtilmeyen dersler"
 
     async def _build_prerequisite_response(
         self,
@@ -323,8 +678,15 @@ class CurriculumAgent(BaseSpecialistAgent):
             courses,
             normalized_department,
         )
+        core_courses, core_language_courses = split_language_choice_courses(core_courses)
+        service_courses, service_language_courses = split_language_choice_courses(service_courses)
+        language_courses = core_language_courses + service_language_courses
 
-        if student_department and not has_department_specific_content(core_courses, elective_groups):
+        if (
+            student_department
+            and not has_department_specific_content(core_courses, elective_groups)
+            and not language_courses
+        ):
             return DepartmentResponse(
                 department=self.department,
                 answer=(
@@ -342,10 +704,31 @@ class CurriculumAgent(BaseSpecialistAgent):
                 success=True,
             )
 
-        lines = [f"{semester} doneminde kayitli {len(courses)} ders/grup bulundu:"]
+        displayed_course_count = (
+            len(core_courses)
+            + len(service_courses)
+            + len(elective_groups)
+            + (1 if language_courses else 0)
+        )
+        lines = [f"{semester} doneminde kayitli {displayed_course_count} ders/grup bulundu:"]
         if core_courses:
             lines.append("\nBolum dersleri:")
             lines.extend(format_course_lines(core_courses))
+        if language_courses:
+            unique_language_courses = list(
+                {
+                    str(course.get("course_code") or ""): course
+                    for course in sorted(language_courses, key=lambda item: item["course_code"])
+                }.values()
+            )
+            option_summary = "; ".join(
+                f"{item['course_code']} {item['course_name']}"
+                for item in unique_language_courses[:8]
+            )
+            if len(unique_language_courses) > 8:
+                option_summary += f"; ... ve {len(unique_language_courses) - 8} secenek daha"
+            lines.append("\nYabanci dil secenekleri:")
+            lines.append(f"- Programdaki yabanci dil dersi icin kayitli secenekler: {option_summary}")
         if service_courses:
             lines.append("\nOrtak dersler:")
             lines.extend(format_course_lines(service_courses))

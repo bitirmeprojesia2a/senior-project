@@ -1,0 +1,65 @@
+{
+  "department": "Ornek Bolum",
+  "courses": [
+    {
+      "course_code": "ORK101",
+      "course_name": "Ornek Derse Giris",
+      "department": "Ornek Bolum",
+      "theory_hours": 3,
+      "practice_hours": 0,
+      "lab_hours": 0,
+      "credits": 3,
+      "akts": 5,
+      "curriculum_semester": 1,
+      "course_type": "zorunlu",
+      "elective_group": null
+    },
+    {
+      "course_code": "ORK201",
+      "course_name": "Ornek Ileri Ders",
+      "department": "Ornek Bolum",
+      "theory_hours": 3,
+      "practice_hours": 0,
+      "lab_hours": 0,
+      "credits": 3,
+      "akts": 5,
+      "curriculum_semester": 2,
+      "course_type": "zorunlu",
+      "elective_group": null
+    },
+    {
+      "course_code": "SOS101",
+      "course_name": "Sosyal Secmeli Ornek Ders",
+      "theory_hours": 2,
+      "practice_hours": 0,
+      "lab_hours": 0,
+      "credits": 2,
+      "akts": 3,
+      "curriculum_semester": null,
+      "course_type": "sosyal_secmeli",
+      "elective_group": "SOSYAL-SEC"
+    }
+  ],
+  "program_slots": [
+    {
+      "slot_code": "ORK-SOS-1",
+      "slot_name": "Sosyal Secmeli Ders I (Grup)",
+      "credits": 2,
+      "akts": 2,
+      "curriculum_semester": 5,
+      "course_type": "secmeli_grup",
+      "elective_group": "SOSYAL-SEC"
+    }
+  ],
+  "prerequisites": [
+    {
+      "course_code": "ORK201",
+      "prerequisites": [
+        {
+          "course_code": "ORK101",
+          "group": 1
+        }
+      ]
+    }
+  ]
+}

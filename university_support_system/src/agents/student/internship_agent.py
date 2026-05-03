@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 
 from a2a.types import Task
 
@@ -18,6 +18,27 @@ class InternshipAgent(BaseSpecialistAgent):
     _CROSS_REF_KEYWORDS = (
         "ucret", "ücret", "odeme", "ödeme", "geri odeme", "geri ödeme",
         "sigorta", "sgk", "staj ucreti", "staj ücreti",
+    )
+
+    _SIMPLE_STAJ_FORM_MARKERS = (
+        "zorunlu staj form",
+        "staj form",
+        "formunu nereden",
+        "formu nereden",
+        "nereden alirim",
+        "nereden alırım",
+    )
+    _SIMPLE_STAJ_GRADUATION_MARKERS = (
+        "staj yapmazsam",
+        "staj yapmadan",
+        "staji yapmazsam",
+        "stajı yapmazsam",
+    )
+
+    _TEACHING_PROGRAM_MARKERS = (
+        "ogretmenligi",
+        "ogretmenlik",
+        "egitim fakultesi",
     )
 
     def __init__(
@@ -47,6 +68,23 @@ class InternshipAgent(BaseSpecialistAgent):
         if not query_text:
             query_text = self._extract_query_from_task(task)
 
+        if self._is_teaching_program_specific_staj_query(query_text):
+            return DepartmentResponse(
+                department=self.department,
+                answer=(
+                    "Matematik ogretmenligi gibi ogretmenlik programlari icin staj/ogretmenlik uygulamasi "
+                    "yukumlulugunu bu kaynaklarla bolum bazinda net dogrulayamiyorum. Bu nedenle muhendislik "
+                    "staj belgelerine gore kesin hukum vermem dogru olmaz. En dogru belge ve surec icin "
+                    "Egitim Fakultesi ilgili bolum sekreterligi veya akademik danismaninizla gorusun; varsa "
+                    "ogretmenlik uygulamasi/staj formu birimin web sayfasi, bolum duyurulari veya OMU Kalem "
+                    "formlari uzerinden paylasilir."
+                ),
+                sources=[],
+                generation_mode="kural",
+                include_contact_suggestion=True,
+                success=True,
+            )
+
         response = await super().handle_department_task(task)
 
         if response.success and self._needs_cross_reference(query_text):
@@ -66,3 +104,18 @@ class InternshipAgent(BaseSpecialistAgent):
     def _needs_cross_reference(cls, query_text: str) -> bool:
         lowered = normalize_text(query_text)
         return any(keyword in lowered for keyword in cls._CROSS_REF_KEYWORDS)
+
+    @classmethod
+    def _is_teaching_program_specific_staj_query(cls, query_text: str) -> bool:
+        lowered = normalize_text(query_text)
+        return "staj" in lowered and any(
+            marker in lowered for marker in cls._TEACHING_PROGRAM_MARKERS
+        )
+
+    def _should_enrich_results(self, query_text: str, results: Sequence[dict]) -> bool:
+        lowered = normalize_text(query_text)
+        if any(marker in lowered for marker in self._SIMPLE_STAJ_FORM_MARKERS):
+            return False
+        if "mezun" in lowered and any(marker in lowered for marker in self._SIMPLE_STAJ_GRADUATION_MARKERS):
+            return False
+        return super()._should_enrich_results(query_text, results)

@@ -91,9 +91,11 @@ class TextChunker:
         self,
         chunk_size: int = 1024,
         chunk_overlap: int = 128,
+        min_chunk_chars: int = 1,
     ):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.min_chunk_chars = max(1, min_chunk_chars)
 
         self._sub_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
@@ -102,6 +104,11 @@ class TextChunker:
             length_function=len,
             is_separator_regex=False,
         )
+
+    def _is_informative_chunk(self, text: str) -> bool:
+        """Skip title-only fragments that add noise to retrieval indexes."""
+        normalized = re.sub(r"\s+", " ", text or "").strip()
+        return len(normalized) >= self.min_chunk_chars
 
     def _extract_madde_header(self, text: str) -> Tuple[Optional[str], Optional[str]]:
         """
@@ -217,6 +224,8 @@ class TextChunker:
             madde_header, _ = self._extract_madde_header(section_text)
 
             if len(section_text) <= self.chunk_size:
+                if not self._is_informative_chunk(section_text):
+                    continue
                 chunk_meta = {
                     **base_metadata,
                     "chunk_index": len(chunks),
@@ -236,6 +245,8 @@ class TextChunker:
                     # Sonraki sub-chunk'lara MADDE basligini ekle
                     if j > 0 and madde_header:
                         sub_text = f"[{madde_header}]\n{sub_text}"
+                    if not self._is_informative_chunk(sub_text):
+                        continue
 
                     chunk_meta = {
                         **base_metadata,

@@ -24,6 +24,7 @@ class Student(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     department: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     faculty: Mapped[str] = mapped_column(String(80), nullable=False)
+    student_type: Mapped[Optional[str]] = mapped_column(String(40), index=True)
     class_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     enrollment_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     registration_status: Mapped[str] = mapped_column(

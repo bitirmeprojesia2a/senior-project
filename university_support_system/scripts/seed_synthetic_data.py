@@ -431,6 +431,8 @@ def seed_synthetic_data(session: Session) -> None:
             current_semester="2025-Güz",
         ),
     ]
+    for student in students:
+        student.student_type = student.student_type or "domestic"
     session.add_all(students)
     session.flush()
 

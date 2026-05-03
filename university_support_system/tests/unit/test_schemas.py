@@ -14,6 +14,7 @@ from src.db.schemas import (
     RAGSource,
     RoutingResult,
     DepartmentResponse,
+    AuthenticatedUserQueryRequest,
     UserQueryRequest,
     UserQueryResponse,
     ServiceHealth,
@@ -148,6 +149,14 @@ class TestUserQueryRequestSchema:
             user_id="user_123",
         )
         assert request.user_id == "user_123"
+
+    def test_authenticated_request_can_disable_cache(self):
+        request = AuthenticatedUserQueryRequest(
+            query="Ders kaydi ne zaman basliyor?",
+            disable_cache=True,
+        )
+
+        assert request.disable_cache is True
 
 
 class TestHealthCheckSchemas:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Awaitable, Callable
+from typing import Sequence
 
 from a2a.types import Task
 
@@ -23,6 +24,33 @@ class ScholarshipAgent(BaseSpecialistAgent):
     _PERSONAL_KEYWORDS = (
         "basvurum", "durumum", "aliyor muyum", "yatti mi", "odendi mi", "bursum",
         "burs aliyorum", "burs durumu", "burs kesildimi", "ne zaman yatar",
+    )
+    _INTERNATIONAL_SCHOLARSHIP_QUERY_MARKERS = (
+        "erasmus",
+        "uluslararasi",
+        "exchange",
+        "degisim",
+        "mevlana",
+        "farabi",
+    )
+    _SCHOLARSHIP_QUERY_MARKERS = ("burs", "hibe", "scholarship", "grant")
+    _EXCHANGE_FINANCE_SOURCE_MARKERS = (
+        "erasmus",
+        "hibe",
+        "grant",
+        "degisim",
+        "hareketlilik",
+        "ulusal ajans",
+    )
+    _POLICY_QUERY_MARKERS = (
+        "kesilir mi",
+        "gerekir mi",
+        "zorunda miyim",
+        "yatay gecis",
+        "kurum",
+        "bildiri",
+        "harc",
+        "ucret",
     )
 
     def __init__(
@@ -107,7 +135,31 @@ class ScholarshipAgent(BaseSpecialistAgent):
 
     def _is_personal_query(self, query_text: str) -> bool:
         lowered = normalize_text(query_text)
+        if any(keyword in lowered for keyword in self._POLICY_QUERY_MARKERS):
+            return False
         return any(keyword in lowered for keyword in self._PERSONAL_KEYWORDS)
+
+    def _filter_results_for_answer(
+        self,
+        query_text: str,
+        results: Sequence[dict],
+    ) -> list[dict]:
+        filtered = super()._filter_results_for_answer(query_text, results)
+        lowered_query = normalize_text(query_text)
+        if not (
+            any(marker in lowered_query for marker in self._INTERNATIONAL_SCHOLARSHIP_QUERY_MARKERS)
+            and any(marker in lowered_query for marker in self._SCHOLARSHIP_QUERY_MARKERS)
+        ):
+            return filtered
+
+        relevant: list[dict] = []
+        for item in filtered:
+            source_text = normalize_text(
+                f"{item.get('source', '')} {item.get('content', '')[:1600]}"
+            )
+            if any(marker in source_text for marker in self._EXCHANGE_FINANCE_SOURCE_MARKERS):
+                relevant.append(item)
+        return relevant
 
     def _format_scholarship_snapshot(self, snapshot: dict) -> str:
         scholarship = snapshot.get("scholarship")

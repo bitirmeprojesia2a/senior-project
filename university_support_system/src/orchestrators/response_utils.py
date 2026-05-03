@@ -31,11 +31,19 @@ GENERATION_MODE_LABELS = {
     "kural": "Kural",
 }
 ANNOUNCEMENT_SURFACE_DEPARTMENT = "announcement"
+EVENT_SURFACE_DEPARTMENT = "event"
 _GLOBAL_SYNTHESIS_ALLOWED_ERRORS = frozenset(
     {
         "department_context_required",
         "student_type_context_required",
     }
+)
+_NO_INFO_RESPONSE_PATTERNS = (
+    "bu konuda elimde yeterli kaynak bulunamadi",
+    "bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi",
+    "bu konuda elimdeki kaynaklarda net bilgi bulunamadi",
+    "verilen kaynaklarda bu soruyu dogrudan yanitlayan net bir bilgi bulunmuyor",
+    "elimizdeki kaynaklarda bu konuda yeterli bilgi yok",
 )
 
 
@@ -77,8 +85,14 @@ def compact_text(value: str, *, max_len: int = 420) -> str:
 # CJK Unified Ideographs + Hiragana + Katakana
 _CJK_RE = re.compile(r'[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff00-\uffef]+')
 
+# Hangul (Korece) karakterler — kucuk LLM'ler bazen Korece token uretir
+_HANGUL_RE = re.compile(r'[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]+')
+
 # Kiril alfabesi
 _CYRILLIC_RE = re.compile(r'[\u0400-\u04ff\u0500-\u052f]+')
+
+# Arapça/IBranice — LLM bazen bu bloklardan da karakter sizdirir
+_ARABIC_HEBREW_RE = re.compile(r'[\u0590-\u05ff\u0600-\u06ff\u0750-\u077f]+')
 
 # Yaygin Ingilizce kelimeler ve Turkce karsiliklari
 _EN_TO_TR: dict[str, str] = {
@@ -125,12 +139,20 @@ _EN_TO_TR: dict[str, str] = {
     "informatie": "bilgi",
     "details": "detaylar",
     "detail": "detay",
+    "processi": "sureci",
+    "applicants": "basvuru sahipleri",
+    "applicantsi": "basvuru sahibi",
+    "different": "farkli",
+    "same": "ayni",
+    "necessario": "gerekli",
+    "podria": "",
     "requirements": "kosullar",
     "conditions": "kosullar",
     "overview": "ozet",
     "timeline": "takvim",
     "approval": "onay",
     "approved": "onaylandi",
+    "certain": "belirli",
     "siguientes": "asagidaki",
 }
 
@@ -156,9 +178,11 @@ _ENGLISH_LINE_HINTS = frozenset(
 
 def _strip_foreign_words(text: str) -> str:
     """Cevaptaki yabanci dil kalintilarini temizler."""
-    # 1) CJK ve Kiril iceren kelimeleri/kalintileri sil
+    # 1) CJK, Hangul, Kiril, Arapca/Ibranice iceren kelimeleri/kalintileri sil
     text = _CJK_RE.sub('', text)
+    text = _HANGUL_RE.sub('', text)
     text = _CYRILLIC_RE.sub('', text)
+    text = _ARABIC_HEBREW_RE.sub('', text)
 
     # 2) Yaygin Ingilizce kelimeleri Turkce karsiliklariyla degistir.
 
@@ -176,9 +200,12 @@ def _strip_foreign_words(text: str) -> str:
         text = pattern.sub(lambda match: _apply_case_style(match, tr_word), text)
 
     text = re.sub(r"\bonce_online\b", "once online", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bsucces(?:s)?ini\b", "basarisini", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bsucces(?:s)?i\b", "basarisi", text, flags=re.IGNORECASE)
     text = re.sub(r"\badem(?:as|\u00e1s)\b", "ayrica", text, flags=re.IGNORECASE)
     text = re.sub(r"\btambi(?:en|\u00e9n)\b", "ayrica", text, flags=re.IGNORECASE)
     text = re.sub(r"\bpor favor\b", "lutfen", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bnecessario\s+podria\b", "gerekebilir", text, flags=re.IGNORECASE)
 
     # 3) Turkce'ye ait olmayan aksanli kelimeleri temizle
     #    Ornek: "konkrét" → "konkret", "éxito" → sil
@@ -239,6 +266,56 @@ def _strip_foreign_words(text: str) -> str:
     text = re.sub(r'\bademás\b', 'ayrica', text, flags=re.IGNORECASE)
     text = re.sub(r'\btambién\b', 'ayrica', text, flags=re.IGNORECASE)
     text = re.sub(r'\bpor favor\b', 'lutfen', text, flags=re.IGNORECASE)
+    # Ingilizce kelime sizintilari — LLM bazen Turkce cumle icinde Ingilizce kelimeler birakir
+    text = re.sub(r'\b-contrib\b', '-katki payi', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bcontrib\b', 'katki payi', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bhowever\b', 'ancak', text, flags=re.IGNORECASE)
+    text = re.sub(r'\btherefore\b', 'bu nedenle', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bfurthermore\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bmoreover\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bnevertheless\b', 'buna ragmen', text, flags=re.IGNORECASE)
+    text = re.sub(r'\baccordingly\b', 'buna gore', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bconsequently\b', 'sonuc olarak', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bspecifically\b', 'ozel olarak', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bapproximately\b', 'yaklasik', text, flags=re.IGNORECASE)
+    text = re.sub(r'\brespectively\b', 'sirasiyla', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bregarding\b', 'ilgili', text, flags=re.IGNORECASE)
+    text = re.sub(r'\badditionally\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bcontribution\b', 'katki', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bexcluding\b', 'haric', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bincluding\b', 'dahil', text, flags=re.IGNORECASE)
+    # Almanca kelime sizintilari — kucuk LLM'ler bazen Almanca kelimeler de birakir
+    text = re.sub(r'\bwichtig\b', 'onemli', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bbeachten\b', 'dikkat et', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bbitte\b', 'lutfen', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bjedoch\b', 'ancak', text, flags=re.IGNORECASE)
+    text = re.sub(r'\baußerdem\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bdaher\b', 'bu nedenle', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bsomit\b', 'boylece', text, flags=re.IGNORECASE)
+    text = re.sub(r'\baber\b', 'fakat', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bauch\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bnur\b', 'sadece', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bnoch\b', 'hala', text, flags=re.IGNORECASE)
+    # Hintce/Devanagari karakter sizintisi — kucuk LLM'ler bazen Hintce karakter uretir
+    text = re.sub(r'[\u0900-\u097F]+', '', text)
+
+    # 6) Uydurma/yabanci token kalintilari — LLM bazen anlamsiz birlesik kelimeler uretir
+    text = re.sub(r'\bdentroslar\w*\b', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpossibilite\w*\b', 'olasilik', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bkonkret\b', 'somut', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bbekannt\b', 'bilinen', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bcontinuation\b', 'devam', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bverificar\w*\b', 'dogrulama', text, flags=re.IGNORECASE)
+    text = re.sub(r'\binformación\b', 'bilgi', text, flags=re.IGNORECASE)
+    text = re.sub(r'\brequerido\b', 'gerekli', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpuede\b', 'olabilir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bdeber\w*\b', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bespec\w+\b', '', text, flags=re.IGNORECASE)  # Ispanyolca "especificar" vb.
+    # "tonabilir" — LLM bazen "tanınabilir" yerine "tonabilir" uretir
+    text = re.sub(r'\btonabilir\b', 'taninabilir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\btonabilir\w*\b', 'taninabilir', text, flags=re.IGNORECASE)
+    # Korece "필요" (gerekli) — en sik rastlanan Hangul token
+    text = re.sub(r'필요', '', text)
 
     return text.strip()
 
@@ -246,6 +323,72 @@ def _strip_foreign_words(text: str) -> str:
 def clean_final_answer(answer: str) -> str:
     """LLM veya birlesik cevaptan kalan basit bicim artefaktlarini temizler."""
     cleaned = answer.replace("**", "").strip()
+    cleaned = re.sub(r"(?im)^\s*Merhaba,?\s*$", "", cleaned)
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Siz,?\s*)?.{0,180}?(?:bilgi almak istiyorsunuz|hakkinda bilgi ariyorsunuz|hakkinda bilgi almak istiyorsunuz)\.?\s*$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?ims)^\s*(?:YANITLAMA STRATEJISI|KAYNAK DOGRULAMA KURALLARI|DEPARTMAN SINIRI KURALLARI)\s*:\s*(?:\n\s*(?:[-*]|\d+[.)]).*?)+(?=\n\s*\n|\Z)",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:YANITLAMA STRATEJISI|KAYNAK DOGRULAMA KURALLARI|DEPARTMAN SINIRI KURALLARI)\s*:?\s*$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Benchmark|Test)\s*,\s*",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:#+\s*)?(?:Benchmark|Test)\s*:?\s*$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Benchmark|Test)\s*:\s*",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Soru|Sorulan soru|Kullanici sorusu)\s*:\s*.*?$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Yanit|YanÄ±t|Cevap|Sorunun cevabi|Sorunun cevabÄ±)\s*:\s*",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Kaynak Bilgisi|Belge kaynaklari|Kaynak DoÄŸrulama|Kaynak Dogrulama)\s*:\s*.*?$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:#+\s*)?(?:Kaynak Bilgisi|Bilgi Kaynagi|Bilgi Kaynağı|Kaynak Izlentileri|Kaynak İzlentileri)\s*:?\s*$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:KAYNAK|Kanit|Kanıt)\s+\d+\s*:\s*.*?$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*Sizden gelen sorulara verilecek yaniti hazirlamaya calisacagim\..*?$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*Sira geldi soruya yanit verme islemine baslamak\s*:\s*",
+        "",
+        cleaned,
+    )
     cleaned = re.sub(
         r"^(?:Test,\s*)?Sen\s+Ondokuz\s+Mayis\s+Universitesi.*?(?:\n\s*\n|$)",
         "",
@@ -290,12 +433,149 @@ def clean_final_answer(answer: str) -> str:
         cleaned,
     )
     cleaned = re.sub(
+        r"(?im)^.*?\bcumle bulunamad[ıi]\.?\s*(?:.*?\byonlendir\.?)?\s*$",
+        "Bu konuda elimdeki kaynaklarda net bilgi bulunamadi.",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)\s*(?:Ogrenci Isleri|Akademik Programlar|Finans)'?ne yonlendir\.?",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
         r"(?im)^\s*(?:Kaynaklar|Kanitlar|Sonuc)\s*:\s*",
         "",
         cleaned,
     )
+    cleaned = re.sub(
+        r"(?im)^\s*(?:Bu cevap|Bu yanit),?\s+OMU.*?i[cÃ§]in\s+uretilmistir\.?\s*$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*Kesin yanit icin kaynaklardan devam ediyoruz\s*:?\s*$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(?im)^\s*Yukar[Äıi]daki bilgilendirmeler dogrultusunda,?\s*(?:OMU ogrencileri icin)?\s*:?\s*$",
+        "",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"\bdevama devam zorunlulugu\b",
+        "devam zorunlulugu",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\bdevam zorunlulugunuz degmez\b",
+        "devam zorunlulugunuz degismez",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\bonay[ıi]gereken\b",
+        "onayi gereken",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\bonay(?:\u0131|i)gereken\b",
+        "onayi gereken",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = _strip_foreign_words(cleaned)
+
+    # Intra-line repetition loop detection:
+    # LLMs (especially small ones) sometimes fall into generation loops
+    # where the same phrase repeats many times within a single line.
+    # Detect 4+ word phrases repeating 3+ times and truncate.
+    def _truncate_repetition_loops(text: str) -> str:
+        out_lines: list[str] = []
+        for line in text.split("\n"):
+            if len(line) > 200:
+                words = line.split()
+                for ngram_size in (6, 5, 4):
+                    if len(words) < ngram_size * 3:
+                        continue
+                    for start in range(len(words) - ngram_size * 3 + 1):
+                        ngram = " ".join(words[start:start + ngram_size])
+                        # Count occurrences of this ngram in the rest of the line
+                        rest = " ".join(words[start:])
+                        count = rest.count(ngram)
+                        if count >= 3:
+                            # Truncate: keep up to just after the first occurrence
+                            first_end = start + ngram_size
+                            line = " ".join(words[:first_end])
+                            words = line.split()
+                            break
+                    else:
+                        continue
+                    break
+            out_lines.append(line)
+        return "\n".join(out_lines)
+
+    cleaned = _truncate_repetition_loops(cleaned)
+
+    # Sentence deduplication: remove exact duplicate lines
+    lines = cleaned.split("\n")
+    seen_normalized: set[str] = set()
+    deduped_lines: list[str] = []
+    for line in lines:
+        from src.core.text_normalization import normalize_text as _norm
+        normalized_line = _norm(line.strip())
+        # Keep empty lines and very short lines (formatting)
+        if not normalized_line or len(normalized_line) < 15:
+            deduped_lines.append(line)
+            continue
+        if normalized_line in seen_normalized:
+            continue
+        seen_normalized.add(normalized_line)
+        deduped_lines.append(line)
+
+    # Cross-line structural repetition: lines sharing the same
+    # 5-word prefix pattern are capped at 2 occurrences max.
+    _prefix_counts: dict[str, int] = {}
+    _struct_deduped: list[str] = []
+    for line in deduped_lines:
+        words = line.split()
+        if len(words) >= 5:
+            prefix = " ".join(words[:5]).lower()
+            count = _prefix_counts.get(prefix, 0)
+            if count >= 2:
+                continue
+            _prefix_counts[prefix] = count + 1
+        _struct_deduped.append(line)
+    cleaned = "\n".join(_struct_deduped)
+
+    # Remove empty markdown headings (e.g. "### " with nothing after)
+    cleaned = re.sub(r"(?m)^#+\s*$", "", cleaned)
+
+    # Remove repeated consecutive headings
+    cleaned = re.sub(r"(?m)^(#+\s+.+)\n\1$", r"\1", cleaned)
+
+    no_info_line_re = re.compile(
+        r"(?im)^\s*(?:Bu konuda elimdeki kaynaklarda net bilgi bulunamad[ıi]\.?|"
+        r"Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamad[ıi]\.?|"
+        r"Cevap bulunamad[ıi]\.?)\s*$"
+    )
+    non_no_info_text = no_info_line_re.sub("", cleaned).strip()
+    if non_no_info_text and len(normalize_text(non_no_info_text).split()) >= 8:
+        cleaned = no_info_line_re.sub("", cleaned)
+
+    cleaned = cleaned.rstrip()
+    if not re.search(r"[.!?:)]\s*$", cleaned) and re.search(
+        r"(?i)\b(?:i[cç]in|ve|veya|ayrica|fakat|ise|olarak|olan)\s*$",
+        cleaned,
+    ):
+        sentences = re.split(r"(?<=[.!?])\s+", cleaned)
+        if len(sentences) > 1:
+            cleaned = " ".join(sentences[:-1]).strip()
+
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned
 
 
@@ -314,7 +594,13 @@ def response_eligible_for_global_synthesis(response: DepartmentResponse) -> bool
     """Return whether a response is safe and useful to include in global synthesis."""
     if not response.answer.strip() or is_announcement_response(response):
         return False
-    return bool(response.success) or response.error in _GLOBAL_SYNTHESIS_ALLOWED_ERRORS
+    if bool(response.success) or response.error in _GLOBAL_SYNTHESIS_ALLOWED_ERRORS:
+        return True
+    # Kaynak bulunmus ama dusuk skor nedeniyle kural-tabanli "bilgi bulunamadi"
+    # donmus cevaplari da senteze dahil et — LLM kaynakları degerlendirsin.
+    if response.sources:
+        return True
+    return False
 
 
 def surface_department_label(response: DepartmentResponse) -> str:
@@ -363,15 +649,38 @@ def is_low_confidence_rag_response(response: DepartmentResponse) -> bool:
     )
 
 
+def is_no_info_response(response: DepartmentResponse) -> bool:
+    """Kaynak olsa bile kullaniciya fiilen bilgi vermeyen fallback cevaplarini tanir."""
+    if is_announcement_response(response):
+        return False
+    normalized_answer = normalize_text(response_core_answer(response))
+    return any(pattern in normalized_answer for pattern in _NO_INFO_RESPONSE_PATTERNS)
+
+
 def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list[DepartmentResponse]:
     """Guclu cevaplar varken cok dusuk skorlu yanitlari finalden ayiklar."""
     if len(responses) < 2:
         return responses
 
+    announcement_responses = [
+        response for response in responses if is_announcement_response(response)
+    ]
+    non_announcement = [
+        response for response in responses if not is_announcement_response(response)
+    ]
+    if announcement_responses and non_announcement and all(
+        is_no_info_response(response) for response in non_announcement
+    ):
+        return announcement_responses
+
     strong_non_announcement = [
         response
         for response in responses
-        if not is_announcement_response(response) and not is_low_confidence_rag_response(response)
+        if (
+            not is_announcement_response(response)
+            and not is_low_confidence_rag_response(response)
+            and not is_no_info_response(response)
+        )
     ]
     if not strong_non_announcement:
         return responses
@@ -379,9 +688,13 @@ def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list
     filtered = [
         response
         for response in responses
-        if is_announcement_response(response) or not is_low_confidence_rag_response(response)
+        if (
+            not is_announcement_response(response)
+            and not is_low_confidence_rag_response(response)
+            and not is_no_info_response(response)
+        )
     ]
-    return filtered or responses
+    return filtered or strong_non_announcement or responses
 
 
 def format_source_summary_from_responses(responses: list[DepartmentResponse]) -> str:
@@ -439,13 +752,16 @@ def append_source_summary_for_sources(answer: str, sources: list[RAGSource]) -> 
 
     labels: list[str] = []
     seen: set[str] = set()
-    for source in sources:
+    for source in sources[:5]:
         label = _format_source_label(source)
         if label and label not in seen:
             seen.add(label)
             labels.append(f"- {label}")
     if not labels:
         return answer
+    extra = len(sources) - 5
+    if extra > 0:
+        labels.append(f"- ... ve {extra} kaynak daha")
     return f"{answer.rstrip()}\n\nKaynak Ozeti:\n{chr(10).join(labels)}"
 
 
@@ -492,6 +808,12 @@ def _format_source_label(source: RAGSource) -> str | None:
         title = metadata.get("title") or compact_text(source.content, max_len=80)
         url = metadata.get("source_url")
         return f"Duyuru kaydi: {title}" + (f" ({url})" if url else "")
+    if record_type == "event":
+        link_type = str(metadata.get("link_type") or "").strip().lower()
+        label = metadata.get("label") or metadata.get("title") or compact_text(source.content, max_len=80)
+        url = metadata.get("source_url") or metadata.get("url")
+        prefix = "Etkinlik eki" if link_type == "attachment" else "Etkinlik kaydi"
+        return f"{prefix}: {label}" + (f" ({url})" if url else "")
 
     filename = (
         metadata.get("display_source")
@@ -559,6 +881,8 @@ def _infer_non_document_source_label(response: DepartmentResponse) -> str | None
         return None
 
     if response.department == Department.ACADEMIC_PROGRAMS:
+        if isinstance(db_data, dict) and db_data.get("query_type") == "schedule_lookup":
+            return "Veritabani kaydi: ders programi"
         if isinstance(db_data, dict) and (
             "prerequisite_groups" in db_data or "course_code" in db_data
         ):
@@ -591,9 +915,18 @@ def compose_department_answers(responses: list[DepartmentResponse]) -> str:
     sections: list[str] = []
     include_contact = False
     meaningful = [response for response in responses if response.answer.strip()]
+    has_strong_rag = any(
+        (
+            not is_announcement_response(r)
+            and not is_low_confidence_rag_response(r)
+            and not is_no_info_response(r)
+        )
+        for r in meaningful
+    )
     meaningful.sort(
         key=lambda response: (
-            1 if is_announcement_response(response) else 0,
+            1 if is_announcement_response(response) and has_strong_rag else 0,
+            0 if is_announcement_response(response) else 1,
             DEPARTMENT_DISPLAY_ORDER.get(response.department, 99),
         )
     )

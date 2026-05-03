@@ -1,0 +1,14 @@
+services:
+  retrieval-service: &a2a-gpu-runtime
+    environment:
+      EMBEDDING_DEVICE: ${A2A_GPU_EMBEDDING_DEVICE:-cuda}
+      RERANKER_DEVICE: ${A2A_GPU_RERANKER_DEVICE:-cuda}
+      NVIDIA_VISIBLE_DEVICES: ${A2A_NVIDIA_VISIBLE_DEVICES:-all}
+      NVIDIA_DRIVER_CAPABILITIES: ${A2A_NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: ${A2A_GPU_DRIVER:-nvidia}
+              count: ${A2A_GPU_COUNT:-1}
+              capabilities: [gpu]

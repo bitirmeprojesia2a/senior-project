@@ -35,6 +35,12 @@ def build_department_request_task(
         conversation_is_follow_up=bool(metadata.get("conversation_is_follow_up", False)),
         conversation_topic=metadata.get("conversation_topic"),
         conversation_source_refs=list(metadata.get("conversation_source_refs") or []),
+        force_llm_synthesis=bool(metadata.get("force_llm_synthesis", False)),
+        query_complexity=metadata.get("query_complexity"),
+        is_personal_query=bool(metadata.get("is_personal_query", False)),
+        trace_id=metadata.get("trace_id"),
+        span_id=metadata.get("span_id"),
+        parent_span_id=metadata.get("parent_span_id"),
     )
     task = build_query_task(payload)
     if disable_specialist_llm:
@@ -42,9 +48,15 @@ def build_department_request_task(
     for key in (
         "original_query",
         "resolved_query",
+        "force_llm_synthesis",
+        "query_complexity",
+        "is_personal_query",
         "conversation_is_follow_up",
         "conversation_topic",
         "conversation_source_refs",
+        "trace_id",
+        "span_id",
+        "parent_span_id",
     ):
         if key in metadata:
             task.metadata[key] = metadata[key]
@@ -58,16 +70,56 @@ def build_announcement_request_task(
     routing_reason: str | None,
     departments: list[str] | None = None,
     faculty: str | None = None,
+    unit_name: str | None = None,
+    trace_id: str | None = None,
+    span_id: str | None = None,
+    parent_span_id: str | None = None,
 ):
     task = build_query_task(
         A2AQueryPayload(
             query_text=query,
             context_id=context_id,
             routing_reason=routing_reason,
+            trace_id=trace_id,
+            span_id=span_id,
+            parent_span_id=parent_span_id,
         )
     )
     if departments:
         task.metadata["departments"] = departments
     if faculty:
         task.metadata["faculty"] = faculty
+    if unit_name:
+        task.metadata["unit_name"] = unit_name
+    return task
+
+
+def build_event_request_task(
+    *,
+    query: str,
+    context_id: str,
+    routing_reason: str | None = None,
+    faculty: str | None = None,
+    unit_name: str | None = None,
+    limit: int | None = None,
+    trace_id: str | None = None,
+    span_id: str | None = None,
+    parent_span_id: str | None = None,
+):
+    task = build_query_task(
+        A2AQueryPayload(
+            query_text=query,
+            context_id=context_id,
+            routing_reason=routing_reason,
+            trace_id=trace_id,
+            span_id=span_id,
+            parent_span_id=parent_span_id,
+        )
+    )
+    if faculty:
+        task.metadata["faculty"] = faculty
+    if unit_name:
+        task.metadata["unit_name"] = unit_name
+    if limit is not None:
+        task.metadata["limit"] = int(limit)
     return task

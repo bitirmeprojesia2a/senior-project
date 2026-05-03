@@ -55,6 +55,19 @@ class QueryProfiler:
     def set_attribute(self, key: str, value: Any) -> None:
         self._attributes[key] = value
 
+    def get_attribute(self, key: str, default: Any = None) -> Any:
+        return self._attributes.get(key, default)
+
+    def append_attribute_list(self, key: str, value: Any) -> None:
+        current = self._attributes.get(key)
+        if current is None:
+            self._attributes[key] = [value]
+            return
+        if not isinstance(current, list):
+            current = [current]
+            self._attributes[key] = current
+        current.append(value)
+
     def start(self, name: str, **meta: Any) -> int:
         parent = None
         if self._stack:

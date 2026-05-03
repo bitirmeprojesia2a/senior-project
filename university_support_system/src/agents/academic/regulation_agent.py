@@ -2,18 +2,28 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from src.agents.academic.regulation_utils import (
     build_regulation_intro,
     pick_preferred_regulation_result,
-    should_skip_regulation_llm_synthesis,
 )
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.core.constants import Department, TaskType
+from src.core.text_normalization import normalize_text
 from src.llm.prompt_templates import REGULATION_AGENT_SYSTEM_PROMPT
 
 
 class RegulationAgent(BaseSpecialistAgent):
     """Yonetmelik, yonerge ve mevzuat uzman ajani."""
+
+    _SIMPLE_PEDAGOGICAL_TRANSCRIPT_MARKERS = (
+        "pedagojik formasyon",
+        "formasyon ders",
+        "transkript",
+        "ortalamaya dahil",
+        "mezuniyet ortalamas",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -30,14 +40,23 @@ class RegulationAgent(BaseSpecialistAgent):
             **kwargs,
         )
 
-    def _should_skip_llm_synthesis(
+    def _should_force_llm_synthesis(
         self,
         query_text: str,
-        results: list[dict] | tuple[dict, ...],
+        results: Sequence[dict],
         *,
         db_context: str | None = None,
     ) -> bool:
-        return should_skip_regulation_llm_synthesis(query_text, results)
+        lowered = normalize_text(query_text)
+        if "cap" in lowered or "cift anadal" in lowered or "cift ana dal" in lowered:
+            return True
+        if "onlisans" in lowered or "on lisans" in lowered:
+            return True
+        return super()._should_force_llm_synthesis(
+            query_text,
+            results,
+            db_context=db_context,
+        )
 
     def _build_source_only_answer(
         self,
@@ -46,6 +65,22 @@ class RegulationAgent(BaseSpecialistAgent):
         *,
         db_context: str | None = None,
     ) -> str:
+        lowered = normalize_text(query_text)
+        if (
+            ("cap" in lowered or "cift anadal" in lowered or "cift ana dal" in lowered)
+            and any(marker in lowered for marker in ("onlisans", "on lisans", "iki yillik"))
+        ):
+            prefix = f"{db_context}\n\n" if db_context else ""
+            return (
+                prefix
+                + "Kaynakta CAP, ana dal lisans programını üstün başarıyla yürüten öğrencilerin "
+                "ikinci bir dalda lisans diploması almak üzere öğrenim görmesi olarak tanımlanır. "
+                "Bu nedenle kaynak bilgisinden hareketle önlisans/iki yıllık program öğrencileri için "
+                "ÇAP uygun görünmüyor; kesin başvuru uygunluğu için ilgili birimin ÇAP/YAP duyurusu ve "
+                "danışmanlığı kontrol edilmelidir.\n\n"
+                "(Kaynak: yonerge_cift_anadal_yandal.pdf)"
+            )
+
         preferred = self._pick_preferred_result(query_text, results)
         if preferred is None:
             return super()._build_source_only_answer(query_text, results, db_context=db_context)
@@ -62,3 +97,11 @@ class RegulationAgent(BaseSpecialistAgent):
         results: list[dict] | tuple[dict, ...],
     ) -> dict | None:
         return pick_preferred_regulation_result(query_text, results)
+
+    def _should_enrich_results(self, query_text: str, results: Sequence[dict]) -> bool:
+        lowered = query_text.casefold()
+        if "formasyon" in lowered and any(
+            marker in lowered for marker in self._SIMPLE_PEDAGOGICAL_TRANSCRIPT_MARKERS
+        ):
+            return False
+        return super()._should_enrich_results(query_text, results)

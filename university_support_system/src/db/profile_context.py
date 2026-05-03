@@ -162,7 +162,7 @@ class ProfileContextService:
                 row.student_number = student_number or row.student_number
                 row.department = department
                 row.faculty = faculty
-                if is_verified:
+                if is_verified and student_type is not None:
                     row.student_type = student_type
                 else:
                     row.student_type = student_type or row.student_type
@@ -188,7 +188,7 @@ class ProfileContextService:
             student_number=auth_context.student_number,
             department=auth_context.student_department,
             faculty=faculty or auth_context.student_faculty,
-            student_type=None,
+            student_type=auth_context.student_type,
             is_verified=True,
             student_db_id=auth_context.student_db_id,
         )

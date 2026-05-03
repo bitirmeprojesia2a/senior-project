@@ -32,6 +32,21 @@ class Department(str, Enum):
         """Türkçe görüntüleme adı."""
         return get_department_config(self).display_name
 
+
+class Capability(str, Enum):
+    """Departman disi ama dagitik agent olarak calisabilen yetenekler."""
+
+    ANNOUNCEMENT = "announcement"
+    EVENT = "event"
+
+    @property
+    def display_name(self) -> str:
+        if self is Capability.ANNOUNCEMENT:
+            return "Duyurular"
+        if self is Capability.EVENT:
+            return "Etkinlikler"
+        return self.value
+
 @dataclass(frozen=True)
 class DepartmentConfig:
     """Departmanın tüm çekirdek tanım bilgisini tek yerde tutar."""
@@ -252,6 +267,7 @@ class AgentRole(str, Enum):
     MAIN_ORCHESTRATOR = "main_orchestrator"
     DEPARTMENT_ORCHESTRATOR = "department_orchestrator"
     SPECIALIST_AGENT = "specialist_agent"
+    CAPABILITY_AGENT = "capability_agent"
 
 
 # NOT: MessageRole (user/agent) artık a2a-sdk'dan gelir.
@@ -274,10 +290,6 @@ class Priority(int, Enum):
 ROUTING_HIGH_CONFIDENCE_THRESHOLD = 0.7
 ROUTING_LOW_CONFIDENCE_THRESHOLD = 0.4
 KEYWORD_MATCH_THRESHOLD = 0.6
-
-# RAG direkt yanıt eşikleri (LLM bypass)
-RAG_DIRECT_SCORE_THRESHOLD = 0.45
-RAG_DIRECT_MIN_CONTENT_LEN = 60
 
 # Kuyruk ayarları
 # Not: Bu sabitler planlı veya kısmi kuyruk entegrasyonları için korunur.

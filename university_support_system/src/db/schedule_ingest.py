@@ -1,22 +1,31 @@
 """Helpers for ingesting structured course schedule rows from document sources.
 
-Current primary source type is local PDF timetable documents parsed with
-``pdfplumber``. HTML/table sources can be added later with a separate adapter
-without changing the database contract defined here.
+Current primary source types are local PDF timetable documents parsed with
+``pdfplumber`` and XLSX workbooks parsed through the standard OOXML structure.
+HTML/table sources can be added later with a separate adapter without changing
+the database contract defined here.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta
+from functools import lru_cache
+import json
 from pathlib import Path
 import re
 from typing import Any, Iterable
+import xml.etree.ElementTree as ET
+from zipfile import ZipFile
 
 import pdfplumber
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from src.core.text_normalization import collapse_whitespace, normalize_text
+from src.core.text_normalization import (
+    collapse_whitespace,
+    iter_alias_matches_longest_first,
+    normalize_text,
+)
 from src.db.models import CourseScheduleSlot
 
 _ACADEMIC_YEAR_RE = re.compile(r"(20\d{2})\s*[-_/]\s*(20\d{2})")
@@ -82,6 +91,120 @@ _NON_WEEKLY_PROGRAM_MARKERS = (
     "dersin kodu",
     "course type of course name",
 )
+_XLSX_NS = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+_SCHEDULE_SOURCE_OVERRIDES_PATH = (
+    Path(__file__).resolve().parents[2] / "data" / "metadata" / "schedule_source_overrides.json"
+)
+_COURSE_NAME_MARKERS = (
+    "akademik",
+    "arastirma",
+    "armoni",
+    "asa",
+    "baski",
+    "bilisim",
+    "bati",
+    "desen",
+    "ders",
+    "egitim",
+    "felsefe",
+    "fotograf",
+    "grafik",
+    "heykel",
+    "koro",
+    "muz",
+    "muzik",
+    "muze",
+    "okul",
+    "ork",
+    "ogret",
+    "perspektif",
+    "resim",
+    "sanat",
+    "sec",
+    "seramik",
+    "sinif",
+    "tas",
+    "tasarim",
+    "teori",
+    "temel",
+    "thm",
+    "tarih",
+    "tsm",
+    "turk",
+    "uyg",
+    "yabanci",
+    "yonet",
+)
+_INVALID_DEPARTMENT_MARKERS = (
+    "ders program",
+    "xlsx",
+    "pdf",
+    "docx",
+    "guncel",
+    "gununcel",
+    "derstir",
+    "bu ders",
+    "bilinmiyor",
+)
+_FILENAME_DEPARTMENT_STOPWORDS = {
+    "2022", "2023", "2024", "2025", "2026", "20", "21", "22", "23", "24", "25", "26",
+    "bahar", "guz", "donemi", "yariyili", "egitim", "ogretim", "yili",
+    "ders", "program", "programi", "haftalik", "lisans", "lisansustu",
+    "guncel", "yeni", "son", "r0", "docx", "xlsx", "pdf", "abd",
+}
+_FILENAME_DEPARTMENT_ALIASES = {
+    "okl": "Okul Oncesi Ogretmenligi",
+    "sinif egt": "Sinif Ogretmenligi",
+    "sinif egitimi": "Sinif Ogretmenligi",
+    "ilkmat": "Matematik Ogretmenligi",
+    "mat": "Matematik Ogretmenligi",
+    "fizik": "Fizik",
+    "biyoloji": "Biyoloji Egitimi",
+    "fen": "Fen Bilgisi Ogretmenligi",
+}
+
+
+@lru_cache(maxsize=1)
+def _load_schedule_source_overrides() -> dict[str, dict[str, Any]]:
+    if not _SCHEDULE_SOURCE_OVERRIDES_PATH.exists():
+        return {}
+
+    with _SCHEDULE_SOURCE_OVERRIDES_PATH.open("r", encoding="utf-8") as handle:
+        raw = json.load(handle)
+
+    sources = raw.get("sources", raw) if isinstance(raw, dict) else {}
+    if not isinstance(sources, dict):
+        return {}
+
+    overrides: dict[str, dict[str, Any]] = {}
+    for source_name, value in sources.items():
+        if isinstance(source_name, str) and isinstance(value, dict):
+            overrides[source_name] = value
+    return overrides
+
+
+def _source_override_for(path: Path) -> dict[str, Any]:
+    overrides = _load_schedule_source_overrides()
+    return overrides.get(path.name) or overrides.get(path.stem) or {}
+
+
+def _merge_source_override(
+    path: Path,
+    *,
+    academic_year: str | None,
+    term: str | None,
+    department: str | None,
+    source_url: str | None,
+) -> tuple[str | None, str | None, str | None, str | None, bool]:
+    override = _source_override_for(path)
+    skip = bool(override.get("skip"))
+    return (
+        academic_year if academic_year is not None else override.get("academic_year"),
+        term if term is not None else override.get("term"),
+        department if department is not None else override.get("department"),
+        source_url if source_url is not None else override.get("source_url"),
+        skip,
+    )
 
 
 def _clean_cell(value: object | None) -> str:
@@ -360,6 +483,27 @@ def _extract_course_fields_from_multiline_cell(
     )
 
 
+def _extract_course_fields_from_loose_matrix_cell(
+    value: object | None,
+) -> dict[str, str | None] | None:
+    text = _clean_cell(value).strip()
+    if not text or text in {'"', "'", "-"}:
+        return None
+    if len(text) <= 2:
+        return None
+
+    fields = _extract_course_fields(text)
+    if fields is None:
+        return None
+    if fields["course_code"]:
+        return fields
+
+    normalized = normalize_text(fields["course_name"] or text)
+    if any(marker in normalized for marker in _COURSE_NAME_MARKERS):
+        return fields
+    return None
+
+
 def _trim_department_candidate(candidate: str) -> str:
     cleaned = collapse_whitespace(candidate).strip(" -_/")
     split_pattern = re.compile(
@@ -373,6 +517,66 @@ def _trim_department_candidate(candidate: str) -> str:
             break
         cleaned = parts[-1].strip(" -_/")
     return cleaned
+
+
+def _looks_like_plausible_department(value: str | None) -> bool:
+    """Reject filename fragments and explanatory sentences as department names."""
+    cleaned = collapse_whitespace(value)
+    if not cleaned or len(cleaned) < 3 or len(cleaned) > 120:
+        return False
+
+    normalized = normalize_text(cleaned)
+    if any(marker in normalized for marker in _INVALID_DEPARTMENT_MARKERS):
+        return False
+    if "_" in cleaned or "\\" in cleaned or "/" in cleaned:
+        return False
+    if "." in cleaned and not any(marker in normalized for marker in ("ogretmenligi", "muhendisligi")):
+        return False
+
+    alpha_count = sum(1 for char in normalized if char.isalpha())
+    digit_count = sum(1 for char in normalized if char.isdigit())
+    if alpha_count < 3:
+        return False
+    if digit_count and digit_count >= alpha_count:
+        return False
+    if re.search(r"\d{3,}", normalized):
+        return False
+
+    return True
+
+
+def _infer_department_from_filename(path: Path) -> str | None:
+    """Extract a plausible department phrase from descriptive schedule filenames."""
+    normalized = normalize_text(path.stem)
+    normalized = re.sub(r"[_\-.]+", " ", normalized)
+    normalized = re.sub(r"\b20\d{2}\b", " ", normalized)
+    normalized = re.sub(r"\b\d{2}\d{2}\b", " ", normalized)
+    normalized = re.sub(r"\b\d{2}_?\d{2}\b", " ", normalized)
+    tokens = [
+        token
+        for token in normalized.split()
+        if token and token not in _FILENAME_DEPARTMENT_STOPWORDS and not token.isdigit()
+    ]
+    if not tokens:
+        return None
+
+    phrase = " ".join(tokens)
+    alias_groups = (
+        (replacement, (marker,))
+        for marker, replacement in _FILENAME_DEPARTMENT_ALIASES.items()
+    )
+    for replacement, marker in iter_alias_matches_longest_first(alias_groups):
+        marker_tokens = marker.split()
+        if marker_tokens == tokens[: len(marker_tokens)] or marker in phrase and len(tokens) > 1:
+            return replacement
+    if len(tokens) == 1 and not any(
+        suffix in tokens[0] for suffix in ("muhendisligi", "ogretmenligi")
+    ):
+        return None
+
+    if any(marker in phrase for marker in ("muhendisligi", "ogretmenligi", "istatistik", "fizik", "kimya")):
+        return " ".join(token.capitalize() for token in tokens)
+    return None
 
 
 def infer_schedule_context(
@@ -396,12 +600,21 @@ def infer_schedule_context(
     resolved_term = term
     if resolved_term is None:
         normalized_base = normalize_text(base_text)
+        term_alias_groups = (
+            (term_name, (marker,))
+            for marker, term_name in _TERM_MARKERS.items()
+        )
         resolved_term = next(
-            (term_name for marker, term_name in _TERM_MARKERS.items() if marker in normalized_base),
+            (
+                term_name
+                for term_name, marker in iter_alias_matches_longest_first(term_alias_groups)
+                if marker in normalized_base
+            ),
             "bilinmiyor",
         )
 
     resolved_department = department
+    department_was_explicit = department is not None
     if resolved_department is None:
         match = _DEPARTMENT_RE.search(preview_text)
         if match:
@@ -415,7 +628,9 @@ def infer_schedule_context(
             if title_match:
                 resolved_department = _trim_department_candidate(title_match.group(1))
             else:
-                resolved_department = collapse_whitespace(pdf_path.stem)
+                resolved_department = _infer_department_from_filename(pdf_path) or collapse_whitespace(pdf_path.stem)
+    if not department_was_explicit and not _looks_like_plausible_department(resolved_department):
+        resolved_department = "bilinmiyor"
 
     return {
         "academic_year": collapse_whitespace(resolved_academic_year),
@@ -630,7 +845,7 @@ def _parse_single_column_grouped_weekly_table(
     source_document: str,
     source_url: str | None,
 ) -> list[dict[str, Any]]:
-    if len(table) < 3 or len(table[0]) != 6:
+    if len(table) < 3 or len(table[0]) < 6 or len(table[0]) > 10:
         return []
 
     data_start = None
@@ -858,6 +1073,75 @@ def _parse_row_day_matrix_table(
     return slots
 
 
+def _parse_wide_day_time_matrix_table(
+    table: list[list[object | None]],
+    context: dict[str, str],
+    source_document: str,
+    source_url: str | None,
+) -> list[dict[str, Any]]:
+    if len(table) < 3 or len(table[0]) < 6:
+        return []
+
+    header_row_index: int | None = None
+    for index, row in enumerate(table[:4]):
+        first_cell = normalize_text(row[0]) if row else ""
+        compact_header = re.sub(
+            r"[^a-z]",
+            "",
+            normalize_text(" ".join(_clean_cell(cell) for cell in row)),
+        )
+        if first_cell.startswith("gunler") or first_cell.startswith("gun ") or "sinif" in compact_header:
+            header_row_index = index
+            break
+    if header_row_index is None:
+        return []
+
+    first_data_row = _first_row_with_time(table, 1)
+    if first_data_row is None:
+        return []
+
+    group_by_column: dict[int, str | None] = {}
+    current_group: str | None = None
+    for cell_index, cell in enumerate(table[header_row_index]):
+        label = _clean_cell(cell)
+        compact_label = re.sub(r"[^a-z]", "", normalize_text(label))
+        if "sinif" in compact_label:
+            current_group = label
+        if cell_index >= 2:
+            group_by_column[cell_index] = current_group
+
+    slots: list[dict[str, Any]] = []
+    current_day: str | None = None
+    for row in table[max(first_data_row, header_row_index + 1) :]:
+        if len(row) < 2:
+            continue
+        day = _normalize_day_label(row[0])
+        if day:
+            current_day = day
+        times = _parse_time_cell_with_optional_next(row[1])
+        if current_day is None or times is None:
+            continue
+
+        for cell_index in range(2, len(row)):
+            course_fields = _extract_course_fields_from_loose_matrix_cell(row[cell_index])
+            if course_fields is None:
+                continue
+            slots.append(
+                _build_slot(
+                    context,
+                    course_fields,
+                    day_of_week=current_day,
+                    start_time=times[0],
+                    end_time=times[1],
+                    source_document=source_document,
+                    source_url=source_url,
+                    schedule_group=group_by_column.get(cell_index),
+                )
+            )
+
+    return slots
+
+
 def _parse_column_day_matrix_table(
     table: list[list[object | None]],
     context: dict[str, str],
@@ -923,8 +1207,9 @@ def parse_schedule_table(
     for parser in (
         _parse_explicit_schedule_table,
         _parse_grouped_weekly_table,
-        _parse_single_column_grouped_weekly_table,
         _parse_two_column_grouped_weekly_table,
+        _parse_single_column_grouped_weekly_table,
+        _parse_wide_day_time_matrix_table,
         _parse_row_day_time_matrix_table,
         _parse_row_day_matrix_table,
         _parse_column_day_matrix_table,
@@ -953,6 +1238,8 @@ def parse_schedule_slots_from_pdf(
             term=term,
             department=department,
         )
+        if context["department"] == "bilinmiyor":
+            return []
 
         parsed_slots: list[dict[str, Any]] = []
         for page in pdf.pages:
@@ -987,6 +1274,131 @@ def parse_schedule_slots_from_pdf(
     return list(deduped.values())
 
 
+def _xlsx_column_index(cell_ref: str) -> int:
+    match = re.match(r"([A-Z]+)", cell_ref)
+    if match is None:
+        return 0
+    index = 0
+    for char in match.group(1):
+        index = index * 26 + ord(char) - ord("A") + 1
+    return index - 1
+
+
+def _read_xlsx_shared_strings(workbook: ZipFile) -> list[str]:
+    try:
+        shared_xml = workbook.read("xl/sharedStrings.xml")
+    except KeyError:
+        return []
+
+    root = ET.fromstring(shared_xml)
+    strings: list[str] = []
+    for item in root.findall("x:si", _XLSX_NS):
+        strings.append("".join(text.text or "" for text in item.findall(".//x:t", _XLSX_NS)))
+    return strings
+
+
+def _xlsx_cell_value(cell: ET.Element, shared_strings: list[str]) -> str:
+    cell_type = cell.attrib.get("t")
+    value = cell.find("x:v", _XLSX_NS)
+    if value is None:
+        inline = cell.find("x:is", _XLSX_NS)
+        if inline is None:
+            return ""
+        return "".join(text.text or "" for text in inline.findall(".//x:t", _XLSX_NS))
+
+    raw_value = value.text or ""
+    if cell_type == "s":
+        try:
+            return shared_strings[int(raw_value)]
+        except (ValueError, IndexError):
+            return raw_value
+    return raw_value
+
+
+def _read_xlsx_tables(xlsx_path: Path) -> list[list[list[object | None]]]:
+    tables: list[list[list[object | None]]] = []
+    with ZipFile(xlsx_path) as workbook:
+        shared_strings = _read_xlsx_shared_strings(workbook)
+        sheet_names = sorted(
+            name
+            for name in workbook.namelist()
+            if name.startswith("xl/worksheets/sheet") and name.endswith(".xml")
+        )
+
+        for sheet_name in sheet_names:
+            root = ET.fromstring(workbook.read(sheet_name))
+            rows: list[list[object | None]] = []
+            for row in root.findall(".//x:sheetData/x:row", _XLSX_NS):
+                row_values: dict[int, str] = {}
+                for cell in row.findall("x:c", _XLSX_NS):
+                    cell_ref = cell.attrib.get("r", "")
+                    row_values[_xlsx_column_index(cell_ref)] = _xlsx_cell_value(cell, shared_strings)
+                if not row_values:
+                    continue
+                width = max(row_values) + 1
+                rows.append([row_values.get(index, "") for index in range(width)])
+            if rows:
+                max_width = max(len(row) for row in rows)
+                tables.append([row + [""] * (max_width - len(row)) for row in rows])
+    return tables
+
+
+def parse_schedule_slots_from_xlsx(
+    xlsx_path: Path,
+    *,
+    academic_year: str | None = None,
+    term: str | None = None,
+    department: str | None = None,
+    source_url: str | None = None,
+) -> list[dict[str, Any]]:
+    tables = _read_xlsx_tables(xlsx_path)
+    preview_text = "\n".join(
+        " ".join(_clean_cell(cell) for cell in row if _clean_cell(cell))
+        for table in tables[:2]
+        for row in table[:8]
+    )
+    context = infer_schedule_context(
+        xlsx_path,
+        preview_text,
+        academic_year=academic_year,
+        term=term,
+        department=department,
+    )
+    if context["department"] == "bilinmiyor":
+        return []
+
+    parsed_slots: list[dict[str, Any]] = []
+    for table in tables:
+        parsed_slots.extend(
+            parse_schedule_table(
+                table,
+                context,
+                source_document=xlsx_path.name,
+                source_url=source_url,
+            )
+        )
+
+    deduped: dict[
+        tuple[str, str, str, str, str | None, str | None, str, time, str | None],
+        dict[str, Any],
+    ] = {}
+    for slot in parsed_slots:
+        key = (
+            slot["academic_year"],
+            slot["term"],
+            slot["department"],
+            slot["course_key"],
+            slot["schedule_group"],
+            slot["section"],
+            slot["day_of_week"],
+            slot["start_time"],
+            slot["classroom"],
+        )
+        deduped[key] = slot
+
+    return list(deduped.values())
+
+
 def collect_schedule_slots_from_path(
     source: Path,
     *,
@@ -995,17 +1407,42 @@ def collect_schedule_slots_from_path(
     department: str | None = None,
     source_url: str | None = None,
 ) -> dict[Path, list[dict[str, Any]]]:
-    files = [source] if source.is_file() else sorted(source.glob("*.pdf"))
+    if source.is_file():
+        files = [source]
+    else:
+        files = sorted([*source.glob("*.pdf"), *source.glob("*.xlsx")])
     collected: dict[Path, list[dict[str, Any]]] = {}
-    for pdf_path in files:
-        slots = parse_schedule_slots_from_pdf(
-            pdf_path,
-            academic_year=academic_year,
-            term=term,
-            department=department,
-            source_url=source_url,
+    for path in files:
+        resolved_academic_year, resolved_term, resolved_department, resolved_source_url, skip = (
+            _merge_source_override(
+                path,
+                academic_year=academic_year,
+                term=term,
+                department=department,
+                source_url=source_url,
+            )
         )
-        collected[pdf_path] = slots
+        if skip:
+            collected[path] = []
+            continue
+
+        if path.suffix.lower() == ".xlsx":
+            slots = parse_schedule_slots_from_xlsx(
+                path,
+                academic_year=resolved_academic_year,
+                term=resolved_term,
+                department=resolved_department,
+                source_url=resolved_source_url,
+            )
+        else:
+            slots = parse_schedule_slots_from_pdf(
+                path,
+                academic_year=resolved_academic_year,
+                term=resolved_term,
+                department=resolved_department,
+                source_url=resolved_source_url,
+            )
+        collected[path] = slots
     return collected
 
 

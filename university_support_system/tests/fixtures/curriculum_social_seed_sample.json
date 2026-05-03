@@ -1,0 +1,23 @@
+{
+  "department": "Elektrik-Elektronik Muhendisligi",
+  "courses": [
+    {
+      "course_code": "SOS101",
+      "course_name": "Toplumsal Duyarlilik",
+      "credits": 2,
+      "akts": 3,
+      "curriculum_semester": 3,
+      "course_type": "universite_secmeli"
+    }
+  ],
+  "program_slots": [
+    {
+      "slot_code": "EEM-SOS-1",
+      "slot_name": "Sosyal Secmeli Ders I (Grup)",
+      "credits": 2,
+      "akts": 2,
+      "curriculum_semester": 5,
+      "elective_group": "SOSYAL-SEC"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Kapsamlı ChromaDB ve RAG Mimari Kılavuzu
 
-> Durum Notu (Nisan 2026): Bu belge RAG/ChromaDB mimarisinin detayli bir aciklamasidir, ancak yazildigi andan sonra retrieval katmaninda ek yardimci moduller, benchmark akislari ve deployment senaryolari eklendi. Guncel operasyon bilgisi icin once `README.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` okunmalidir.
+> Durum Notu (Nisan 2026): Bu belge RAG/ChromaDB mimarisinin detayli tarihsel aciklamasidir. Yazildigi andan sonra retrieval katmaninda merkezi `retrieval-service`, yeni benchmark akislari, A2A servis topolojisi ve Slack runtime eklendi. Guncel operasyon bilgisi icin once `README.md`, `docs/A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` okunmalidir.
 
 Bu belge, üniversite destek sisteminin ardındaki "Akıllı Arama" (RAG - Retrieval-Augmented Generation) mekanizmasının tam olarak nasıl yapılandırıldığını detaylandırır. 
 
@@ -89,6 +89,6 @@ Kullanıcı, "ÇAP ortalaması kaç?" diye sorduğunda süreç şöyle işler:
 
 1. **Embedding:** Soru BGE-M3 modeline girer, 1024 boyutlu "Soru Vektörü" elde edilir.
 2. **Dense Retrieval (Ana Sorgu):** ChromaDB, soru vektörüne en yakın 20-30 adet adayı getirir ([query](file:///c:/Users/%C3%96MER%20FARUK%20DER%C4%B0N/Desktop/bitirme%20projesi/university_support_system/university_support_system/src/rag/indexer.py#201-234) fonksiyonu ile).
-3. **Reranking (Pırlanta Filtresi):** Sisteminize eklenmiş olan `seroe/bge-reranker-v2-m3-turkish-triplet` (Özel Türkçe modeli) devreye girer. ChromaDB'den gelen 30 adayı alır, kullanıcının sorusuyla çapraz okuma yaparak, *gerçekten konuya yanıt veren* **en iyi 5 parçayı** filtreler ve sıralar (hibrit arama).
+3. **Reranking (Pırlanta Filtresi):** Sisteminize eklenmiş olan `nreimers/mmarco-mMiniLMv2-L6-H384-v1` çok dilli cross-encoder modeli devreye girer. ChromaDB'den gelen adayları alır, kullanıcının sorusuyla çapraz okuma yaparak, *gerçekten konuya yanıt veren* **en iyi parçaları** filtreler ve sıralar (hibrit arama).
 4. **LLM Nesli:** Son olarak, bu seçilmiş 5 kaynak metin (metadata'daki "Madde 31" gibi referanslarla birlikte) Ana Dil Modeline (Ollama vb.) gönderilir.
 5. LLM şöyle bir cümle kurar: *"Yönetmeliğin 6. Bölüm, 31. maddesine göre ÇAP ortalaması en az..."*

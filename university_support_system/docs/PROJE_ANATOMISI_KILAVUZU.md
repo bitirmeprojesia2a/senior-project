@@ -1,7 +1,9 @@
 # Universite Kurumsal Destek Sistemi
 # Proje Anatomisi ve Modul Kilavuzu
 
-Bu belge, guncel repo yapisini ve aktif modullerin sorumluluklarini ozetler. Tarihsel faz dokumanlari daha ayrintili ama eski baglamlar icerebilir; mevcut kodu anlamak icin once bu dosya, `README.md` ve kurulum rehberi okunmalidir.
+Bu belge, guncel repo yapisini ve aktif modullerin sorumluluklarini kisa bir harita olarak ozetler. Ayrintili nihai mimari anlatimi icin `A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md`, calistirma komutlari icin `KURULUM_VE_CALISTIRMA.md`, dokuman sirasi icin `DOKUMANTASYON_OKUMA_SIRASI.md` esas alinmalidir.
+
+> Nisan 2026 notu: Bu kilavuz artik arsiv adayi degil, kompakt modul haritasi olarak tutulur. Ancak A2A servis topolojisi, merkezi `retrieval-service`, Slack A2A runtime ve capability agent ayrimi gibi detaylari tam anlatmak icin yeni A2A mimari ozetiyle birlikte okunmalidir.
 
 ## 1. Ust Duzey Akis
 
@@ -9,9 +11,11 @@ Guncel sorgu akisi kabaca soyledir:
 
 1. Istemci FastAPI uzerinden `/query` ya da ilgili auth endpoint'ine gelir.
 2. API katmani auth, profile ve conversation baglamini cozer.
-3. `MainOrchestrator` sorgunun follow-up olup olmadigini, hangi departmana gidecegini ve synthesis gerekip gerekmedigini belirler.
-4. Ilgili departman ajanlari RAG ve LLM katmanlarini kullanarak cevap uretir.
-5. Gerekirse cevaplar tek cikti haline sentezlenir, telemetry yazilir ve kaynaklar donulur.
+3. `MainOrchestrator` routing LLM ve deterministic guard'lar ile canonical query, intent, departmanlar, eksik slotlar ve synthesis ihtiyacini belirler.
+4. A2A modunda departman/capability servislerine HTTP/JSON-RPC transport ile gidilir; inprocess modda ayni mantik lokal nesnelerle calisir.
+5. RAG ihtiyaci olan akislarda agir embedding/reranking isi merkezi `retrieval-service` uzerinden paylastirilabilir.
+6. Ilgili departman, uzman veya capability agent cevabi uretir.
+7. Gerekirse cevaplar tek cikti haline sentezlenir, telemetry yazilir ve kaynaklar donulur.
 
 ## 2. `src/` Dizini
 
@@ -141,7 +145,7 @@ Gunluk operasyon ve benchmark komutlari burada bulunur.
 - `index_documents.py`: departman indeksleme
 - `evaluate_rag.py`: retrieval kalitesi olcumu
 - `query_db.py`: CLI sorgu denemesi
-- `test_hybrid_search.py`: retrieval denemeleri
+- `hybrid_search_probe.py`: retrieval denemeleri
 - `live_question_test.py`: demo ve benchmark preset'leri
 - `compare_collections.py`: koleksiyon kiyaslama
 - `seed_curriculum_data.py`, `seed_synthetic_data.py`: veri tohumlama yardimcilari

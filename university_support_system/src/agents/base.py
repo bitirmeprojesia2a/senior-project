@@ -10,16 +10,24 @@ from typing import TYPE_CHECKING, Awaitable, Callable, Sequence
 
 from a2a.types import AgentSkill, Task
 
-from src.a2a import build_agent_card, build_department_response_task
+from src.a2a import build_agent_card, build_agent_response_task
 from src.core.constants import (
+    AgentRole,
+    Capability,
     Department,
-    RAG_DIRECT_MIN_CONTENT_LEN,
-    RAG_DIRECT_SCORE_THRESHOLD,
     TaskType,
 )
 from src.core.config import settings
 from src.core.profiling import profile_stage
 from src.core.text_normalization import normalize_text
+from src.rag.query_preprocessor import QueryPreprocessor
+from src.quality.evidence import (
+    build_evidence_context_chunks,
+    build_evidence_diagnostics,
+    extract_evidence_items,
+    select_evidence_sentences,
+)
+from src.quality.evidence_selector import EvidenceSelectionDecision, select_evidence_with_llm
 from src.db.office_contacts import OfficeContactRecord, fetch_office_contacts
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.llm.prompt_templates import GENERAL_QA_SYSTEM_PROMPT
@@ -29,8 +37,10 @@ if TYPE_CHECKING:
     from src.rag.retriever import HybridRetriever
 
 logger = logging.getLogger(__name__)
+_EVIDENCE_QUERY_PREPROCESSOR = QueryPreprocessor()
 
 _SHARED_RETRIEVER: HybridRetriever | None = None
+_SHARED_LOCAL_FALLBACK_RETRIEVER: HybridRetriever | None = None
 _LLM_SYNTHESIS_TIMEOUT_SECONDS = settings.llm.specialist_synthesis_timeout_seconds
 
 _CONTACT_REQUEST_KEYWORDS = (
@@ -39,19 +49,15 @@ _CONTACT_REQUEST_KEYWORDS = (
     "adres", "kime basvurayim", "kimle gorusmeliyim", "birim", "mudurluk",
 )
 
-_DIRECT_RAG_RERANKER_THRESHOLD = 0.61
-_DIRECT_RAG_RETRIEVAL_THRESHOLD = 0.25
 _SPECIALIST_LLM_CONTEXT_MAX_LEN = 2000
-
-_LLM_SYNTHESIS_MIN_RERANKER_SCORE = 0.48
-_LLM_SYNTHESIS_MIN_RETRIEVAL_SCORE = 0.18
-
-_NO_USEFUL_RESULT_RERANKER_CEILING = 0.35
-
-_DIRECT_RAG_SCORE_GAP_MIN = 0.01
+_SPECIALIST_EVIDENCE_MAX_SENTENCES = 7
+_SPECIALIST_EVIDENCE_MIN_SCORE = 0.45
 
 _FAQ_QUESTION_RE = re.compile(r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$", re.MULTILINE)
 _FAQ_SOURCE_PATTERNS = ("sik_sorulan", "sikca_sorulan", "sss", "faq")
+# Backward-compat aliases — canonical definitions live in src.quality.evidence
+from src.quality.evidence import EVIDENCE_SENTENCE_RE as _EVIDENCE_SENTENCE_RE  # noqa: E402
+from src.quality.evidence import EVIDENCE_STOPWORDS as _EVIDENCE_STOPWORDS  # noqa: E402
 
 
 # Genel/yaygın kelimeler — eşleşme skorunda düşük ağırlık
@@ -149,10 +155,25 @@ class BaseSpecialistAgent:
         """Surec boyunca ortak kullanilacak retriever ornegini uretir."""
         global _SHARED_RETRIEVER
         if _SHARED_RETRIEVER is None:
+            if settings.retrieval_service.enabled:
+                from src.rag.remote import RemoteHybridRetriever
+
+                _SHARED_RETRIEVER = RemoteHybridRetriever()  # type: ignore[assignment]
+            else:
+                from src.rag.retriever import HybridRetriever
+
+                _SHARED_RETRIEVER = HybridRetriever()
+        return _SHARED_RETRIEVER
+
+    @staticmethod
+    def _build_shared_local_fallback_retriever() -> HybridRetriever:
+        """Remote retrieval gecici olarak dusunce pahali local fallback'i tekrar kurma."""
+        global _SHARED_LOCAL_FALLBACK_RETRIEVER
+        if _SHARED_LOCAL_FALLBACK_RETRIEVER is None:
             from src.rag.retriever import HybridRetriever
 
-            _SHARED_RETRIEVER = HybridRetriever()
-        return _SHARED_RETRIEVER
+            _SHARED_LOCAL_FALLBACK_RETRIEVER = HybridRetriever()
+        return _SHARED_LOCAL_FALLBACK_RETRIEVER
 
     def _get_retriever(self) -> HybridRetriever:
         """Ajan yasam dongusu boyunca ayni retriever ornegini kullanir."""
@@ -192,11 +213,12 @@ class BaseSpecialistAgent:
     async def handle_task(self, task: Task) -> Task:
         """A2A task'ini isleyip A2A response task'i uretir."""
         response = await self.handle_department_task(task)
-        return build_department_response_task(
+        return build_agent_response_task(
             response,
             request_task=task,
             emitter_id=self.agent_id,
             emitter_name=self.definition.name,
+            metadata=self._agent_response_metadata(),
         )
 
     async def handle_department_task(self, task: Task) -> DepartmentResponse:
@@ -220,17 +242,49 @@ class BaseSpecialistAgent:
             student_department = meta.get("student_department")
             intent_force_llm = bool(meta.get("force_llm_synthesis", False))
             with profile_stage("agent.retriever.search", agent_id=self.agent_id, department=self.department.value):
-                results = retriever.search(
-                    query_text,
-                    department=self.department,
-                    source_hints=source_hints,
-                    topic_hint=topic_hint,
-                    student_department=student_department,
-                )
+                try:
+                    results = retriever.search(
+                        query_text,
+                        top_k=self._search_top_k(query_text, meta),
+                        department=self.department,
+                        source_hints=source_hints,
+                        topic_hint=topic_hint,
+                        student_department=student_department,
+                    )
+                except Exception:
+                    if not settings.retrieval_service.enabled or not settings.retrieval_service.fallback_to_local:
+                        raise
+                    logger.warning(
+                        "remote_retrieval_failed_falling_back_local agent=%s",
+                        self.agent_id,
+                        exc_info=True,
+                    )
+                    retriever = self._build_shared_local_fallback_retriever()
+                    results = retriever.search(
+                        query_text,
+                        top_k=self._search_top_k(query_text, meta),
+                        department=self.department,
+                        source_hints=source_hints,
+                        topic_hint=topic_hint,
+                        student_department=student_department,
+                    )
             enrich_results = getattr(type(retriever), "enrich_results", None)
-            if callable(enrich_results):
+            if callable(enrich_results) and self._should_enrich_results(query_text, results):
                 with profile_stage("agent.retriever.enrich_results", agent_id=self.agent_id, department=self.department.value):
-                    results = retriever.enrich_results(results, department=self.department)
+                    try:
+                        results = retriever.enrich_results(results, department=self.department)
+                    except Exception:
+                        if not settings.retrieval_service.enabled or not settings.retrieval_service.fallback_to_local:
+                            raise
+                        logger.warning(
+                            "remote_retrieval_enrich_failed_falling_back_local agent=%s",
+                            self.agent_id,
+                            exc_info=True,
+                        )
+                        local_retriever = self._build_shared_local_fallback_retriever()
+                        results = local_retriever.enrich_results(results, department=self.department)
+            with profile_stage("agent.filter_results", agent_id=self.agent_id, department=self.department.value):
+                results = self._filter_results_for_answer(query_text, results)
             with profile_stage("agent.generate_answer", agent_id=self.agent_id):
                 answer, generation_mode = await self._generate_answer(
                     query_text,
@@ -245,6 +299,20 @@ class BaseSpecialistAgent:
                 generation_mode=generation_mode,
                 include_contact_suggestion=True,
             )
+
+    def _agent_response_metadata(self) -> dict[str, str]:
+        """A2A AgentResponse identity metadata for published artifacts."""
+        if self.agent_id == "announcement_agent":
+            return {
+                "agent_role": AgentRole.CAPABILITY_AGENT.value,
+                "capability": Capability.ANNOUNCEMENT.value,
+            }
+        if self.agent_id == "event_agent":
+            return {
+                "agent_role": AgentRole.CAPABILITY_AGENT.value,
+                "capability": Capability.EVENT.value,
+            }
+        return {"agent_role": AgentRole.SPECIALIST_AGENT.value}
 
     async def handle_a2a_task(self, task: Task) -> Task:
         """Geriye donuk uyumluluk icin A2A response task dondurur."""
@@ -366,6 +434,95 @@ class BaseSpecialistAgent:
             success=True,
         )
 
+    # ── Deterministik answer completeness check ──────────────────
+    # Soru tipine gore cevapta zorunlu alan kontrolu.
+    # Ekstra LLM cagrisi YOK — sadece regex/pattern bazli kontrol.
+
+    _QUESTION_TYPE_PATTERNS: ClassVar[list[tuple[str, re.Pattern, tuple[str, ...]]]] = [
+        # (tip, sorgu_paterni, cevapta_beklenen_kalip)
+        ("ne_zaman", re.compile(r"\bne zaman\b|\bzamani\b|\btarihi\b|\btarih\b|\bne kadar sure\b", re.I),
+         (r"\d{1,2}[\./-]\d{1,2}", r"\d{4}", r"\bhafta\b", r"\bgun\b", r"\bay\b",
+          r"\bdonem\b", r"\bbaslangic\b", r"\bbitis\b", r"\bsure\b", r"\bdeadline\b",
+          r"\bicerisinde\b", r"\bitibaren\b", r"\bkadar\b", r"\bonce\b", r"\bsonra\b")),
+        ("kac_ne_kadar", re.compile(r"\bkac\b|\bne kadar\b|\bmiktari\b|\btutari\b|\bucreti\b", re.I),
+         (r"\d+", r"\bAKTS\b", r"\bkredi\b", r"\bTL\b", r"\byuzde\b", r"\boran\b",
+          r"\btutar\b", r"\bucret\b", r"\bsayi\b", r"\bnet tutar yok\b")),
+        ("hangi_belge", re.compile(r"\bhangi belge\b|\bnereden al\b|\bform\b|\bdilekce\b|\bdekont\b", re.I),
+         (r"\bform\b", r"\bdilekce\b", r"\bbelge\b", r"\bdekont\b", r"\bbasvuru\b",
+          r"\bnereden\b", r"\bplatform\b", r"\bsistem\b", r"\bweb\b", r"\binternet\b")),
+        ("kimler", re.compile(r"\bkimler\b|\bkimler katil\b|\bkatilabilir\b|\buygun\b|\bhangi ogrenci\b", re.I),
+         (r"\bogrenci\b", r"\blisans\b", r"\bonlisans\b", r"\byuksek lisans\b",
+          r"\bkosul\b", r"\bsart\b", r"\buygun\b", r"\bhak\b", r"\bkatil\b")),
+    ]
+
+    @classmethod
+    def _check_answer_completeness(cls, query: str, answer: str) -> str | None:
+        """Cevapta soru tipinin gerektirdigi bilgi var mi kontrol et.
+        Eksikse uyari mesaji don, doluysa None don.
+        """
+        q_lower = normalize_text(query)
+        answer_normalized = normalize_text(answer)
+        for q_type, q_pattern, a_patterns in cls._QUESTION_TYPE_PATTERNS:
+            if not q_pattern.search(q_lower):
+                continue
+            # Cevapta en az bir beklenen kalip var mi?
+            if any(re.search(ap, answer_normalized, re.I) for ap in a_patterns):
+                return None
+            # Eksik — uyari don
+            return (
+                f"Bu konuda elimdeki kaynaklarda net {q_type.replace('_', ' ')} bilgisi bulunamadi. "
+                "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin."
+            )
+        return None
+
+    # ── Evidence boost — soru tipine gore ilgili evidence oncelendirme ──
+
+    _EVIDENCE_BOOST_PATTERNS: ClassVar[list[tuple[re.Pattern, tuple[str, ...], float]]] = [
+        # (sorgu_paterni, evidence_sinyal_kelimeleri, boost)
+        (re.compile(r"\bne zaman\b|\bzamani\b|\btarihi\b", re.I),
+         ("tarih", "sure", "hafta", "gun", "ay", "donem", "baslangic", "bitis", "deadline",
+          "itibaren", "kadar", "once", "sonra", "icerisinde"), 0.05),
+        (re.compile(r"\bkac\b|\bne kadar\b|\bucreti\b|\btutari\b", re.I),
+         ("akts", "kredi", "tl", "yuzde", "oran", "tutar", "ucret", "sayi", "adet"), 0.05),
+        (re.compile(r"\bhangi belge\b|\bnereden al\b|\bform\b", re.I),
+         ("form", "dilekce", "belge", "dekont", "platform", "web", "sistem", "basvuru"), 0.05),
+        # AKTS/GANO ders kaydi sorularinda regulation/registration kaynaklari oncelikli
+        (re.compile(r"\bakts hakki\b|\bakts siniri\b|\bkredi hakki\b|\bkredi siniri\b|\bders yuku\b|\bgano.*akts\b|\bakts.*gano\b|\bdonemlik akts\b|\bkac akts alabilirim\b", re.I),
+         ("ders kaydi", "akts hakki", "kredi siniri", "gno", "donem yuku", "azami",
+          "yonetmelik", "yonerge", "kayit", "basvuru"), 0.08),
+    ]
+
+    # AKTS/GANO sorularinda ilgisiz kaynaklari demote et
+    _EVIDENCE_DEMOTE_PATTERNS: ClassVar[list[tuple[re.Pattern, tuple[str, ...], float]]] = [
+        # (sorgu_paterni, demote_sinyal_kelimeleri, penalty)
+        (re.compile(r"\bakts\b|\bakts hakki\b|\bkredi siniri\b|\bders yuku\b|\bgano.*akts\b|\bakts.*gano\b", re.I),
+         ("erasmus", "uluslararasi", "staj", "yatay gecis", "mup", "sanayi",
+          "bitirme", "harc", "odeme", "ucret", "dekont"), -0.10),
+    ]
+
+    @classmethod
+    def _apply_evidence_boost(cls, query: str, results: list[dict]) -> list[dict]:
+        """Soru tipine gore ilgili icerik sinyali tasiyan evidence'lara kucuk boost ver."""
+        q_lower = normalize_text(query)
+        for q_pattern, signals, boost in cls._EVIDENCE_BOOST_PATTERNS:
+            if not q_pattern.search(q_lower):
+                continue
+            for r in results:
+                content = normalize_text(r.get("content") or "")
+                if any(s in content for s in signals):
+                    r["score"] = float(r.get("score", 0.0)) + boost
+            break  # ilk eslesen kurali uygula, digerlerini atla
+        # Demote: ilgisiz kaynaklari cezalandir
+        for q_pattern, demote_signals, penalty in cls._EVIDENCE_DEMOTE_PATTERNS:
+            if not q_pattern.search(q_lower):
+                continue
+            for r in results:
+                content = normalize_text(r.get("content") or "")
+                if any(s in content for s in demote_signals):
+                    r["score"] = max(0.0, float(r.get("score", 0.0)) + penalty)
+            break
+        return results
+
     async def _generate_answer(
         self,
         query_text: str,
@@ -377,6 +534,10 @@ class BaseSpecialistAgent:
         llm_profile: str | None = None,
     ) -> tuple[str, str]:
         """Tek yanit uretim noktasi. Tum ajanlar bu metodu kullanmali."""
+        # Evidence boost — soru tipine gore ilgili evidence oncelendirme
+        if results:
+            results = self._apply_evidence_boost(query_text, list(results))
+
         if not results and not db_context:
             return (
                 "Bu konuda elimde yeterli kaynak bulunamadi. "
@@ -389,33 +550,22 @@ class BaseSpecialistAgent:
             top_score = float(results[0].get("score", 0.0))
             top_source = results[0].get("source", "?")
             logger.info(
-                "generate_answer_score_check",
-                agent_id=self.agent_id,
-                top_score=round(top_score, 4),
-                score_type=score_type_raw,
-                top_source=top_source,
-                result_count=len(results),
-                ceiling=_NO_USEFUL_RESULT_RERANKER_CEILING,
-                llm_min=_LLM_SYNTHESIS_MIN_RERANKER_SCORE,
+                (
+                    "generate_answer_score_check agent=%s top_score=%.4f "
+                    "score_type=%s top_source=%s result_count=%s"
+                ),
+                self.agent_id,
+                top_score,
+                score_type_raw,
+                top_source,
+                len(results),
             )
-            if score_type_raw == "reranker":
-                if top_score < _NO_USEFUL_RESULT_RERANKER_CEILING:
-                    # force_llm=True ise ceiling kontrolunu atla —
-                    # routing LLM sentez gerektirdigine karar vermisse, dusuk skor
-                    # nedeniyle kural moduna dusurmeyelim; LLM kaynaklari birlestirmeye calissin.
-                    if not force_llm:
-                        logger.info(
-                            "no_useful_rag_results agent=%s top_reranker_score=%.4f ceiling=%.4f",
-                            self.agent_id, top_score, _NO_USEFUL_RESULT_RERANKER_CEILING,
-                        )
-                        return (
-                            "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
-                            "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin."
-                        ), "kural"
-                    logger.info(
-                        "force_llm_bypasses_ceiling agent=%s top_reranker_score=%.4f ceiling=%.4f",
-                        self.agent_id, top_score, _NO_USEFUL_RESULT_RERANKER_CEILING,
-                    )
+            if score_type_raw == "reranker" and top_score < 0.10:
+                logger.info(
+                    "low_rag_score_kept_for_llm agent=%s top_reranker_score=%.4f",
+                    self.agent_id,
+                    top_score,
+                )
 
         if not allow_llm:
             with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
@@ -429,28 +579,13 @@ class BaseSpecialistAgent:
             results,
             db_context=db_context,
         )
-        if not force_specialist_llm and self._should_skip_llm_synthesis(
-            query_text,
-            results,
-            db_context=db_context,
-        ):
-            with profile_stage("agent.skip_llm_synthesis", agent_id=self.agent_id):
-                return (
-                    self._build_source_only_answer(query_text, results, db_context=db_context),
-                    self._derive_non_llm_generation_mode(results, db_context=db_context),
-                )
-
-        if not force_specialist_llm and not db_context:
-            with profile_stage("agent.try_direct_rag", agent_id=self.agent_id):
-                direct_rag_answer = self._try_direct_rag_answer(results, query_text=query_text)
-            if direct_rag_answer is not None:
-                return (
-                    direct_rag_answer,
-                    self._derive_non_llm_generation_mode(results, db_context=db_context),
-                )
+        # Normal RAG answers should be synthesized by the specialist LLM. The
+        # source-only/direct-RAG builders remain available as failure fallbacks
+        # and for explicitly non-LLM flows, but they should not short-circuit a
+        # healthy LLM because they tend to expose long raw chunks to the user.
 
         with profile_stage("agent.llm_synthesize", agent_id=self.agent_id):
-            return await self._llm_synthesize(
+            answer, gen_mode = await self._llm_synthesize(
                 query_text,
                 results,
                 db_context=db_context,
@@ -458,15 +593,38 @@ class BaseSpecialistAgent:
                 force_llm=force_specialist_llm,
             )
 
-    def _should_skip_llm_synthesis(
-        self,
-        query_text: str,
-        results: Sequence[dict],
-        *,
-        db_context: str | None = None,
-    ) -> bool:
-        """Alt ajanlarin LLM sentezini kisa devre etmesine izin verir."""
-        return False
+        # Claim guard — conservative check against evidence
+        if gen_mode not in ("kural",):
+            try:
+                from src.quality.claim_guard import guard_answer as _guard_answer
+                from src.core.profiling import get_current_profiler
+
+                _profiler = get_current_profiler()
+                # Recover evidence items from the extraction stage
+                evidence_items_for_guard = getattr(self, "_last_evidence_items", None)
+                if evidence_items_for_guard:
+                    with profile_stage("agent.claim_guard", agent_id=self.agent_id):
+                        guard_result = _guard_answer(answer, evidence_items_for_guard)
+                        answer = guard_result.cleaned_answer
+                        if _profiler is not None:
+                            _profiler.set_attribute("claim_guard", {
+                                "unsupported_claims": guard_result.unsupported_claims,
+                                "modifications_made": guard_result.modifications_made,
+                            })
+            except Exception:
+                logger.debug("claim_guard_skipped agent=%s", self.agent_id, exc_info=True)
+
+        # Deterministik completeness check — soru tipine gore cevapta zorunlu alan kontrolu
+        if gen_mode not in ("kural",):
+            completeness_warning = self._check_answer_completeness(query_text, answer)
+            if completeness_warning:
+                logger.info(
+                    "answer_completeness_warning agent=%s query_type_match",
+                    self.agent_id,
+                )
+                answer = f"{answer}\n\n{completeness_warning}"
+
+        return answer, gen_mode
 
     # Çok-parçalı soru kalıpları — tek RAG kaynaktan cevaplanamaz
     _MULTI_PART_QUERY_MARKERS = frozenset({
@@ -496,7 +654,39 @@ class BaseSpecialistAgent:
         if len(strong_results) >= 3:
             return True
 
+        # 3) Prosedur/nasil sorulari → LLM sentez sart (kural modu yetersiz)
+        _PROCEDURE_FORCE_MARKERS = (
+            "nasil", "ne yap", "nereden", "nereye", "hangi birim",
+            "yapabil", "yapamam", "yapabilir", "yapamaz",
+            "girebil", "giremez", "alabil", "alamaz",
+            "mi ", "mu ", "miyim", "muyum", "miyiz", "muyuz",
+            "gerekiyor", "gerekir", "zorunlu",
+            "ne zaman", "kimler", "katilabilir", "basvurusu",
+            "basvuru", "kosullari", "sartlari", "nelere",
+        )
+        if any(m in lowered for m in _PROCEDURE_FORCE_MARKERS):
+            return True
+
         return False
+
+    def _should_use_llm_evidence_selection(
+        self,
+        query_text: str,
+        evidence_items: Sequence,
+        *,
+        force_llm: bool,
+        db_context: str | None = None,
+    ) -> bool:
+        """Allow agents to keep final synthesis while skipping the extra selector call."""
+        _ = query_text, force_llm, db_context
+        min_candidates = max(
+            1,
+            int(settings.rag.llm_evidence_selection_min_candidates),
+        )
+        return (
+            settings.rag.llm_evidence_selection_enabled
+            and len(evidence_items) >= min_candidates
+        )
 
     def _build_source_only_answer(
         self,
@@ -511,6 +701,176 @@ class BaseSpecialistAgent:
             db_context=db_context,
             query_text=query_text,
         )
+
+    def _filter_results_for_answer(
+        self,
+        query_text: str,
+        results: Sequence[dict],
+    ) -> list[dict]:
+        """Allow specialist agents to drop misleading retrieval results."""
+        _ = query_text
+        return list(results)
+
+    def _should_enrich_results(self, query_text: str, results: Sequence[dict]) -> bool:
+        """Allow agents to skip expensive neighbor expansion when compact evidence is better."""
+        _ = query_text, results
+        return True
+
+    def _llm_synthesis_timeout_seconds(
+        self,
+        query_text: str,
+        results: Sequence[dict],
+        *,
+        llm_profile: str | None = None,
+    ) -> float:
+        """Allow agents to cap slow external LLM calls for low-risk short answers."""
+        _ = query_text, results, llm_profile
+        return float(_LLM_SYNTHESIS_TIMEOUT_SECONDS)
+
+    async def _apply_judge_quality_gate(
+        self,
+        *,
+        query_text: str,
+        answer: str,
+        system: str,
+        context_chunks: Sequence[str],
+        evidence_items: Sequence,
+        intent_coverage,
+        llm_profile: str | None,
+        synthesis_timeout: float,
+    ) -> tuple[str, dict]:
+        """Run the optional one-shot LLM judge and apply at most one repair.
+
+        The judge is intentionally bounded: one evaluation and one corrective
+        generation. This keeps latency predictable while catching risky
+        numeric/regulation/no-info/foreign-token answers.
+        """
+        from src.core.profiling import get_current_profiler
+        from src.quality.answer_filter import check_answer_quality, REWRITE_ONLY_SYSTEM_SUFFIX
+        from src.quality.judge import run_judge
+
+        quality = check_answer_quality(answer)
+        evidence_summary = "\n\n".join(context_chunks[:5])
+        judge_meta: dict = {
+            "judge_enabled": False,
+            "judge_action": "not_run",
+            "retry_count": 0,
+        }
+        judge_result = await run_judge(
+            query=query_text,
+            answer=answer,
+            evidence_summary=evidence_summary,
+            llm_service=self.llm_service,
+            llm_profile=llm_profile,
+            has_foreign_suspicion=quality.needs_rewrite,
+            intent_coverage_is_low=bool(getattr(intent_coverage, "is_low", False)),
+            missing_intents=list(getattr(intent_coverage, "missing_intents", []) or []),
+        )
+        if judge_result is None:
+            return answer, judge_meta
+
+        judge_meta.update(
+            {
+                "judge_enabled": True,
+                "judge_action": judge_result.action,
+                "approved": judge_result.approved,
+                "failure_reason": judge_result.failure_reason,
+                "missing_intents": judge_result.missing_intents,
+                "unsupported_claims": judge_result.unsupported_claims,
+                "bad_tokens": judge_result.bad_tokens,
+                "suggested_query": judge_result.suggested_query,
+            }
+        )
+        _profiler = get_current_profiler()
+        if _profiler is not None:
+            _profiler.set_attribute("answer_judge", judge_meta)
+
+        if judge_result.approved or judge_result.action == "accept":
+            return answer, judge_meta
+
+        if judge_result.action == "ask_clarification":
+            judge_meta["retry_count"] = 1
+            clarification = (
+                "Bu soruyu dogru cevaplayabilmem icin eksik bir bilgi var. "
+                "Bolum/program, ogrenci turu veya hangi basvuru/islem hakkinda sordugunuzu belirtir misiniz?"
+            )
+            return clarification, judge_meta
+
+        repair_context = evidence_summary
+        repair_query = query_text
+
+        if judge_result.action == "retrieve_again" and judge_result.suggested_query:
+            try:
+                with profile_stage("agent.judge_retrieve_again", agent_id=self.agent_id):
+                    retry_results = self._get_retriever().search(
+                        judge_result.suggested_query,
+                        top_k=8,
+                        department=self.department,
+                    )
+                    retry_results = self._apply_evidence_boost(
+                        judge_result.suggested_query,
+                        list(retry_results),
+                    )
+                    retry_items = extract_evidence_items(
+                        judge_result.suggested_query,
+                        retry_results[:8],
+                        self.department.value,
+                        analysis_query=_EVIDENCE_QUERY_PREPROCESSOR.preprocess(
+                            judge_result.suggested_query
+                        ),
+                    )
+                    if retry_items:
+                        repair_context = "\n\n".join(
+                            build_evidence_context_chunks(
+                                retry_items,
+                                judge_result.suggested_query,
+                                max_items=5,
+                                max_content_len=_SPECIALIST_LLM_CONTEXT_MAX_LEN,
+                            )
+                        )
+                        repair_query = judge_result.suggested_query
+                        judge_meta["retrieve_again_results"] = len(retry_results)
+            except Exception:
+                logger.debug("judge_retrieve_again_failed agent=%s", self.agent_id, exc_info=True)
+
+        try:
+            with profile_stage("agent.judge_repair", agent_id=self.agent_id, action=judge_result.action):
+                repair_prompt = (
+                    f"Kullanici sorusu:\n{repair_query}\n\n"
+                    f"Onceki cevap:\n{answer}\n\n"
+                    f"Judge sorunu:\n{judge_result.failure_reason or judge_result.action}\n\n"
+                    f"Kaynak baglami:\n{repair_context}\n\n"
+                    "Cevabi ayni kaynaklara dayanarak yeniden yaz. "
+                    "Eksik alt niyetleri tamamla, yanlis/unsupported iddialari cikar, "
+                    "sayi/tarih/ucret/AKTS/GANO bilgilerini kaynakta gecen sekliyle koru. "
+                    "Kaynakta yoksa uydurma. Dogal Turkce disinda kelime kullanma."
+                )
+                repaired = await asyncio.wait_for(
+                    self.llm_service.generate(
+                        prompt=repair_prompt,
+                        system=system + REWRITE_ONLY_SYSTEM_SUFFIX,
+                        model_role="specialist_synthesis",
+                        llm_profile=llm_profile,
+                    ),
+                    timeout=synthesis_timeout,
+                )
+                if repaired and len(repaired.strip()) > 12:
+                    judge_meta["retry_count"] = 1
+                    return repaired, judge_meta
+        except Exception as exc:
+            logger.warning(
+                "judge_repair_failed agent=%s action=%s reason=%s",
+                self.agent_id,
+                judge_result.action,
+                type(exc).__name__,
+            )
+
+        return answer, judge_meta
+
+    def _search_top_k(self, query_text: str, metadata: dict) -> int | None:
+        """Allow specialist agents to request a wider retrieval result set."""
+        _ = query_text, metadata
+        return None
 
     @classmethod
     def _compose_generation_mode(cls, *parts: str) -> str:
@@ -553,52 +913,6 @@ class BaseSpecialistAgent:
             parts.append("rag")
         return self._compose_generation_mode(*parts)
 
-    def _try_direct_rag_answer(self, results: Sequence[dict], query_text: str = "") -> str | None:
-        """En yuksek skorlu RAG sonucu yeterince iyiyse LLM'e gitmeden dondurur."""
-        if not results:
-            return None
-
-        top = results[0]
-        score = float(top.get("score", 0.0))
-        content = top.get("content", "").strip()
-        source = top.get("source", "")
-        metadata = dict(top.get("metadata", {}) or {})
-        score_type = str(metadata.get("score_type", "semantic_similarity"))
-        direct_threshold = self._resolve_direct_rag_threshold(score_type)
-
-        if score < direct_threshold:
-            return None
-        if len(content) < RAG_DIRECT_MIN_CONTENT_LEN:
-            return None
-
-        if (
-            score_type.strip().lower() == "reranker"
-            and len(results) >= 2
-            and score < direct_threshold + 0.07
-        ):
-            second_score = float(results[1].get("score", 0.0))
-            if (score - second_score) < _DIRECT_RAG_SCORE_GAP_MIN:
-                logger.info(
-                    "direct_rag_skipped_small_gap agent=%s top=%.4f second=%.4f gap=%.4f",
-                    self.agent_id, score, second_score, score - second_score,
-                )
-                return None
-
-        if _is_faq_source(source) and query_text:
-            content = _extract_relevant_faq_block(content, query_text)
-
-        return f"{self._compact_source_content(content, max_len=None)}\n\n(Kaynak: {source})"
-
-    @staticmethod
-    def _resolve_direct_rag_threshold(score_type: str) -> float:
-        """Map heterogeneous score types onto practical direct-answer thresholds."""
-        normalized_type = (score_type or "").strip().lower()
-        if normalized_type == "reranker":
-            return _DIRECT_RAG_RERANKER_THRESHOLD
-        if normalized_type == "retrieval":
-            return _DIRECT_RAG_RETRIEVAL_THRESHOLD
-        return RAG_DIRECT_SCORE_THRESHOLD
-
     async def _llm_synthesize(
         self,
         query_text: str,
@@ -609,91 +923,220 @@ class BaseSpecialistAgent:
         force_llm: bool = False,
     ) -> tuple[str, str]:
         """RAG kaynaklarini (ve varsa DB baglamini) LLM ile sentezler."""
-        if results and not db_context:
-            top_score = float(results[0].get("score", 0.0))
-            top_metadata = results[0].get("metadata") or {}
-            score_type = str(top_metadata.get("score_type", "semantic_similarity")).strip().lower()
+        # LLM sentez esiginde threshold kontrolunu kaldirildi —
+        # kaynak bulunduysa LLM'e birakilir, LLM kaynakta bilgi yoksa kendisi soyler.
+        # Sadece tamamen ilgisiz (0.10 alti) skorlari zaten _generate_answer'da filtreleniyor.
 
-            min_threshold = (
-                _LLM_SYNTHESIS_MIN_RERANKER_SCORE
-                if score_type == "reranker"
-                else _LLM_SYNTHESIS_MIN_RETRIEVAL_SCORE
+        # ── Structured Evidence Pipeline ─────────────────────
+        with profile_stage("agent.evidence_extraction", agent_id=self.agent_id):
+            # Pre-filter: FAQ extraction on raw content
+            preprocessed_results = []
+            for item in results[:8]:
+                item_copy = dict(item)
+                source = item_copy.get("source", "bilinmiyor")
+                if _is_faq_source(source) and query_text:
+                    item_copy["content"] = _extract_relevant_faq_block(
+                        item_copy.get("content", ""), query_text,
+                    )
+                preprocessed_results.append(item_copy)
+
+            evidence_items = extract_evidence_items(
+                query_text,
+                preprocessed_results,
+                self.department.value if hasattr(self, "department") else "",
+                analysis_query=_EVIDENCE_QUERY_PREPROCESSOR.preprocess(query_text),
             )
 
-            if top_score < min_threshold:
-                # force_llm=True ise threshold kontrolunu atla —
-                # routing LLM sentez gerektirdigine karar vermisse,
-                # dusuk skor nedeniyle LLM cagrisini engellemeyelim.
-                if not force_llm:
+            # Low-score keyword overlap filter (preserve existing behavior)
+            # BUT: if reranker score >= 0.45, trust the reranker's semantic
+            # understanding — semantic paraphrases (e.g. "bırakıp ayrılmak"
+            # ↔ "ilişik kesme") have low term overlap but high reranker scores.
+            if not force_llm:
+                _kept_evidence: list = []
+                for ev in evidence_items:
+                    if ev.score < 0.55 and not ev.matched_query_terms:
+                        # Reranker trusts this source — keep it despite low overlap
+                        if ev.score >= 0.45 and ev.score_type == "reranker":
+                            _kept_evidence.append(ev)
+                            continue
+                        _kw_overlap = self._compute_keyword_overlap(
+                            query_text, ev.content_snippet,
+                        )
+                        if _kw_overlap < 0.10:
+                            logger.info(
+                                "llm_context_filtered source=%s score=%.3f keyword_overlap=%.3f",
+                                ev.source_name, ev.score, _kw_overlap,
+                            )
+                            continue
+                    _kept_evidence.append(ev)
+                # Filtreleme sonrasi evidence sifir olursa, orijinal evidence'in
+                # en az 1 tanesini koru — LLM kaynakta bilgi yoksa kendisi soyler.
+                if not _kept_evidence and evidence_items:
+                    _kept_evidence = [evidence_items[0]]
                     logger.info(
-                        "llm_synthesis_blocked_low_score agent=%s top_score=%.4f threshold=%.4f score_type=%s",
-                        self.agent_id, top_score, min_threshold, score_type,
+                        "evidence_filter_kept_top_fallback agent=%s score=%.3f",
+                        self.agent_id, evidence_items[0].score,
+                    )
+                evidence_items = _kept_evidence
+
+            # Evidence varsa LLM'e birak; LLM kaynakta bilgi yoksa kendisi soyler.
+            # Sadece evidence hic yoksa (0 sonuc) Kural fallback zaten _generate_answer'da yapiliyor.
+
+            evidence_max_items = 8 if force_llm else 5
+            selector_max_items = min(
+                evidence_max_items,
+                max(1, int(settings.rag.llm_evidence_selection_max_selected)),
+            )
+            if self._should_use_llm_evidence_selection(
+                query_text,
+                evidence_items,
+                force_llm=force_llm,
+                db_context=db_context,
+            ):
+                with profile_stage("agent.evidence_selection", agent_id=self.agent_id):
+                    evidence_items, selection_decision = await select_evidence_with_llm(
+                        query_text,
+                        evidence_items,
+                        self.llm_service,
+                        llm_profile=llm_profile,
+                        max_selected=selector_max_items,
+                    )
+            else:
+                original_candidate_count = len(evidence_items)
+                evidence_items = list(evidence_items)[:selector_max_items]
+                selection_decision = EvidenceSelectionDecision(
+                    used_llm=False,
+                    status="agent_skipped",
+                    reason="selector not required for this agent/query",
+                    candidate_count=original_candidate_count,
+                )
+            if not evidence_items and not db_context:
+                # Evidence selection tum evidence'lari elemis olabilir —
+                # orijinal results'tan en az 1 tanesini geri koy, LLM denesin.
+                if preprocessed_results:
+                    from src.quality.evidence import EvidenceItem, _stable_source_id, _source_identity, select_evidence_sentences
+                    top = preprocessed_results[0]
+                    top_content = top.get("content", "")
+                    top_source = top.get("source", "bilinmiyor")
+                    top_metadata = top.get("metadata") or {}
+                    top_score = float(top.get("score", 0.0))
+                    source_id = _stable_source_id(
+                        _source_identity(top_metadata, top_source),
+                        top_content,
+                    )
+                    evidence_items = [EvidenceItem(
+                        content_snippet=top_content[:500],
+                        source_name=top_source,
+                        source_id=source_id,
+                        department=self.department.value,
+                        score=top_score,
+                        score_type=str(top_metadata.get("score_type", "")),
+                        selected_sentences=select_evidence_sentences(query_text, top_content),
+                        matched_query_terms=[],
+                        relevance_score=top_score,
+                        extracted_facts=[],
+                    )]
+                    logger.info(
+                        "evidence_selection_recovered_top agent=%s score=%.3f",
+                        self.agent_id, evidence_items[0].score,
+                    )
+                else:
+                    logger.info(
+                        "llm_evidence_selection_insufficient agent=%s status=%s",
+                        self.agent_id,
+                        selection_decision.status,
                     )
                     return (
                         "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
                         "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin.",
                         "kural",
                     )
+            context_chunks = build_evidence_context_chunks(
+                evidence_items,
+                query_text,
+                max_items=evidence_max_items,
+                max_content_len=_SPECIALIST_LLM_CONTEXT_MAX_LEN,
+            )
+
+            # Log evidence diagnostics
+            from src.core.profiling import get_current_profiler
+            _profiler = get_current_profiler()
+
+            # Intent coverage: çok parçalı sorularda evidence kapsama kontrolü
+            from src.quality.intent_coverage import compute_intent_coverage
+            _intent_coverage = compute_intent_coverage(
+                query_text,
+                [ev.content_snippet for ev in evidence_items],
+            )
+            if _intent_coverage.is_low:
                 logger.info(
-                    "force_llm_bypasses_synthesis_threshold agent=%s top_score=%.4f threshold=%.4f",
-                    self.agent_id, top_score, min_threshold,
+                    "intent_coverage_low agent=%s sub_intents=%s missing=%s ratio=%.2f",
+                    self.agent_id,
+                    _intent_coverage.sub_intents,
+                    _intent_coverage.missing_intents,
+                    _intent_coverage.coverage_ratio,
                 )
 
-        context_chunks = []
-        for index, item in enumerate(results[:5], start=1):
-            source = item.get("source", "bilinmiyor")
-            raw_content = item.get("content", "")
-            score = float(item.get("score", 0.0))
+            if _profiler is not None:
+                _profiler.set_attribute(
+                    "evidence_summary",
+                    build_evidence_diagnostics(evidence_items),
+                )
+                _profiler.set_attribute(
+                    "evidence_selection",
+                    selection_decision.to_diagnostics_dict(),
+                )
+                _profiler.set_attribute(
+                    "intent_coverage",
+                    {
+                        "sub_intents": _intent_coverage.sub_intents,
+                        "covered_intents": _intent_coverage.covered_intents,
+                        "missing_intents": _intent_coverage.missing_intents,
+                        "coverage_ratio": _intent_coverage.coverage_ratio,
+                        "is_low": _intent_coverage.is_low,
+                    },
+                )
 
-            # Düşük skorlu + düşük keyword overlap'li kaynakları LLM context'ine gönderme
-            # force_llm=True ise bu filtre atlanır — routing LLM sentez gerektirdiğini
-            # belirtmişse, specialist LLM'e tüm mevcut bağlamı göndermeliyiz.
-            if score < 0.55 and not force_llm:
-                _kw_overlap = self._compute_keyword_overlap(query_text, raw_content)
-                if _kw_overlap < 0.10:
-                    logger.info(
-                        "llm_context_filtered source=%s score=%.3f keyword_overlap=%.3f",
-                        source, score, _kw_overlap,
-                    )
-                    continue
+            # Store for claim guard and judge (used after LLM synthesis returns)
+            self._last_evidence_items = evidence_items
+            self._last_intent_coverage = _intent_coverage
 
-            if _is_faq_source(source) and query_text:
-                raw_content = _extract_relevant_faq_block(raw_content, query_text)
-            content = self._compact_source_content(
-                raw_content,
-                max_len=_SPECIALIST_LLM_CONTEXT_MAX_LEN,
-            )
-            context_chunks.append(f"[Kaynak {index}: {source}]\n{content}")
-
-        prompt = f"Soru:\n{query_text}\n\n"
+        safe_prompt = f"Kullanici sorusu:\n{query_text}\n\n"
         if db_context:
-            prompt += f"Veritabani Bilgisi:\n{db_context}\n\n"
+            safe_prompt += f"Veritabani Bilgisi:\n{db_context}\n\n"
         if context_chunks:
-            prompt += f"Belge Baglami:\n{chr(10).join(context_chunks)}\n\n"
-        prompt += (
-            "YANITLAMA STRATEJISI:\n"
-            "- Once sorunun DOGRUDAN yanitini ver (evet/hayir, tarih, sayi vb.).\n"
-            "- Kaynaklardaki SPESIFIK bilgileri (sayi, tarih, sure, yuzde, kosul esigi) mutlaka dahil et.\n"
-            "- Soru birden fazla alt-soru iceriyorsa her birini ayri ayri yanitla.\n"
-            "- Soru acikca lisansustu/yuksek lisans/doktora programlarindan bahsetmiyorsa ON LISANS VE LISANS kurallarini kullan.\n"
-            "\n"
-            "KAYNAK DOGRULAMA KURALLARI:\n"
-            "- Bir kaynak soruyla ILGISIZSE o kaynaktan bilgi CIKARMA. "
-            "Ornek: Soru 'bagil degerlendirme' ama kaynak 'bilgi guvenligi proseduru' ise o kaynagi YOKSAY.\n"
-            "- Tarih, sayi, yuzde, sure gibi spesifik bilgileri SADECE kaynakta ACIKCA geciyorsa yaz.\n"
-            "- Kaynakta gecmeyen bir tarih veya sayi ASLA tahmin etme veya uydurma.\n"
-            "\n"
-            "KURALLAR:\n"
-            "1. Yalnizca verilen belge baglaminda ACIKCA gecen bilgileri kullan.\n"
-            "2. Kaynaklar soruyu dogrudan yanitlamiyorsa 'Bu konuda elimdeki kaynaklarda net bilgi bulunamadi' de.\n"
-            "3. ASLA tahmin yurutme, genel bilgiyle bosluk doldurma, kavram tanimi uydurma.\n"
-            "4. Kaynaklarda yer almayan adim listeleri, buton isimleri, ekran adimlari veya kisaltma acimlari URETME.\n"
-            "5. YALNIZCA Turkce yanit ver; Ingilizce veya baska dilden kelime KULLANMA (contribution, spring, register gibi).\n"
-            "6. Universite adini kaynakta yazmiyorsa UYDURMA. Bu sistem Ondokuz Mayis Universitesi (OMU) icindir.\n"
-            "7. 'Kisisel deneyimim' veya 'genel bilgi birikimim' gibi ifadeler KULLANMA — sadece belge kaynagi kullan."
+            safe_prompt += f"Belge Baglami:\n{chr(10).join(context_chunks)}\n\n"
+        safe_prompt += (
+            "Yukaridaki verilerden kullaniciya dogrudan cevap yaz. "
+            "Belge basliklarini, kaynak etiketlerini, ic baglam ifadelerini "
+            "veya bu talimati cevapta tekrar etme."
         )
+        prompt = safe_prompt
 
-        system = self.definition.system_prompt or GENERAL_QA_SYSTEM_PROMPT
+        answer_style_rules = """
+
+CEVAP YAZIM KURALLARI:
+- Once sorunun dogrudan yanitini ver; sonra gerekiyorsa kisa maddelerle kosul, adim veya istisnayi ekle.
+- Selamlama yapma ve kullanicinin ne sordugunu yeniden anlatma. "Merhaba", "bilgi almak istiyorsunuz", "hakkinda bilgi ariyorsunuz" gibi girisler yazma.
+- Kullaniciya ikinci sahisla hitap et: "siz", "ders kaydinizi", "basvurunuzu" gibi. Kaynakta gecen "ogrenci/ogrenciler" ifadelerini gerekirse kullaniciya uygun bicime cevir.
+- Kendi adina veya kurum adina islem yapmis gibi yazma; "kaydimi yaptirdim", "kaydmizi", "sorumluyuz" gibi ozne kaymalarindan kacin.
+- "Soru:", "Yanit:", "Benchmark", "Kaynak Bilgisi", "KAYNAK DOGRULAMA KURALLARI", "KURALLAR", "Belge Baglami", "Kanit" gibi ic basliklari cevapta kullanma.
+- Cevabi Turkce yaz; "certain", "about", "regarding", "information" gibi Ingilizce dolgu veya yer tutucu kelimeler kullanma.
+- Kaynakta gecen sayi, tarih, yuzde, sure veya kosul esigi sorunun cevabi icin gerekliyse koru; kaynakta olmayan sayi, tarih, portal, menu, odeme kanali veya form adi uretme.
+- Prosedur sorularinda kaynakta varsa su alanlari ozellikle koru: sure/deadline, basvuru belgesi veya form, yetkili kurul/komisyon/birim, platform/sistem adi, devam/devamsizlik kosulu, sayisal esik ve istisna.
+- Resmi kisaltma veya ad kaynakta geciyorsa sadelestirip kaybetme; gerekirse birlikte yaz: "UBYS/ogrenci bilgi sistemi" gibi.
+- Olumsuz ve istisna bildiren ifadeleri tersine cevirme: "sayilmaz", "dikkate alinmaz", "gerekmez", "zorunlu degildir", "giremez" gibi hukumleri ayni anlamda koru.
+- Kaynak soruyla kismen ilgiliyse yalnizca dogrudan ilgili bilgiyi ver; ilgisiz metni ve kaynak yorumunu cevaba tasima.
+- Cevap verdikten sonra ayrica "bilgi bulunamadi" gibi celisen bir not ekleme.
+- Cevabi yarim cumleyle bitirme; kaynakta ayrintili esik/tutar yoksa o parcayi acmadan tamamlanmis cumleyle dur.
+- COK PARCALI SORU: Kullanici birden fazla seyi soruyorsa (ornegin "ne zaman + kimler + nasil + ucret + gerekli belge + sartlar") cevabi alt basiklara bol. Her alt parca icin kaynakta bilgi varsa ver; kaynak sadece bir alt parcayi destekliyorsa diger parcalar icin "Bu konuda kaynaklarda net bilgi bulunamadi" de. Tarih sorulmus ama kaynakta tarih yoksa tarih UYDURMA; "akademik takvim/duyuru ile ilan edilir" gibi temkinli ifadelendirme kullan.
+"""
+        system = (self.definition.system_prompt or GENERAL_QA_SYSTEM_PROMPT) + answer_style_rules
+        synthesis_timeout = self._llm_synthesis_timeout_seconds(
+            query_text,
+            results,
+            llm_profile=llm_profile,
+        )
         selected_model = settings.resolve_llm_model(
             role="specialist_synthesis",
             profile=llm_profile,
@@ -701,7 +1144,7 @@ class BaseSpecialistAgent:
         logger.info(
             "specialist_llm_synthesis_start agent=%s timeout_s=%s prompt_chars=%s sources=%s model=%s profile=%s",
             self.agent_id,
-            _LLM_SYNTHESIS_TIMEOUT_SECONDS,
+            synthesis_timeout,
             len(prompt) + len(system),
             len(context_chunks),
             selected_model,
@@ -718,9 +1161,65 @@ class BaseSpecialistAgent:
                         model_role="specialist_synthesis",
                         llm_profile=llm_profile,
                     ),
-                    timeout=_LLM_SYNTHESIS_TIMEOUT_SECONDS,
+                    timeout=synthesis_timeout,
                 )
-                return answer, self._derive_llm_generation_mode(results, db_context=db_context)
+
+            # Post-generation quality check: foreign/broken token detection
+            from src.quality.answer_filter import check_answer_quality, REWRITE_ONLY_SYSTEM_SUFFIX
+            quality = check_answer_quality(answer)
+            if quality.needs_rewrite:
+                logger.info(
+                    "answer_quality_rewrite agent=%s issues=%s bad_tokens=%s",
+                    self.agent_id,
+                    quality.detected_issues,
+                    quality.bad_tokens[:3],
+                )
+                try:
+                    rewrite_system = system + REWRITE_ONLY_SYSTEM_SUFFIX
+                    rewrite_prompt = (
+                        f"Onceki cevapta yabanci kelime ve bozuk tokenlar vardi. "
+                        f"Ayni anlami koruyarak dogal Turkce ile yeniden yaz:\n\n{answer}"
+                    )
+                    rewritten = await asyncio.wait_for(
+                        self.llm_service.generate(
+                            prompt=rewrite_prompt,
+                            system=rewrite_system,
+                            model_role="specialist_synthesis",
+                            llm_profile=llm_profile,
+                        ),
+                        timeout=synthesis_timeout,
+                    )
+                    if rewritten and len(rewritten.strip()) > len(answer.strip()) * 0.4:
+                        answer = rewritten
+                        logger.info("answer_quality_rewrite_success agent=%s", self.agent_id)
+                except (asyncio.TimeoutError, Exception) as retry_exc:
+                    logger.warning(
+                        "answer_quality_rewrite_failed agent=%s reason=%s",
+                        self.agent_id, type(retry_exc).__name__,
+                    )
+
+            # Riskli cevaplarda LLM-as-a-Judge kalite kapisi. En fazla bir
+            # rewrite/retrieve-again onarimi yapilir; tekrar judge calistirilmaz.
+            answer, judge_meta = await self._apply_judge_quality_gate(
+                query_text=query_text,
+                answer=answer,
+                system=system,
+                context_chunks=context_chunks,
+                evidence_items=evidence_items,
+                intent_coverage=_intent_coverage,
+                llm_profile=llm_profile,
+                synthesis_timeout=synthesis_timeout,
+            )
+            if judge_meta.get("judge_enabled"):
+                logger.info(
+                    "answer_judge_applied agent=%s action=%s retry_count=%s approved=%s",
+                    self.agent_id,
+                    judge_meta.get("judge_action"),
+                    judge_meta.get("retry_count"),
+                    judge_meta.get("approved"),
+                )
+
+            return answer, self._derive_llm_generation_mode(results, db_context=db_context)
         except (asyncio.TimeoutError, LLMServiceError) as exc:
             logger.warning(
                 "llm_synthesis_fallback_used agent=%s reason=%s",
@@ -732,6 +1231,20 @@ class BaseSpecialistAgent:
                     self._build_llm_failure_fallback(results, db_context=db_context),
                     self._derive_non_llm_generation_mode(results, db_context=db_context),
                 )
+
+    @classmethod
+    def _extract_evidence_content(cls, query_text: str, content: str) -> str:
+        """LLM baglamina soruyla en ilgili kanit cumlelerini tasir.
+
+        Thin wrapper around ``select_evidence_sentences`` from
+        ``src.quality.evidence``.  Kept for backward compatibility.
+        """
+        return select_evidence_sentences(
+            query_text,
+            content,
+            max_sentences=_SPECIALIST_EVIDENCE_MAX_SENTENCES,
+            min_score=_SPECIALIST_EVIDENCE_MIN_SCORE,
+        )
 
     def _build_llm_failure_fallback(
         self,

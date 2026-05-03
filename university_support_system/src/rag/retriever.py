@@ -22,6 +22,7 @@ from langchain_core.retrievers import BaseRetriever
 
 from src.core.config import settings
 from src.core.constants import Department, academic_schedule_collection_name, collection_name_for_department
+from src.core.text_normalization import normalize_text
 from src.rag.candidate_utils import (
     deduplicate_candidate_dicts,
     deduplicate_documents,
@@ -30,15 +31,18 @@ from src.rag.candidate_utils import (
     sort_candidates_by_score,
 )
 from src.rag.query_cache import _QueryCache as _SharedQueryCache
+from src.rag.llm_query_expander import LLMQueryExpander
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.rag.search_planner import (
     OFF_TOPIC_PENALTY as _SHARED_OFF_TOPIC_PENALTY,
     _apply_education_level_penalty as _shared_apply_education_level_penalty,
     _apply_finance_source_penalty as _shared_apply_finance_source_penalty,
+    _apply_query_profile_source_bias as _shared_apply_query_profile_source_bias,
     _looks_like_schedule_query as _shared_looks_like_schedule_query,
     _apply_source_relevance as _shared_apply_source_relevance,
     _apply_student_affairs_faq_bias as _shared_apply_student_affairs_faq_bias,
     _detect_query_topic as _shared_detect_query_topic,
+    _detect_student_affairs_query_profile as _shared_detect_student_affairs_query_profile,
     _plan_search_departments as _shared_plan_search_departments,
     _score_departments as _shared_score_departments,
 )
@@ -68,6 +72,14 @@ _AUGMENTATION_PREFIX_RE = re.compile(
     r"^(?:[\w\s/çğıöşüÇĞİÖŞÜ]+\s+(?:bolumu/programi|baglami|Fakultesi)\s+icin:\s*)+",
     re.IGNORECASE,
 )
+_FAQ_QUESTION_RE = re.compile(r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$", re.MULTILINE)
+_FAQ_SOURCE_PATTERNS = ("sik_sorulan", "sikca_sorulan", "sss", "faq")
+_FAQ_LOW_WEIGHT_WORDS = frozenset({
+    "ne", "nasil", "nerede", "neden", "hangi", "kim", "kac",
+    "mi", "mu", "icin", "ile", "ve", "bir", "var", "yok",
+    "olur", "olmali", "gerekir", "yapmali", "kayit",
+    "ogrenci", "universite", "belge", "bilgi",
+})
 
 
 def _strip_augmentation_prefix(query: str) -> str:
@@ -76,10 +88,54 @@ def _strip_augmentation_prefix(query: str) -> str:
     return stripped if len(stripped) >= 5 else query
 
 
+def _faq_word_weight(word: str) -> float:
+    return 0.3 if word in _FAQ_LOW_WEIGHT_WORDS else 1.0
+
+
+def _is_faq_source(source: str) -> bool:
+    lowered = normalize_text(source)
+    return any(pattern in lowered for pattern in _FAQ_SOURCE_PATTERNS)
+
+
+def _extract_relevant_faq_block(content: str, query: str, *, max_blocks: int = 2) -> str:
+    """Trim FAQ-style content to the most relevant Q&A blocks before reranking."""
+    questions = list(_FAQ_QUESTION_RE.finditer(content))
+    if len(questions) < 2:
+        return content
+
+    query_words = set(normalize_text(query).split())
+    scored_blocks: list[tuple[float, str]] = []
+    for index, match in enumerate(questions):
+        end = questions[index + 1].start() if index + 1 < len(questions) else len(content)
+        block = content[match.start():end].strip()
+        question_text = match.group(1) if match.group(1) else block.split("\n")[0]
+        question_words = set(normalize_text(question_text).split())
+        question_overlap = sum(_faq_word_weight(word) for word in query_words & question_words) * 2.0
+        block_words = set(normalize_text(block).split())
+        block_overlap = sum(_faq_word_weight(word) for word in query_words & block_words)
+        scored_blocks.append((question_overlap + block_overlap, block))
+
+    scored_blocks.sort(key=lambda pair: pair[0], reverse=True)
+    top_blocks = [block for score, block in scored_blocks[:max_blocks] if score > 0]
+    if not top_blocks:
+        return scored_blocks[0][1] if scored_blocks else content
+    return "\n\n".join(top_blocks)
+
+
+def _select_reranker_query(query: str, expanded_query: str) -> str:
+    """Prefer expanded query text for high-value student-affairs admin profiles."""
+    profile = _detect_student_affairs_query_profile(query)
+    if profile in {"grade_objection", "grade_entry", "grade_visibility", "withdrawal", "discipline", "muafiyet"}:
+        return _strip_augmentation_prefix(expanded_query)
+    return _strip_augmentation_prefix(query)
+
+
 _TURKISH_SUFFIXES = (
     "lerin", "larin", "leri", "ları", "lari",
     "ler", "lar",
     "nin", "nın", "nın", "nun", "nün",
+    "larımız", "lerimiz", "larimiz", "lerimiz",
+    "larım", "lerim", "larim", "lerim",
     "dan", "den", "tan", "ten",
     "nda", "nde",
     "daki", "deki", "ndaki", "ndeki",
@@ -87,6 +143,8 @@ _TURKISH_SUFFIXES = (
     "ını", "ini", "unu", "ünü",
     "ına", "ine", "una", "üne",
     "ında", "inde", "unda", "ünde",
+    "uma", "üme", "ime", "ıma",
+    "um", "üm",
     "ıdır", "idir", "udur", "üdür",
     "dır", "dir", "dur", "dür",
     "tır", "tir", "tur", "tür",
@@ -108,10 +166,27 @@ def _turkish_stem(token: str) -> str:
     """Aggressive but safe suffix stripping for BM25 recall."""
     if len(token) <= 3:
         return token
-    for suffix in _TURKISH_SUFFIXES:
-        if token.endswith(suffix) and len(token) - len(suffix) >= 2:
-            return token[: -len(suffix)]
-    return token
+    stemmed = token
+    for _ in range(2):
+        for suffix in _TURKISH_SUFFIXES:
+            if stemmed.endswith(suffix) and len(stemmed) - len(suffix) >= 2:
+                stemmed = stemmed[: -len(suffix)]
+                break
+        else:
+            break
+    return stemmed
+
+
+def _dedupe_tokens(tokens: List[str]) -> List[str]:
+    """Preserve token order while removing exact duplicates."""
+    seen: set[str] = set()
+    deduped: List[str] = []
+    for token in tokens:
+        if token in seen:
+            continue
+        seen.add(token)
+        deduped.append(token)
+    return deduped
 
 
 def turkish_bm25_preprocess(text: str) -> List[str]:
@@ -128,8 +203,16 @@ def turkish_bm25_preprocess(text: str) -> List[str]:
     normalized_text = _WHITESPACE_RE.sub(" ", normalized_text).strip()
 
     tokens = normalized_text.split()
-    stemmed = [_turkish_stem(token) for token in tokens if len(token) > 1]
-    return stemmed
+    stemmed: List[str] = []
+    for token in tokens:
+        if len(token) <= 1:
+            continue
+        token_stem = _turkish_stem(token)
+        stemmed.append(token_stem)
+        ascii_stem = _turkish_stem(normalize_text(token))
+        if ascii_stem and ascii_stem != token_stem:
+            stemmed.append(ascii_stem)
+    return _dedupe_tokens(stemmed)
 
 
 OFF_TOPIC_PENALTY = _SHARED_OFF_TOPIC_PENALTY
@@ -185,12 +268,26 @@ def _apply_student_affairs_faq_bias(
     return _shared_apply_student_affairs_faq_bias(results, query, collection_name)
 
 
+def _apply_query_profile_source_bias(
+    results: List[Dict[str, Any]],
+    query: str,
+    collection_name: str,
+) -> List[Dict[str, Any]]:
+    """Backward-compatible wrapper for student-affairs query-profile biasing."""
+    return _shared_apply_query_profile_source_bias(results, query, collection_name)
+
+
 def _apply_education_level_penalty(
     results: List[Dict[str, Any]],
     query: str,
 ) -> List[Dict[str, Any]]:
     """Backward-compatible wrapper for lisans/lisansustu source penalty."""
     return _shared_apply_education_level_penalty(results, query)
+
+
+def _detect_student_affairs_query_profile(query: str) -> Optional[str]:
+    """Backward-compatible wrapper for student-affairs query profile detection."""
+    return _shared_detect_student_affairs_query_profile(query)
 
 
 def _looks_like_schedule_query(query: str) -> bool:
@@ -316,6 +413,16 @@ def _result_score_type(item: Dict[str, Any]) -> str:
     return str(metadata.get("score_type", "retrieval")).strip().lower()
 
 
+def _metadata_identity_key(metadata: Dict[str, Any]) -> str:
+    """Return the stable document identity used when source filenames are ambiguous."""
+    return str(
+        metadata.get("relative_path")
+        or metadata.get("file_path")
+        or metadata.get("source")
+        or ""
+    )
+
+
 class ChromaRestRetriever(BaseRetriever):
     """LangChain-compatible retriever backed by Chroma REST API."""
 
@@ -363,6 +470,20 @@ class HybridRetriever:
     OVERSAMPLE_FACTOR = 4
     _BM25_DOCUMENT_CACHE: ClassVar[dict[str, List[Document]]] = {}
     _BM25_RETRIEVER_CACHE: ClassVar[dict[tuple[str, int], BM25Retriever]] = {}
+    _WARMUP_PROBE_QUERIES: ClassVar[dict[str, str]] = {
+        collection_name_for_department(Department.STUDENT_AFFAIRS): (
+            "Kayit yenileme, ders kaydi ve danisman onayi nasil ilerler?"
+        ),
+        collection_name_for_department(Department.ACADEMIC_PROGRAMS): (
+            "Muafiyet ve intibak basvurusu hangi belgelerle ve hangi surede yapilir?"
+        ),
+        collection_name_for_department(Department.FINANCE): (
+            "Harc odemesi ve ogrenim ucreti nasil yatirilir?"
+        ),
+        academic_schedule_collection_name(): (
+            "Haftalik ders programi ve derslik bilgisi nerede gorulur?"
+        ),
+    }
 
     @classmethod
     def clear_resource_cache(cls) -> None:
@@ -387,6 +508,7 @@ class HybridRetriever:
         self.min_score = min_score if min_score is not None else settings.rag.min_similarity
 
         self.query_preprocessor = QueryPreprocessor(enable_expansion=enable_query_expansion)
+        self.llm_query_expander = LLMQueryExpander()
         from src.rag.embedder import Embedder
         from src.rag.reranker import CrossEncoderReranker
 
@@ -396,7 +518,13 @@ class HybridRetriever:
         self._indexers: Dict[str, ChromaIndexer] = {}
         self._ensembles: Dict[str, EnsembleRetriever] = {}
         self._bm25_doc_counts: Dict[str, int] = {}
-        self._cache = _QueryCache(ttl=cache_ttl)
+        effective_cache_ttl = settings.cache.retriever_query_cache_ttl_seconds
+        if cache_ttl != 300:
+            effective_cache_ttl = cache_ttl
+        self._cache = _QueryCache(
+            ttl=effective_cache_ttl,
+            enabled=(settings.cache.enabled and settings.cache.retriever_query_cache_enabled),
+        )
 
     @classmethod
     def prewarm(
@@ -417,6 +545,25 @@ class HybridRetriever:
                 _ = retriever.reranker.model
             for collection_name in collection_names:
                 retriever._ensure_ensemble(collection_name)
+                probe_query = cls._WARMUP_PROBE_QUERIES.get(collection_name, "Test sorgusu")
+                retriever.embedder.embed_single(probe_query, is_query=True)
+                candidates = retriever._search_collection_candidates(collection_name, probe_query)
+                if include_reranker:
+                    reranker_candidates = candidates[: max(1, min(retriever.k, 2))]
+                    if not reranker_candidates:
+                        reranker_candidates = [
+                            {
+                                "content": "Warm-up belge parcasi",
+                                "score": 0.0,
+                                "source": "__warmup__",
+                                "metadata": {},
+                            }
+                        ]
+                    retriever.reranker.rerank(
+                        probe_query,
+                        reranker_candidates,
+                        top_k=min(len(reranker_candidates), retriever.k),
+                    )
         finally:
             retriever.close()
 
@@ -425,7 +572,14 @@ class HybridRetriever:
         """Sort candidates by score descending."""
         return sort_candidates_by_score(candidates)
 
-    def _reranker_candidate_limit(self, collection_name: str, query_type: str, top_k: int) -> int:
+    def _reranker_candidate_limit(
+        self,
+        collection_name: str,
+        query_type: str,
+        top_k: int,
+        *,
+        query: str,
+    ) -> int:
         """Return reranker candidate pool size for the current collection/query type."""
         base_limit = settings.rag.reranker_candidate_limit_default
 
@@ -441,6 +595,28 @@ class HybridRetriever:
             and query_type == "general"
         ):
             base_limit = max(base_limit, top_k + 4)
+
+        profile = _detect_student_affairs_query_profile(query)
+        if collection_name in {
+            "__multi__",
+            collection_name_for_department(Department.STUDENT_AFFAIRS),
+        }:
+            if profile in {
+                "grade_objection",
+                "grade_entry",
+                "grade_visibility",
+                "withdrawal",
+                "discipline",
+                "muafiyet",
+                "course_registration",
+            }:
+                # Keep extra recall for admin/procedure-heavy student-affairs flows,
+                # but avoid reranking very large pools that dominate dispatch latency.
+                base_limit = max(base_limit, top_k + 8, 16)
+            elif query_type == "procedural":
+                base_limit = max(base_limit, top_k + 6, 12)
+            elif profile == "international_registration":
+                base_limit = max(base_limit, top_k + 8, 14)
 
         return max(top_k, base_limit)
 
@@ -488,7 +664,7 @@ class HybridRetriever:
     def _load_documents_for_collection(self, collection_name: str) -> List[Document]:
         """Load BM25 cache documents for a collection on demand."""
         cached_documents = self._BM25_DOCUMENT_CACHE.get(collection_name)
-        if cached_documents is not None:
+        if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled and cached_documents is not None:
             return cached_documents
 
         indexer = self._get_indexer(collection_name)
@@ -512,6 +688,7 @@ class HybridRetriever:
         """Expand a result to the full MADDE span when the hit is only one sub-chunk."""
         metadata = dict(candidate.get("metadata") or {})
         source = metadata.get("source") or candidate.get("source")
+        document_key = _metadata_identity_key(metadata)
         madde_no = metadata.get("madde_no")
         sub_chunk = metadata.get("sub_chunk")
         if not source or not madde_no or not sub_chunk:
@@ -525,7 +702,7 @@ class HybridRetriever:
         related_candidates: List[Dict[str, Any]] = []
         for document in documents:
             doc_metadata = dict(document.metadata or {})
-            if doc_metadata.get("source") != source:
+            if _metadata_identity_key(doc_metadata) != document_key:
                 continue
             if str(doc_metadata.get("madde_no")) != str(madde_no):
                 continue
@@ -608,6 +785,25 @@ class HybridRetriever:
             candidates.extend(self._search_collection_candidates(collection_name, expanded_query))
         return candidates
 
+    def _expand_query_for_search(self, query: str) -> str:
+        """Apply deterministic expansion and optional LLM expansion."""
+        rule_expanded_query = self.query_preprocessor.preprocess(query)
+        llm_expander = getattr(self, "llm_query_expander", None)
+        if llm_expander is None:
+            return rule_expanded_query
+
+        llm_result = llm_expander.expand(query, rule_expanded_query=rule_expanded_query)
+        if llm_result is None:
+            return rule_expanded_query
+
+        logger.info(
+            "llm_query_expanded",
+            original=query,
+            expanded=llm_result.expanded_query,
+            added_terms=llm_result.added_terms,
+        )
+        return llm_result.expanded_query
+
     @staticmethod
     def _build_cache_key(
         query: str,
@@ -656,14 +852,30 @@ class HybridRetriever:
         self,
         *,
         query: str,
+        expanded_query: str,
         query_type: str,
         candidates: List[Dict[str, Any]],
         search_scope: str,
         top_k: int,
     ) -> List[Dict[str, Any]]:
         """Apply reranker policy and return ranked candidates."""
-        reranker_limit = self._reranker_candidate_limit(search_scope, query_type, top_k)
+        reranker_limit = self._reranker_candidate_limit(
+            search_scope,
+            query_type,
+            top_k,
+            query=query,
+        )
         reranker_candidates = candidates[:reranker_limit]
+        clean_query = _select_reranker_query(query, expanded_query)
+        reranker_candidates = [
+            {
+                **candidate,
+                "content": _extract_relevant_faq_block(str(candidate.get("content", "")), clean_query)
+                if _is_faq_source(str(candidate.get("source", "")))
+                else candidate.get("content", ""),
+            }
+            for candidate in reranker_candidates
+        ]
 
         if self._should_skip_reranker(search_scope, query_type, reranker_candidates, top_k):
             logger.info(
@@ -676,7 +888,6 @@ class HybridRetriever:
             )
             return self._rank_without_reranker(query, reranker_candidates, top_k=top_k)
 
-        clean_query = _strip_augmentation_prefix(query)
         logger.info(
             "reranker_limited",
             query=query,
@@ -745,7 +956,7 @@ class HybridRetriever:
     ) -> List[Document]:
         """Load and cache BM25 documents for a collection."""
         cached_documents = self._BM25_DOCUMENT_CACHE.get(collection_name)
-        if cached_documents is not None:
+        if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled and cached_documents is not None:
             logger.info(
                 "bm25_document_cache_hit",
                 collection=collection_name,
@@ -764,7 +975,8 @@ class HybridRetriever:
                 metadata = metadatas[index] if metadatas and index < len(metadatas) else {}
                 documents.append(Document(page_content=text, metadata=metadata))
 
-        self._BM25_DOCUMENT_CACHE[collection_name] = documents
+        if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled:
+            self._BM25_DOCUMENT_CACHE[collection_name] = documents
         logger.info(
             "bm25_documents_cached",
             collection=collection_name,
@@ -781,7 +993,7 @@ class HybridRetriever:
         """Build and cache BM25 retrievers per collection and k."""
         cache_key = (collection_name, internal_k)
         cached_retriever = self._BM25_RETRIEVER_CACHE.get(cache_key)
-        if cached_retriever is not None:
+        if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled and cached_retriever is not None:
             logger.info(
                 "bm25_retriever_cache_hit",
                 collection=collection_name,
@@ -800,7 +1012,8 @@ class HybridRetriever:
             preprocess_func=turkish_bm25_preprocess,
         )
         bm25_retriever.k = internal_k
-        self._BM25_RETRIEVER_CACHE[cache_key] = bm25_retriever
+        if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled:
+            self._BM25_RETRIEVER_CACHE[cache_key] = bm25_retriever
         return bm25_retriever
 
     def _ensure_ensemble(self, collection_name: str) -> EnsembleRetriever:
@@ -899,7 +1112,7 @@ class HybridRetriever:
         if cached is not None:
             return cached
 
-        expanded_query = self.query_preprocessor.preprocess(query)
+        expanded_query = self._expand_query_for_search(query)
         query_type = self.query_preprocessor.detect_query_type(query)
 
         logger.info(
@@ -930,12 +1143,14 @@ class HybridRetriever:
 
         search_scope = primary_collections[0] if len(primary_collections) == 1 else "__multi__"
         candidates = _apply_student_affairs_faq_bias(candidates, query, search_scope)
+        candidates = _apply_query_profile_source_bias(candidates, query, search_scope)
         candidates = _apply_finance_source_penalty(candidates, query, search_scope)
         candidates = _apply_education_level_penalty(candidates, query)
         candidates = _apply_department_metadata_boost(candidates, student_department)
         candidates = self._sort_candidates_by_score(candidates)
         results = self._rank_candidates(
             query=query,
+            expanded_query=expanded_query,
             query_type=query_type,
             candidates=candidates,
             search_scope=search_scope,

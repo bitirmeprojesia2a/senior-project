@@ -1,0 +1,1046 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "run_timestamp": "20260423_174611",
+  "total_questions": 25,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 96.0,
+    "key_fact_coverage": 70.0,
+    "clean_quality_pct": 96.0,
+    "avg_time_ms": 11299.9,
+    "median_time_ms": 10445.8,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0
+  },
+  "results": [
+    {
+      "id": "Q1",
+      "category": "A_multi_source_synthesis",
+      "question": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs",
+        "announcement"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "üç hafta",
+        "dilekçe",
+        "komisyon",
+        "derslere devam"
+      ],
+      "key_fact_results": {
+        "üç hafta": true,
+        "dilekçe": false,
+        "komisyon": true,
+        "derslere devam": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 13825.5,
+      "source_count": 12,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Yatay geçişle gelen bir öğrenci, muafiyet başvurularını her eğitim-öğretim döneminde derslerin başlamasından itibaren ikinci haftanın sonuna kadar yapmalıdır. Başvuruların sonuçlanmasının ardından, öğrenciler ilgili birim tarafından oluşturulan ders yeterlik ve intibak komisyonu tarafından değerlendirilir. Derslere devam edilebilir mi?\n\nEvet, öğrenciler muafiyet başvurularının sonuçlanmasını beklemek üzere derslere devam etmesi önerilir. Ancak akademik takvime bağlı olarak kayıt yenileyen öğrencilerin bu süre içinde mağdur olmaları önlenmelidir.\n\nDetaylar:\n\n- Yatay geçişle gelen öğrenciler, kayıt yaptırdıkları öğretim yılının en geç 3. haftasının sonuna kadar muafiyet başvurularını yapabilir.\n- öğrenciler muafiyet başvurularının sonuçlanmasını beklemek üzere derslere devam etmesi önerilir.\n- Disiplin cezası almış öğrencilerin yatay geçiş başvuruları kabul edilmez.\n- Yatay geçişle gelen öğrenciler, muafiyet başvurularını her eğitim-öğretim döneminde derslerin başlamasından itibaren ikinci haftanın sonuna kadar gerçekleştirebilirler.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Belge: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf\n- Belge: 2025_2026_bahar_yatay_geçiş_ilan_metni.pdf\n- Belge: ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf\n- Belge: sık_sorulan_sorular.txt\n- Belge: yonerge_uluslararasi_ogrenci_yatay_gecis.pdf\n- Belge: diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf\n- Belge: önlisans_ve_lisans_düzeyindeki_programlar_arasında_geçiş_yönergesi.pdf\n- Belge: uzaktan_eğitim_tezsiz_yüksek_lisans_programı_yönergesi.pdf\n- Duyuru kaydi: 2025-2026 Eğitim Öğretim Yılı Bahar Yarıyılı Yatay Geçiş Yedek sonuçları (https://www.omu.edu.tr/tr/icerik/duyuru/2025-2026-egitim-ogretim-yili-bahar-yariyili-yatay-gecis-yedek-sonuclari)\n- Duyuru kaydi: 2025 - 2026 Güz Dönemi Yatay Geçiş Başvuru Sonuçları (https://eem-muhendislik.omu.edu.tr/tr/haberler/2025-2026-guz-donemi-yatay-gecis-basvuru-sonuclar)\n- Duyuru kaydi: 2025-2026 eğitim öğretim yılı bahar yarıyılı yatay geçiş sonuçları (https://www.omu.edu.tr/tr/icerik/duyuru/2025-2026-egitim-ogretim-yili-bahar-yariyili-yatay-gecis-sonuclari)",
+      "profiling": {
+        "total_ms": 13825.462,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q2",
+      "category": "A_multi_source_synthesis",
+      "question": "Tek ders sınavına girebilmek için stajımı tamamlamış olmam gerekir mi ve sınavda başarılı sayılmam için minimum not kaç?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "staj",
+        "tamamla",
+        "CC"
+      ],
+      "key_fact_results": {
+        "staj": true,
+        "tamamla": true,
+        "CC": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 3,
+      "elapsed_ms": 18013.6,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Sorusuna ilişkin ayrıntılı yanıtı veriyorum:\n\n1. Yönetmelik On Lisans ve Lisans Eğitimi Yönetmeliği'nin 8. maddesinde yazıyor ama daha spesifik bilgi için diğer kaynaklara bakmamız gerekecektir. Yine de birinciden bahsetmek gerekiyor, bu maddeye göre ön lisans ve lisans düzeyindeki öğrenciler en fazla yedi yıl süreyle eğitim görebilirler.\n\nYanıtlar:\n\n- \"Stajımı tamamlamış olmam gerekmez mi tek ders sınavına girip?\" Yanıt: Evet, staj dersini tamamlanmış olmak gerekli değildir. Kaynak: [Kaynak 1: sık_sorulan_sorular.txt] \"Tek ders sınavına bir dersten başarılı sayılabilmek için Yarıyıl/Yıl Sonu Sınavı Alt Limiti var mıdır?\" Yanıt: Evet, 100 puan üzerinden 50’nin altında not alan öğrenciler başarısız sayılır. Kaynak: [Kaynak 2: sık_sorulan_sorular.txt] \"Tek ders sınavı sonucunda hangi not aldığımda başarılı sayılabilirim?\" Yanıt: Ara sınav şartı aranmaksızın en az CC alırsanız başarılı sayılırsınız. Kaynak: [Kaynak 4: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf] \n- \"Minimum not kaç?\" Yanıt: 50. (Ara sınav şartı aranmaksızın 100 üzerinden 50’nin altında not alan öğrenciler başarısız sayılır.) Kaynak: [Kaynak 4: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf]\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+      "profiling": {
+        "total_ms": 18013.604,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q3",
+      "category": "A_multi_source_synthesis",
+      "question": "Başarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "değiştirebilir",
+        "devam koşulu",
+        "yeni",
+        "ders"
+      ],
+      "key_fact_results": {
+        "değiştirebilir": false,
+        "devam koşulu": true,
+        "yeni": false,
+        "ders": true
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 4,
+      "elapsed_ms": 7304.2,
+      "source_count": 4,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Soru: Başarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?\n\nYanıt: Devam zorunluluğunuz değişmez. Zira yurutmekle görevli olduğunuz belge baglaminda devamsizligina dair cozum yontemleri \"devam koşulu olmayan derslerde dönem içi değerlendirmelerine\" ilgili olarak yer almaktadir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: yaz_okulu_eğitim_öğretim.pdf\n- Belge: yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+      "profiling": {
+        "total_ms": 7304.189,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q4",
+      "category": "A_multi_source_synthesis",
+      "question": "Pedagojik formasyon dersleri transkripte dahil ediliyor mu, mezuniyet ortalamasına etkisi var mı ve diplomada nasıl bir ibare yer alıyor?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs"
+      ],
+      "actual_departments": [
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "transkript",
+        "dahil",
+        "ortalama",
+        "tamamlamıştır"
+      ],
+      "key_fact_results": {
+        "transkript": true,
+        "dahil": true,
+        "ortalama": true,
+        "tamamlamıştır": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 4,
+      "elapsed_ms": 9004.8,
+      "source_count": 4,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Soru 1: Pedagojik formasyon dersleri transkripte dahil ediliyor mu?\n\nYANIT: Evet, pedagojik formasyon dersleri transkripte dahil edilecektir. [Kaynak 1: pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt]\n\nSoru 2: Mezuniyet ortalamasına etkisi var mı?\n\nYANIT: Evet, pedagojik formasyon dersleri mezuniyet ortalamasına dahil edilecektir. [Kaynak 1: pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt]\n\nSoru 3: Diplomada nasıl bir ibare yer alacak?\n\nYANIT: Diplomaların arkasına “Pedagojik formasyon eğitimini tamamlamıştır.” ifadesi yazılacaktır. [Kaynak 1: pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt]\n\nSoru 4: Pedagojik formasyon derslerinin alınması zorunlu mudur?\n\nYANIT: Hayır, pedagojik formasyon dersleri seçmeli derslerdir. [Kaynak 2: lisans_pedagojik_formasyon_derslerine_ilişkin.pdf]\n\nSoru 5: Son sınıf öğrencisi olup kayıtlı olduğu programın mezuniyet için gerekli tüm şartlarını yerine getiren öğrenciler, pedagojik formasyon eğitimi uygulamasından yararlanabilecekler mi?\n\nYANIT: Evet. [Kaynak 4: uygulama_esaslari_lisans_pedagojik_formasyon.pdf]\n\nEkteki kaynaklar da belirtildiği üzere:\n- Pedagojik formasyon derslerinin sayısı 40 AKTS'den oluşur ve bu eğitim öğrencinin lisans programından mezuniyeti için alması gereken asgari AKTS şartının dışında değerlendirilir.\n- Bu dersler, öğrencilerin ilgili döneme ait genel ağırlıklı not ortalaması (GANO) hesabına dahil edilir.\n- Pedagojik formasyon derslerinin yüz yüze yapılması esastır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt\n- Belge: lisans_pedagojik_formasyon_derslerine_ilişkin.pdf\n- Belge: uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+      "profiling": {
+        "total_ms": 9004.768,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q5",
+      "category": "B_cross_department_parallel",
+      "question": "Uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretimi nereye yatırmam gerekiyor ve ayrıca ikamet izni için hangi belgeleri hazırlamalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance",
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "academic_programs",
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "ücret",
+        "ikamet",
+        "belge"
+      ],
+      "key_fact_results": {
+        "ücret": true,
+        "ikamet": true,
+        "belge": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 3,
+      "elapsed_ms": 11606.3,
+      "source_count": 10,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, İkamet İzni ve Öğrenim Ücreti Üzerine Bilgi:\n\nÖğrenim Ücreti\nUluslararası öğrenci olarak öğrenim ücretimi, Ziraat Bankası'ndan öğrenci numaranızla yatırmalısınız. Şehit/Gazi çocuğuyken, öğrencilerin öğrenim ücretinden muaf olduğu unutulmamalıdır.\n\nİkamet İznine İlişkin Bilgiler\n- İlk olarak, ikamet izni için Göç İdaresi Başkanlığı'ndan vize muafiyeti başvurusunda bulunmanız gerekmektedir.\n- İkamet izni başvurusu tamamlanmasının ardından, uluslararası öğrenci bölümlerinde ikamet izni belgenizi teslim etmeniz gerekecektir.\n- İkamet adres değişikliği yaptığınızda ise, bulunduğunuz yerin mahalli-resmi makamlarına 2 iş günü içinde bildirmelisiniz.\n\nDikkat Edilmesi Gereken Bilgiler\n- Öğrenim ücretini öğrenci portalından ön kayıt yaptırmak suretiyle ya da öğrenci işleri daire başkanlığı hesabına yatırmalısınız.\n- Uluslararası öğrenci olarak kayıt yaptıranların, Üniversite'ne ödemiş oldukları öğrenim ücretini yatırmak suretiyle öğrenimine devam ettikleri bilinmelidir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Akademik Programlar: RAG + LLM\n- Ogrenci Isleri: RAG + LLM\n- Finans: VT\n\nKaynak Ozeti:\n- Belge: uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf\n- Belge: uluslararası_öğrenci_yönergesi.pdf\n- Belge: lisansüstü_eğitim_enstitüsü.pdf\n- Belge: ön_lisans_ve_lisans_programları.pdf\n- Belge: sık_sorulan_sorular.txt\n- Belge: öğrenci_işleri_birimi.txt\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "profiling": {
+        "total_ms": 11606.261,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q6",
+      "category": "B_cross_department_parallel",
+      "question": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance"
+      ],
+      "actual_departments": [
+        "finance",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "not ortalaması",
+        "harç",
+        "ödeme",
+        "başvuru"
+      ],
+      "key_fact_results": {
+        "not ortalaması": true,
+        "harç": true,
+        "ödeme": true,
+        "başvuru": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 4,
+      "elapsed_ms": 10596.1,
+      "source_count": 3,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Sorunuzun cevabinin detaylarına göre, ÇAP başvuru şartları ve harç borcu ödeme bilgileri aşağıdaki kadardır:\n\nÇAP programına başvurmak için en az 4,00 üzerinden 3,00 not ortalaması, başvuru alınacak yıla kadar dersleri almış ve tamamlamış olma, başvuru alınan yarıyılın başlarından/sonlarında öğrenci listesinde en az ilk %20'inde yer almış olmak, dört yıllık programlarda ana dal diploma programının en erken 3., en geç 5. yarı yılında başvurulabilir olması gerekir. \n\nBaşvuru, ÖİDB'nin internet sayfasında açılan ilgili link üzerinden elektronik olarak yapılır.\n\nHarç borcu ödemesi ilişkin kesin bilgi alınamamaktadır. Ödenek ve belgeye dayanarak ise öğrenci, mühendislik fakültesinde kayıtlı bir öğrenci olmalıdır. Yılık öğrenim ücreti 2.397,00 TL, dönemlik öğrenim ücreti ise 1.198,50 TL'dir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Finans: VT\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenim ucreti tablosu\n- Belge: yonerge_cift_anadal_yandal.pdf\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+      "profiling": {
+        "total_ms": 10596.14,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q7",
+      "category": "B_cross_department_parallel",
+      "question": "Kayıt yenileme döneminde harç ücretimi yatırdıktan sonra ders kaydını nasıl yapacağım, danışmanın onay süreci nasıl işliyor?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "harç",
+        "UBYS",
+        "ders",
+        "danışman",
+        "onay"
+      ],
+      "key_fact_results": {
+        "harç": true,
+        "UBYS": false,
+        "ders": true,
+        "danışman": true,
+        "onay": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 5,
+      "elapsed_ms": 8556.9,
+      "source_count": 8,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Ders Kaydını Yapmak İçin Adım-by-Adım Rehber:\n \n- Kayıt yenileme döneminde harç ücretinizi yatırdıktan sonra, öğrenci bilgi sistemi üzerinden ders seçmelisiniz. \n- Bu işlem akademik takvimde belirtilen süre içinde gerçekleştirilmelidir. \n- Belirtilen süre dışında kaydın tamamlanmaması öğrencinin o dönemde öğrenimlerine devam etme hakkını kaybettirir.\n- İlgili birim yönetim kurulunca mazeretin haklı ve geçerli belirlenmesi durumunda, ders kaydı başvurunuz dikkate alınır.\n- Akademik takvimde belirtilen süre içinde ders kaydınızı tamamladıktan sonra, danışman onayını muhakkak yaptırmalısınız.\n \nYapmanız gereken son aşama; danışman onayından sonra başarılı olduğunuz dersleri müfredatınızla karşılaştırmanızdır. Bu, her kayıt dönemi başında yapılması gereken bir işlem olduğu unutulmamalıdır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Finans: VT\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "profiling": {
+        "total_ms": 8556.906,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q8",
+      "category": "B_cross_department_parallel",
+      "question": "Burslu öğrenciyim ve yatay geçiş yapmak istiyorum. Bursum kesilir mi, yeni üniversitede harç ödemem gerekir mi?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "burs",
+        "kesilme",
+        "kurum",
+        "bildiri",
+        "harç"
+      ],
+      "key_fact_results": {
+        "burs": true,
+        "kesilme": true,
+        "kurum": true,
+        "bildiri": false,
+        "harç": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 5,
+      "elapsed_ms": 11377.4,
+      "source_count": 10,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Sorumuzun dogrudan yaniti: Evet, bursunuz kesilebilir.\n \nYeni üniversiteye geçiş yaptığınızda, bursunuzu devredebilir veya kesilebilir. Bursun devri veya kesilmesi gibi durumlar için ilgili üniversite ile iletişim kurulması gerekmektedir.\n\nKesin bilgi için, burs aldığınız kurumla iletişim kurmanız gerekmektedir. Gerekli koşullar karşılanmışsa, yeni üniversiteye geçiş yaparak harç ödememeniz mümkündür. \n\nGerekli koşullar:\n- Önceki üniversitenizden mezun olamayışın ya da bursunu kaybettinizin olmaması.\n- Yeni üniversitede kayıtlı programa giriş için gereken genel not oranının karşılanması (en az 2.80 veya 72 oranını).\n- Yaptığınız yatay geçiş başvurunun başarı ile tamamlanması.\n\nTalebiniz kabul edilirse, harç ücreti yatırmaya gerek yoktur.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Finans: RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: öğrenci_yemek_bursu_yönergesi.pdf\n- Belge: idari_ve_mali_işler_birimi.txt",
+      "profiling": {
+        "total_ms": 11377.416,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q9",
+      "category": "C_conditional_scenario",
+      "question": "4. sınıf öğrencisiyim ve program süresini 1 yıl aştım. Ek süre hakkım var mı ve bu sürede katkı payı öder miyim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "academic_programs",
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "azami",
+        "ek",
+        "süre",
+        "katkı payı",
+        "öde"
+      ],
+      "key_fact_results": {
+        "azami": true,
+        "ek": true,
+        "süre": true,
+        "katkı payı": true,
+        "öde": true
+      },
+      "key_facts_found": 5,
+      "key_facts_total": 5,
+      "elapsed_ms": 15301.4,
+      "source_count": 9,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Katkı Payı ve Ek Süre Hakkı Sorununda Bilgiler\n\n4. sınıf öğrencisi olarak, program süresinin 1 yıl aştığını ve ek süre hakkının olup olmadığını soruyorsunuz. İşte ilgili bilgiler:\n\n* Ek Süre Hakkı: Öğrenciler, program süresini aştığı için ek süre hakkından yararlanamaz. Öğrenim süresinden sayılma veya katkı payı ile ilgili genel kurallar mevcut, ancak program süresinin aşılması ile ilgili spesifik bilgi bulunamadı.\n* Katı Payı: Program süresini aştığınızda, katkı payını/öğrenim ücretini değişim programında geçen süre için öğrenci kayıtlı olduğu yükseköğretim kurumuna öder. Bu süre öğretim süresine dahildir.\n* Tıp Fakültesi Yönetim Kurulunun Kararı: Tıp Fakültesi Yönetim Kurulu kararı ile en fazla bir yıla kadar izin verilebilir.\n* Öğrenim Süresini Tamamlama: Öğrenciler, ders, uygulama, staj ve sınavlara katılabilirler; ancak bunların dışındaki öğrencilik haklarından yararlanamazlar.\n\nBilgi Kaynağı: Ön lisans ve lisans düzeyindeki program süresinden sayılır ile ilgili madde olan ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf belgesine göre,\n\n- Önlisans ve lisans düzeyinde öğrenim gören öğrencilerin öğrenimlerini tamamlamaları için tanınan azami süreler; bir yıl süreli yabancı dil hazırlık sınıfı hariç kayıt olduğu programa ait derslerin verildiği dönemden başlamak üzere her dönem için 4, 7 ve 9 yıl olarak gösterilmiştir.\n- 4. sınıfta olan bir öğrenci program süresini 1 yıldan fazla aştığında, ek süre hakkından yararlanma hakkı yoktur.\n\nBu bilgileri kullanarak, sonuç olarak: Ek süre hakkınız yoktur.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Akademik Programlar: RAG + LLM\n- Ogrenci Isleri: RAG + LLM\n\nKaynak Ozeti:\n- Belge: yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf\n- Belge: diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf\n- Belge: önlisans_ve_lisans_düzeyindeki_programlar_arasında_geçiş_yönergesi.pdf\n- Belge: yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+      "profiling": {
+        "total_ms": 15301.456,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q10",
+      "category": "C_conditional_scenario",
+      "question": "Devamsızlıktan kaldığım bir dersin bütünleme sınavına girebilir miyim? Giremiyorsam bu dersi ne zaman tekrar alabilirim?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs",
+        "announcement"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "giremez",
+        "devamsızlık",
+        "bütünleme",
+        "tekrar"
+      ],
+      "key_fact_results": {
+        "giremez": false,
+        "devamsızlık": true,
+        "bütünleme": true,
+        "tekrar": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 11717.3,
+      "source_count": 13,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Devamsızlıktan kaldığınız bir dersin bütünleme sınavına girebilir misiniz? Giremiyorsanız bu dersi ne zaman tekrar alabilirsiniz?\n\nEvet, devamsızlıktan kaldığınız bir dersin bütünleme sınavına girebilirsiniz. Bütünleme sınavına girebilmek için mezuniyetiniz için tek dersi kalan öğrencilerin bütünleme sınav notlarının ilanını takip eden beş iş günü içinde dilekçe ile başvurması gerekir. Bu sayede devamsızlık sürenizin bir dersin o dönemdeki/yıldaki toplam saatinin %50'sini aşmamış olması yeterlidir.\n\nGiremiyorsanız, tekrarlamak istediğiniz dersi/bloğu veya klinik uygulamayı tekrar alabilirsiniz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: bağıl_değerlendirme_yönergesi.pdf\n- Belge: diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf\n- Belge: tıp_fakültesi_tıp_doktorluğu_programı.pdf\n- Belge: lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf\n- Belge: lisansüstü_eğitim_ve.pdf\n- Duyuru kaydi: 📢 Girişimcilik ve Yenilikçilik Dersinin Derslikleri Hakkında (https://bil-muhendislik.omu.edu.tr/tr/haberler/girisimcilik-ve-yenilikcilik-dersinin-derslikleri-hakkinda)\n- Duyuru kaydi: İngilizce II ve İleri İngilizce II Derslerinin Mazeret Sınavları Hakkında (https://bil-muhendislik.omu.edu.tr/tr/haberler/ingilizce-ii-ve-ileri-ingilizce-dersleri-mazeret-sinavlari-hakkinda)\n- Duyuru kaydi: TBFİZ124 Fizik II ve TBFİZ122 Fizik II Dersini Alan Öğrencilerin Dikkatine! (https://bil-muhendislik.omu.edu.tr/tr/haberler/duyuru-tbfiz124-fizik-ii-ve-tbfiz122-fizik-ii-dersini-alan-ogrencilerin-dikkatine)",
+      "profiling": {
+        "total_ms": 11717.303,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q11",
+      "category": "C_conditional_scenario",
+      "question": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "öğrenim ücreti",
+        "gerek yok",
+        "yönetim kurulu",
+        "sayılma"
+      ],
+      "key_fact_results": {
+        "öğrenim ücreti": true,
+        "gerek yok": false,
+        "yönetim kurulu": true,
+        "sayılma": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 9898.7,
+      "source_count": 4,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Soru: İkinci öğretim öğrencisiyim ve bir dönem kayıt dondumak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?\n\nCevap: \n- Kayıt dondurma isteğinizin ilgili yönetim kurulunca kabul edilmesi durumunda öğrenim ücretinizi yatırmak zorunda değilsiniz.\n- Kayıt dondurduğunuz süreler eğitim-öğretimden sayılmaz.\n- Kayıt dondurma ile kayıt yaptıramamak arasında bir fark vardır; kayıt dondurma ile kayıt yaptırmak arasındaki fark öğrencinin öğrenimine devam edebilmesi ve sınavlara girebilmesidir.\n\nDetaylar:\n- Öğrenci katkı payı/öğrenim ücreti ödemesi, akademik takvimde belirtilen süreler içinde her eğitim-öğretim döneminde/yılında yapılır.\n- Öğrenci katkı payı/öğrenim ücreti, ilgili mevzuatta belirlenen tutarla ödenir (yılık ücret: 2.397,00 TL, dönemlik ücret: 1.198,50 TL).\n- Kayıt dondurma isteğinizin ilgili yönetim kurulunca kabul edilmesi, öğrencinin öğrenim ücretini yatırmasına gerek duyurmayacaktır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Finans: VT\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "profiling": {
+        "total_ms": 9898.729,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q12",
+      "category": "C_conditional_scenario",
+      "question": "Hazırlık sınıfındayım ve transkriptim yok. Ek Madde-1 ile başka bir üniversiteye yatay geçiş yapabilir miyim?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "transkript",
+        "Ek Madde",
+        "başvuru yapabilir",
+        "GANO"
+      ],
+      "key_fact_results": {
+        "transkript": true,
+        "Ek Madde": true,
+        "başvuru yapabilir": true,
+        "GANO": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 4,
+      "elapsed_ms": 7401.1,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Soru: Hazırlık sınıfındayım ve transkriptim yok. Ek Madde-1 ile başka bir üniversiteye yatay geçiş yapabilir miyim?\n\nCevap: Evet, hazırlık sınıfı okuyan ve Ek Madde-1 kapsamında merkezi yerleştirme puanı ile yatay geçiş başvurusu yapmak isteyen adaylar, transkriptleri olmadan da başvuru yapabilirler. Ek Madde-1 kapsamında yapılan yatay geçiş başvurularında öğrencinin GANO'su değerlendirme aşamasında etkili değildir. (Kaynak 4: sık_sorulan_sorular.txt)\n\nLisans programlarına yatay geçiş yapıp geri dönme hakkını kullanmak isteyen öğrencilerin, ilgili akademik birimlere dilekçe ile başvuru yapması gerekmektedir. Bir dönemde en fazla 2 yatay geçiş başvurusu yapılabilir. (Kaynak 1: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf)\n\nBirden fazla üniversiteye yatay geçiş başvurusu yapabilir miyim? Farklı üniversitelere yatay geçiş başvurusu yapabilirsiniz. (Kaynak 4: sık_sorulan_sorular.txt)\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf\n- Belge: 2025_2026_bahar_yatay_geçiş_ilan_metni.pdf\n- Belge: sık_sorulan_sorular.txt",
+      "profiling": {
+        "total_ms": 7401.133,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q13",
+      "category": "D_comparison",
+      "question": "Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar nelerdir? Başvuru şartları ve değerlendirme kriterleri nasıl farklılık gösterir?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "kurum içi",
+        "kurumlar arası",
+        "Ek Madde",
+        "GANO",
+        "YKS"
+      ],
+      "key_fact_results": {
+        "kurum içi": true,
+        "kurumlar arası": true,
+        "Ek Madde": false,
+        "GANO": false,
+        "YKS": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 5,
+      "elapsed_ms": 11701.3,
+      "source_count": 5,
+      "quality_warnings": [
+        "uydurma_riski"
+      ],
+      "intent_analysis": null,
+      "answer": "Benchmark, Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar;\n\nKurum içi yatay geçiş için;\n- Öğrenci, aynı üniversitede aynı düzeyde diploma programlarına geçiş yapmakta;\n- Genellikle aynı birimdeki programlar arası geçiş yapılmaktadır;\n- Başvuru için öğrencinin genel not ortalamasının en az 2.80 olması gerekir;\n- Disiplin cezasının yoksa bu durumunu belgelemesi gerekir;\n- Kayıt dondurulmuş ise bu durumu belgelendirmesi gerekir.\n\nKurumlararası yatay geçiş için;\n- Öğrenci, farklı bir üniversitede aynı düzeyde diploma programlarına geçiş yapmakta;\n- Genellikle aynı düzeyde diploma programlarına geçiş yapılmaktadır;\n- Başvuru için öğrencinin kayıtlı olduğu programda bitirmiş olduğu dönemlere ait genel not ortalamasının; 4'lük sistem kullanan üniversiteler için en az 2.80, 100'lük sistem kullanan üniversiteler için en az 72 olması gerekir;\n- Disiplin cezasının yoksa bu durumunu belgelemesi gerekir;\n- Kayıt dondurulmuş ise bu durumu belgelendirmesi gerekir.\n\nYatay geçiş başvuruları;\n- Disiplin cezası almış öğrencilerin başvuruları kabul edilmez;\n- Başvuru esnasında disiplin cezası almadıklarını belgelemeleri şarttır;\n- Öğrenci kayıt dondurmuş ise yatay geçiş başvurusu sırasında bu durumu belgelendirmesi gerekir.\n\nYatay geçiş kontenjanları;\n- ÖSYM Kılavuzunda öngörülen öğrenci kontenjanının yıllık % 15 ini geçmeyecek biçimde dönemlere bölünerek ilgili yönetim kurulunun önerisi ve Senato’nun kararı ile belirlenir.\n- Yatay geçiş kontenjanları, ilgili diploma programının son dört yıla ait taban puanları ve başvuru şartları, son başvurunun kabul edileceği günden en az 15 gün öncesinde üniversite web sayfasında ilan edilir.\n\nYatay geçiş başvurusunda öğrencinin merkezi sınav puanı esas alınır;\n- Öğrencinin aldığı merkezi sınav puanının, yurt içindeki diğer üniversitelerin başvurulan program için geçerli olan puan türündeki en düşük taban puanından az olmaması gerekir.\n- Özel yetenek sınavı ile öğrenci kabul edilen diploma programlarına kurum içi yatay geçişlerde diğer şartların yanı sıra özel yetenek sınavında da başarılı olma şartı aranır.\n\nYatay geçiş başvurusunda bulunacak öğrencilerin başvuru yapılacak döneme kadar müfredatında yer alan bütün dersleri almış olmaları gerekmektedir.\n- Derslerin tamamını başarmış olma şartı aranmaz.\n\nYatay geçiş, sadece ana dal programı üzerinden yapılır.\n- Çift ana dal programına (ÇAP) kayıtlı öğrenciler, yatay geçişle geldikleri programa başında kaydolmak zorundadır.\n\nDeğerlendirme kriterleri;\n- Genellikle yatay geçiş başvurusu yapılan programlarda öğrencinin genel not ortalaması baz alınır;\n- Disiplin cezası veya kayıt dondurulması durumları değerlendirilir;\n- Yürütülen eğitim programını ve varsa özel yetenek sınavlarını değerlendirirler.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: 2025_2026_bahar_yatay_geçiş_ilan_metni.pdf\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+      "profiling": {
+        "total_ms": 11701.279,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q14",
+      "category": "D_comparison",
+      "question": "Bağıl değerlendirme sistemi ile mutlak değerlendirme arasındaki fark nedir ve hangi öğrenci sayısında hangisi uygulanır?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "academic_programs"
+      ],
+      "actual_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "bağıl",
+        "mutlak",
+        "10",
+        "öğrenci sayısı"
+      ],
+      "key_fact_results": {
+        "bağıl": true,
+        "mutlak": true,
+        "10": true,
+        "öğrenci sayısı": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 4,
+      "elapsed_ms": 16349.9,
+      "source_count": 8,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Bağıl Değerlendirme Sistemi ve Mutlak Değişlendirme Arasındaki Fark\n=========================\n\nBağıl değerlendirme sistemi ve mutlak değerlendirme sistemi arasındaki fark, notların hesaplanmasındaki approaches'tir. Bağıl değerlendirmede, öğrencinin yılları içi ve yılları sonu sınav notu hesaplanırken ağırlıklı puana yer verilir (Kaynak 1, Madde 7), mutlak değerlendirmede ise sadece yıl sonu veya tümlemer sınav notu temel alınır (Kaynak 2, Madde 23).\n\nHangi Öğrenci Sayısında Hangisi Uygulanır?\n-----------------------------------------\n\n- Bağıl Değerlendirme: Bağıl değerlendirmeye katılan öğrenci sayısı 10 ve altında ise öğrenci otomasyon sistemi ham başarı puanını mutlak değerlendirme yaparak harf notuna dönüştürür (Tablo-1). 11-29 öğrenci sayısında ise estudiantes'in ham başarı puanları ders ortalaması dikkate alınarak Tablo-2’ye göre nota dönüştürülür.\n- Mutlak Değişlendirme: Bağıl değerlendirmeye katılan öğrenci sayısı 10 ve altında ise mutlak değerlendirme kullanılır (Kaynak 1, Madde 7).\n\nBağıl Değerlendirme Sistemi Uygulanır:\n------------------------------------------\n\nBağıl değerlendirmede, uzaktan eğitim öğrencilerine uygulanır (Kaynak 2, Madde 23).\n\nNot Hesaplaması:\n-------------------\n\n- Mutlak Değişlendirme Sistem:\n - 60 ve üzerinde not: \"FF\" notu\n - 60-64 arasındaki not: \"CC\" notu\n - 65-69 arasında not: \"CB\" notu\n - 70-79 arasında not: \"BB\" notu\n - 80-89 arasında not: \"BA\" notu\n - 90 ve üzeri not: \"AA\" notu\n- Bağıl Değerlendirme Yönergesi.pdf (Madde 5)\n - Ön Lisans ve Lisans.pdf (Madde 29)\n - Uzaktan Eğitim Tezsiz Yüksek Lisans Programı Yönergesi.pdf (Madde 7)\n - Lisansüstü Eğitimi ve.pdf (Madde 23)\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Akademik Programlar: RAG + LLM\n- Ogrenci Isleri: RAG\n\nKaynak Ozeti:\n- Belge: uzaktan_eğitim_tezsiz_yüksek_lisans_programı_yönergesi.pdf\n- Belge: lisansüstü_eğitim_ve.pdf\n- Belge: lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf\n- Belge: hizmet_içi_eğitim_yönergesi.pdf\n- Belge: bağıl_değerlendirme_yönergesi.pdf\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: yonerge_bagil_degerlendirme.pdf",
+      "profiling": {
+        "total_ms": 16349.936,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q15",
+      "category": "D_comparison",
+      "question": "Diploma eki ile transkript arasındaki fark nedir? Diploma eki transkript yerine kullanılabilir mi?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "diploma eki",
+        "transkript",
+        "yerine geçmez"
+      ],
+      "key_fact_results": {
+        "diploma eki": true,
+        "transkript": true,
+        "yerine geçmez": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 3,
+      "elapsed_ms": 9568.5,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Soru: Diploma eki ile transkript arasındaki fark nedir? Diploma eki transkript yerine kullanılabilir mi?\n\nYanıt: Diploma eki, transkriptin aksine, kişinin takip ettiği öğrenimin yapı, düzey, bağlam, içerik ve statüsünü tarif etmek üzere verilir. Diploma eki, transkriptin yerini alamaz, ancak yurtdışında daha okunabilir ve mukayese edilebilir bir diploma, akademik güzergahının ve yurtiçinde ve yurtdışında edindiği yeti ve becerilerin tam bir tarifi, başarı ve yetilerinin nesnel ve adil değerlendirmesi, geleceğe yönelik olarak yurtdışında iş ve eğitim imkanlarına daha rahat ulaşma olanağı, iş bulma olanaklarını artırma kazanımlarını elde edebilirsiniz. \n\nDiploma eki, bir yükseköğretim diplomasına ek olarak verilen bir belge olarak tanımlanırken, transkript, diplomanın arkasında yer alan bilgilerin kayıtlara uygunluğu tarafından onaylanır.\n\nNot: Belge kaynaklarından anlaşıldığı kadarıyla diploma eki, transkriptten daha spesifik bilgiler sağlar, ancak her iki belge de farklı amaçlar için kullanılır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+      "profiling": {
+        "total_ms": 9568.46,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q16",
+      "category": "D_comparison",
+      "question": "Kayıt dondurma ile kayıt yaptırmamak arasında ne fark var? Her iki durumda da öğrencilik haklarım nasıl etkilenir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "kayıt dondurma",
+        "sayılma",
+        "süre",
+        "hak"
+      ],
+      "key_fact_results": {
+        "kayıt dondurma": true,
+        "sayılma": false,
+        "süre": true,
+        "hak": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 18453.1,
+      "source_count": 10,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Kayıt dondurma ile kayıt yaptırmamak arasındaki farklar ve kayıt yaptırmazsa öğrencilik haklarındaki etkileri aşağıda açıklanmıştır:\n\nKayıt dondurma, öğrencilerin belirli bir süre için üniversiteden uzaklaşmasına izin verir. Bu durum, öğrencinin ilgili akademik takvimde belirlenen süre içerisinde ders kaydını yaptırmasına gerek olmayacaktır. Kayıt dondurulan yıl, öğrencinin öğrenim süresinden sayılacaktır.\n\nKayıt yaptırmamak ise, öğrencilerin bir öğrenci bilgi sistemi üzerinden alacağı dersleri seçerek derse kaydını yapmaları durumunu belirtir. Bu durum, öğrencinin ilgili akademik takvimde belirlenen süre içerisinde ders kaydını yaptırmasına gerek vardır ve öğrencinin kaydı yapılmış olsa bile, öğrenimine devam etmesi için kayıt yapması gerekecektir.\n\nHer iki durumda da öğrencinin öğrencilik hakları etkilenir. Kayıt donduran bir öğrencinin öğrenim süresi uzayacak, kayıt yapılmayan bir öğrenci ise öğrenimine devam edemeyerek öğrencilik haklarından yararlanamayacak.Örneğin, uluslararası öğrenciler için kayıt yapılan tarihler, kayıt yapılan yıl için YÖK tarafından belirlenen son kayıt tarihli ile sınırlıdır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: 2025_2026_bahar_yatay_geçiş_ilan_metni.pdf\n- Belge: ön_kayıt_kılavuzu_başvuru_adımları.pdf\n- Belge: yonetmelik_lisansustu_egitim_ogretim.pdf\n- Belge: uluslararası_öğrenci_yönergesi.pdf\n- Belge: diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf\n- Belge: uzaktan_eğitim_önlisans_ve_lisans_yönergesi.pdf",
+      "profiling": {
+        "total_ms": 18453.13,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q17",
+      "category": "E_process_chain",
+      "question": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "UBYS",
+        "ders seçimi",
+        "danışman",
+        "onay",
+        "yoklama"
+      ],
+      "key_fact_results": {
+        "UBYS": true,
+        "ders seçimi": false,
+        "danışman": true,
+        "onay": true,
+        "yoklama": true
+      },
+      "key_facts_found": 4,
+      "key_facts_total": 5,
+      "elapsed_ms": 7391.3,
+      "source_count": 8,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Ders kaydı ve danışman onayının süreci hakkında sorularınıza yanıt olarak sunulan bilgiler göre yanıtlayacağım.\n\nDers kaydın ilk adımı, öğrenci bilgi yönetim sistemine giriş yaparak kayıt işlemini başlatmadır. Bu adımı yapabilmeniz için internetsiz kalmadan internet yoluyla ubys.omu.edu.tr adresine giriş yapmak sureti ile interneti bulunan her yerden yapabilirsiniz.\n\nDers kaydın ardından, öğrencinin seçmiş olduğu derslerin müfredat bilgileri ile transkriptini karşılaştırması gerekir. Başarılı oldukları dersleri müfredat ile karşılaştırdıktan sonra, danışman onay bittikten sonra öğrencinin yapması gereken bir şey daha vardır. \n\nDanışman onay işlemi tamamlandıktan sonra öğrenciler, kayıtlanmış oldukları dersleri tek tek kontrol etmelidir. Sizin danışman onayınıza göndermiş olduğunuz derslerden bir veya birkaçı danışmanınız tarafından listeden çıkartılmış olabilir. Bu nedenle, sınıf yoklama listesine imza atmalıdır.\n\nSınıf yoklama listesinde adınız yoksa, danışmanınıza veya akademik birimınıza başvurmak gerekir.\n\nBu konuya ilişkin olarak, aşağıdaki bilgiler mevcuttur:\n\n- Öğrenciler, her dönem/yıl başında akademik takvimde belirlenen süre içinde öğrenci bilgi sistemi üzerinden alacakları dersleri seçerler. (Kaynak 5: ön_lisans_ve_lisans.pdf, md. 10)\n- Kayıt dönemi başlamadan transkript/müfredat kontrolünü yaparak akademik takvimde tanımlanan süre içerisinde ders kaydını yapmaları gerektiği, derslere başladığında ise sınıf yoklama listesinde adları yoksa danışmanlarına uğramaları gerektiği bilgisi paylaşılmalıdır. (Kaynak 2: sık_sorulan_sorular.txt)\n- Ödenek kaydı yaptırmadığınız dönemler de eğitim süresinden sayılmaktadır. Güz yarıyılı ders kaydı yaptırmadım. Bir sonraki yarıyıl (bahar) ders kaydı yaptırabilir miyim? \n(Kaynak 3: sık_sorulan_sorular.txt)\n- Danışman onayını vermek için öğrencinin şahsen gelmesini zorunlu tutabilir miyim? Öğrenci bilginin yönetim sistemi üzerinden internet ortamında ders kaydını yapan öğrenci, danışman onayına sistem üzerinden gönderebilmektedir. (Kaynak 4: sık_sorulan_sorular.txt)\n- Her öğrenci ders kaydını yapmak, yaptığı kaydı danışman onayına göndermek ve onaya gönderdiği kaydın danışman tarafından kesin kayda dönüşmesini takip etmekle yükümlüdür. (Kaynak 4: sık_sorulan_sorular.txt)\n\nBu süreç hakkında daha detaylı bilgi için Ögrenci İşleri bölüme başvurabilir veya Ondokuz Mayıs Üniversitesi (OMU) Öğrenci Bilgi Yönetim Sistemi'ne giriş yaparak kayıt işlemini detaylıca inceleyebilirsiniz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: ön_lisans_ve_lisans_akademik_danışmanlık.pdf",
+      "profiling": {
+        "total_ms": 7391.272,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q18",
+      "category": "E_process_chain",
+      "question": "Sınav notuma itiraz etmek istiyorum. Başvuru süreci, süresi ve olası sonuçları nelerdir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "itiraz",
+        "beş iş günü",
+        "dilekçe",
+        "bölüm başkanlığı"
+      ],
+      "key_fact_results": {
+        "itiraz": true,
+        "beş iş günü": true,
+        "dilekçe": false,
+        "bölüm başkanlığı": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 4,
+      "elapsed_ms": 8215.3,
+      "source_count": 4,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Sizlere Öncelikle OMU içinde sınav notuna itiraz edilmesi için süreci ve süreci ile ilgili bilgiler vereceğim.\n\nSINAV SONUÇLARINA İTİRAZ PROSESİ:\n- Soru 15 gün içerisinde fakülte/yüksekokuluna yazı ile itiraz edilebilir. İtirazlar 15 gün içinde birim yönetim kurulunca karara bağlanır ve karar kesindir. (Kaynak 2: yüzde_on_başarı_değerlendirme_yönergesi.pdf)\n\nYENİDEN İNCELEME:\n- Öğrenciler, sınavların bitiminde cevap anahtarının yüklenmiş olabileceği Üniversite sisteminde erişebildiği şekilde, sonuçların açıklanmasından itibaren beş iş günü içerisinde ilgili bölüme yazılı olarak başvurmak kaydıyla, sınav kağıtlarının yeniden incelenmesi talebinde bulunabilir. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\nYENİDEN İNCELEMELİK TALEPLERİ İÇİN İTİRAZ DÖNEMİ:\n- Soru acikca belirtmedeyse 3 iş gunu icinde itiraz edilebilir. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\nGENEL BELGELER:\n- Sınav sonuçlarına itiraz ve not düzeltme 15 gün içerisinde yapılmalıdır. İtiraz süre bittikten sonra bildirilen not ve not düzeltmeleri dikkate alınmaz. (Kaynak 2: yüzde_on_başarı_değerlendirme_yönergesi.pdf)\n- Sınavların bitiminde cevap anahtarının bir örneği Üniversitesi tarafından hazırlanmış bir sisteme yüklenir. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\nYENİDEN İNCELEME KOMİSYONU:\n- Yeniden incelemeye itiraz edildiginde, ilgili öğretim elemanı tarafından hazırlanmış cevap kağıdı dikkate alınarak sınav inceleme komisyonu tarafından incelenir. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\nYENİDEN İNCELEME KOMİSYONU İÇİN Süre:\n- İşlem, en geç 3 iş günü içinde sonuçlandırılır. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\nÖĞRETCİ İŞLERİ DİREKTÖRLÜĞÜNE GÖNDERİM:\n- Notta değişiklik olması durumunda, form ilgili birimin yönetim kurulu kararıyla Öğrenci İşleri Daire Başkanlığına gönderilir. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\nYENİDEN İNCELEME DEĞERLENDİRME FORMU:\n- İtiraz değerlendirme formu doldurulur. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\nKARAR GÖNDERİMİ:\n- İlgili birimin yönetim kurulu kararıyla Öğrenci İşleri Daire Başkanlığına gönderilir. (Kaynak 3: yonetmelik_onlisans_lisans_egitim_ogretim.pdf)\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: ders_yeterlilik_sınavı_uygulama_yönergesi.pdf\n- Belge: yüzde_on_başarı_değerlendirme_yönergesi.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+      "profiling": {
+        "total_ms": 8215.286,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q19",
+      "category": "E_process_chain",
+      "question": "Mezuniyet için gerekli tüm koşulları ve ilişik kesme sürecini adım adım açıklar mısın?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "ders",
+        "staj",
+        "GANO",
+        "2,00",
+        "ilişik kesme",
+        "diploma"
+      ],
+      "key_fact_results": {
+        "ders": true,
+        "staj": false,
+        "GANO": false,
+        "2,00": false,
+        "ilişik kesme": true,
+        "diploma": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 6,
+      "elapsed_ms": 10445.8,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Soru:\nMezuniyet için gerekli tüm koşulları ve ilişik kesme sürecini adım adım açıklar mısın?\n\nYanit:\nMezuniyet için gereken koşullar Önlisans ve Lisans Eğitimi Öğretimi Yönetmeliği'nde belirlenmiştir.\n\nMezuniyet İçin Gereken Koşullar:\n\n- Öğrenciler, öğrenim gördüğü programda yer alan bütün şartları yerine getirerek mezuniyet hakkı kazanır. (Kaynak 3: Madde 7)\n\n- Mezuniyet diploması, Öğrenci İşleri Daire Başkanlığı tarafından ön lisans ve lisans diplomaları hazırlanır. Yüksek lisans ve doktora diploması ise enstitü müdürlüğü tarafından hazırlanır. (Kaynak 3: Madde 7)\n\n- Diplomalar, dekan/müdür ve rektör tarafından imzalanır. İmzalar ıslak imza olmalıdır. Diplomalarda yer alan bilgilerin kayıtlara uygunluğu tasdik edilir. (Kaynak 3: Madde 7)\n\n- Diplomanın düzenlenmesinde, Üniversite tarafından bir hata yapılmasını istemekteyiz. Bu nedenle, iptal edilen diplomanın yenisi düzenlenir. (Kaynak 3: Madde 7)\n\n- Kayıt hakkını kaybeden öğrenci, istenen belgeleri tamamlamayan öğrenci ve yazılı isteği üzerine kaydını sildiren öğrenci, ÖSYM tarafından yeniden yerleştirilmediği sürece Üniversiteye tekrar kaydolamaz. (Kaynak 1: Madde 34, Kaynak 2: Madde 9)\n\n- Yabancı dille eğitimi yapılan programlarda, öğrenciler yeterlilik sınavına girer. Başarı puanını elde edenler, bağlı bulundukları bölüm/programlara kayıt hakkı kazanırlar. Başarısız öğrenciler iki dönem süreli yabancı dil hazırlık sınıfına kaydolurlar. (Kaynak 4: Madde 34)\n\n- İlişik Kesme Koşulları:\n\n + Yükseköğretim Kurumları Öğrenci Disiplin Yönetmeliği ve diğer ilgili mevzuat hükümlerine göre yükseköğretim kurumlarından çıkarma cezası almış olanlar ile kendi istekleri ile kaydını sildiren öğrencilerin Üniversite ile ilişikleri kesilir. (Kaynak 1: Madde 32, Kaynak 2: Madde 32)\n + Dört yıl üst üste katkı payı ve öğrenim ücreti ödemeyenler ve kayıt yenilememiş durumda olan öğrencilerin, ilgili birimlerin teklifi ve Senato kararı ile YÖK’ün onaylaması durumunda Üniversite ile ilişikleri kesilir. (Kaynak 1: Madde 32, Kaynak 2: Madde 32)\n + 8 inci maddenin üçüncü ve dördüncü fıkraları kapsamındaki öğrencilerden başarısız oldukları ders sayısını bire indiremeyenlerin Üniversite ile ilişiği kesilir. (Kaynak 1: Madde 32, Kaynak 2: Madde 32)\n\n İlişik Kesme Süreci:\n\n - İlişik kesme, öğrenci disiplin yönetmeliği ve ilgili mevzuat hükümlerine göre yapılır.\n - İlişik kesme kararı, ilgili birimlerin teklifi ve Senato kararı ile YÖK’ün onaylaması ardından alınırlar.\n- İlişik kesme, öğrencinin katkı payı ve öğrenim ücreti ödememesi, kayıt yenilememesi ve başarısız olduğu ders sayısını bire indirememesi gibi nedenlerle yapılır.\n- İlişik kesme, Yükseköğretim Kurumları Öğrenci Disiplin Yönetmeliği ve diğer ilgili mevzuat hükümlerine göre yapılır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+      "profiling": {
+        "total_ms": 10445.85,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q20",
+      "category": "F_edge_cases",
+      "question": "Diplomamı kaybettim ve aynı zamanda e-devlette mezuniyet bilgilerim görünmüyor. Her iki sorun için ne yapmalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "2. nüsha",
+        "diploma",
+        "e-devlet",
+        "YÖKSİS"
+      ],
+      "key_fact_results": {
+        "2. nüsha": false,
+        "diploma": true,
+        "e-devlet": true,
+        "YÖKSİS": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 4,
+      "elapsed_ms": 8178.1,
+      "source_count": 4,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Mezuniyet ve diploma kayıp işlemleriyle ilgili talebiniz konusunda aşağıdaki adımları takip edebilirsiniz:\n\n1. Diplomayı Kaybetmiş Olmanız halinde:\n\nDiplomasını kaybedenler, yaygın gazetelerden birine diploma kayıp ilanı verirler. Kayıp ilanının yer aldığı gazete, başvuru dilekçesi ve onaylı nüfus cüzdanı sureti, diploma ücretini yatırdıklarını gösteren banka dekontu ile diploma aldıkları birime müracaat ederler. Bu öğrencilere ilk diplomada yer alan bilgileri içeren yeni bir diploma düzenlenir ve üzerinde İkinci Nüsha olduğu bilgisi yer alır.\n\n2. E-Devlet Üzerinden Mezuniyet Bilgileri Görünmemesi:\n\nE-devlet üzerinden mezuniyet bilgilerin görülmemesi durumunda, ön lisans ve lisans diplomaları Öğrenci İşleri Daire Başkanlığında, yüksek lisans ve doktora diplomaları ise ilgili enstitü müdürlüğünde hazırlanır. Diplomaların arka sayfasında yer alan bilgilerin kayıtlara uygunluğu enstitülerde ilgili enstitü sekreterliği tarafından, diğer birimlerde ise Öğrenci İşleri Daire Başkanlığı tarafından tasdik edilir.\n\nE-devlet üzerinden diploma onaylama işlemleri yapılmaktadır. Eksik veya onaysız belge/belgeler ile gelen öğrenciler ile beyanlarında hata olanların kayıt işlemi yerine getirilmeyecektir. E-Devlet üzerinden alınan belgelerde onay şartı aranmayacaktır.\n\nTalep Edilen Belgeler:\n\n* Başvuru formu çıktısı\n* Öğrenci belgesi\n* Transkript\n* ÖSYM sınav sonuç belgesi\n* ÖSYM yerleştirme belgesi\n* Disiplin cezası almadığına dair belge\n* Öğrencinin geldiği yükseköğretim kurumunda öğrenim gördüğü dönemlere ait bütün derslerini gösteren öğretim planı/müfredat\n* Öğrencinin aldığı derslere ait ders içerikleri (muafiyet talebi olmayan öğrenciler için)\n* Zorunlu hazırlık sınıfı bulunan bölüm/programlara yatay geçiş yapmak isteyen öğrenciler için hazırlık sınıfı ve/veya eşdeğer yabancı dil sınavlarından başarılı olduğunu gösterir belge\n\nBu bilgiler Ondokuz Mayis Üniversitesi (OMU) içerisinde düzenlenmektedir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: uygulama_esaslari_diploma_mezuniyet_belgeler.pdf\n- Belge: 2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+      "profiling": {
+        "total_ms": 8178.142,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q21",
+      "category": "F_edge_cases",
+      "question": "Uzaktan eğitim yoluyla alınan 5-i derslerinin sınav ve başarı değerlendirmesi yüz yüze derslerden farklı mıdır?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "uzaktan",
+        "%20",
+        "%80",
+        "%40",
+        "%60"
+      ],
+      "key_fact_results": {
+        "uzaktan": true,
+        "%20": false,
+        "%80": true,
+        "%40": false,
+        "%60": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 5,
+      "elapsed_ms": 20466.0,
+      "source_count": 10,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Uzaktan eğitim yoluyla alınan 5-i derslerinin sınav ve başarı değerlendirmesi yüz yüze derslerden farklı değildir. \nBilgiye ulaşıldığında, iki tür sınav türü var: yüz yüze ve uzaktan. Yüz yüze olarak yürütülen derslerin teorik saatlerinin en az % 70'ine; ders uygulamaları, atölye ve laboratuvarların ise en az % 80'ine devam zorunludur. Ancak, soru ve projeksiyon cihazının bulunmaması gibi bir durum olsa bile, yüz yüze veya uzaktan sınav türünden hangisinin kullanılabileceği öğretim elemanı tarafından belirlenir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Ogrenci Isleri: RAG + LLM\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf\n- Belge: uzaktan_karma_eğitim_yönergesi.pdf\n- Belge: yonerge_uzaktan_karma_egitim.pdf\n- Belge: uzaktan_eğitim_önlisans_ve_lisans_yönergesi.pdf\n- Belge: yonetmelik_lisansustu_egitim_ogretim.pdf",
+      "profiling": {
+        "total_ms": 20465.978,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q22",
+      "category": "F_edge_cases",
+      "question": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "kural",
+      "actual_generation_mode": "llm",
+      "mode_match": false,
+      "expected_key_facts": [],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 0,
+      "elapsed_ms": 12289.0,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Yanit:\nSınavda kopya çekilmesinin cezası olarak kopya çekmek, telafi sınavına gitmek, disiplin cezasının uygulanması, sınav görevlisi tarafından uyarı alınması, öğrencinin salondan çıkarılması ve stajda kopya yapmanın cezası olarak, staj raporunun reddedilmesi, disiplin soruşturması başlatılması ve öğrencinin stajdan kaydolması ve mezun olamaması gibi sonuçlar sözkonusu olabilir.\n\n1- Kopya çekmek: Sınav kağıtlarında herhangi bir değişiklik yapmak (karalamak, yırtmak, sayfaları varsa birbirinden ayırmak vb.) ve zarar vermek yasaktır. Bu gibi durumlarda sınav görevlisi veya ilgili öğretim elemanı, uyarıda bulunmaksızın bu öğrenciler hakkında işlem yapabilirler. (Kaynak 1: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf)\n\n2- Telafi sınavına gitme: Öğrenciler sınav görevlilerinin her türlü uyarısına uymak zorundadır ve sınav görevleri tarafından telafi sınavına gidebilirler. (Kaynak 2: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf)\n\n3- Disiplin cezasının uygulanması: Kopya vermek ve çekme girişiminde bulunmak da bir disiplin suçudur. Bu suçun tespitine sınav görevlileri karar verme yetkisine sahiptir. (Kaynak 1: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf)\n\n4- Sınav görevcisi uyarı alması: Bu gibi durumlarda sınav görevlice veya ilgili öğretim elemanı, öğrencilere uyarıda bulunabilirler. (Kaynak 2: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf)\n\n5- Öğrencinin salondan çıkarılması: Her öğrenci, 15 dakikadan daha kısa süre olmamak üzere, yoklama işlemi tamamlanmadan ve sınav görevlisinden izin almadan salondan çıkamaz. (Kaynak 1: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf)\n\n6- Stajda kopya yapma: Staj raporunda benzer içeriklerin olması ve aynı konuları içeren, ders kitabındaki bilgilerin bulunduğu bir rapora kopya izlenimi veriyorsa staj raporunun reddedileceği belirtilmiştir. (Kaynak 3: staj_ilkeleri_23122019_inş_müh.pdf)\n\n7- Stajdan kaydolma ve mezun olmama: Staj raporu reddedildiği takdirde öğrencinin stajın geçersiz sayılacağı da belirtilmiştir. (Kaynak 3: staj_ilkeleri_23122019_inş_müh.pdf)\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf\n- Belge: staj_ilkeleri_23122019_inş_müh.pdf\n- Belge: işyeri_staj_sözleşmesi.pdf",
+      "profiling": {
+        "total_ms": 12288.974,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q23",
+      "category": "G_semantic_paraphrase",
+      "question": "Üniversiteyi bırakıp ayrılmak istiyorum, tüm işlemleri ve dikkat etmem gereken hususları söyler misin?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "ilişik kesme",
+        "UBYS",
+        "form",
+        "birim"
+      ],
+      "key_fact_results": {
+        "ilişik kesme": false,
+        "UBYS": false,
+        "form": false,
+        "birim": true
+      },
+      "key_facts_found": 1,
+      "key_facts_total": 4,
+      "elapsed_ms": 9482.4,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Üniversiteyi bırakıp ayrılmak istediğinizde aşağıdaki işlemler ve dikkat etmeniz gereken hususlar bulunmaktadır:\n\n- Ayrılmak için öğrencinin yazılı talebidır.\n- Üyeliğin sonlandırılmasının ardından 7 gün içinde SKSDB’ye itiraz başvurusunda bulunabilir.\n- İtiraz başvurusu, başvuru tarihinden sonra toplanan ilk Etkinlik Kurulunda görüşülerek karara bağlanır.\n- Üyeliğine son verilen öğrenci aynı topluluğa yeniden üye olamaz.\n\nKayıtları sonlandırma hususunda dikkat edilecek hususlar ise;\n\n- Kayıt yenilemeyen öğrencilerin ilgili birimin yönetim kurulunca kabul edilmesi halinde akademik takvimde belirtilen süre içinde yapılabilir.\n- Kayıt yaptırdıkları dönemde almakla yükümlü oldukları derslerin toplam AKTS kredisi bir dönemde alınabilecek toplam AKTS kredisinden eksik ise dönemdeki AKTS kredisi sınırını aşmamak şartı ile bir üst sınıftan ders alabilirler.\n- Sebebi ile değişmese de, öğrenci bilgi sistemi üzerinden alacağı dersleri seçer ve ders kaydı, danışman onayı ile kesinleşir.\n- Her dönem/yıl başında akademik takvimde belirlenen süre içinde öğrenci bilgi sistemi üzerinden alacağı dersleri seçer ve ders kaydı, danışman onayı ile kesinleşir.\n- Güz ve bahar dönemlerindeki öğrenim planında tanımlanan derslere kayıt yaptırmak zorundadır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: öğrenci_toplulukları_yönergesi.pdf\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: işyeri_staj_sözleşmesi.pdf",
+      "profiling": {
+        "total_ms": 9482.414,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q24",
+      "category": "G_semantic_paraphrase",
+      "question": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "kayıt",
+        "yenileme",
+        "UBYS",
+        "müfredat"
+      ],
+      "key_fact_results": {
+        "kayıt": true,
+        "yenileme": false,
+        "UBYS": false,
+        "müfredat": false
+      },
+      "key_facts_found": 1,
+      "key_facts_total": 4,
+      "elapsed_ms": 7202.4,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Soruya göre, okulumuzu dondurup 1 yıl ara verdikten sonra nasıl ders seçeceğiz?\n\nKurallara göre, kaynaklarda dondurulan kayıtta ders seçimi hakkında açık bir bilgi yoktur. Dolayısıyla, dondurulan kayıt bitiminde yeniden ders seçimi nasıl yapılacak sorusuna cevap oluşturacağız.\n\nSoruya göre, dondurulan kayıt bitiminde ders seçimi nasıl yapılır sorusunu iki ayrı soru olarak ele alabiliriz:\n\n1. Dondurulan kayıt bitiminde ders seçimi nasıl yapılır?\n2. Dondurulan kayıt bitiminde ders seçimi yapma süresini neye bağlıdır?\n\nDondurulan kayıt bitiminde ders seçimi nasıl yapılır?: \n\nKursallarda dondurulan kayıt bitiminde, öğrenciler kayıt dönemi başladıktan sonra 1 hafta süreyle ders seçimi yapabilirler. Dondurulan kayıt bitiminde, ders seçimi yapma yetkiniz yoktur.\n\nDondurulan kayıt bitiminde ders seçimi yapma süresini neye bağlıdır?\n\nKursallarda dondurulan kayıt bitiminde, ders seçimi yapma yetkiniz öğrenci bilgi yönetim sistemine (SDBS) göre belirlenen süre içinde yapılır. Dondurulan kayıt bitiminde ders seçimi yapma yetkiniz students.dbms sistemine göre 7 günlük bir süre boyunca yapılır.\n\nYanıtlar:\n\n1. \nDers seçimi yapma yetkiniz yoktur.\n \n2. \nStudents.dbms sistemine göre 7 günlük bir süre boyunca yapılır.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: sık_sorulan_sorular.txt",
+      "profiling": {
+        "total_ms": 7202.394,
+        "events": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q25",
+      "category": "G_semantic_paraphrase",
+      "question": "Hocam benim ders notlarımı sisteme girmemiş, bu durumda ne yapabilirim?",
+      "difficulty": "easy",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "danışman",
+        "bölüm",
+        "oidb@omu.edu.tr"
+      ],
+      "key_fact_results": {
+        "danışman": true,
+        "bölüm": false,
+        "oidb@omu.edu.tr": true
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 3,
+      "elapsed_ms": 8152.2,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Hocam, sizin ders notlarınızı sisteme girmemişsiniz:\n\n- Soruya DOGRUDAN yanit: Hayır.\n- Kaynağa göre cevap: \n- [Kaynak 1]: Ders kayıtlarını hangi tarihler arasında yapmam gerekir? Akademik takvimde belirtilen süreler içerisinde yapmak zorundasınız.\n- [Kaynak 2]: Akademik takvimde belirtilen sürede danışman onayını muhakkak yaptırınız. Hiçbir yetkiliye ulaşılamadığı takdirde oidb@omu.edu.tr adresine sistemle ilgili sorununuzu e-posta yolu ile iletebilirsiniz.\n- [Kaynak 3]: MADDE 10 – (2) Akademik takvimde belirlenen süre içinde ders kaydını yapmayan öğrenciler, o dönemde öğrenimine devam etme hakkını kaybederler.\n- [Kaynak 4]: Muafiyet başvurunuz sonuçlanıncaya kadar, dönem derslerine devam etmeniz önem arz etmektedir.\n- [Kaynak 5]: Danışman onayını vermek için, öğrencinin şahsen gelmesini zorunlu tutabilir miyim? Öğrenci bilgi yönetim sistemi üzerinden internet ortamında ders kaydını yapan öğrenci, danışman onayına sistem üzerinden gönderebilmektedir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: sık_sorulan_sorular.txt\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+      "profiling": {
+        "total_ms": 8152.181,
+        "events": []
+      },
+      "error": null
+    }
+  ]
+}

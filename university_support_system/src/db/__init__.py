@@ -8,16 +8,28 @@ __all__ = [
     "AuthContext",
     "AuthService",
     "Base",
+    "AnnouncementCandidate",
+    "AnnouncementSourceRecord",
+    "AnnouncementSyncStats",
     "ConversationContextService",
     "ConversationResolution",
     "ConversationStateData",
     "ConversationTurnData",
+    "EventCandidate",
+    "EventSourceRecord",
+    "EventSyncStats",
     "OfficeContactRecord",
     "ProfileContextData",
     "ProfileContextService",
+    "TelemetryService",
+    "fetch_active_announcement_sources",
+    "fetch_active_event_sources",
+    "fetch_relevant_events",
     "fetch_relevant_announcements",
     "fetch_office_contacts",
     "format_office_contact",
+    "get_or_create_announcement_source",
+    "get_or_create_event_source",
     "extract_profile_from_text",
     "get_session",
     "check_db_health",
@@ -72,6 +84,57 @@ def __getattr__(name: str) -> Any:
         return fetch_relevant_announcements
 
     if name in {
+        "AnnouncementCandidate",
+        "AnnouncementSourceRecord",
+        "AnnouncementSyncStats",
+        "fetch_active_announcement_sources",
+        "get_or_create_announcement_source",
+    }:
+        from src.db.announcement_sources import (
+            AnnouncementCandidate,
+            AnnouncementSourceRecord,
+            AnnouncementSyncStats,
+            fetch_active_announcement_sources,
+            get_or_create_announcement_source,
+        )
+
+        return {
+            "AnnouncementCandidate": AnnouncementCandidate,
+            "AnnouncementSourceRecord": AnnouncementSourceRecord,
+            "AnnouncementSyncStats": AnnouncementSyncStats,
+            "fetch_active_announcement_sources": fetch_active_announcement_sources,
+            "get_or_create_announcement_source": get_or_create_announcement_source,
+        }[name]
+
+    if name in {
+        "EventCandidate",
+        "EventSourceRecord",
+        "EventSyncStats",
+        "fetch_active_event_sources",
+        "get_or_create_event_source",
+    }:
+        from src.db.event_sources import (
+            EventCandidate,
+            EventSourceRecord,
+            EventSyncStats,
+            fetch_active_event_sources,
+            get_or_create_event_source,
+        )
+
+        return {
+            "EventCandidate": EventCandidate,
+            "EventSourceRecord": EventSourceRecord,
+            "EventSyncStats": EventSyncStats,
+            "fetch_active_event_sources": fetch_active_event_sources,
+            "get_or_create_event_source": get_or_create_event_source,
+        }[name]
+
+    if name == "fetch_relevant_events":
+        from src.db.events import fetch_relevant_events
+
+        return fetch_relevant_events
+
+    if name in {
         "ConversationContextService",
         "ConversationResolution",
         "ConversationStateData",
@@ -110,5 +173,10 @@ def __getattr__(name: str) -> Any:
             "extract_profile_from_text": extract_profile_from_text,
             "looks_like_profile_submission": looks_like_profile_submission,
         }[name]
+
+    if name == "TelemetryService":
+        from src.db.telemetry import TelemetryService
+
+        return TelemetryService
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

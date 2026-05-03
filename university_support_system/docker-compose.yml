@@ -57,7 +57,7 @@ services:
       IS_PERSISTENT: "TRUE"
       ANONYMIZED_TELEMETRY: "FALSE"
 
-  # ── Ollama (LLM) ──────────────────────────────
+  # ── Ollama (opsiyonel lokal LLM/fallback) ──────────────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: uni_ollama
@@ -72,8 +72,8 @@ services:
       - ollama_data:/root/.ollama
       - ./docker/ollama-bootstrap.sh:/usr/local/bin/ollama-bootstrap.sh:ro
     entrypoint: ["/bin/sh", "/usr/local/bin/ollama-bootstrap.sh"]
-    # LLM servisi aktif olarak kullanılır. API ve Slack katmanları tamamlanmasa da
-    # mevcut LLM istemcileri bu servise bağlanır.
+    # LLM yolu .env icindeki LLM_PRIMARY_PROVIDER ile belirlenir.
+    # Groq/OpenAI-compatible kullanimda Ollama ana uretim yolu degildir; lokal fallback icin tutulur.
     # GPU desteği için aşağıdaki satırları açın:
     # deploy:
     #   resources:

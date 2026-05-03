@@ -2,6 +2,23 @@
   {
     "academic_year": "2025-2026",
     "student_type": "domestic",
+    "unit_name": "Diş Hekimliği Fakültesi",
+    "annual_amount": 3057.0,
+    "semester_amount": null,
+    "source_document": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf"
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "international",
+    "unit_name": "Diş Hekimliği Fakültesi",
+    "annual_amount": 203000.0,
+    "semester_amount": null,
+    "source_document": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+    "notes": "PDF satırında dönemlik ücret '-' olarak verilmiştir."
+  },
+  {
+    "academic_year": "2025-2026",
+    "student_type": "domestic",
     "unit_name": "Mühendislik Fakültesi",
     "annual_amount": 2397.0,
     "semester_amount": 1198.5,

@@ -1,0 +1,1819 @@
+{
+  "generated_at": "2026-04-30T11:48:30.857064+00:00",
+  "source_dir": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\academic_programs",
+  "total_documents": 201,
+  "total_chunks": 5057,
+  "embedding_model": "BAAI/bge-m3",
+  "collection_name": "academic_programs_docs",
+  "documents": [
+    {
+      "filename": "eğitim_planlama_birimi.txt",
+      "relative_path": "birimler/eğitim_planlama_birimi.txt",
+      "category": "birimler",
+      "file_type": "txt",
+      "char_count": 757,
+      "chunk_count": 1,
+      "content_hash": "337cb93a884d88a8"
+    },
+    {
+      "filename": "kalite_ofisi.txt",
+      "relative_path": "birimler/kalite_ofisi.txt",
+      "category": "birimler",
+      "file_type": "txt",
+      "char_count": 3998,
+      "chunk_count": 5,
+      "content_hash": "b76d3e44e2d8a8b5"
+    },
+    {
+      "filename": "uluslararası_ogrencı_ozel_yetenek_gırıs_sınavı_sonuc_bıldırım_formu.pdf",
+      "relative_path": "formlar/uluslararası_ogrencı_ozel_yetenek_gırıs_sınavı_sonuc_bıldırım_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 276,
+      "chunk_count": 1,
+      "content_hash": "c6c813070de9166a"
+    },
+    {
+      "filename": "uluslararası_öğrenci_evrak_teslim_formu_r1.pdf",
+      "relative_path": "formlar/uluslararası_öğrenci_evrak_teslim_formu_r1.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 1270,
+      "chunk_count": 2,
+      "content_hash": "b51f988db83e859c"
+    },
+    {
+      "filename": "uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf",
+      "relative_path": "formlar/uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 6204,
+      "chunk_count": 8,
+      "content_hash": "0ceec5fcaacf7433"
+    },
+    {
+      "filename": "uluslararası_öğrenci_kimlik_bilgileri_güncelleme_formu.pdf",
+      "relative_path": "formlar/uluslararası_öğrenci_kimlik_bilgileri_güncelleme_formu.pdf",
+      "category": "formlar",
+      "file_type": "pdf",
+      "char_count": 1503,
+      "chunk_count": 2,
+      "content_hash": "2cd6c23f976bee9c"
+    },
+    {
+      "filename": "bilişim_cihazları_ve_yazılım_alımı_genelgesi.pdf",
+      "relative_path": "genelgeler/bilişim_cihazları_ve_yazılım_alımı_genelgesi.pdf",
+      "category": "genelgeler",
+      "file_type": "pdf",
+      "char_count": 3274,
+      "chunk_count": 5,
+      "content_hash": "20def68591dd3ad4"
+    },
+    {
+      "filename": "hukuk_müşavirliğinden_görüş_istenmesine_ilişkin_genelge.pdf",
+      "relative_path": "genelgeler/hukuk_müşavirliğinden_görüş_istenmesine_ilişkin_genelge.pdf",
+      "category": "genelgeler",
+      "file_type": "pdf",
+      "char_count": 3280,
+      "chunk_count": 5,
+      "content_hash": "6126ac4562b51b43"
+    },
+    {
+      "filename": "tütün_kullanımı_genelgesi.pdf",
+      "relative_path": "genelgeler/tütün_kullanımı_genelgesi.pdf",
+      "category": "genelgeler",
+      "file_type": "pdf",
+      "char_count": 3731,
+      "chunk_count": 6,
+      "content_hash": "86c92ba6219b8c6c"
+    },
+    {
+      "filename": "zimmetteki_taşınırların_iadesi_hakkında.pdf",
+      "relative_path": "genelgeler/zimmetteki_taşınırların_iadesi_hakkında.pdf",
+      "category": "genelgeler",
+      "file_type": "pdf",
+      "char_count": 5227,
+      "chunk_count": 7,
+      "content_hash": "5c4a524f8ee20b68"
+    },
+    {
+      "filename": "ödeneklerin_kullanılmasına_ilişkin.pdf",
+      "relative_path": "genelgeler/ödeneklerin_kullanılmasına_ilişkin.pdf",
+      "category": "genelgeler",
+      "file_type": "pdf",
+      "char_count": 9802,
+      "chunk_count": 12,
+      "content_hash": "38240d9bd9dab37d"
+    },
+    {
+      "filename": "ısıtma_sistemlerini_işletme_ve_kullanma.pdf",
+      "relative_path": "genelgeler/ısıtma_sistemlerini_işletme_ve_kullanma.pdf",
+      "category": "genelgeler",
+      "file_type": "pdf",
+      "char_count": 4684,
+      "chunk_count": 7,
+      "content_hash": "953d5c2d01e7f75c"
+    },
+    {
+      "filename": "kimya_müh_eğitim_öğretim_ders_planı_türkçe_07102025.pdf",
+      "relative_path": "mufredatlar/kimya_müh_eğitim_öğretim_ders_planı_türkçe_07102025.pdf",
+      "category": "mufredatlar",
+      "file_type": "pdf",
+      "char_count": 6163,
+      "chunk_count": 7,
+      "content_hash": "a260e4e237357b76"
+    },
+    {
+      "filename": "lisans_ders_i_erik_2022_2023_den_itibaren_ge_erli_olan.pdf",
+      "relative_path": "mufredatlar/lisans_ders_i_erik_2022_2023_den_itibaren_ge_erli_olan.pdf",
+      "category": "mufredatlar",
+      "file_type": "pdf",
+      "char_count": 50106,
+      "chunk_count": 62,
+      "content_hash": "9887da5d3bb5b844"
+    },
+    {
+      "filename": "uluslararası_öğrenci_başvuru.pdf",
+      "relative_path": "mufredatlar/uluslararası_öğrenci_başvuru.pdf",
+      "category": "mufredatlar",
+      "file_type": "pdf",
+      "char_count": 4468,
+      "chunk_count": 6,
+      "content_hash": "31020b0312a2038d"
+    },
+    {
+      "filename": "öğretmenlik_uygulaması_derslerini_yürüten_öğretim_elemanları_gruplar_ve.pdf",
+      "relative_path": "mufredatlar/öğretmenlik_uygulaması_derslerini_yürüten_öğretim_elemanları_gruplar_ve.pdf",
+      "category": "mufredatlar",
+      "file_type": "pdf",
+      "char_count": 8193,
+      "chunk_count": 12,
+      "content_hash": "41476ac5802a1f49"
+    },
+    {
+      "filename": "araştırma_politikası.pdf",
+      "relative_path": "politikalar/araştırma_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 8444,
+      "chunk_count": 11,
+      "content_hash": "3ea0f05fc5e726f9"
+    },
+    {
+      "filename": "bilgi_güvenliği_politikası.pdf",
+      "relative_path": "politikalar/bilgi_güvenliği_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 2650,
+      "chunk_count": 3,
+      "content_hash": "56d145547e6c4aa6"
+    },
+    {
+      "filename": "bilgi_güvenliği_yedekleme_prosedürü.pdf",
+      "relative_path": "politikalar/bilgi_güvenliği_yedekleme_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 2764,
+      "chunk_count": 3,
+      "content_hash": "1fa4fe5d5488a148"
+    },
+    {
+      "filename": "döküman_kontrolü_ve_kayıt_yönetimi_prosedürü.pdf",
+      "relative_path": "politikalar/döküman_kontrolü_ve_kayıt_yönetimi_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 20291,
+      "chunk_count": 26,
+      "content_hash": "d31dda75f0c6c3c7"
+    },
+    {
+      "filename": "düzeltici_iyileştirici_faaliyet_prosedürü.pdf",
+      "relative_path": "politikalar/düzeltici_iyileştirici_faaliyet_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 10596,
+      "chunk_count": 13,
+      "content_hash": "f1845513eb764d3d"
+    },
+    {
+      "filename": "enerji_planlama_prosedürü.pdf",
+      "relative_path": "politikalar/enerji_planlama_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 13535,
+      "chunk_count": 18,
+      "content_hash": "dd98944b525ae1b7"
+    },
+    {
+      "filename": "enerji_yönetimi_politikası.pdf",
+      "relative_path": "politikalar/enerji_yönetimi_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 1638,
+      "chunk_count": 2,
+      "content_hash": "0e07c4a46542e55b"
+    },
+    {
+      "filename": "eğitim_öğretim_perfomansını_değerlendirme_prosedürü.pdf",
+      "relative_path": "politikalar/eğitim_öğretim_perfomansını_değerlendirme_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 14818,
+      "chunk_count": 19,
+      "content_hash": "2d2bd10c70b91f18"
+    },
+    {
+      "filename": "eğitim_öğretim_politikası.pdf",
+      "relative_path": "politikalar/eğitim_öğretim_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 12110,
+      "chunk_count": 15,
+      "content_hash": "406ed7938c2c36ce"
+    },
+    {
+      "filename": "insan_kaynakları_politikası.pdf",
+      "relative_path": "politikalar/insan_kaynakları_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 6623,
+      "chunk_count": 8,
+      "content_hash": "20c3333d51a8f912"
+    },
+    {
+      "filename": "iç_tetkik_ve_yönetimin_gözden_geçirmesi_ygg_prosedürü.pdf",
+      "relative_path": "politikalar/iç_tetkik_ve_yönetimin_gözden_geçirmesi_ygg_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 19796,
+      "chunk_count": 24,
+      "content_hash": "a393eae514fadd08"
+    },
+    {
+      "filename": "kalite_politikası.pdf",
+      "relative_path": "politikalar/kalite_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 3526,
+      "chunk_count": 5,
+      "content_hash": "7eb68ce3976b1594"
+    },
+    {
+      "filename": "kendi_mezunlarını_işe_alma_politikası.pdf",
+      "relative_path": "politikalar/kendi_mezunlarını_işe_alma_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 1387,
+      "chunk_count": 2,
+      "content_hash": "90b7a6a23bb5662c"
+    },
+    {
+      "filename": "mali_politikası.pdf",
+      "relative_path": "politikalar/mali_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 7585,
+      "chunk_count": 9,
+      "content_hash": "0ce8fbece94ea072"
+    },
+    {
+      "filename": "paydaş_geri_bildirim_politikası.pdf",
+      "relative_path": "politikalar/paydaş_geri_bildirim_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 1610,
+      "chunk_count": 2,
+      "content_hash": "dd0884951df68ddc"
+    },
+    {
+      "filename": "paydaş_geri_bildirim_yönetimi_prosedürü.pdf",
+      "relative_path": "politikalar/paydaş_geri_bildirim_yönetimi_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 28665,
+      "chunk_count": 35,
+      "content_hash": "37895c8aee85bc69"
+    },
+    {
+      "filename": "risk_ve_fırsat_yönetimi_prosedürü.pdf",
+      "relative_path": "politikalar/risk_ve_fırsat_yönetimi_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 28282,
+      "chunk_count": 21,
+      "content_hash": "b765241ad2a0f6f5"
+    },
+    {
+      "filename": "satın_alma_prosedürü.pdf",
+      "relative_path": "politikalar/satın_alma_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 22634,
+      "chunk_count": 28,
+      "content_hash": "ca9a7effa8b9b1a6"
+    },
+    {
+      "filename": "sürdürülebilir_yatırım_politikası.pdf",
+      "relative_path": "politikalar/sürdürülebilir_yatırım_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 2867,
+      "chunk_count": 4,
+      "content_hash": "bf6ed5fc3c830673"
+    },
+    {
+      "filename": "sürdürülebilirlik_politikası.pdf",
+      "relative_path": "politikalar/sürdürülebilirlik_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 27796,
+      "chunk_count": 37,
+      "content_hash": "ef89cef576cdf33e"
+    },
+    {
+      "filename": "toplumsal_katkı_politikası.pdf",
+      "relative_path": "politikalar/toplumsal_katkı_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 5710,
+      "chunk_count": 8,
+      "content_hash": "fb2ae9ba2df071e1"
+    },
+    {
+      "filename": "uluslararasılaşma_politikası.pdf",
+      "relative_path": "politikalar/uluslararasılaşma_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 5851,
+      "chunk_count": 7,
+      "content_hash": "15bd7f18a8cbc6d1"
+    },
+    {
+      "filename": "uygun_olmayan_ürün_ve_hizmet_prosedürü.pdf",
+      "relative_path": "politikalar/uygun_olmayan_ürün_ve_hizmet_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 5812,
+      "chunk_count": 8,
+      "content_hash": "d97b979099e6ed1b"
+    },
+    {
+      "filename": "yayınları_ve_araştırma_verileri_açık_erişim_politikaları.pdf",
+      "relative_path": "politikalar/yayınları_ve_araştırma_verileri_açık_erişim_politikaları.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 14892,
+      "chunk_count": 19,
+      "content_hash": "1a844d768f267bc2"
+    },
+    {
+      "filename": "çeşitlilik_eşitlik_ve_kapsayıcılık_politikası.pdf",
+      "relative_path": "politikalar/çeşitlilik_eşitlik_ve_kapsayıcılık_politikası.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 3432,
+      "chunk_count": 5,
+      "content_hash": "49cc57159a88fff0"
+    },
+    {
+      "filename": "ön_lisans_ve_lisans_program_tasarımı_sürecinde_paydaş_katılım_süreci_prosedürü.pdf",
+      "relative_path": "politikalar/ön_lisans_ve_lisans_program_tasarımı_sürecinde_paydaş_katılım_süreci_prosedürü.pdf",
+      "category": "politikalar",
+      "file_type": "pdf",
+      "char_count": 9293,
+      "chunk_count": 11,
+      "content_hash": "3b3a2665131a3d8d"
+    },
+    {
+      "filename": "burslu_uluslararası_öğrenci_yerleştirme_ve_kesin_kayıt_iş_akış_süreci.pdf",
+      "relative_path": "prosedürler/burslu_uluslararası_öğrenci_yerleştirme_ve_kesin_kayıt_iş_akış_süreci.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 803,
+      "chunk_count": 1,
+      "content_hash": "16a302fa30add5dc"
+    },
+    {
+      "filename": "denklik_belgesi.pdf",
+      "relative_path": "prosedürler/denklik_belgesi.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 2964,
+      "chunk_count": 4,
+      "content_hash": "a154962d26dc86a3"
+    },
+    {
+      "filename": "ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+      "relative_path": "prosedürler/ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 18432,
+      "chunk_count": 23,
+      "content_hash": "4785055c28f88728"
+    },
+    {
+      "filename": "mavi_kartlılar_nüfus_kayıt_örneği.pdf",
+      "relative_path": "prosedürler/mavi_kartlılar_nüfus_kayıt_örneği.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 1619,
+      "chunk_count": 2,
+      "content_hash": "472522e1bc21192a"
+    },
+    {
+      "filename": "muvafakatname.pdf",
+      "relative_path": "prosedürler/muvafakatname.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 2538,
+      "chunk_count": 4,
+      "content_hash": "43d5876549c3a980"
+    },
+    {
+      "filename": "tyb.pdf",
+      "relative_path": "prosedürler/tyb.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 4793,
+      "chunk_count": 7,
+      "content_hash": "77c1681d018a91e1"
+    },
+    {
+      "filename": "uluslararası_öğrenci.pdf",
+      "relative_path": "prosedürler/uluslararası_öğrenci.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 11112,
+      "chunk_count": 16,
+      "content_hash": "d53e2a49502cd3d9"
+    },
+    {
+      "filename": "uluslararası_öğrenci_alımı_ve_kesin_kayıt_iş_akış_süreci.pdf",
+      "relative_path": "prosedürler/uluslararası_öğrenci_alımı_ve_kesin_kayıt_iş_akış_süreci.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 2501,
+      "chunk_count": 4,
+      "content_hash": "62b875f3ef1caa84"
+    },
+    {
+      "filename": "uluslararası_öğrenci_ikamet_işlemleri.pdf",
+      "relative_path": "prosedürler/uluslararası_öğrenci_ikamet_işlemleri.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 4779,
+      "chunk_count": 6,
+      "content_hash": "4890c4729faade96"
+    },
+    {
+      "filename": "vukuatlı_nüfus_kayıt_örneği.pdf",
+      "relative_path": "prosedürler/vukuatlı_nüfus_kayıt_örneği.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 3918,
+      "chunk_count": 5,
+      "content_hash": "18cb77ab7e38de43"
+    },
+    {
+      "filename": "yurda_giriş_çıkış_belgesi.pdf",
+      "relative_path": "prosedürler/yurda_giriş_çıkış_belgesi.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 3515,
+      "chunk_count": 6,
+      "content_hash": "8d92b6083b08f2d4"
+    },
+    {
+      "filename": "yurtdışından_öğrenci_kabul_kontenjanları_iş_akış_süreci_r1.pdf",
+      "relative_path": "prosedürler/yurtdışından_öğrenci_kabul_kontenjanları_iş_akış_süreci_r1.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 786,
+      "chunk_count": 1,
+      "content_hash": "c81bdc45e7c13aa4"
+    },
+    {
+      "filename": "yös_ıd_no_öğrenme.pdf",
+      "relative_path": "prosedürler/yös_ıd_no_öğrenme.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 136,
+      "chunk_count": 1,
+      "content_hash": "a10e97144c2470ee"
+    },
+    {
+      "filename": "ön_kayıt_kılavuzu_başvuru_adımları.pdf",
+      "relative_path": "prosedürler/ön_kayıt_kılavuzu_başvuru_adımları.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 8254,
+      "chunk_count": 12,
+      "content_hash": "da28b0be359dbc0f"
+    },
+    {
+      "filename": "özel_yetenek_sınavı_ile_uluslararası_öğrenci_alımı_ve_kayıt_iş_akış_süreci.pdf",
+      "relative_path": "prosedürler/özel_yetenek_sınavı_ile_uluslararası_öğrenci_alımı_ve_kayıt_iş_akış_süreci.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 1344,
+      "chunk_count": 2,
+      "content_hash": "6f8f7d74c75fb249"
+    },
+    {
+      "filename": "öğrenci_no_öğrenme.pdf",
+      "relative_path": "prosedürler/öğrenci_no_öğrenme.pdf",
+      "category": "prosedürler",
+      "file_type": "pdf",
+      "char_count": 546,
+      "chunk_count": 1,
+      "content_hash": "34540d6df24ee198"
+    },
+    {
+      "filename": "19a3160c_955f_40a6_b6f5_7508b9d735e9.pdf",
+      "relative_path": "uygulama esasları/19a3160c_955f_40a6_b6f5_7508b9d735e9.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 14561,
+      "chunk_count": 18,
+      "content_hash": "90e07fa34e324a19"
+    },
+    {
+      "filename": "uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+      "relative_path": "uygulama esasları/uygulama_esaslari_lisans_pedagojik_formasyon.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 11860,
+      "chunk_count": 21,
+      "content_hash": "d2e5583d65cc391f"
+    },
+    {
+      "filename": "yurtdışından_öğrenci_kabulüne_ilişkin_esaslar.pdf",
+      "relative_path": "uygulama esasları/yurtdışından_öğrenci_kabulüne_ilişkin_esaslar.pdf",
+      "category": "uygulama esasları",
+      "file_type": "pdf",
+      "char_count": 14561,
+      "chunk_count": 18,
+      "content_hash": "90e07fa34e324a19"
+    },
+    {
+      "filename": "makine_lisans_ders_ıcerikleri_2016_2017.pdf",
+      "relative_path": "uygulama/makine_lisans_ders_ıcerikleri_2016_2017.pdf",
+      "category": "uygulama",
+      "file_type": "pdf",
+      "char_count": 84974,
+      "chunk_count": 109,
+      "content_hash": "63c5072049c7be9c"
+    },
+    {
+      "filename": "pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+      "relative_path": "uygulama/pedagojik_formasyon_eğitiminin_uygulanmasına_dair_muhtemel_sorular_ve_cevapları.txt",
+      "category": "uygulama",
+      "file_type": "txt",
+      "char_count": 3141,
+      "chunk_count": 6,
+      "content_hash": "4c1a6461a3a3b0ef"
+    },
+    {
+      "filename": "akademik_performans_değerlendirme_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/akademik_performans_değerlendirme_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 11539,
+      "chunk_count": 21,
+      "content_hash": "faa1cc98fb4a4fb2"
+    },
+    {
+      "filename": "akademik_personel_yurtiçi_ve_yurtdışı_görevlendirme_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/akademik_personel_yurtiçi_ve_yurtdışı_görevlendirme_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 10171,
+      "chunk_count": 18,
+      "content_hash": "5a270cdc20d6403d"
+    },
+    {
+      "filename": "bilgisayar_derslerinin_muafiyeti_sınav_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/bilgisayar_derslerinin_muafiyeti_sınav_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 5490,
+      "chunk_count": 18,
+      "content_hash": "732542fba797c104"
+    },
+    {
+      "filename": "bilimsel_araştırma_projeleri_uygulama.pdf",
+      "relative_path": "yonergeler_egitim/bilimsel_araştırma_projeleri_uygulama.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 45540,
+      "chunk_count": 76,
+      "content_hash": "1640586f1e368ba2"
+    },
+    {
+      "filename": "diş_hekimliği_fakültesi.pdf",
+      "relative_path": "yonergeler_egitim/diş_hekimliği_fakültesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 26897,
+      "chunk_count": 46,
+      "content_hash": "0f07c57a2433b12c"
+    },
+    {
+      "filename": "diş_hekimliği_fakültesi_uzmanlık_eğitim_öğretim_ve_sınav_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/diş_hekimliği_fakültesi_uzmanlık_eğitim_öğretim_ve_sınav_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 26897,
+      "chunk_count": 46,
+      "content_hash": "0f07c57a2433b12c"
+    },
+    {
+      "filename": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 41342,
+      "chunk_count": 66,
+      "content_hash": "a393ab0b41c1a688"
+    },
+    {
+      "filename": "doktora_sonrası_araştırma_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/doktora_sonrası_araştırma_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 14434,
+      "chunk_count": 25,
+      "content_hash": "2141acde686d7197"
+    },
+    {
+      "filename": "eğitim_komisyonu_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/eğitim_komisyonu_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 6412,
+      "chunk_count": 15,
+      "content_hash": "857476c19b27066d"
+    },
+    {
+      "filename": "eğitim_öğretim_koordinatörlüğü_omeok.pdf",
+      "relative_path": "yonergeler_egitim/eğitim_öğretim_koordinatörlüğü_omeok.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 9125,
+      "chunk_count": 22,
+      "content_hash": "42167ec29d4089eb"
+    },
+    {
+      "filename": "güzel_sanatlar_fakültesi.pdf",
+      "relative_path": "yonergeler_egitim/güzel_sanatlar_fakültesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 5283,
+      "chunk_count": 11,
+      "content_hash": "034d21b8c6ba82dc"
+    },
+    {
+      "filename": "hizmet_içi_eğitim_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/hizmet_içi_eğitim_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 22435,
+      "chunk_count": 45,
+      "content_hash": "245a0561578c27ac"
+    },
+    {
+      "filename": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+      "relative_path": "yonergeler_egitim/lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 11860,
+      "chunk_count": 21,
+      "content_hash": "d2e5583d65cc391f"
+    },
+    {
+      "filename": "lisansüstü_eğitim_enstitüsü.pdf",
+      "relative_path": "yonergeler_egitim/lisansüstü_eğitim_enstitüsü.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 14442,
+      "chunk_count": 28,
+      "content_hash": "1b9bf4da308176f8"
+    },
+    {
+      "filename": "lisansüstü_eğitim_programlarında_uzmanlık_alan_dersi_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/lisansüstü_eğitim_programlarında_uzmanlık_alan_dersi_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 5154,
+      "chunk_count": 11,
+      "content_hash": "3e518def08a20ecf"
+    },
+    {
+      "filename": "lisansüstü_öğrenci_danışmanlığı_ve.pdf",
+      "relative_path": "yonergeler_egitim/lisansüstü_öğrenci_danışmanlığı_ve.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 7204,
+      "chunk_count": 16,
+      "content_hash": "34d03f865aabf9bd"
+    },
+    {
+      "filename": "meslek_yüksekokulları_koordinatörlüğü_meyok_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/meslek_yüksekokulları_koordinatörlüğü_meyok_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 7761,
+      "chunk_count": 21,
+      "content_hash": "b315d50161b9d3e6"
+    },
+    {
+      "filename": "mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+      "relative_path": "yonergeler_egitim/mezunlar_için_pedagojik_formasyon_eğitimi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 27147,
+      "chunk_count": 43,
+      "content_hash": "31f1aadc12fa63a8"
+    },
+    {
+      "filename": "mühendislik_fakültesi_ortak_sınav_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/mühendislik_fakültesi_ortak_sınav_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 6431,
+      "chunk_count": 15,
+      "content_hash": "98f5dcc1df032d38"
+    },
+    {
+      "filename": "personel_performans_değerlendirme_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/personel_performans_değerlendirme_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 15216,
+      "chunk_count": 27,
+      "content_hash": "985d94d940d68629"
+    },
+    {
+      "filename": "sürekli_eğitim_merkezi_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/sürekli_eğitim_merkezi_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 10334,
+      "chunk_count": 24,
+      "content_hash": "7796dc799ec78959"
+    },
+    {
+      "filename": "tıp_fakültesi_akademik_öğrenci_danışmanlığı_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/tıp_fakültesi_akademik_öğrenci_danışmanlığı_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 6033,
+      "chunk_count": 16,
+      "content_hash": "487e19b35e533629"
+    },
+    {
+      "filename": "tıp_fakültesi_intörn_doktorluk_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/tıp_fakültesi_intörn_doktorluk_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 16676,
+      "chunk_count": 35,
+      "content_hash": "ca03f67066d9b828"
+    },
+    {
+      "filename": "tıp_fakültesi_tıp_doktorluğu_programı.pdf",
+      "relative_path": "yonergeler_egitim/tıp_fakültesi_tıp_doktorluğu_programı.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 44408,
+      "chunk_count": 71,
+      "content_hash": "2d654a028e82c540"
+    },
+    {
+      "filename": "tıpta_uzmanlık_eğitimi_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/tıpta_uzmanlık_eğitimi_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 35145,
+      "chunk_count": 52,
+      "content_hash": "60c393fe260d0150"
+    },
+    {
+      "filename": "uzaktan_eğitim_tezsiz_yüksek_lisans_programı_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/uzaktan_eğitim_tezsiz_yüksek_lisans_programı_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 11850,
+      "chunk_count": 25,
+      "content_hash": "0c6283fb983a0993"
+    },
+    {
+      "filename": "uzaktan_eğitim_önlisans_ve_lisans_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/uzaktan_eğitim_önlisans_ve_lisans_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 8797,
+      "chunk_count": 25,
+      "content_hash": "6a84d0e98f36886b"
+    },
+    {
+      "filename": "uzaktan_karma_eğitim_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/uzaktan_karma_eğitim_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 11182,
+      "chunk_count": 22,
+      "content_hash": "08b344245ba3a8b0"
+    },
+    {
+      "filename": "veteriner_fakültesi_eğitim_uygulama_ve_araştırma_hastanesi_işletme_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/veteriner_fakültesi_eğitim_uygulama_ve_araştırma_hastanesi_işletme_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 14836,
+      "chunk_count": 31,
+      "content_hash": "a923c238310c7e82"
+    },
+    {
+      "filename": "yonerge_cift_anadal_yandal.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_cift_anadal_yandal.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 16688,
+      "chunk_count": 31,
+      "content_hash": "b4b9abf7c02b4b84"
+    },
+    {
+      "filename": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 41342,
+      "chunk_count": 66,
+      "content_hash": "a393ab0b41c1a688"
+    },
+    {
+      "filename": "yonerge_egitim_komisyonu.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_egitim_komisyonu.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 6412,
+      "chunk_count": 15,
+      "content_hash": "857476c19b27066d"
+    },
+    {
+      "filename": "yonerge_lisansustu_danismanlik_ders_verme.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_lisansustu_danismanlik_ders_verme.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 7204,
+      "chunk_count": 16,
+      "content_hash": "34d03f865aabf9bd"
+    },
+    {
+      "filename": "yonerge_ozel_ogrenci.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_ozel_ogrenci.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 8813,
+      "chunk_count": 16,
+      "content_hash": "2dbf50db5482673a"
+    },
+    {
+      "filename": "yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 44408,
+      "chunk_count": 71,
+      "content_hash": "2d654a028e82c540"
+    },
+    {
+      "filename": "yonerge_uzaktan_egitim_onlisans_lisans.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_uzaktan_egitim_onlisans_lisans.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 8797,
+      "chunk_count": 25,
+      "content_hash": "6a84d0e98f36886b"
+    },
+    {
+      "filename": "yonerge_uzaktan_karma_egitim.pdf",
+      "relative_path": "yonergeler_egitim/yonerge_uzaktan_karma_egitim.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 11182,
+      "chunk_count": 22,
+      "content_hash": "08b344245ba3a8b0"
+    },
+    {
+      "filename": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+      "relative_path": "yonergeler_egitim/çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 16688,
+      "chunk_count": 31,
+      "content_hash": "b4b9abf7c02b4b84"
+    },
+    {
+      "filename": "önlisans_ve_lisans_düzeyindeki_programlar_arasında_geçiş_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/önlisans_ve_lisans_düzeyindeki_programlar_arasında_geçiş_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 20295,
+      "chunk_count": 29,
+      "content_hash": "943f857c0394f054"
+    },
+    {
+      "filename": "özel_yetenek_sınavı_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/özel_yetenek_sınavı_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 5544,
+      "chunk_count": 22,
+      "content_hash": "6f9e6aa9078693a3"
+    },
+    {
+      "filename": "özel_öğrenci_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/özel_öğrenci_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 8368,
+      "chunk_count": 17,
+      "content_hash": "18aaf31cbb59bb92"
+    },
+    {
+      "filename": "öğretim_üyeliğine_yükseltilme_ve_atanma_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/öğretim_üyeliğine_yükseltilme_ve_atanma_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 62695,
+      "chunk_count": 90,
+      "content_hash": "c316d840391bdeee"
+    },
+    {
+      "filename": "öğretim_üyesi_yetiştirme_programı_yönergesi.pdf",
+      "relative_path": "yonergeler_egitim/öğretim_üyesi_yetiştirme_programı_yönergesi.pdf",
+      "category": "yonergeler_egitim",
+      "file_type": "pdf",
+      "char_count": 8145,
+      "chunk_count": 19,
+      "content_hash": "67332ca98c6a5566"
+    },
+    {
+      "filename": "araçları_kullanım_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/araçları_kullanım_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 17498,
+      "chunk_count": 29,
+      "content_hash": "95e91a24c176632b"
+    },
+    {
+      "filename": "araştırma_ve_geliştirme_koordinatörlüğü.pdf",
+      "relative_path": "yonergeler_kurumsal/araştırma_ve_geliştirme_koordinatörlüğü.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 9788,
+      "chunk_count": 22,
+      "content_hash": "b5fa202e1afcad99"
+    },
+    {
+      "filename": "danışma_kurulu_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/danışma_kurulu_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 4788,
+      "chunk_count": 10,
+      "content_hash": "410d27619cfc9276"
+    },
+    {
+      "filename": "deney_hayvanları_uygulama_ve_araştırma_merkezi_deham_çalışma_esasları_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/deney_hayvanları_uygulama_ve_araştırma_merkezi_deham_çalışma_esasları_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 13375,
+      "chunk_count": 25,
+      "content_hash": "a38c7755caad78f2"
+    },
+    {
+      "filename": "dış_kaynaklı_projelerde_araştırmacıların.pdf",
+      "relative_path": "yonergeler_kurumsal/dış_kaynaklı_projelerde_araştırmacıların.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 9853,
+      "chunk_count": 19,
+      "content_hash": "d563ac04316c67c6"
+    },
+    {
+      "filename": "enerji_yönetimi_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/enerji_yönetimi_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 11741,
+      "chunk_count": 23,
+      "content_hash": "62fd6115c6b8fb93"
+    },
+    {
+      "filename": "engelli_öğrenci_birimi_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/engelli_öğrenci_birimi_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 8030,
+      "chunk_count": 17,
+      "content_hash": "504f728968d8a9b3"
+    },
+    {
+      "filename": "etik_ilkeleri_ve_iş_etik_kurulu_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/etik_ilkeleri_ve_iş_etik_kurulu_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 15026,
+      "chunk_count": 29,
+      "content_hash": "89e1fecdc63d2cd8"
+    },
+    {
+      "filename": "fikri_ve_sınai_mülkiyet_hakları_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/fikri_ve_sınai_mülkiyet_hakları_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 18367,
+      "chunk_count": 29,
+      "content_hash": "eb57ea19b68cb5bc"
+    },
+    {
+      "filename": "fiziki_alanlara_ad_verme_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/fiziki_alanlara_ad_verme_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 7214,
+      "chunk_count": 15,
+      "content_hash": "328faf5d28a37146"
+    },
+    {
+      "filename": "girişimsel_olmayan_klinik_araştırmalar.pdf",
+      "relative_path": "yonergeler_kurumsal/girişimsel_olmayan_klinik_araştırmalar.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 17220,
+      "chunk_count": 28,
+      "content_hash": "9012f4fa6399499b"
+    },
+    {
+      "filename": "güvenlik_hizmetlerinin_yürütülmesine_dair_yönerge.pdf",
+      "relative_path": "yonergeler_kurumsal/güvenlik_hizmetlerinin_yürütülmesine_dair_yönerge.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 50983,
+      "chunk_count": 82,
+      "content_hash": "509b4d70b9973c35"
+    },
+    {
+      "filename": "güvenlik_soruşturması_ve_arşiv_araştırması_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/güvenlik_soruşturması_ve_arşiv_araştırması_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 7792,
+      "chunk_count": 18,
+      "content_hash": "1f2a89c81ebe846d"
+    },
+    {
+      "filename": "hasta_yakını_evi_çalışma_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/hasta_yakını_evi_çalışma_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 5158,
+      "chunk_count": 13,
+      "content_hash": "dbe0100dc6417b32"
+    },
+    {
+      "filename": "hayvan_deneyleri_yerel_etik_kurulu_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/hayvan_deneyleri_yerel_etik_kurulu_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 39153,
+      "chunk_count": 59,
+      "content_hash": "8af2793c9c39d494"
+    },
+    {
+      "filename": "hukuk_müşavirliği_görev_yetki_ve_sorumlulukları_ile_çalışma_usul_ve_esasları.pdf",
+      "relative_path": "yonergeler_kurumsal/hukuk_müşavirliği_görev_yetki_ve_sorumlulukları_ile_çalışma_usul_ve_esasları.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 19393,
+      "chunk_count": 41,
+      "content_hash": "63ef87ca1a4fff04"
+    },
+    {
+      "filename": "iç_denetim_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/iç_denetim_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 58555,
+      "chunk_count": 98,
+      "content_hash": "1950f32d56c57bfa"
+    },
+    {
+      "filename": "iş_sağlığı_ve_güvenliği_kurulları_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/iş_sağlığı_ve_güvenliği_kurulları_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 21981,
+      "chunk_count": 36,
+      "content_hash": "bb4576258caa522b"
+    },
+    {
+      "filename": "kalite_güvence_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/kalite_güvence_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 13055,
+      "chunk_count": 24,
+      "content_hash": "dec66d652fce1854"
+    },
+    {
+      "filename": "kampüs_koordinatörlükleri_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/kampüs_koordinatörlükleri_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 4876,
+      "chunk_count": 14,
+      "content_hash": "be7344096b232c8d"
+    },
+    {
+      "filename": "kariyer_merkezi_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/kariyer_merkezi_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 9010,
+      "chunk_count": 23,
+      "content_hash": "de946c96d9a97472"
+    },
+    {
+      "filename": "klinik_araştırmalar_etik_kurulunun_çalışma_esasları_hakkında_yönerge.pdf",
+      "relative_path": "yonergeler_kurumsal/klinik_araştırmalar_etik_kurulunun_çalışma_esasları_hakkında_yönerge.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 20622,
+      "chunk_count": 33,
+      "content_hash": "26d1de030945dc07"
+    },
+    {
+      "filename": "konut_tahsis_ve_yönetim_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/konut_tahsis_ve_yönetim_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 15096,
+      "chunk_count": 26,
+      "content_hash": "f0b3f19ec7beb14e"
+    },
+    {
+      "filename": "koruma_ve_güvenlik_müdürlüğü_ulaşım_güvenliği_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/koruma_ve_güvenlik_müdürlüğü_ulaşım_güvenliği_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 9972,
+      "chunk_count": 17,
+      "content_hash": "63713a52a9a95f93"
+    },
+    {
+      "filename": "kök_hücre_araştırma_merkezi_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/kök_hücre_araştırma_merkezi_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 9862,
+      "chunk_count": 22,
+      "content_hash": "8044098ce7303a49"
+    },
+    {
+      "filename": "kütüphane_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/kütüphane_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 24199,
+      "chunk_count": 42,
+      "content_hash": "91c4bf60cf5bc4a2"
+    },
+    {
+      "filename": "mevzuat_komisyonu_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/mevzuat_komisyonu_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 3363,
+      "chunk_count": 11,
+      "content_hash": "c88d02f820b1465d"
+    },
+    {
+      "filename": "mezunlar_koordinatörlüğü_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/mezunlar_koordinatörlüğü_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 12469,
+      "chunk_count": 26,
+      "content_hash": "c56facd4abd7521c"
+    },
+    {
+      "filename": "moleküler_biyoloji_ve_genetik_bölümü_kimyasal_atık_prosedürü.pdf",
+      "relative_path": "yonergeler_kurumsal/moleküler_biyoloji_ve_genetik_bölümü_kimyasal_atık_prosedürü.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 5638,
+      "chunk_count": 7,
+      "content_hash": "140732f130497f94"
+    },
+    {
+      "filename": "omu_ogrenci_kalite_komisyonu_yonergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/omu_ogrenci_kalite_komisyonu_yonergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 7994,
+      "chunk_count": 15,
+      "content_hash": "d97424855867a986"
+    },
+    {
+      "filename": "proje_yönetimi_ofisi_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/proje_yönetimi_ofisi_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 561,
+      "chunk_count": 1,
+      "content_hash": "582156007d267811"
+    },
+    {
+      "filename": "psikolojik_tacizle_mobbing_mücadele_kurulu_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/psikolojik_tacizle_mobbing_mücadele_kurulu_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 10284,
+      "chunk_count": 20,
+      "content_hash": "da044face8818b54"
+    },
+    {
+      "filename": "sağluk_uygulama_ve_araştırma_merkezi_radyasyon_güvenliği_komitesi_kuruluş_ve.pdf",
+      "relative_path": "yonergeler_kurumsal/sağluk_uygulama_ve_araştırma_merkezi_radyasyon_güvenliği_komitesi_kuruluş_ve.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 11786,
+      "chunk_count": 27,
+      "content_hash": "1f7ed4f118f7192b"
+    },
+    {
+      "filename": "sağlık_kültür_ve_spor_daire_başkanlığı_beslenme_hizmetleri_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/sağlık_kültür_ve_spor_daire_başkanlığı_beslenme_hizmetleri_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 19766,
+      "chunk_count": 36,
+      "content_hash": "596cb40233f932f1"
+    },
+    {
+      "filename": "sağlık_kültür_ve_spor_daire_başkanlığı_iktisadi.pdf",
+      "relative_path": "yonergeler_kurumsal/sağlık_kültür_ve_spor_daire_başkanlığı_iktisadi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 20131,
+      "chunk_count": 37,
+      "content_hash": "e87903a6f9e57474"
+    },
+    {
+      "filename": "sağlık_uygulama_ve_araştırma_merkezi.pdf",
+      "relative_path": "yonergeler_kurumsal/sağlık_uygulama_ve_araştırma_merkezi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 11160,
+      "chunk_count": 25,
+      "content_hash": "8796f80852f63153"
+    },
+    {
+      "filename": "sağlık_uygulama_ve_araştırma_merkezi_ameliyathane_koordinasyon_kurulu_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/sağlık_uygulama_ve_araştırma_merkezi_ameliyathane_koordinasyon_kurulu_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 27200,
+      "chunk_count": 46,
+      "content_hash": "4406cb90f2e1ba7b"
+    },
+    {
+      "filename": "sağlık_uygulama_ve_araştırma_merkezi_hemşirelik_hizmetleri_müdürlüğü_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/sağlık_uygulama_ve_araştırma_merkezi_hemşirelik_hizmetleri_müdürlüğü_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 103305,
+      "chunk_count": 145,
+      "content_hash": "0b090e6aa93f0df4"
+    },
+    {
+      "filename": "sağlık_uygulama_ve_araştırma_merkezi_klinik_beslenme_eğitimi_uygulamaları.pdf",
+      "relative_path": "yonergeler_kurumsal/sağlık_uygulama_ve_araştırma_merkezi_klinik_beslenme_eğitimi_uygulamaları.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 14575,
+      "chunk_count": 18,
+      "content_hash": "3fbfc3f1991463cf"
+    },
+    {
+      "filename": "sağlık_uygulama_ve_araştırma_merkezi_tıp_laboratuvarları_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/sağlık_uygulama_ve_araştırma_merkezi_tıp_laboratuvarları_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 16900,
+      "chunk_count": 28,
+      "content_hash": "ecd70735e5f6db35"
+    },
+    {
+      "filename": "sosyal_ve_beşeri_bilimler_araştırmaları.pdf",
+      "relative_path": "yonergeler_kurumsal/sosyal_ve_beşeri_bilimler_araştırmaları.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 13432,
+      "chunk_count": 24,
+      "content_hash": "80d34fd816c705ed"
+    },
+    {
+      "filename": "sürdürülebilirlik_ve_dijitalleşme.pdf",
+      "relative_path": "yonergeler_kurumsal/sürdürülebilirlik_ve_dijitalleşme.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 5651,
+      "chunk_count": 16,
+      "content_hash": "7a2d8b3df5d635ce"
+    },
+    {
+      "filename": "taşınır_mal_ve_hurda_yönetimi_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/taşınır_mal_ve_hurda_yönetimi_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 23290,
+      "chunk_count": 42,
+      "content_hash": "e3cc0c456d41c2db"
+    },
+    {
+      "filename": "toplumsal_katkı_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/toplumsal_katkı_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 9861,
+      "chunk_count": 23,
+      "content_hash": "c3dc07ecc111c511"
+    },
+    {
+      "filename": "uygulama_ve_araştırma_merkezleri.pdf",
+      "relative_path": "yonergeler_kurumsal/uygulama_ve_araştırma_merkezleri.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 6172,
+      "chunk_count": 18,
+      "content_hash": "08496dc94a89300a"
+    },
+    {
+      "filename": "yayın_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/yayın_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 21380,
+      "chunk_count": 36,
+      "content_hash": "ccf96cb5834afc21"
+    },
+    {
+      "filename": "çocuk_istismarı_ve_ihmali_izleme_ve_önleme.pdf",
+      "relative_path": "yonergeler_kurumsal/çocuk_istismarı_ve_ihmali_izleme_ve_önleme.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 6233,
+      "chunk_count": 16,
+      "content_hash": "90babf2da051a23b"
+    },
+    {
+      "filename": "ödül_ve_teşvik_yönergesi.pdf",
+      "relative_path": "yonergeler_kurumsal/ödül_ve_teşvik_yönergesi.pdf",
+      "category": "yonergeler_kurumsal",
+      "file_type": "pdf",
+      "char_count": 17749,
+      "chunk_count": 29,
+      "content_hash": "03d8daa5813ab29a"
+    },
+    {
+      "filename": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+      "relative_path": "yonergeler_uluslararasi/avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 32211,
+      "chunk_count": 50,
+      "content_hash": "fbf84741598a7973"
+    },
+    {
+      "filename": "türkçe_öğretimi_uygulama_ve_araştırma_merkezi.pdf",
+      "relative_path": "yonergeler_uluslararasi/türkçe_öğretimi_uygulama_ve_araştırma_merkezi.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 17749,
+      "chunk_count": 28,
+      "content_hash": "39bab32d30019f00"
+    },
+    {
+      "filename": "uluslararası_ilişkiler_birimi_yönergesi.pdf",
+      "relative_path": "yonergeler_uluslararasi/uluslararası_ilişkiler_birimi_yönergesi.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 16098,
+      "chunk_count": 33,
+      "content_hash": "5d8a9c12b0c6ee2c"
+    },
+    {
+      "filename": "uluslararası_işbirlikleri_protokoller_kapsamındaki_öğrenci_ve_personel_değişim.pdf",
+      "relative_path": "yonergeler_uluslararasi/uluslararası_işbirlikleri_protokoller_kapsamındaki_öğrenci_ve_personel_değişim.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 20129,
+      "chunk_count": 33,
+      "content_hash": "f31219319a9c8a5c"
+    },
+    {
+      "filename": "uluslararası_öğrenci_yönergesi.pdf",
+      "relative_path": "yonergeler_uluslararasi/uluslararası_öğrenci_yönergesi.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 21620,
+      "chunk_count": 35,
+      "content_hash": "f513bd6401750359"
+    },
+    {
+      "filename": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+      "relative_path": "yonergeler_uluslararasi/yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 15843,
+      "chunk_count": 37,
+      "content_hash": "5b7488e151163e87"
+    },
+    {
+      "filename": "yonerge_uluslararasi_ogrenci_kabul.pdf",
+      "relative_path": "yonergeler_uluslararasi/yonerge_uluslararasi_ogrenci_kabul.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 34514,
+      "chunk_count": 51,
+      "content_hash": "33cd71dc9302c646"
+    },
+    {
+      "filename": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
+      "relative_path": "yonergeler_uluslararasi/yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 19968,
+      "chunk_count": 29,
+      "content_hash": "ec74d0dd78ab9b99"
+    },
+    {
+      "filename": "yonerge_yabanci_dil_egitim_ogretim.pdf",
+      "relative_path": "yonergeler_uluslararasi/yonerge_yabanci_dil_egitim_ogretim.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 15843,
+      "chunk_count": 37,
+      "content_hash": "5b7488e151163e87"
+    },
+    {
+      "filename": "ön_lisans_ve_lisans_programları.pdf",
+      "relative_path": "yonergeler_uluslararasi/ön_lisans_ve_lisans_programları.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 21620,
+      "chunk_count": 35,
+      "content_hash": "f513bd6401750359"
+    },
+    {
+      "filename": "önlisans_lisans_ve_lisansüstü_düzeyindeki_programlara_uluslararası_öğrenci.pdf",
+      "relative_path": "yonergeler_uluslararasi/önlisans_lisans_ve_lisansüstü_düzeyindeki_programlara_uluslararası_öğrenci.pdf",
+      "category": "yonergeler_uluslararasi",
+      "file_type": "pdf",
+      "char_count": 19968,
+      "chunk_count": 29,
+      "content_hash": "ec74d0dd78ab9b99"
+    },
+    {
+      "filename": "afet_eğitimi_ve_yönetimi.pdf",
+      "relative_path": "yönetmelikler/afet_eğitimi_ve_yönetimi.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 7745,
+      "chunk_count": 19,
+      "content_hash": "f72d15b7b2a84ea5"
+    },
+    {
+      "filename": "arapça_öğretimi.pdf",
+      "relative_path": "yönetmelikler/arapça_öğretimi.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 7093,
+      "chunk_count": 19,
+      "content_hash": "03eb02e47d3fe851"
+    },
+    {
+      "filename": "astronomi_eğitimi_uygulama.pdf",
+      "relative_path": "yönetmelikler/astronomi_eğitimi_uygulama.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 8020,
+      "chunk_count": 20,
+      "content_hash": "48680bc8c5576bf6"
+    },
+    {
+      "filename": "ağız_ve_diş_sağlığı_uygulama.pdf",
+      "relative_path": "yönetmelikler/ağız_ve_diş_sağlığı_uygulama.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 9936,
+      "chunk_count": 23,
+      "content_hash": "12eccab68d0aaa15"
+    },
+    {
+      "filename": "bağımlılıkla_mücadele.pdf",
+      "relative_path": "yönetmelikler/bağımlılıkla_mücadele.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 11061,
+      "chunk_count": 24,
+      "content_hash": "e37876c328812dee"
+    },
+    {
+      "filename": "bölgesel_kalkınma_ve_stratejik_araştırmalar_uygulama_ve_araştırma_merkezi.txt",
+      "relative_path": "yönetmelikler/bölgesel_kalkınma_ve_stratejik_araştırmalar_uygulama_ve_araştırma_merkezi.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 6139,
+      "chunk_count": 17,
+      "content_hash": "da6ebc7bd6ccc394"
+    },
+    {
+      "filename": "deney_hayvanları_uygulama_ve_araştırma_merkezi.pdf",
+      "relative_path": "yönetmelikler/deney_hayvanları_uygulama_ve_araştırma_merkezi.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 10206,
+      "chunk_count": 25,
+      "content_hash": "a190a0a6b17f104f"
+    },
+    {
+      "filename": "dil_ve_konuşma_bozuklukları.pdf",
+      "relative_path": "yönetmelikler/dil_ve_konuşma_bozuklukları.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 7292,
+      "chunk_count": 19,
+      "content_hash": "e8fc4004d72eff0c"
+    },
+    {
+      "filename": "döner.pdf",
+      "relative_path": "yönetmelikler/döner.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 5530,
+      "chunk_count": 14,
+      "content_hash": "e2883655fb18b2b9"
+    },
+    {
+      "filename": "gelişimsel_eğitim_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/gelişimsel_eğitim_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 6976,
+      "chunk_count": 20,
+      "content_hash": "af40d86b59a20d4b"
+    },
+    {
+      "filename": "havacılık_ve_uzay_teknolojileri.pdf",
+      "relative_path": "yönetmelikler/havacılık_ve_uzay_teknolojileri.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 577,
+      "chunk_count": 4,
+      "content_hash": "051138270ce91db1"
+    },
+    {
+      "filename": "iş_sağlığı_ve_güvenliği_meslek_hastalıkları_uygulama_ve_araştırma_merkezi.txt",
+      "relative_path": "yönetmelikler/iş_sağlığı_ve_güvenliği_meslek_hastalıkları_uygulama_ve_araştırma_merkezi.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 8533,
+      "chunk_count": 18,
+      "content_hash": "502dbe93ec65e487"
+    },
+    {
+      "filename": "kadın_ve_aile_çalışmaları_uygulama_ve_araştırma.pdf",
+      "relative_path": "yönetmelikler/kadın_ve_aile_çalışmaları_uygulama_ve_araştırma.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 7215,
+      "chunk_count": 17,
+      "content_hash": "3d8ab165305d27ca"
+    },
+    {
+      "filename": "karadeniz_ileri_teknoloji_araştırma_ve_uygulama.pdf",
+      "relative_path": "yönetmelikler/karadeniz_ileri_teknoloji_araştırma_ve_uygulama.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 10338,
+      "chunk_count": 23,
+      "content_hash": "0a93930cd12952b7"
+    },
+    {
+      "filename": "kök_hücre_uygulama.pdf",
+      "relative_path": "yönetmelikler/kök_hücre_uygulama.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 8736,
+      "chunk_count": 21,
+      "content_hash": "dfbd1e9f4ed19f6c"
+    },
+    {
+      "filename": "lisansüstü_eğitim_ve.pdf",
+      "relative_path": "yönetmelikler/lisansüstü_eğitim_ve.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 77671,
+      "chunk_count": 117,
+      "content_hash": "5765c3e31bf85c44"
+    },
+    {
+      "filename": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+      "relative_path": "yönetmelikler/lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 76306,
+      "chunk_count": 116,
+      "content_hash": "0364cf768990b475"
+    },
+    {
+      "filename": "okul_öncesi_eğitimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/okul_öncesi_eğitimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 8165,
+      "chunk_count": 19,
+      "content_hash": "56621cf0d9095513"
+    },
+    {
+      "filename": "psikoloji_uygulama.pdf",
+      "relative_path": "yönetmelikler/psikoloji_uygulama.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 7113,
+      "chunk_count": 21,
+      "content_hash": "6193466689fc61ff"
+    },
+    {
+      "filename": "samsun_sağlık_yüksekokulu_eğitim_öğretim_ve_sınav_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/samsun_sağlık_yüksekokulu_eğitim_öğretim_ve_sınav_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 10911,
+      "chunk_count": 27,
+      "content_hash": "2943235e23df1109"
+    },
+    {
+      "filename": "sağlık_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/sağlık_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 20981,
+      "chunk_count": 36,
+      "content_hash": "0ab51d8541dc9914"
+    },
+    {
+      "filename": "siber_güvenlik_ve_bilişim_teknolojileri.pdf",
+      "relative_path": "yönetmelikler/siber_güvenlik_ve_bilişim_teknolojileri.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 8967,
+      "chunk_count": 19,
+      "content_hash": "6fb73cd2dd41973d"
+    },
+    {
+      "filename": "sürekli_eğitim_merkezi_omü_yabancı_dil_sertifikası_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/sürekli_eğitim_merkezi_omü_yabancı_dil_sertifikası_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 3684,
+      "chunk_count": 14,
+      "content_hash": "b637af1153410fcb"
+    },
+    {
+      "filename": "sürekli_eğitim_merkezi_sertifikaya_yönelik_eğitim_programları_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/sürekli_eğitim_merkezi_sertifikaya_yönelik_eğitim_programları_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 4649,
+      "chunk_count": 13,
+      "content_hash": "598b5d7beb4e24b2"
+    },
+    {
+      "filename": "sürekli_eğitim_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/sürekli_eğitim_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 4902,
+      "chunk_count": 17,
+      "content_hash": "5e5402887606d9ca"
+    },
+    {
+      "filename": "tarımsal_uygulama_ve.pdf",
+      "relative_path": "yönetmelikler/tarımsal_uygulama_ve.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 10808,
+      "chunk_count": 13,
+      "content_hash": "63dee523c750c30d"
+    },
+    {
+      "filename": "taşınmazlarının.pdf",
+      "relative_path": "yönetmelikler/taşınmazlarının.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 66474,
+      "chunk_count": 127,
+      "content_hash": "e181387dd53ea07a"
+    },
+    {
+      "filename": "temiz_enerji_teknolojileri_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/temiz_enerji_teknolojileri_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 9540,
+      "chunk_count": 21,
+      "content_hash": "ec4e566017d6eecc"
+    },
+    {
+      "filename": "türkçe_öğretimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/türkçe_öğretimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 8401,
+      "chunk_count": 21,
+      "content_hash": "516f3c72d969d747"
+    },
+    {
+      "filename": "uzaktan_eğitim_uygulama_ve_araştırma.pdf",
+      "relative_path": "yönetmelikler/uzaktan_eğitim_uygulama_ve_araştırma.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 9547,
+      "chunk_count": 21,
+      "content_hash": "22fb48345ded1ae6"
+    },
+    {
+      "filename": "yaratıcı_yazarlık_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/yaratıcı_yazarlık_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 8734,
+      "chunk_count": 19,
+      "content_hash": "e3e951fe56f11a5f"
+    },
+    {
+      "filename": "yonetmelik_lisansustu_egitim_ogretim.pdf",
+      "relative_path": "yönetmelikler/yonetmelik_lisansustu_egitim_ogretim.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 77671,
+      "chunk_count": 117,
+      "content_hash": "5765c3e31bf85c44"
+    },
+    {
+      "filename": "yonetmelik_uzaktan_egitim.pdf",
+      "relative_path": "yönetmelikler/yonetmelik_uzaktan_egitim.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 9547,
+      "chunk_count": 21,
+      "content_hash": "22fb48345ded1ae6"
+    },
+    {
+      "filename": "çevre_sorunları_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/çevre_sorunları_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 6062,
+      "chunk_count": 17,
+      "content_hash": "1d484d5cb37b7823"
+    },
+    {
+      "filename": "çocuk_eğitimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "relative_path": "yönetmelikler/çocuk_eğitimi_uygulama_ve_araştırma_merkezi_yönetmeliği.txt",
+      "category": "yönetmelikler",
+      "file_type": "txt",
+      "char_count": 6574,
+      "chunk_count": 19,
+      "content_hash": "26fcd756c97507fb"
+    },
+    {
+      "filename": "üstün_zekalı_ve_yetenekli.pdf",
+      "relative_path": "yönetmelikler/üstün_zekalı_ve_yetenekli.pdf",
+      "category": "yönetmelikler",
+      "file_type": "pdf",
+      "char_count": 9118,
+      "chunk_count": 22,
+      "content_hash": "f784765b8749bee3"
+    }
+  ]
+}

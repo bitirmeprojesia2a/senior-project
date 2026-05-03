@@ -70,6 +70,8 @@ _GENERAL_RULE_SIGNALS: tuple[str, ...] = (
 
 _PROCEDURAL_OVERRIDE_SIGNALS: tuple[str, ...] = (
     "nereye",
+    "nerede",
+    "nereden",
     "ne yapmaliyim",
     "ne yapmam gerekiyor",
     "ne yapabilirim",
@@ -83,6 +85,8 @@ _PROCEDURAL_OVERRIDE_SIGNALS: tuple[str, ...] = (
     "alabilirim",
     "goruntuleyebilirim",
     "goruntulerim",
+    "gorebilirim",
+    "gorerim",
     "hata",
     "sorun",
     "problem",

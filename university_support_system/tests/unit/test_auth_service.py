@@ -47,6 +47,7 @@ async def seeded_student(db_session):
         email="20210001@stu.omu.edu.tr",
         department="bilgisayar_muhendisligi",
         faculty="Muhendislik Fakultesi",
+        student_type="domestic",
         class_year=3,
         enrollment_year=2021,
         registration_status="active",
@@ -119,12 +120,14 @@ async def test_verify_otp_creates_session_and_slack_mapping(auth_service_factory
     assert result["success"] is True
     assert result["session_token"]
     assert result["student_department"] == "bilgisayar_muhendisligi"
+    assert result["student_type"] == "domestic"
 
     resolved = await service.resolve_auth_context(session_token=result["session_token"])
     assert resolved is not None
     assert resolved.student_number == "20210001"
     assert resolved.student_department == "bilgisayar_muhendisligi"
     assert resolved.student_faculty == "Muhendislik Fakultesi"
+    assert resolved.student_type == "domestic"
 
     resolved_from_slack = await service.resolve_auth_context(slack_user_id="U123")
     assert resolved_from_slack is not None
@@ -190,3 +193,39 @@ async def test_invalidate_session_marks_session_inactive(auth_service_factory, s
     assert invalidated is True
     assert await service.resolve_auth_context(session_token=result["session_token"]) is None
     assert await service.resolve_auth_context(slack_user_id="U123") is None
+
+
+@pytest.mark.asyncio
+async def test_invalidate_slack_sessions_marks_all_user_sessions_inactive(
+    auth_service_factory,
+    seeded_student,
+    db_session,
+):
+    now = datetime(2026, 3, 26, 12, 0, tzinfo=timezone.utc)
+    db_session.add_all(
+        [
+            VerificationSession(
+                student_id=seeded_student.id,
+                slack_user_id="U123",
+                session_token="old-session",
+                expires_at=now + timedelta(hours=1),
+                is_active=True,
+            ),
+            VerificationSession(
+                student_id=seeded_student.id,
+                slack_user_id="U123",
+                session_token="new-session",
+                expires_at=now + timedelta(hours=2),
+                is_active=True,
+            ),
+        ]
+    )
+    await db_session.commit()
+    service = auth_service_factory()
+
+    invalidated = await service.invalidate_slack_sessions("U123")
+
+    assert invalidated is True
+    assert await service.resolve_auth_context(slack_user_id="U123") is None
+    assert await service.resolve_auth_context(session_token="old-session") is None
+    assert await service.resolve_auth_context(session_token="new-session") is None

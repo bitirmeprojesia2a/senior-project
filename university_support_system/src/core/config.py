@@ -11,6 +11,18 @@ from typing import Literal, Optional
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+LLMProvider = Literal["ollama", "openai_compatible", "google_ai"]
+LLMRole = Literal[
+    "default",
+    "routing",
+    "conversation",
+    "query_expansion",
+    "evidence_selection",
+    "final_refinement",
+    "specialist_synthesis",
+    "global_synthesis",
+]
+
 
 class PostgresSettings(BaseSettings):
     """PostgreSQL ayarlari."""
@@ -75,7 +87,7 @@ class OllamaSettings(BaseSettings):
     host: str = "http://localhost:11434"
     model: str = "qwen2.5:7b"
     secondary_model: str = "qwen2.5:3b"
-    timeout: int = 600
+    timeout: int = 120
     max_retries: int = 3
     num_ctx: int = 8192
     num_predict: int = 512
@@ -95,12 +107,37 @@ class OpenAISettings(BaseSettings):
     base_url: str = "https://api.openai.com/v1"
     model: str = "gpt-4o-mini"
     secondary_model: Optional[str] = None
+    routing_model: Optional[str] = None
+    conversation_model: Optional[str] = None
+    query_expansion_model: Optional[str] = None
+    evidence_selection_model: Optional[str] = None
+    final_refinement_model: Optional[str] = None
+    specialist_synthesis_model: Optional[str] = None
+    global_synthesis_model: Optional[str] = None
+    reasoning_effort: Optional[str] = None
     timeout: int = 30
     provider_name: str = "openai_compatible"
 
     @property
     def is_available(self) -> bool:
         return bool(self.api_key)
+
+
+class GoogleAISettings(OpenAISettings):
+    """Google Gemini OpenAI-compatible endpoint ayarlari."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="GOOGLE_AI_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    model: str = "gemini-2.5-flash"
+    secondary_model: Optional[str] = "gemini-2.5-flash-lite"
+    reasoning_effort: Optional[str] = "none"
+    provider_name: str = "google_ai"
 
 
 class LLMRuntimeSettings(BaseSettings):
@@ -114,14 +151,19 @@ class LLMRuntimeSettings(BaseSettings):
     )
 
     profile: Literal["fast", "balanced", "quality"] = "balanced"
-    routing_model: Optional[str] = "qwen2.5:3b"
-    conversation_model: Optional[str] = "qwen2.5:3b"
+    routing_model: Optional[str] = None
+    conversation_model: Optional[str] = None
+    query_expansion_model: Optional[str] = None
+    evidence_selection_model: Optional[str] = None
+    final_refinement_model: Optional[str] = None
     specialist_synthesis_model: Optional[str] = None
     global_synthesis_model: Optional[str] = None
-    specialist_synthesis_timeout_seconds: int = 600
-    global_synthesis_timeout_seconds: int = 600
-    primary_provider: Literal["ollama", "openai_compatible"] = "ollama"
-    fallback_provider: Literal["none", "ollama", "openai_compatible"] = "openai_compatible"
+    query_normalization_enabled: bool = True
+    query_normalization_timeout_seconds: int = 6
+    specialist_synthesis_timeout_seconds: int = 120
+    global_synthesis_timeout_seconds: int = 120
+    primary_provider: LLMProvider = "ollama"
+    fallback_provider: Literal["none", "ollama", "openai_compatible", "google_ai"] = "openai_compatible"
 
 
 class ChromaSettings(BaseSettings):
@@ -155,7 +197,9 @@ class EmbeddingSettings(BaseSettings):
 
     model: str = "BAAI/bge-m3"
     dimension: int = 1024
+    batch_size: int = 32
     device: Literal["auto", "cpu", "cuda"] = "auto"
+    cuda_fallback_to_cpu: bool = True
     local_files_only: bool = True
 
 
@@ -171,15 +215,21 @@ class RAGSettings(BaseSettings):
 
     chunk_size: int = 1024
     chunk_overlap: int = 128
+    min_chunk_chars: int = 50
     top_k: int = 5
     min_similarity: float = 0.02
     reranker_candidate_limit_default: int = 16
     reranker_candidate_limit_finance: int = 5
     reranker_candidate_limit_student_affairs: int = 10
     reranker_candidate_limit_academic_programs: int = 12
-    skip_reranker_for_finance_narrow_queries: bool = False
-    skip_reranker_for_student_affairs_procedural: bool = False
-    skip_reranker_for_academic_programs_procedural: bool = False
+    llm_query_expansion_enabled: bool = False
+    llm_query_expansion_timeout_seconds: int = 8
+    llm_query_expansion_max_chars: int = 420
+    llm_evidence_selection_enabled: bool = True
+    llm_evidence_selection_timeout_seconds: int = 10
+    llm_evidence_selection_min_candidates: int = 4
+    llm_evidence_selection_max_candidates: int = 10
+    llm_evidence_selection_max_selected: int = 5
 
 
 class RerankerSettings(BaseSettings):
@@ -192,11 +242,31 @@ class RerankerSettings(BaseSettings):
         extra="ignore",
     )
 
-    model: str = "seroe/bge-reranker-v2-m3-turkish-triplet"
+    model: str = "nreimers/mmarco-mMiniLMv2-L6-H384-v1"
     max_length: int = 512
     batch_size: int = 16
     device: Literal["auto", "cpu", "cuda"] = "auto"
     local_files_only: bool = True
+
+
+class RetrievalServiceSettings(BaseSettings):
+    """Merkezi retrieval/reranker servisi ayarlari."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="RETRIEVAL_SERVICE_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    enabled: bool = False
+    url: str = "http://retrieval-service:8140"
+    timeout_seconds: float = 75.0
+    fallback_to_local: bool = True
+
+    @property
+    def normalized_url(self) -> str:
+        return self.url.rstrip("/")
 
 
 class AuthSettings(BaseSettings):
@@ -259,6 +329,10 @@ class SlackSettings(BaseSettings):
     def is_configured(self) -> bool:
         return bool(self.bot_token and self.signing_secret)
 
+    @property
+    def socket_mode_configured(self) -> bool:
+        return bool(self.bot_token and self.signing_secret and self.app_token)
+
 
 class ServerSettings(BaseSettings):
     """Sunucu ayarlari."""
@@ -272,6 +346,12 @@ class ServerSettings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
+    public_url: Optional[str] = None
+    app_version: str = "1.0.0"
+    build_id: str = "dev"
+    build_timestamp: str = "unknown"
+    git_sha: str = "unknown"
+    image_ref: str = "unversioned"
     runtime_label: str = "default"
     debug: bool = True
     log_level: str = "INFO"
@@ -279,6 +359,20 @@ class ServerSettings(BaseSettings):
     warmup_enabled: bool = False
     warmup_include_reranker: bool = False
     warmup_collections: str = "student_affairs_docs,academic_programs_docs"
+    warmup_llm_enabled: bool = True
+    warmup_llm_roles: str = "routing,evidence_selection,final_refinement,specialist_synthesis"
+    warmup_llm_timeout_seconds: int = 15
+    warmup_llm_prompt: str = "Yalnizca OK yaz."
+
+    def build_metadata(self) -> dict[str, str]:
+        """Saglik ve rollout icin surum/build metadata'sini dondurur."""
+        return {
+            "version": self.app_version,
+            "build_id": self.build_id,
+            "build_timestamp": self.build_timestamp,
+            "git_sha": self.git_sha,
+            "image_ref": self.image_ref,
+        }
 
 
 class ConversationSettings(BaseSettings):
@@ -301,6 +395,198 @@ class ConversationSettings(BaseSettings):
     max_rolling_summary_chars: int = 900
 
 
+class CacheSettings(BaseSettings):
+    """Uygulama ici cache ayarlari."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="CACHE_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    enabled: bool = True
+    question_cache_enabled: bool = True
+    question_cache_ttl_seconds: int = 300
+    redis_question_cache_enabled: bool = True
+    retriever_query_cache_enabled: bool = True
+    retriever_query_cache_ttl_seconds: int = 300
+    redis_retriever_query_cache_enabled: bool = True
+    embedding_model_cache_enabled: bool = True
+    reranker_model_cache_enabled: bool = True
+    bm25_resource_cache_enabled: bool = True
+
+
+class A2ASettings(BaseSettings):
+    """Departman ajanlari arasi transport ayarlari."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="A2A_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    mode: Literal["inprocess", "http", "shadow"] = "inprocess"
+    specialist_mode: Literal["inprocess", "http"] = "inprocess"
+    transport_protocol: Literal["rest", "jsonrpc"] = "rest"
+    timeout_seconds: float = 10.0
+    department_timeout_seconds: float | None = None
+    specialist_timeout_seconds: float | None = 60.0
+    retry_count: int = 1
+    retry_backoff_seconds: float = 0.25
+    circuit_breaker_threshold: int = 2
+    circuit_breaker_cooldown_seconds: float = 15.0
+    discovery_ttl_seconds: float = 120.0
+    discovery_healthcheck_enabled: bool = True
+    discovery_healthcheck_timeout_seconds: float = 2.0
+    discovery_healthcheck_cache_seconds: float = 15.0
+    discovery_agent_card_enabled: bool = False
+    discovery_agent_card_timeout_seconds: float = 2.0
+    discovery_agent_card_cache_seconds: float = 60.0
+    internal_api_key: Optional[str] = None
+    require_service_identity: bool = False
+    allowed_caller_ids: str = ""
+    require_request_signature: bool = False
+    request_signature_secret: Optional[str] = None
+    request_signature_ttl_seconds: int = 300
+    external_trust_enabled: bool = False
+    external_allowed_agent_ids: str = ""
+    external_agent_endpoints: str = ""
+    external_agent_signature_secrets: str = ""
+    external_require_request_signature: bool = True
+    external_request_signature_secret: Optional[str] = None
+    external_agent_card_timeout_seconds: float = 3.0
+    student_affairs_url: Optional[str] = None
+    academic_programs_url: Optional[str] = None
+    finance_url: Optional[str] = None
+    announcement_url: Optional[str] = None
+    event_url: Optional[str] = None
+    specialist_endpoints: str = ""
+
+    def effective_department_timeout_seconds(self) -> float:
+        """Timeout budget for main-orchestrator to department-service calls.
+
+        Department services may spend their own specialist timeout budget before
+        responding, so this can be configured separately from the generic A2A
+        request timeout used by faster capability calls.
+        """
+        if self.department_timeout_seconds is not None:
+            return max(0.1, float(self.department_timeout_seconds))
+        return max(0.1, float(self.timeout_seconds))
+
+    def endpoint_for(self, department: str) -> str | None:
+        """Return the configured base URL for a department or capability service."""
+        endpoints = {
+            "student_affairs": self.student_affairs_url,
+            "academic_programs": self.academic_programs_url,
+            "finance": self.finance_url,
+            "announcement": self.announcement_url,
+            "event": self.event_url,
+        }
+        value = endpoints.get(department)
+        return value.rstrip("/") if value else None
+
+    def specialist_endpoint_for(self, agent_id: str) -> str | None:
+        """Return a configured specialist-agent base URL from `A2A_SPECIALIST_ENDPOINTS`.
+
+        Format: `tuition_agent=http://agent-finance-tuition:8110,scholarship_agent=http://...`
+        """
+        target = agent_id.strip()
+        if not target or not self.specialist_endpoints.strip():
+            return None
+        for item in self.specialist_endpoints.split(","):
+            if "=" not in item:
+                continue
+            key, value = item.split("=", 1)
+            if key.strip() == target and value.strip():
+                return value.strip().rstrip("/")
+        return None
+
+    def allowed_caller_id_set(self) -> set[str]:
+        """Return configured A2A caller service ids."""
+        return {
+            item.strip()
+            for item in self.allowed_caller_ids.split(",")
+            if item.strip()
+        }
+
+    @staticmethod
+    def _parse_key_value_list(raw: str) -> dict[str, str]:
+        parsed: dict[str, str] = {}
+        for item in raw.split(","):
+            if "=" not in item:
+                continue
+            key, value = item.split("=", 1)
+            cleaned_key = key.strip()
+            cleaned_value = value.strip()
+            if cleaned_key and cleaned_value:
+                parsed[cleaned_key] = cleaned_value
+        return parsed
+
+    def external_agent_endpoint_map(self) -> dict[str, str]:
+        """Return configured external A2A agent endpoints.
+
+        Format: `partner_agent=https://partner.example,other=http://host:9000`
+        """
+        return self._parse_key_value_list(self.external_agent_endpoints)
+
+    def external_agent_secret_map(self) -> dict[str, str]:
+        """Return per-partner external A2A HMAC secrets.
+
+        Format: `partner_agent=secret,other=secret2`
+        """
+        return self._parse_key_value_list(self.external_agent_signature_secrets)
+
+    def external_allowed_agent_id_set(self) -> set[str]:
+        """Return explicitly trusted external A2A caller ids."""
+        configured = {
+            item.strip()
+            for item in self.external_allowed_agent_ids.split(",")
+            if item.strip()
+        }
+        return (
+            configured
+            | set(self.external_agent_endpoint_map().keys())
+            | set(self.external_agent_secret_map().keys())
+        )
+
+    def external_signature_secret_for(self, caller_id: str | None) -> str | None:
+        """Return the HMAC secret for an external caller id."""
+        if not caller_id:
+            return None
+        return (
+            self.external_agent_secret_map().get(caller_id)
+            or self.external_request_signature_secret
+        )
+
+    def resolved_request_signature_secret(self, fallback_key: str | None = None) -> str | None:
+        """Return the secret used for optional A2A request signatures."""
+        return (
+            self.request_signature_secret
+            or self.internal_api_key
+            or fallback_key
+        )
+
+
+class AgentServiceSettings(BaseSettings):
+    """Ayrik agent servisi ayarlari."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="AGENT_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    department: Optional[
+        Literal["student_affairs", "academic_programs", "finance", "announcement", "event"]
+    ] = None
+    specialist_id: Optional[str] = None
+    service_id: str = "department-agent"
+    public_url: str = "http://localhost:8101"
+
+
 class Settings(BaseSettings):
     """Uygulama ayarlarinin kok nesnesi."""
 
@@ -314,16 +600,21 @@ class Settings(BaseSettings):
     redis: RedisSettings = Field(default_factory=RedisSettings)
     ollama: OllamaSettings = Field(default_factory=OllamaSettings)
     openai: OpenAISettings = Field(default_factory=OpenAISettings)
+    google_ai: GoogleAISettings = Field(default_factory=GoogleAISettings)
     llm: LLMRuntimeSettings = Field(default_factory=LLMRuntimeSettings)
     chroma: ChromaSettings = Field(default_factory=ChromaSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     rag: RAGSettings = Field(default_factory=RAGSettings)
     reranker: RerankerSettings = Field(default_factory=RerankerSettings)
+    retrieval_service: RetrievalServiceSettings = Field(default_factory=RetrievalServiceSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
     email: EmailSettings = Field(default_factory=EmailSettings)
     slack: SlackSettings = Field(default_factory=SlackSettings)
     server: ServerSettings = Field(default_factory=ServerSettings)
     conversation: ConversationSettings = Field(default_factory=ConversationSettings)
+    cache: CacheSettings = Field(default_factory=CacheSettings)
+    a2a: A2ASettings = Field(default_factory=A2ASettings)
+    agent: AgentServiceSettings = Field(default_factory=AgentServiceSettings)
 
     base_dir: Path = Path(__file__).parent.parent.parent
     data_dir: Path = base_dir / "data"
@@ -341,9 +632,9 @@ class Settings(BaseSettings):
     def resolve_llm_model(
         self,
         *,
-        role: Literal["default", "routing", "conversation", "specialist_synthesis", "global_synthesis"] = "default",
+        role: LLMRole = "default",
         profile: str | None = None,
-        provider: Literal["ollama", "openai_compatible"] | None = None,
+        provider: LLMProvider | None = None,
     ) -> str:
         """
         LLM rolune gore kullanilacak Ollama modelini cozumler.
@@ -364,31 +655,77 @@ class Settings(BaseSettings):
         if requested_profile == "quality":
             return primary_model
 
+        provider_override = self._resolve_provider_role_model(active_provider, role)
+        if provider_override:
+            return provider_override
+
+        # Legacy LLM_* role overrides are global and usually describe the
+        # primary provider. Do not leak Groq/Ollama model names into Google AI
+        # or another fallback provider with a different model namespace.
+        if active_provider == self.llm.primary_provider:
+            legacy_override = self._resolve_legacy_role_model(role)
+            if legacy_override:
+                return legacy_override
+
+        if role in {"routing", "conversation"}:
+            return secondary_model
+        return primary_model
+
+    def _resolve_legacy_role_model(self, role: LLMRole) -> Optional[str]:
+        """Return old global LLM_* role override values."""
         role_overrides = {
             "routing": self.llm.routing_model,
             "conversation": self.llm.conversation_model,
+            "query_expansion": self.llm.query_expansion_model,
+            "evidence_selection": self.llm.evidence_selection_model,
+            "final_refinement": self.llm.final_refinement_model,
             "specialist_synthesis": self.llm.specialist_synthesis_model,
             "global_synthesis": self.llm.global_synthesis_model,
             "default": None,
         }
-        return role_overrides.get(role) or primary_model
+        return role_overrides.get(role)
+
+    def _resolve_provider_role_model(self, provider: LLMProvider, role: LLMRole) -> Optional[str]:
+        """Return provider-specific role override values."""
+        if provider == "openai_compatible":
+            provider_settings = self.openai
+        elif provider == "google_ai":
+            provider_settings = self.google_ai
+        else:
+            return None
+
+        role_overrides = {
+            "routing": provider_settings.routing_model,
+            "conversation": provider_settings.conversation_model,
+            "query_expansion": provider_settings.query_expansion_model,
+            "evidence_selection": provider_settings.evidence_selection_model,
+            "final_refinement": provider_settings.final_refinement_model,
+            "specialist_synthesis": provider_settings.specialist_synthesis_model,
+            "global_synthesis": provider_settings.global_synthesis_model,
+            "default": None,
+        }
+        return role_overrides.get(role)
 
     def _resolve_provider_primary_model(
         self,
-        provider: Literal["ollama", "openai_compatible"],
+        provider: LLMProvider,
     ) -> str:
         """Return the default primary model for the selected provider."""
         if provider == "openai_compatible":
             return self.openai.model
+        if provider == "google_ai":
+            return self.google_ai.model
         return self.ollama.model
 
     def _resolve_provider_secondary_model(
         self,
-        provider: Literal["ollama", "openai_compatible"],
+        provider: LLMProvider,
     ) -> str:
         """Return the secondary/fast profile model for the selected provider."""
         if provider == "openai_compatible":
             return self.openai.secondary_model or self.openai.model
+        if provider == "google_ai":
+            return self.google_ai.secondary_model or self.google_ai.model
         return self.ollama.secondary_model or self.ollama.model
 
     def configured_llm_models(self) -> dict[str, str]:
@@ -401,6 +738,9 @@ class Settings(BaseSettings):
             "profile": self.normalize_llm_profile(self.llm.profile),
             "routing": self.resolve_llm_model(role="routing"),
             "conversation": self.resolve_llm_model(role="conversation"),
+            "query_expansion": self.resolve_llm_model(role="query_expansion"),
+            "evidence_selection": self.resolve_llm_model(role="evidence_selection"),
+            "final_refinement": self.resolve_llm_model(role="final_refinement"),
             "specialist_synthesis": self.resolve_llm_model(role="specialist_synthesis"),
             "global_synthesis": self.resolve_llm_model(role="global_synthesis"),
         }

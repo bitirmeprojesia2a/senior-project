@@ -2,6 +2,70 @@
 
 Bu belge, projenin guncel kod tabani icin pratik kurulum rehberidir. Tarihsel faz dokumanlarindaki bazi anlatilar proje gecmisi acisindan degerlidir, ancak guncel calistirma akisi icin bu dosya, `README.md` ve `AZURE_VM_RUNBOOK.md` once referans alinmalidir.
 
+## 0. Guncel Kisa Akis
+
+Gelistirme makinesinde bugunku onerilen akisi hizlica toparlamak gerekirse:
+
+```powershell
+cd "<repo>\university_support_system"
+.\venv\Scripts\activate
+
+docker compose up -d postgres redis chromadb
+
+.\venv\Scripts\python.exe -m alembic upgrade head
+.\venv\Scripts\python.exe -m scripts.seed_curriculum_data
+.\venv\Scripts\python.exe -m scripts.seed_synthetic_data
+
+.\venv\Scripts\python.exe -m scripts.audit_academic_source_coverage --fail-on-missing
+```
+
+Full dagitik A2A + GPU targeted runtime icin:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --health-timeout-seconds 300
+```
+
+Kod degismediyse, sadece servisleri mevcut image ile yeniden kaldirmak icin:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --skip-build --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --health-timeout-seconds 300
+```
+
+25 soruluk kalite benchmark'i:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.run_quality_benchmark --use-api --api-base-url http://127.0.0.1:8000 --llm-profile balanced --warmup-mode full --warmup-timeout 90
+```
+
+Slack icin tek runtime acik tutulmalidir. A2A Slack:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.slack_runtime up --runtime a2a
+.\venv\Scripts\python.exe -m scripts.slack_runtime logs --runtime a2a
+```
+
+Monolitik Slack:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.slack_runtime up --runtime inprocess
+.\venv\Scripts\python.exe -m scripts.slack_runtime logs --runtime inprocess
+```
+
+Slack runtime kapatma:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.slack_runtime stop --runtime a2a
+.\venv\Scripts\python.exe -m scripts.slack_runtime stop --runtime inprocess
+```
+
+Notlar:
+
+- Docker Desktop sorunluysa once Docker'i kapatip acin; `dockerDesktopLinuxEngine` pipe hatasi uygulama hatasi degil Docker daemon erisim hatasidir.
+- Kod, dependency veya data dosyasi degistiyse `--skip-build` kullanmayin; normal build'li rollout gerekir.
+- RAG belge icerigi degistiyse ilgili koleksiyon yeniden indekslenmelidir. Structured DB seed veya schedule ingest degistiyse yeniden indeks gerekmez, ilgili seed/ingest komutu yeterlidir.
+- Slack'te iki cevap gelirse genellikle iki Socket Mode bot ayni token ile aciktir. `slack-bot-a2a` ve `slack-bot-inprocess` ayni anda calismamali.
+- `LLM_QUERY_NORMALIZATION_ENABLED` varsayilan olarak `true` gelir. Kisa capability ifadeleri (`guncel duyur` gibi) routing oncesi kanoniklestirilir; normal sorgularda canonical query routing LLM'in ayni JSON ciktisindan alinir. Gerekirse `.env` icinde `LLM_QUERY_NORMALIZATION_ENABLED=false` ile kapatilabilir.
+
 ## 1. On Kosullar
 
 Projeyi lokal ya da VM uzerinde calistirmak icin asagidaki araclar yeterlidir:
@@ -161,8 +225,8 @@ Notlar:
 Docker servisleri ayaktayken:
 
 ```powershell
-python -m alembic upgrade head
-python -m alembic current
+.\venv\Scripts\python.exe -m alembic upgrade head
+.\venv\Scripts\python.exe -m alembic current
 ```
 
 Beklenen son durum:
@@ -178,8 +242,8 @@ kismi dogrudan PostgreSQL tablolarindan okur. Bu nedenle migration sonrasinda
 asagidaki seed komutlari da calistirilmalidir:
 
 ```powershell
-python -m scripts.seed_curriculum_data
-python -m scripts.seed_synthetic_data
+.\venv\Scripts\python.exe -m scripts.seed_curriculum_data
+.\venv\Scripts\python.exe -m scripts.seed_synthetic_data
 ```
 
 Bu komutlar su veri alanlarini doldurur:
@@ -199,6 +263,8 @@ Not:
 - `seed_synthetic_data` icindeki duyuru ve iletisim kayitlari demo fixture niteligindedir.
 - `office_contacts tablosu bulunamadi` benzeri bir hata alirsaniz migration adimini tekrar calistirin: `python -m alembic upgrade head`.
 - Gercek ortama geciste bu alanlarin kurumsal kaynaklardan doldurulmasi gerekir.
+- `tuition_fee_catalog` gibi structured kataloglar guncellendiyse sadece kodu rebuild etmek yetmez; `seed_synthetic_data` tekrar calistirilmelidir.
+- Ders/mufredat JSON seedleri degistiyse `seed_curriculum_data` veya ilgili `seed_curriculum_from_json` komutu tekrar calistirilmelidir.
 
 ## 8. Dokuman Indeksleme
 
@@ -211,16 +277,16 @@ Her departman kendi koleksiyonuna indekslenmelidir. Guncel koleksiyonlar:
 Komutlar:
 
 ```powershell
-python scripts/index_documents.py --source data/raw/student_affairs --collection student_affairs_docs --reindex
-python scripts/index_documents.py --source data/raw/academic_programs --collection academic_programs_docs --reindex
-python scripts/index_documents.py --source data/raw/academic_programs/ders_programlari --collection academic_schedules_docs --reindex
-python scripts/index_documents.py --source data/raw/finance --collection finance_docs --reindex
+.\venv\Scripts\python.exe scripts/index_documents.py --source data/raw/student_affairs --collection student_affairs_docs --reindex
+.\venv\Scripts\python.exe scripts/index_documents.py --source data/raw/academic_programs --collection academic_programs_docs --reindex
+.\venv\Scripts\python.exe scripts/index_documents.py --source data/raw/academic_programs/ders_programlari --collection academic_schedules_docs --reindex
+.\venv\Scripts\python.exe scripts/index_documents.py --source data/raw/finance --collection finance_docs --reindex
 ```
 
 Belge korpusunu indekslemeden once hizlica denetlemek isterseniz:
 
 ```powershell
-python scripts/audit_document_corpus.py
+.\venv\Scripts\python.exe scripts/audit_document_corpus.py
 ```
 
 Indeksleme sirasinda beklenenler:
@@ -239,18 +305,24 @@ Notlar:
 - Yapisal schedule verileri icin ayrica `course_schedule_slots` ETL komutu vardir:
 
 ```powershell
-python scripts/ingest_schedule_slots.py --source data/raw/academic_programs/ders_programlari --dry-run
-python scripts/ingest_schedule_slots.py --source data/raw/academic_programs/ders_programlari
-python scripts/ingest_schedule_slots.py --html-url "https://example.edu/schedule.html" --html-source-name "schedule.html" --dry-run
+.\venv\Scripts\python.exe -m scripts.ingest_schedule_slots --source data/raw/academic_programs/ders_programlari --dry-run
+.\venv\Scripts\python.exe -m scripts.ingest_schedule_slots --source data/raw/academic_programs/ders_programlari
+.\venv\Scripts\python.exe -m scripts.ingest_schedule_slots --html-url "https://example.edu/schedule.html" --html-source-name "schedule.html" --dry-run
 ```
 
-- Bu ETL su anda yerel PDF ders programlarini `pdfplumber` ile okur ve yalnizca gun+saat baglami net satirlari tabloya yazar.
+- Bu ETL yerel PDF ders programlarini `pdfplumber` ile, XLSX programlarini ise OOXML hucre yapisindan okur ve yalnizca gun+saat baglami net satirlari tabloya yazar.
 - HTML/tablo kaynakli gelecekteki akislarda Scrapling ayni `course_schedule_slots` tablosunu besleyen ikinci adapter olarak kullanilabilir; mevcut yerel PDF korpusu icin birincil parser degildir.
 - `--html-url` yolu opsiyoneldir ve yalnizca `scrapling` paketi kuruluysa kullanilabilir.
 - `course_schedule_slots` doluysa sistem `hangi saatte`, `hangi gun`, `derslik` gibi daha net schedule sorularinda bu yapisal tablodan once faydalanabilir.
 - `academic_schedules_docs` koleksiyonu indekslenirken haftalik program olmayan katalog/mufredat PDF'leri otomatik olarak haric tutulur; boylece schedule retrieval havuzu daha temiz kalir.
+- Announcement kaynaklariyla curriculum/schedule kapsami uyumunu kontrol etmek icin:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.audit_academic_source_coverage --fail-on-missing
+```
+
 - Ilk embedding uretiminde `BAAI/bge-m3` indirilecegi icin sure uzayabilir.
-- Ilk reranker kullanimi sirasinda `seroe/bge-reranker-v2-m3-turkish-triplet` da indirilebilir.
+- Ilk reranker kullanimi sirasinda `nreimers/mmarco-mMiniLMv2-L6-H384-v1` da indirilebilir.
 
 ## 9. Sunucuyu Calistirma ve Kontrol Etme
 
@@ -424,10 +496,9 @@ Asagidaki senaryolarda ise sunucu acik olmak faydali veya gerekli olabilir:
 `tests/` klasoru iki farkli tur icerik barindirir:
 
 - pytest ile kosulan gercek test dosyalari
-- benchmark ve live test scriptlerinin urettigi JSON/MD artefaktlari
+- benchmark ve live test scriptlerinin urettigi JSON artefaktlari
 
-Ozellikle `tests/live_test_results_*`, `tests/live_test_profile_*` ve `tests/quality_benchmark_*`
-dosyalari pytest suite'i degildir; bunlar rapor/cikti dosyalaridir.
+Yeni benchmark JSON ciktilari varsayilan olarak `tests/archive/benchmarks/` altina yazilir. Markdown raporlar ise `docs/archive/benchmarks/` altindadir. Bu dosyalar pytest suite'i degildir; rapor/cikti artefaktidir.
 
 ### 10.1 Unit / normal testler
 
@@ -523,20 +594,40 @@ python -m pytest tests/unit/test_reranker.py -v --tb=short
 Pytest disi kontrol ve benchmark komutlari:
 
 ```powershell
-python scripts/test_hybrid_search.py "Cap basvurusu icin gereken not ortalamasi kactir"
-python scripts/query_db.py "BIL104 dersinin on kosulu nedir"
-python scripts/evaluate_rag.py
-python scripts/test_followup.py
-python scripts/analyze_reranker_scores.py
-python scripts/live_question_test.py --benchmark demo_showcase_stable_turk
-python scripts/run_quality_benchmark.py
+.\venv\Scripts\python.exe scripts/hybrid_search_probe.py "Cap basvurusu icin gereken not ortalamasi kactir"
+.\venv\Scripts\python.exe scripts/query_db.py "BIL104 dersinin on kosulu nedir"
+.\venv\Scripts\python.exe scripts/evaluate_rag.py
+.\venv\Scripts\python.exe scripts/followup_benchmark.py
+.\venv\Scripts\python.exe scripts/analyze_reranker_scores.py
+.\venv\Scripts\python.exe scripts/live_question_test.py --benchmark demo_showcase_stable_turk
+.\venv\Scripts\python.exe -m scripts.run_quality_benchmark
+```
+
+API uzerinden guncel kalite benchmark'i icin onerilen komut:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.run_quality_benchmark --use-api --api-base-url http://127.0.0.1:8000 --llm-profile balanced --warmup-mode full --warmup-timeout 90
+```
+
+Sadece belirli sorulari kosmak icin:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.run_quality_benchmark --use-api --api-base-url http://127.0.0.1:8000 --question Q1 Q7 Q17 Q23 Q25 --llm-profile balanced --warmup-mode full --warmup-timeout 90
+```
+
+A2A stack runtime smoke:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.a2a_docker_stack_smoke --expect-protocol jsonrpc --min-active 15 --timeout 120
 ```
 
 Notlar:
 
 - `scripts/live_question_test.py` hem orchestrator icinden hem de `--use-api` ile HTTP uzerinden kullanilabilir.
 - `scripts/run_quality_benchmark.py` ve `scripts/live_question_test.py` pytest degildir; sonuc dosyalarini `tests/` altina yazabilir.
-- `scripts/test_gpu.py` ve benzeri scriptler daha cok ortam/hardware dogrulama yardimcisidir.
+- API benchmark modunda `/health` preflight vardir; API kapaliysa hatali full-error raporu uretmeden durmasi beklenir.
+- `--warmup-mode full` API modunda gercek `/query` yolunu isitir. Bu warmup, dagitik A2A agent servislerinin model/retrieval cold-start maliyetini olcumden once azaltmak icindir.
+- `scripts/gpu_diagnostics.py` ve benzeri scriptler daha cok ortam/hardware dogrulama yardimcisidir.
 
 Benchmark setlerinin detayli aciklamasi icin [demo_runbook.md](demo_runbook.md) dosyasina bakin.
 

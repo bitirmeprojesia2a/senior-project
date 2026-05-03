@@ -1,5 +1,7 @@
 # Nisan 2026 Routing, RAG ve Follow-up Guncelleme Notlari
 
+> Durum Notu (Nisan 2026): Bu belge 13 Nisan civarindaki routing/RAG/follow-up iyilestirmelerinin tarihsel kaydidir. Sonraki calismalarda routing LLM `canonical_query`, `primary_intent`, `required_slots` ve `missing_slots` sinyalleri uretmeye; deterministik katman da bunlari clarification ve guard kararlarinda kullanmaya basladi. En guncel mimari icin `A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md` okunmalidir.
+
 Bu belge, 13 Nisan 2026 civarinda benchmark sonuclarina ve canli follow-up testlerine bakilarak yapilan degisiklikleri tek yerde toplar.
 
 Amac yalnizca "hangi dosya degisti" bilgisini vermek degildir. Bu not, ekipte yeni okuyacak bir kisinin su uc soruya cevap bulabilmesi icin yazilmistir:
@@ -199,7 +201,7 @@ Ilgili dosya:
 
 * `src/db/conversation_context.py`
 
-Bu alandaki degisiklikler, `scripts/test_followup.py` ile gorulen cok turlu konusma hatalarina cevap olarak yapildi.
+Bu alandaki degisiklikler, `scripts/followup_benchmark.py` ile gorulen cok turlu konusma hatalarina cevap olarak yapildi.
 
 ### 5.1 Kisa ve Sinyalsiz Sorgularin Follow-up Olarak Degerlendirilmesi
 

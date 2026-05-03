@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -13,6 +14,7 @@ def _configure_openai_settings(mock_settings, *, api_key):
     mock_settings.openai.base_url = "https://api.openai.com/v1"
     mock_settings.openai.timeout = 30
     mock_settings.openai.provider_name = "openai_compatible"
+    mock_settings.openai.reasoning_effort = None
 
 
 @pytest.fixture
@@ -61,6 +63,24 @@ def test_get_headers(openai_client, openai_client_no_key):
         openai_client_no_key._get_headers()
 
 
+def test_client_accepts_custom_openai_compatible_config():
+    config = SimpleNamespace(
+        api_key="google-key",
+        model="gemini-2.5-flash",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        timeout=20,
+        provider_name="google_ai",
+        reasoning_effort="none",
+    )
+
+    client = OpenAIClient(config, api_key_env_name="GOOGLE_AI_API_KEY")
+
+    assert client.provider_name == "google_ai"
+    assert client.reasoning_effort == "none"
+    assert client.chat_url == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    assert client._get_headers()["Authorization"] == "Bearer google-key"
+
+
 @pytest.mark.asyncio
 async def test_get_health_healthy(openai_client):
     mock_resp = MockResponse(json_data={"data": [{"id": "gpt-4o-mini"}, {"id": "gpt-4o"}]})
@@ -91,6 +111,19 @@ async def test_get_health_model_missing(openai_client):
 
 
 @pytest.mark.asyncio
+async def test_get_health_normalizes_google_style_model_prefixes(openai_client):
+    mock_resp = MockResponse(json_data={"data": [{"id": "models/gemini-2.5-flash"}, {"id": "models/gemini-2.5-flash-lite"}]})
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_resp
+        result = await openai_client.get_health(models=["gemini-2.5-flash", "gemini-2.5-flash-lite"])
+        assert result["status"] == "healthy"
+        assert result["configured_models_found"] == {
+            "gemini-2.5-flash": True,
+            "gemini-2.5-flash-lite": True,
+        }
+
+
+@pytest.mark.asyncio
 async def test_get_health_unhealthy(openai_client):
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
         mock_get.side_effect = httpx.RequestError("Api down", request=AsyncMock())
@@ -117,6 +150,28 @@ async def test_generate_success(openai_client):
         payload = kwargs["json"]
         assert payload["response_format"] == {"type": "json_object"}
         assert len(payload["messages"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_generate_includes_reasoning_effort_when_configured():
+    config = SimpleNamespace(
+        api_key="google-key",
+        model="gemini-2.5-flash",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        timeout=20,
+        provider_name="google_ai",
+        reasoning_effort="none",
+    )
+    client = OpenAIClient(config, api_key_env_name="GOOGLE_AI_API_KEY")
+    mock_resp = MockResponse(json_data={"choices": [{"message": {"content": "Gemini says hi"}}]})
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_post.return_value = mock_resp
+        result = await client.generate("Hello")
+
+        assert result == "Gemini says hi"
+        _, kwargs = mock_post.call_args
+        assert kwargs["json"]["reasoning_effort"] == "none"
 
 
 @pytest.mark.asyncio

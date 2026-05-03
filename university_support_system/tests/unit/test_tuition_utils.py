@@ -1,6 +1,14 @@
 """Tuition utility tests."""
 
-from src.agents.finance.tuition_utils import is_personal_query
+import json
+from pathlib import Path
+
+from src.agents.finance.tuition_utils import (
+    extract_requested_unit,
+    is_personal_query,
+    is_structured_fee_query,
+    needs_fee_context_clarification,
+)
 
 
 def test_is_personal_query_treats_installment_policy_question_as_non_personal():
@@ -9,3 +17,41 @@ def test_is_personal_query_treats_installment_policy_question_as_non_personal():
 
 def test_is_personal_query_keeps_real_personal_balance_question_personal():
     assert is_personal_query("Harc borcum var mi?") is True
+
+
+def test_is_personal_query_keeps_personal_amount_question_personal():
+    assert is_personal_query("Harc borcum ne kadar?") is True
+
+
+def test_is_personal_query_treats_transfer_fee_policy_question_as_non_personal():
+    assert is_personal_query("Yatay gecis yaparsam harc odemem gerekir mi?") is False
+
+
+def test_extract_requested_unit_accepts_faculty_alias_without_suffix():
+    assert extract_requested_unit("Dis hekimligi donem ucreti Turk ogrenci icin ne kadar?") == "dis hekimligi fakultesi"
+
+
+def test_extract_requested_unit_maps_engineering_department_to_faculty():
+    assert (
+        extract_requested_unit("Elektrik elektronik muhendisligi ogrenim ucreti ne kadar?")
+        == "muhendislik fakultesi"
+    )
+
+
+def test_meal_fee_does_not_trigger_tuition_clarification():
+    query = "Yemekhane ucreti ne kadar?"
+
+    assert is_structured_fee_query(query) is False
+    assert needs_fee_context_clarification(query, None, None) is False
+
+
+def test_tuition_fee_catalog_includes_dentistry_rows():
+    path = Path("data/metadata/tuition_fee_catalog.json")
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    indexed = {
+        (row["student_type"], row["unit_name"]): row
+        for row in rows
+    }
+
+    assert indexed[("domestic", "Diş Hekimliği Fakültesi")]["annual_amount"] == 3057.0
+    assert indexed[("international", "Diş Hekimliği Fakültesi")]["annual_amount"] == 203000.0

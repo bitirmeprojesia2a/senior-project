@@ -59,7 +59,7 @@ async def resolve_query_context(
             student_number=resolved["student_number"],
             department=resolved["student_department"] or payload.student_department or "",
             faculty=resolved["student_faculty"] or payload.student_faculty or "",
-            student_type=None,
+            student_type=resolved["student_type"],
             is_verified=True,
             student_db_id=resolved["student_id"],
         )
@@ -124,6 +124,7 @@ async def resolve_dispatch_context(
         slack_user_id=payload.slack_user_id,
         auth_service=auth_service,
         allow_slack_identity=True,
+        allow_trusted_identity_claims=True,
     )
     return payload.context_id or "api-a2a-context", resolved
 
@@ -145,4 +146,16 @@ def build_dispatch_metadata(
         "llm_profile": payload.llm_profile,
         "is_authenticated": resolved["is_authenticated"],
         "routing_reason": "api_a2a_dispatch",
+        "original_query": payload.original_query,
+        "resolved_query": payload.resolved_query,
+        "conversation_is_follow_up": payload.conversation_is_follow_up,
+        "conversation_topic": payload.conversation_topic,
+        "conversation_source_refs": list(payload.conversation_source_refs or []),
+        "force_llm_synthesis": payload.force_llm_synthesis,
+        "query_complexity": payload.query_complexity,
+        "is_personal_query": payload.is_personal_query,
+        "disable_specialist_llm": payload.disable_specialist_llm,
+        "trace_id": payload.trace_id,
+        "span_id": payload.span_id,
+        "parent_span_id": payload.parent_span_id,
     }

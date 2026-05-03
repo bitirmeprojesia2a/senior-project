@@ -1,0 +1,56 @@
+services:
+  api: &a2a-gpu-runtime
+    environment:
+      EMBEDDING_DEVICE: ${A2A_GPU_EMBEDDING_DEVICE:-cuda}
+      RERANKER_DEVICE: ${A2A_GPU_RERANKER_DEVICE:-cuda}
+      NVIDIA_VISIBLE_DEVICES: ${A2A_NVIDIA_VISIBLE_DEVICES:-all}
+      NVIDIA_DRIVER_CAPABILITIES: ${A2A_NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: ${A2A_GPU_DRIVER:-nvidia}
+              count: ${A2A_GPU_COUNT:-1}
+              capabilities: [gpu]
+
+  agent-finance:
+    <<: *a2a-gpu-runtime
+
+  agent-finance-tuition:
+    <<: *a2a-gpu-runtime
+
+  agent-finance-scholarship:
+    <<: *a2a-gpu-runtime
+
+  agent-student-affairs:
+    <<: *a2a-gpu-runtime
+
+  agent-student-registration:
+    <<: *a2a-gpu-runtime
+
+  agent-student-graduation:
+    <<: *a2a-gpu-runtime
+
+  agent-student-internship:
+    <<: *a2a-gpu-runtime
+
+  agent-student-life:
+    <<: *a2a-gpu-runtime
+
+  agent-academic:
+    <<: *a2a-gpu-runtime
+
+  agent-academic-curriculum:
+    <<: *a2a-gpu-runtime
+
+  agent-academic-regulation:
+    <<: *a2a-gpu-runtime
+
+  agent-academic-international:
+    <<: *a2a-gpu-runtime
+
+  agent-announcement:
+    <<: *a2a-gpu-runtime
+
+  agent-event:
+    <<: *a2a-gpu-runtime

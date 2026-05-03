@@ -1,6 +1,18 @@
 # FAZ 2 — LLM Servis Altyapısı: Teknik Dokümantasyon
 
-> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 2 kaydidir. LLM katmani sonradan rol bazli modele ayrilmis, farkli deployment profilleri eklenmis ve Azure CPU senaryosu belgelenmistir. Guncel ayarlar icin once `README.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/AZURE_VM_RUNBOOK.md` okunmalidir.
+> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 2 kaydidir. Arsivlenecek/cop belge degildir; LLM servis katmaninin neden ayrildigini ve ilk hata toleransi kararlarini anlatir. Guncel model/profil ve dagitim davranisi icin once `README.md`, `docs/A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/AZURE_VM_RUNBOOK.md` okunmalidir.
+
+## Guncel Konumlandirma (Nisan 2026)
+
+FAZ 2, LLM istemcileri, fallback mantigi, JSON cikti disiplini, timeout/retry ve prompt altyapisinin kuruldugu donemi temsil eder. Bu dosyada anlatilan Qwen/Ollama varsayimlari o donemin snapshot'idir; bugunku sistem tek bir sabit modele bagli degildir.
+
+Bu fazdan sonra sistem su yonde evrildi:
+
+- LLM rolleri `routing`, `specialist_synthesis`, `global_synthesis`, `final_refinement` gibi ayrildi.
+- OpenAI-compatible provider/Groq gibi API tabanli hizli modeller demo ve benchmark akisi icin onemli hale geldi.
+- Routing LLM sadece departman secimi degil, canonical query ve eksik slot sinyali de uretmeye basladi.
+- LLM kararlarini dogrudan mutlak karar saymak yerine deterministic guard katmani ile dogrulama yaklasimi benimsendi.
+- Slack follow-up, auth guard, structured DB cevaplari ve A2A dispatch akisi LLM servis katmaniyla birlikte calisir hale geldi.
 
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 6 Mart 2026  

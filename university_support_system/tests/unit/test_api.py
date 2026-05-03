@@ -1,9 +1,12 @@
 """FastAPI giris noktasi testleri."""
 
 import pytest
+from a2a.types import Role
 from fastapi.testclient import TestClient
 
+from src.a2a import build_text_message
 from src.api.main import (
+    A2AAgentStatus,
     AgentCardSummary,
     app,
     get_agent_card_summaries,
@@ -11,6 +14,7 @@ from src.api.main import (
     get_llm_service,
     get_main_orchestrator,
     get_profile_context_service,
+    get_telemetry_service,
 )
 from src.core.config import settings
 from src.core.constants import Department, TaskType
@@ -56,6 +60,7 @@ class _FakeAuthService:
             "full_name": "Ahmet Yilmaz",
             "student_department": "bilgisayar_muhendisligi",
             "student_faculty": "Muhendislik Fakultesi",
+            "student_type": "domestic",
             "session_token": "session-xyz",
             "expires_at": __import__("datetime").datetime(2026, 3, 26, 20, 0, 0),
         }
@@ -71,6 +76,7 @@ class _FakeAuthService:
                     "full_name": "Ahmet Yilmaz",
                     "student_department": "bilgisayar_muhendisligi",
                     "student_faculty": "Muhendislik Fakultesi",
+                    "student_type": "domestic",
                     "slack_user_id": "U123",
                     "session_token": session_token,
                     "expires_at": None,
@@ -127,6 +133,10 @@ class _FakeMainOrchestrator:
         student_type: str | None = None,
         llm_profile: str | None = None,
         is_authenticated: bool = False,
+        trace_id: str | None = None,
+        span_id: str | None = None,
+        parent_span_id: str | None = None,
+        disable_cache: bool = False,
     ):
         return UserQueryResponse(
             answer=f"yanit: {query}",
@@ -146,6 +156,10 @@ class _FakeMainOrchestrator:
                         "student_type": student_type,
                         "llm_profile": llm_profile,
                         "is_authenticated": is_authenticated,
+                        "trace_id": trace_id,
+                        "span_id": span_id,
+                        "parent_span_id": parent_span_id,
+                        "disable_cache": disable_cache,
                     },
                 )
             ],
@@ -194,6 +208,111 @@ class _FakeProfileContextService:
         return data
 
 
+class _FakeTelemetryService:
+    async def list_registered_agents(self, *, include_internal: bool = False):
+        rows = [
+            {
+                "agent_id": "student_affairs_orchestrator",
+                "name": "Student Affairs Orchestrator",
+                "department": "student_affairs",
+                "role": "department_orchestrator",
+                "description": "Student affairs service",
+                "endpoint": "http://agent-student-affairs:8101",
+                "is_active": True,
+                "last_heartbeat": "2026-04-21T16:00:00+00:00",
+                "is_stale": False,
+                "capabilities": {
+                    "service_build": {"build_id": "codex-build"},
+                    "service_runtime_label": "agent-student-affairs",
+                },
+                "service_build": {"build_id": "codex-build"},
+                "service_runtime_label": "agent-student-affairs",
+                "is_published_service": True,
+            },
+            {
+                "agent_id": "announcement_agent",
+                "name": "Announcement Capability",
+                "department": "announcement",
+                "role": "capability_agent",
+                "description": "Announcement capability service",
+                "endpoint": "http://agent-announcement:8104",
+                "is_active": True,
+                "last_heartbeat": "2026-04-21T15:00:00+00:00",
+                "is_stale": True,
+                "capabilities": {
+                    "service_build": {"build_id": "codex-build"},
+                    "service_runtime_label": "agent-announcement",
+                },
+                "service_build": {"build_id": "codex-build"},
+                "service_runtime_label": "agent-announcement",
+                "is_published_service": True,
+            },
+            {
+                "agent_id": "registration_agent",
+                "name": "Registration Agent",
+                "department": "student_affairs",
+                "role": "specialist_agent",
+                "description": "Internal specialist",
+                "endpoint": None,
+                "is_active": True,
+                "last_heartbeat": "2026-04-20T15:00:00+00:00",
+                "is_stale": True,
+                "capabilities": {},
+                "service_build": None,
+                "service_runtime_label": None,
+                "is_published_service": False,
+            },
+        ]
+        if include_internal:
+            return rows
+        return [row for row in rows if row["is_published_service"]]
+
+    async def get_a2a_diagnostics(self, *, window_minutes: int = 60, recent_limit: int = 10):
+        return {
+            "status": "ok",
+            "overview": {
+                "generated_at": "2026-04-23T00:00:00+00:00",
+                "window_minutes": window_minutes,
+                "window_started_at": "2026-04-22T23:00:00+00:00",
+                "query_count": 3,
+                "query_failure_count": 1,
+                "agent_task_count": 4,
+                "agent_task_failure_count": 1,
+                "avg_response_time_ms": 125.5,
+                "max_response_time_ms": 300,
+            },
+            "agents": [
+                {
+                    "agent_id": "event_agent",
+                    "name": "Event Agent",
+                    "department": "event",
+                    "role": "capability_agent",
+                    "total_tasks": 2,
+                    "completed_tasks": 1,
+                    "failed_tasks": 1,
+                    "failure_rate": 0.5,
+                    "latency_sample_count": 2,
+                    "avg_latency_ms": 81.2,
+                    "max_latency_ms": 120.0,
+                    "last_error": "timeout",
+                    "last_completed_at": "2026-04-23T00:00:00+00:00",
+                }
+            ],
+            "recent_failures": [
+                {
+                    "task_id": "task-1",
+                    "sender_agent_id": "main_orchestrator",
+                    "receiver_agent_id": "event_agent",
+                    "status": "failed",
+                    "error": "timeout",
+                    "completed_at": "2026-04-23T00:00:00+00:00",
+                    "trace_id": "trace-1",
+                    "query_preview": "Bu hafta etkinlik var mi?",
+                }
+            ][:recent_limit],
+        }
+
+
 def _override_cards():
     return [
         AgentCardSummary(
@@ -217,15 +336,26 @@ def teardown_function():
 def test_health_endpoint_returns_llm_status():
     app.dependency_overrides[get_llm_service] = lambda: _FakeLLMService()
     client = TestClient(app)
+    previous_build_id = settings.server.build_id
+    previous_git_sha = settings.server.git_sha
+    settings.server.build_id = "test-build"
+    settings.server.git_sha = "abc123"
 
-    response = client.get("/health")
+    try:
+        response = client.get("/health")
+    finally:
+        settings.server.build_id = previous_build_id
+        settings.server.git_sha = previous_git_sha
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "healthy"
     assert payload["llm"]["primary"]["status"] == "healthy"
     assert payload["llm"]["primary"]["name"] == "ollama"
-    assert payload["app"]["a2a_mode"] == "internal"
+    assert payload["app"]["build"]["version"] == settings.server.app_version
+    assert payload["app"]["build"]["build_id"] == "test-build"
+    assert payload["app"]["build"]["git_sha"] == "abc123"
+    assert payload["app"]["a2a_mode"] == settings.a2a.mode
     assert payload["app"]["auth_mode"] == "otp_session"
 
 
@@ -307,7 +437,7 @@ def test_query_endpoint_resolves_session_token_before_orchestration():
     assert payload["sources"][0]["metadata"]["user_id"] == "U123"
 
 
-def test_query_endpoint_verified_session_ignores_payload_student_type_override():
+def test_query_endpoint_verified_session_uses_verified_student_type_not_payload_override():
     app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
     app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
     app.dependency_overrides[get_profile_context_service] = lambda: _FakeProfileContextService()
@@ -327,7 +457,7 @@ def test_query_endpoint_verified_session_ignores_payload_student_type_override()
     assert response.status_code == 200
     payload = response.json()
     assert payload["sources"][0]["metadata"]["is_authenticated"] is True
-    assert payload["sources"][0]["metadata"]["student_type"] is None
+    assert payload["sources"][0]["metadata"]["student_type"] == "domestic"
 
 
 def test_a2a_dispatch_endpoint_routes_to_department_orchestrator_with_auth_resolution():
@@ -460,6 +590,57 @@ def test_query_endpoint_does_not_trust_client_authenticated_flags_without_sessio
     assert payload["sources"][0]["metadata"]["is_authenticated"] is False
 
 
+def test_query_endpoint_forwards_disable_cache_to_orchestrator():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_profile_context_service] = lambda: _FakeProfileContextService()
+    client = TestClient(app)
+
+    response = client.post(
+        "/query",
+        json={
+            "query": "Ders kaydi ne zaman basliyor?",
+            "context_id": "ctx-disable-cache",
+            "full_name": "Test Ogrenci",
+            "student_number": "22060388",
+            "student_department": "Bilgisayar Muhendisligi",
+            "student_faculty": "Muhendislik Fakultesi",
+            "disable_cache": True,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sources"][0]["metadata"]["disable_cache"] is True
+
+
+def test_query_endpoint_attaches_local_profile_diagnostics():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_profile_context_service] = lambda: _FakeProfileContextService()
+    client = TestClient(app)
+
+    response = client.post(
+        "/query",
+        json={
+            "query": "Ders kaydi nasil yapilir?",
+            "context_id": "ctx-local-profile",
+            "full_name": "Test Ogrenci",
+            "student_number": "22060388",
+            "student_department": "Bilgisayar Muhendisligi",
+            "student_faculty": "Muhendislik Fakultesi",
+        },
+    )
+
+    assert response.status_code == 200
+    diagnostics = response.json()["diagnostics"]
+    assert diagnostics["local_profile"]["label"] == "api.query:ctx-local-profile"
+    assert any(
+        event["name"] == "api.query"
+        for event in diagnostics["local_profile"]["events"]
+    )
+
+
 def test_agents_endpoint_lists_active_agent_cards():
     app.dependency_overrides[get_agent_card_summaries] = _override_cards
     client = TestClient(app)
@@ -470,6 +651,168 @@ def test_agents_endpoint_lists_active_agent_cards():
     payload = response.json()
     assert len(payload) == 1
     assert payload[0]["agent_id"] == "registration_agent"
+
+
+def test_main_agent_card_endpoint_exposes_a2a_discovery():
+    client = TestClient(app)
+
+    response = client.get("/.well-known/agent.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "OMU Main Orchestrator"
+    assert payload["url"].endswith("/a2a")
+    assert payload["capabilities"]["stateTransitionHistory"] is True
+    assert payload["skills"][0]["id"] == "university_support_query"
+    assert "announcement" in payload["skills"][0]["tags"]
+
+
+def test_main_a2a_jsonrpc_message_send_handles_user_query():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_profile_context_service] = lambda: _FakeProfileContextService()
+    client = TestClient(app)
+    previous_key = settings.server.internal_api_key
+    settings.server.internal_api_key = "test-internal-key"
+    message = build_text_message(
+        "Ders kaydi nasil yapilir?",
+        context_id="ctx-main-a2a",
+        role=Role.user,
+        metadata={
+            "full_name": "Test Ogrenci",
+            "student_number": "22000001",
+            "student_department": "Bilgisayar Muhendisligi",
+            "student_faculty": "Muhendislik Fakultesi",
+            "student_type": "Turk ogrenci",
+            "llm_profile": "fast",
+            "trace_id": "trace-main-a2a-test",
+            "span_id": "span-main-a2a-test",
+        },
+    )
+
+    try:
+        response = client.post(
+            "/a2a",
+            json={
+                "jsonrpc": "2.0",
+                "id": "main-a2a-req-1",
+                "method": "message/send",
+                "params": {
+                    "message": message.model_dump(mode="json", exclude_none=True),
+                },
+            },
+            headers={"X-Internal-API-Key": "test-internal-key"},
+        )
+    finally:
+        settings.server.internal_api_key = previous_key
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == "main-a2a-req-1"
+    assert payload["result"]["status"]["state"] == "completed"
+    assert payload["result"]["metadata"]["trace_id"] == "trace-main-a2a-test"
+    assert payload["result"]["metadata"]["span_id"] == "span-main-a2a-test"
+    assert [item["state"] for item in payload["result"]["metadata"]["state_transitions"]] == [
+        "submitted",
+        "working",
+        "completed",
+    ]
+    assert payload["result"]["metadata"]["state_transitions"][-1]["actor_id"] == "main_orchestrator"
+    artifacts = payload["result"]["artifacts"]
+    data_artifact = next(
+        artifact
+        for artifact in artifacts
+        if artifact["metadata"]["schema"] == "omu.user_query_response.v1"
+    )
+    data = data_artifact["parts"][0]["data"]
+    assert data["answer"] == "yanit: Ders kaydi nasil yapilir?"
+    assert data["query_id"] == "ctx-main-a2a"
+    assert data["sources"][0]["metadata"]["student_department"] == "Bilgisayar Muhendisligi"
+    assert data["sources"][0]["metadata"]["llm_profile"] == "fast"
+
+
+def test_main_a2a_jsonrpc_rejects_requests_without_internal_key():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    app.dependency_overrides[get_profile_context_service] = lambda: _FakeProfileContextService()
+    client = TestClient(app)
+    previous_key = settings.server.internal_api_key
+    settings.server.internal_api_key = "test-internal-key"
+    message = build_text_message(
+        "Ders kaydi nasil yapilir?",
+        context_id="ctx-main-a2a-forbidden",
+        role=Role.user,
+    )
+
+    try:
+        response = client.post(
+            "/a2a",
+            json={
+                "jsonrpc": "2.0",
+                "id": "main-a2a-req-forbidden",
+                "method": "message/send",
+                "params": {
+                    "message": message.model_dump(mode="json", exclude_none=True),
+                },
+            },
+        )
+    finally:
+        settings.server.internal_api_key = previous_key
+
+    assert response.status_code == 403
+
+
+def test_a2a_topology_endpoint_lists_registry_agents():
+    app.dependency_overrides[get_telemetry_service] = lambda: _FakeTelemetryService()
+    client = TestClient(app)
+
+    response = client.get("/a2a/topology")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["include_internal"] is False
+    assert payload["agent_count"] == 3
+    assert payload["active_count"] == 3
+    assert payload["stale_count"] == 1
+    assert payload["agents"][0]["agent_id"] == "main_orchestrator"
+    assert payload["agents"][0]["is_published_service"] is True
+    assert payload["agents"][0]["capabilities"]["response_schema"] == "omu.user_query_response.v1"
+    assert payload["agents"][1]["agent_id"] == "student_affairs_orchestrator"
+    assert payload["agents"][1]["service_runtime_label"] == "agent-student-affairs"
+    assert payload["agents"][2]["agent_id"] == "announcement_agent"
+    assert payload["agents"][2]["is_stale"] is True
+
+
+def test_a2a_topology_endpoint_can_include_internal_registry_agents():
+    app.dependency_overrides[get_telemetry_service] = lambda: _FakeTelemetryService()
+    client = TestClient(app)
+
+    response = client.get("/a2a/topology?include_internal=true")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["include_internal"] is True
+    assert payload["agent_count"] == 4
+    assert payload["stale_count"] == 2
+    assert payload["agents"][3]["agent_id"] == "registration_agent"
+    assert payload["agents"][3]["is_published_service"] is False
+
+
+def test_a2a_diagnostics_endpoint_returns_recent_agent_health():
+    app.dependency_overrides[get_telemetry_service] = lambda: _FakeTelemetryService()
+    client = TestClient(app)
+
+    response = client.get("/a2a/diagnostics?window_minutes=30&recent_limit=1")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["overview"]["window_minutes"] == 30
+    assert payload["overview"]["agent_task_failure_count"] == 1
+    assert payload["agents"][0]["agent_id"] == "event_agent"
+    assert payload["agents"][0]["failure_rate"] == 0.5
+    assert payload["recent_failures"][0]["trace_id"] == "trace-1"
 
 
 def test_logout_endpoint_invalidates_session():

@@ -1,5 +1,7 @@
 # Azure VM Runbook
 
+> Durum Notu (Nisan 2026): Bu runbook Azure VM operasyonu icin tutulur. Icindeki bazi LLM/Ollama ornekleri CPU/VM fallback senaryosunu anlatir; lokal GPU targeted A2A demo akisi icin `KURULUM_VE_CALISTIRMA.md`, dagitik mimari ozeti icin `A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md` esas alinmalidir.
+
 Bu dokuman, projenin Azure uzerinde bastan sona nasil ayağa kaldirilacagini ve daha sonra nasil yeniden erisilecegini tek yerde toplar.
 
 Bu runbook mevcut Azure kurulumu baz alinarak hazirlandi:

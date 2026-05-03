@@ -75,7 +75,10 @@ class TestEmbedderInit:
         assert embedder.resolved_device == "cpu"
 
     def test_model_loader_passes_resolved_device(self):
-        with patch("src.rag.embedder.SentenceTransformer") as mock_transformer:
+        with (
+            patch("src.rag.embedder.SentenceTransformer") as mock_transformer,
+            patch("src.rag.embedder.settings.embedding.dimension", 3),
+        ):
             mock_model = MagicMock()
             mock_model.get_sentence_embedding_dimension.return_value = 3
             mock_transformer.return_value = mock_model
@@ -88,6 +91,19 @@ class TestEmbedderInit:
             device="cpu",
             local_files_only=True,
         )
+
+    def test_model_loader_rejects_configured_dimension_mismatch(self):
+        with (
+            patch("src.rag.embedder.SentenceTransformer") as mock_transformer,
+            patch("src.rag.embedder.settings.embedding.dimension", 1024),
+        ):
+            mock_model = MagicMock()
+            mock_model.get_sentence_embedding_dimension.return_value = 768
+            mock_transformer.return_value = mock_model
+
+            embedder = Embedder(model_name="BAAI/bge-m3", device="cpu")
+            with pytest.raises(ValueError, match="Embedding model dimension mismatch"):
+                _ = embedder.model
 
 
 class TestEmbedTexts:
@@ -153,6 +169,23 @@ class TestEmbedTexts:
 
         call_args = mock_sentence_transformer.encode.call_args
         assert call_args[1]["normalize_embeddings"] is True
+
+    def test_rejects_embedding_count_mismatch(self, mock_sentence_transformer):
+        mock_sentence_transformer.encode.return_value = np.array([[0.1, 0.2, 0.3]])
+        embedder = Embedder(model_name="BAAI/bge-m3")
+        embedder._model = mock_sentence_transformer
+
+        with pytest.raises(ValueError, match="Embedding count mismatch"):
+            embedder.embed_texts(["metin 1", "metin 2"])
+
+    def test_rejects_embedding_dimension_mismatch(self, mock_sentence_transformer):
+        mock_sentence_transformer.encode.return_value = np.array([[0.1, 0.2]])
+        mock_sentence_transformer.get_sentence_embedding_dimension.return_value = 3
+        embedder = Embedder(model_name="BAAI/bge-m3")
+        embedder._model = mock_sentence_transformer
+
+        with pytest.raises(ValueError, match="Embedding dimension mismatch in batch"):
+            embedder.embed_texts(["metin"])
 
 
 class TestEmbedSingle:

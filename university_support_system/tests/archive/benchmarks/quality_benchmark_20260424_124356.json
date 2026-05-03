@@ -1,0 +1,3403 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "run_timestamp": "20260424_124356",
+  "total_questions": 7,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 85.7,
+    "key_fact_coverage": 40.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 6562.6,
+    "median_time_ms": 2744.7,
+    "intent_analysis_active": 7,
+    "force_llm_synthesis_count": 5,
+    "a2a_query_failure_delta": 0,
+    "a2a_agent_task_failure_delta": 0
+  },
+  "results": [
+    {
+      "id": "Q3",
+      "category": "A_multi_source_synthesis",
+      "question": "Başarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "değiştirebilir",
+        "devam koşulu",
+        "yeni",
+        "ders"
+      ],
+      "key_fact_results": {
+        "değiştirebilir": false,
+        "devam koşulu": false,
+        "yeni": false,
+        "ders": true
+      },
+      "key_facts_found": 1,
+      "key_facts_total": 4,
+      "elapsed_ms": 1451.3,
+      "reported_response_time_ms": 1312.2,
+      "source_count": 4,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "simple",
+        "is_personal": true,
+        "force_llm_synthesis": false,
+        "query_type": "factual"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "graduation_agent",
+          "agent_role": "specialist_agent"
+        }
+      ],
+      "llm_usage_summary": {
+        "specialist_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ]
+      },
+      "answer": "Benchmark, Soru:\nBaşarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?\n\nYanit:\nDevam zorunluluğu ile ilgili olarak madde 17 ve 19'ye bakıldığında, öğrenci başarısız olduğu bir seçmeli ders yerine, sonraki dönemde/yılda devam etmek kaydıyla, bir başka seçmeli dersi alabilir. Ancak, dönem içi değerlendirme ve devam zorunluluğu için madde 17 ve devam ediyor olan öğrenciler için en az % 70 oranındaki devam zorunluluğu geçerlidir. Bu kapsamda, başarılı olduğunuz ders yerine diğer seçmeli dersi almak ile devam zorunluluğunuzda bir değişim yaşanmaz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: yaz_okulu_eğitim_öğretim.pdf\n- Belge: yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+      "profiling": {
+        "total_ms": 1453.764,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "graduation_agent",
+            "agent_role": "specialist_agent"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q3-124240",
+          "total_ms": 1437.465,
+          "attributes": {
+            "context_id": "qbench-Q3-124240",
+            "query": "Başarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?",
+            "a2a_trace": {
+              "trace_id": "7c918b0a24a04bc0b5f8f2d6cb37534f",
+              "span_id": "df21133a36ae4255"
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "academic_query",
+              "confidence": 1.0,
+              "intent": {
+                "complexity": "simple",
+                "is_personal": true,
+                "force_llm_synthesis": false,
+                "query_type": "factual"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.031,
+              "ended_at_ms": 1437.451,
+              "duration_ms": 1437.42,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 73.797,
+              "ended_at_ms": 1437.417,
+              "duration_ms": 1363.62,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q3-124240"
+              }
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 74.056,
+              "ended_at_ms": 75.121,
+              "duration_ms": 1.065,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 75.153,
+              "ended_at_ms": 99.133,
+              "duration_ms": 23.98,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 99.182,
+              "ended_at_ms": 1383.241,
+              "duration_ms": 1284.059,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 1383.421,
+              "ended_at_ms": 1383.43,
+              "duration_ms": 0.01,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 1383.437,
+              "ended_at_ms": 1387.893,
+              "duration_ms": 4.456,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 1387.923,
+              "ended_at_ms": 1397.646,
+              "duration_ms": 9.723,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 1397.665,
+              "ended_at_ms": 1437.053,
+              "duration_ms": 39.388,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "graduation_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:graduation_agent",
+              "total_ms": 1176.055,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 0.321,
+                  "ended_at_ms": 1175.531,
+                  "duration_ms": 1175.211,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 0.409,
+                  "ended_at_ms": 2.636,
+                  "duration_ms": 2.226,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 2.682,
+                  "ended_at_ms": 8.578,
+                  "duration_ms": 5.896,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 8.62,
+                  "ended_at_ms": 8.631,
+                  "duration_ms": 0.01,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 8.639,
+                  "ended_at_ms": 1175.46,
+                  "duration_ms": 1166.821,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 9.119,
+                  "ended_at_ms": 1175.456,
+                  "duration_ms": 1166.338,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 10.543,
+                  "ended_at_ms": 1175.447,
+                  "duration_ms": 1164.904,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 10.754,
+                  "ended_at_ms": 1175.285,
+                  "duration_ms": 1164.531,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 10.802,
+                  "ended_at_ms": 1175.229,
+                  "duration_ms": 1164.427,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 1252.24,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.254,
+                  "ended_at_ms": 1251.946,
+                  "duration_ms": 1251.692,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "academic_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.279,
+                  "ended_at_ms": 0.462,
+                  "duration_ms": 0.183,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.612,
+                  "ended_at_ms": 1209.252,
+                  "duration_ms": 1208.64,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1209.289,
+                  "ended_at_ms": 1251.034,
+                  "duration_ms": 41.745,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q6",
+      "category": "B_cross_department_parallel",
+      "question": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance"
+      ],
+      "actual_departments": [
+        "finance",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "not ortalaması",
+        "harç",
+        "ödeme",
+        "başvuru"
+      ],
+      "key_fact_results": {
+        "not ortalaması": false,
+        "harç": true,
+        "ödeme": true,
+        "başvuru": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 4,
+      "elapsed_ms": 6778.3,
+      "reported_response_time_ms": 6691.2,
+      "source_count": 3,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": true,
+        "force_llm_synthesis": true,
+        "query_type": "comparative"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast"
+        },
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "regulation_agent",
+          "agent_role": "specialist_agent"
+        }
+      ],
+      "llm_usage_summary": {
+        "routing": [
+          "groq/llama-3.1-8b-instant"
+        ],
+        "specialist_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ],
+        "global_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ]
+      },
+      "answer": "Benchmark, ÇAP Başvuru Şartları ve Harç Borcu Ödeme\n\nÇAP'a başvuru yapıldıktan sonra, öğrenci harç borcu olduğunu bilmelidir. Eğitim-öğretim yılı sonuna kadar ÇAP'a başvurmuş öğrenciler, herhangi bir engel olmaksızın kabul edilirler. ÇAP'te geçici veya sürekli ayrılma ve ilişik kesilme halleri bulunur. Öğrenci ÇAP'ı kendi isteği ile bırakabilir veya başvuru koşullarını sağlayan öğrenciler başka ÇAP başvurusu yapabilirler.\n\nHarç Borcu Ödeme\n\nÖğrenciler, eğitim-öğretim yılı için öğrenim ücreti ödemezler, öğrenci katkı payı ödemek zorundadır. 2025-2026 yılı için yıllık öğrenci katkı payı ücreti 2.397,00 TL, dönemlik ücreti ise 1.198,50 TL'dir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Finans: VT\n- Akademik Programlar: RAG + LLM\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenim ucreti tablosu\n- Belge: yonerge_cift_anadal_yandal.pdf\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+      "profiling": {
+        "total_ms": 6778.336,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "routing",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": true,
+            "llm_profile": "fast"
+          },
+          {
+            "kind": "generate",
+            "model_role": "global_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast"
+          },
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "regulation_agent",
+            "agent_role": "specialist_agent"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q6-124246",
+          "total_ms": 6746.992,
+          "attributes": {
+            "context_id": "qbench-Q6-124246",
+            "query": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+            "a2a_trace": {
+              "trace_id": "8fb9769d92484ae0b4f300434b17e6b5",
+              "span_id": "0a275d8f86654531"
+            },
+            "conversation_resolution": {
+              "effective_query": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "llm_usage": [
+              {
+                "kind": "generate",
+                "model_role": "routing",
+                "provider": "openai_compatible",
+                "provider_label": "groq",
+                "display_name": "groq",
+                "model": "llama-3.1-8b-instant",
+                "path": "primary",
+                "status": "success",
+                "json_mode": true,
+                "llm_profile": "fast"
+              },
+              {
+                "kind": "generate",
+                "model_role": "global_synthesis",
+                "provider": "openai_compatible",
+                "provider_label": "groq",
+                "display_name": "groq",
+                "model": "llama-3.1-8b-instant",
+                "path": "primary",
+                "status": "success",
+                "json_mode": false,
+                "llm_profile": "fast"
+              }
+            ],
+            "routing": {
+              "departments": [
+                "finance",
+                "academic_programs"
+              ],
+              "strategy": "parallel",
+              "task_type": "tuition_query",
+              "confidence": 0.9,
+              "intent": {
+                "complexity": "complex",
+                "is_personal": true,
+                "force_llm_synthesis": true,
+                "query_type": "comparative"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.019,
+              "ended_at_ms": 6746.981,
+              "duration_ms": 6746.962,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 22.059,
+              "ended_at_ms": 6746.954,
+              "duration_ms": 6724.895,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q6-124246"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 22.191,
+              "ended_at_ms": 28.232,
+              "duration_ms": 6.041,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 28.376,
+              "ended_at_ms": 884.657,
+              "duration_ms": 856.281,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "llm.generate",
+              "started_at_ms": 29.421,
+              "ended_at_ms": 884.221,
+              "duration_ms": 854.8,
+              "parent": "main.router.route",
+              "meta": {
+                "json_mode": true
+              }
+            },
+            {
+              "name": "llm.generate.openai_compatible",
+              "started_at_ms": 29.457,
+              "ended_at_ms": 884.131,
+              "duration_ms": 854.673,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "llama-3.1-8b-instant",
+                "role": "routing"
+              }
+            },
+            {
+              "name": "llm.generate.validate_json",
+              "started_at_ms": 884.178,
+              "ended_at_ms": 884.216,
+              "duration_ms": 0.038,
+              "parent": "llm.generate"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 884.699,
+              "ended_at_ms": 908.144,
+              "duration_ms": 23.445,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 908.198,
+              "ended_at_ms": 5545.534,
+              "duration_ms": 4637.335,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 5545.722,
+              "ended_at_ms": 5545.905,
+              "duration_ms": 0.183,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 5545.914,
+              "ended_at_ms": 6718.155,
+              "duration_ms": 1172.241,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.global_llm_synthesis",
+              "started_at_ms": 5546.543,
+              "ended_at_ms": 6710.259,
+              "duration_ms": 1163.717,
+              "parent": "main.compose_response"
+            },
+            {
+              "name": "llm.generate",
+              "started_at_ms": 5546.725,
+              "ended_at_ms": 6710.194,
+              "duration_ms": 1163.469,
+              "parent": "main.global_llm_synthesis",
+              "meta": {
+                "json_mode": false
+              }
+            },
+            {
+              "name": "llm.generate.openai_compatible",
+              "started_at_ms": 5546.749,
+              "ended_at_ms": 6710.14,
+              "duration_ms": 1163.391,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "llama-3.1-8b-instant",
+                "role": "global_synthesis"
+              }
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 6718.194,
+              "ended_at_ms": 6729.86,
+              "duration_ms": 11.665,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 6729.884,
+              "ended_at_ms": 6746.938,
+              "duration_ms": 17.054,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "tuition_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:tuition_agent",
+              "total_ms": 72.458,
+              "attributes": {},
+              "events": []
+            }
+          },
+          {
+            "agent_id": "finance_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:finance",
+              "total_ms": 920.982,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 56.132,
+                  "ended_at_ms": 919.939,
+                  "duration_ms": 863.807,
+                  "parent": null,
+                  "meta": {
+                    "department": "finance",
+                    "task_type": "tuition_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 62.454,
+                  "ended_at_ms": 66.454,
+                  "duration_ms": 4.001,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "finance"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 75.934,
+                  "ended_at_ms": 846.737,
+                  "duration_ms": 770.803,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "finance",
+                    "agent_id": "tuition_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 847.141,
+                  "ended_at_ms": 913.893,
+                  "duration_ms": 66.752,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "finance"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "regulation_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:regulation_agent",
+              "total_ms": 3935.942,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 4.856,
+                  "ended_at_ms": 3919.754,
+                  "duration_ms": 3914.898,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "regulation_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 10.632,
+                  "ended_at_ms": 50.693,
+                  "duration_ms": 40.06,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "regulation_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 50.771,
+                  "ended_at_ms": 73.934,
+                  "duration_ms": 23.163,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "regulation_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 73.993,
+                  "ended_at_ms": 74.012,
+                  "duration_ms": 0.019,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "regulation_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 74.03,
+                  "ended_at_ms": 3913.724,
+                  "duration_ms": 3839.693,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "regulation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 79.205,
+                  "ended_at_ms": 3913.703,
+                  "duration_ms": 3834.498,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "regulation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 82.733,
+                  "ended_at_ms": 3913.619,
+                  "duration_ms": 3830.886,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "regulation_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 83.471,
+                  "ended_at_ms": 3910.67,
+                  "duration_ms": 3827.199,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 83.655,
+                  "ended_at_ms": 3910.584,
+                  "duration_ms": 3826.929,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "academic_programs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:academic_programs",
+              "total_ms": 4518.38,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.42,
+                  "ended_at_ms": 4518.233,
+                  "duration_ms": 4517.813,
+                  "parent": null,
+                  "meta": {
+                    "department": "academic_programs",
+                    "task_type": "tuition_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.465,
+                  "ended_at_ms": 0.662,
+                  "duration_ms": 0.196,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.893,
+                  "ended_at_ms": 4477.495,
+                  "duration_ms": 4476.602,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs",
+                    "agent_id": "regulation_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 4477.527,
+                  "ended_at_ms": 4517.733,
+                  "duration_ms": 40.206,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q13",
+      "category": "D_comparison",
+      "question": "Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar nelerdir? Başvuru şartları ve değerlendirme kriterleri nasıl farklılık gösterir?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "kurum içi",
+        "kurumlar arası",
+        "Ek Madde",
+        "GANO",
+        "YKS"
+      ],
+      "key_fact_results": {
+        "kurum içi": true,
+        "kurumlar arası": true,
+        "Ek Madde": false,
+        "GANO": false,
+        "YKS": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 5,
+      "elapsed_ms": 28943.1,
+      "reported_response_time_ms": 28832.8,
+      "source_count": 10,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "comparison",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "conditional"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "error_type": "OpenAIClientError",
+          "error_message": "groq HTTP hatasi (429): {\"error\":{\"message\":\"Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01knmmc49ffzkt05j0txmhc6wj` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 3713, Requested 2555. Please try again in 2.68s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "google_ai",
+          "provider_label": "google_ai",
+          "display_name": "google_ai",
+          "model": "gemini-2.5-flash-lite",
+          "path": "fallback",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "fallback_from": "openai_compatible",
+          "fallback_from_label": "groq",
+          "fallback_from_model": "llama-3.1-8b-instant"
+        },
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "international_agent",
+          "agent_role": "specialist_agent"
+        },
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "registration_agent",
+          "agent_role": "specialist_agent"
+        }
+      ],
+      "llm_usage_summary": {
+        "routing": [
+          "groq/llama-3.1-8b-instant"
+        ],
+        "specialist_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ],
+        "global_synthesis": [
+          "google_ai/gemini-2.5-flash-lite [fallback]"
+        ]
+      },
+      "answer": "Benchmark, Kurum içi yatay geçiş, Ondokuz Mayıs Üniversitesi (OMU) içinde aynı düzeydeki farklı diploma programlarına geçişi ifade ederken; kurumlar arası yatay geçiş, farklı bir üniversitenin eşdeğer eğitim veren fakülte, yüksekokul veya bölümünden OMU'ya yapılan geçiştir.\n\nBaşvuru şartları ve değerlendirme kriterleri farklılık göstermektedir:\n* Kurum içi yatay geçiş için genel not ortalamasının en az 2.80 olması gerekirken, kurumlar arası yatay geçiş için genel not ortalamasının 4 üzerinden en az 2.80 veya 100'lük sistemde en az 72 olması gerekmektedir.\n* Kurumlar arası yatay geçiş için başvuran kişinin, geçiş yapmak istediği programla eşdeğer bir diploma programına kayıtlı olması şartı aranır; kurum içi yatay geçişte bu koşul bulunmamaktadır.\n* Her iki geçiş türü için de başvuru yapan öğrencinin öğrenim gördüğü yükseköğretim kurumunda herhangi bir disiplin cezası almamış olması gereklidir.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Akademik Programlar: RAG + LLM\n- Ogrenci Isleri: RAG + LLM\n\nKaynak Ozeti:\n- Belge: yonerge_uluslararasi_ogrenci_yatay_gecis.pdf\n- Belge: önlisans_ve_lisans_düzeyindeki_programlar_arasında_geçiş_yönergesi.pdf\n- Belge: önlisans_lisans_ve_lisansüstü_düzeyindeki_programlara_uluslararası_öğrenci.pdf\n- Belge: 2025_2026_bahar_yatay_geçiş_ilan_metni.pdf\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+      "profiling": {
+        "total_ms": 28943.096,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "routing",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": true,
+            "llm_profile": "fast"
+          },
+          {
+            "kind": "generate",
+            "model_role": "global_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "error",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "error_type": "OpenAIClientError",
+            "error_message": "groq HTTP hatasi (429): {\"error\":{\"message\":\"Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01knmmc49ffzkt05j0txmhc6wj` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 3713, Requested 2555. Please try again in 2.68s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+          },
+          {
+            "kind": "generate",
+            "model_role": "global_synthesis",
+            "provider": "google_ai",
+            "provider_label": "google_ai",
+            "display_name": "google_ai",
+            "model": "gemini-2.5-flash-lite",
+            "path": "fallback",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "fallback_from": "openai_compatible",
+            "fallback_from_label": "groq",
+            "fallback_from_model": "llama-3.1-8b-instant"
+          },
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "international_agent",
+            "agent_role": "specialist_agent"
+          },
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "registration_agent",
+            "agent_role": "specialist_agent"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q13-124258",
+          "total_ms": 28906.298,
+          "attributes": {
+            "context_id": "qbench-Q13-124258",
+            "query": "Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar nelerdir? Başvuru şartları ve değerlendirme kriterleri nasıl farklılık gösterir?",
+            "a2a_trace": {
+              "trace_id": "8fd06b7448d34a8f8d5be19b0a6bebca",
+              "span_id": "a4d16682358d4d66"
+            },
+            "conversation_resolution": {
+              "effective_query": "Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar nelerdir? Başvuru şartları ve değerlendirme kriterleri nasıl farklılık gösterir?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "llm_usage": [
+              {
+                "kind": "generate",
+                "model_role": "routing",
+                "provider": "openai_compatible",
+                "provider_label": "groq",
+                "display_name": "groq",
+                "model": "llama-3.1-8b-instant",
+                "path": "primary",
+                "status": "success",
+                "json_mode": true,
+                "llm_profile": "fast"
+              },
+              {
+                "kind": "generate",
+                "model_role": "global_synthesis",
+                "provider": "openai_compatible",
+                "provider_label": "groq",
+                "display_name": "groq",
+                "model": "llama-3.1-8b-instant",
+                "path": "primary",
+                "status": "error",
+                "json_mode": false,
+                "llm_profile": "fast",
+                "error_type": "OpenAIClientError",
+                "error_message": "groq HTTP hatasi (429): {\"error\":{\"message\":\"Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01knmmc49ffzkt05j0txmhc6wj` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 3713, Requested 2555. Please try again in 2.68s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+              },
+              {
+                "kind": "generate",
+                "model_role": "global_synthesis",
+                "provider": "google_ai",
+                "provider_label": "google_ai",
+                "display_name": "google_ai",
+                "model": "gemini-2.5-flash-lite",
+                "path": "fallback",
+                "status": "success",
+                "json_mode": false,
+                "llm_profile": "fast",
+                "fallback_from": "openai_compatible",
+                "fallback_from_label": "groq",
+                "fallback_from_model": "llama-3.1-8b-instant"
+              }
+            ],
+            "routing": {
+              "departments": [
+                "academic_programs",
+                "student_affairs"
+              ],
+              "strategy": "parallel",
+              "task_type": "registration_query",
+              "confidence": 0.95,
+              "intent": {
+                "complexity": "comparison",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "conditional"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.058,
+              "ended_at_ms": 28906.287,
+              "duration_ms": 28906.23,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 33.865,
+              "ended_at_ms": 28906.262,
+              "duration_ms": 28872.398,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q13-124258"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 34.073,
+              "ended_at_ms": 65.14,
+              "duration_ms": 31.066,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 65.393,
+              "ended_at_ms": 961.32,
+              "duration_ms": 895.927,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "llm.generate",
+              "started_at_ms": 66.421,
+              "ended_at_ms": 960.572,
+              "duration_ms": 894.151,
+              "parent": "main.router.route",
+              "meta": {
+                "json_mode": true
+              }
+            },
+            {
+              "name": "llm.generate.openai_compatible",
+              "started_at_ms": 66.47,
+              "ended_at_ms": 960.376,
+              "duration_ms": 893.906,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "llama-3.1-8b-instant",
+                "role": "routing"
+              }
+            },
+            {
+              "name": "llm.generate.validate_json",
+              "started_at_ms": 960.488,
+              "ended_at_ms": 960.563,
+              "duration_ms": 0.075,
+              "parent": "llm.generate"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 961.366,
+              "ended_at_ms": 1013.268,
+              "duration_ms": 51.902,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 1013.319,
+              "ended_at_ms": 8410.888,
+              "duration_ms": 7397.569,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 8411.03,
+              "ended_at_ms": 8411.759,
+              "duration_ms": 0.729,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 8411.768,
+              "ended_at_ms": 28869.963,
+              "duration_ms": 20458.195,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.global_llm_synthesis",
+              "started_at_ms": 8412.819,
+              "ended_at_ms": 28861.563,
+              "duration_ms": 20448.743,
+              "parent": "main.compose_response"
+            },
+            {
+              "name": "llm.generate",
+              "started_at_ms": 8412.944,
+              "ended_at_ms": 28861.521,
+              "duration_ms": 20448.577,
+              "parent": "main.global_llm_synthesis",
+              "meta": {
+                "json_mode": false
+              }
+            },
+            {
+              "name": "llm.generate.openai_compatible",
+              "started_at_ms": 8412.964,
+              "ended_at_ms": 14177.655,
+              "duration_ms": 5764.692,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "llama-3.1-8b-instant",
+                "role": "global_synthesis"
+              }
+            },
+            {
+              "name": "llm.generate.google_ai_fallback",
+              "started_at_ms": 14199.713,
+              "ended_at_ms": 28861.497,
+              "duration_ms": 14661.784,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "gemini-2.5-flash-lite",
+                "role": "global_synthesis"
+              }
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 28869.999,
+              "ended_at_ms": 28882.793,
+              "duration_ms": 12.794,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 28882.814,
+              "ended_at_ms": 28906.247,
+              "duration_ms": 23.433,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "international_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:international_agent",
+              "total_ms": 7266.308,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 0.069,
+                  "ended_at_ms": 7265.067,
+                  "duration_ms": 7264.999,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "international_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 0.182,
+                  "ended_at_ms": 0.835,
+                  "duration_ms": 0.653,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "international_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 0.857,
+                  "ended_at_ms": 10.99,
+                  "duration_ms": 10.133,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "international_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 11.027,
+                  "ended_at_ms": 11.725,
+                  "duration_ms": 0.699,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "international_agent",
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 11.737,
+                  "ended_at_ms": 7264.885,
+                  "duration_ms": 7253.148,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "international_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 11.92,
+                  "ended_at_ms": 7264.877,
+                  "duration_ms": 7252.958,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "international_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 13.066,
+                  "ended_at_ms": 7264.863,
+                  "duration_ms": 7251.797,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "international_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 13.195,
+                  "ended_at_ms": 7264.666,
+                  "duration_ms": 7251.47,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 13.235,
+                  "ended_at_ms": 7264.624,
+                  "duration_ms": 7251.389,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "academic_programs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:academic_programs",
+              "total_ms": 7359.229,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.217,
+                  "ended_at_ms": 7359.079,
+                  "duration_ms": 7358.862,
+                  "parent": null,
+                  "meta": {
+                    "department": "academic_programs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.238,
+                  "ended_at_ms": 0.357,
+                  "duration_ms": 0.12,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.462,
+                  "ended_at_ms": 7314.444,
+                  "duration_ms": 7313.983,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs",
+                    "agent_id": "international_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 7314.484,
+                  "ended_at_ms": 7358.634,
+                  "duration_ms": 44.15,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "registration_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:registration_agent",
+              "total_ms": 1188.874,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 0.12,
+                  "ended_at_ms": 1188.36,
+                  "duration_ms": 1188.239,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 0.164,
+                  "ended_at_ms": 0.578,
+                  "duration_ms": 0.414,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 0.601,
+                  "ended_at_ms": 1.953,
+                  "duration_ms": 1.352,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 1.979,
+                  "ended_at_ms": 2.971,
+                  "duration_ms": 0.991,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 2.982,
+                  "ended_at_ms": 1188.173,
+                  "duration_ms": 1185.191,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 3.122,
+                  "ended_at_ms": 1188.165,
+                  "duration_ms": 1185.043,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 3.691,
+                  "ended_at_ms": 1188.142,
+                  "duration_ms": 1184.451,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 3.786,
+                  "ended_at_ms": 1187.833,
+                  "duration_ms": 1184.047,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 3.81,
+                  "ended_at_ms": 1187.789,
+                  "duration_ms": 1183.979,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 1308.077,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.174,
+                  "ended_at_ms": 1307.904,
+                  "duration_ms": 1307.729,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.195,
+                  "ended_at_ms": 0.32,
+                  "duration_ms": 0.125,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.416,
+                  "ended_at_ms": 1216.013,
+                  "duration_ms": 1215.597,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1216.041,
+                  "ended_at_ms": 1307.513,
+                  "duration_ms": 91.472,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q20",
+      "category": "F_edge_cases",
+      "question": "Diplomamı kaybettim ve aynı zamanda e-devlette mezuniyet bilgilerim görünmüyor. Her iki sorun için ne yapmalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "2. nüsha",
+        "diploma",
+        "e-devlet",
+        "YÖKSİS"
+      ],
+      "key_fact_results": {
+        "2. nüsha": false,
+        "diploma": true,
+        "e-devlet": true,
+        "YÖKSİS": false
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 4,
+      "elapsed_ms": 3079.5,
+      "reported_response_time_ms": 2988.8,
+      "source_count": 4,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": true,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast"
+        },
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "graduation_agent",
+          "agent_role": "specialist_agent"
+        }
+      ],
+      "llm_usage_summary": {
+        "routing": [
+          "groq/llama-3.1-8b-instant"
+        ],
+        "specialist_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ]
+      },
+      "answer": "Benchmark, Sorunun cevabı:\n\n1. Diploma kaybedenler için: \n- İlk adım olarak yaygın gazetelerden birine diploma kayıp ilanı vermelisiniz. \n- İlgili birimlere kayıp ilanının yer aldığı gazeteye, başvuru dilekçesine ve onaylı nüfus cüzdanı suretine müracaat etmelisiniz. \n- Diploma ücretini yatırdığını gösteren banka dekontu ile birlikte Diploma aldığınız birime müracaat etmelisiniz. \n- Uygulama esasları Madde 17 (1) göre yeni diploma düzenlenir.\n- Yeni diploma orijinal diploma gibi olmayacak, üzerine \"İkinci Nüsha\" bilgisi yer alacak.\n\n2. E-devlette mezuniyet bilgilerinin görünmemesi için:\n- E-devletten alınan belgelerde onay şartı aranmayacaktır. \n- E-devletten alınan 1. Başvuru formu çıkan belge, e-devlet üzerinden alacağınız belge olacaktır. \n- Lütfen başvuru formu çıktılarınızı e-devlet üzerinden alın ve belge durumunu kendiniz kontrol edunuz.\n- E-Devletteki mezuniyet bilgisine erişmek için ilgili birim tarafından tasdik edilmiş belge bilgilerinizi e-devlet üzerinden güncelleyebilirsiniz.\n\nBelge kayıp ilanı veren ve yeniden diploma düzenlemek isteyen öğrenciler için, diploma ücretini yatırdığını gösteren banka dekontu ile birlikte Diploma aldıkları birime müracaat etmelidirler. Uygulama esasları Madde 17 (2) göre yeniden diploma düzenlenir.\n\nAyrıca, mahkeme kararına dayalı nüfus kaydı değişikliği olması halinde, diploma yeniden düzenlenir. Madde 18- (1) göre yeniden düzenlenecek diplomalar için mahkeme kararı, diploma ücretini yatırdığını gösteren banka dekontu, kimlik fotokopisi ve dilekçe ile başvurulması gerekir.\n\nBu konularda net bilgiye erişebilmek için ilgili birime müracaat ediniz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: uygulama_esaslari_diploma_mezuniyet_belgeler.pdf\n- Belge: 2025_2026_ek_madde_1_güz_yarıyılı_kayıt_için_gerekli_belgeler.pdf",
+      "profiling": {
+        "total_ms": 3079.534,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "routing",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": true,
+            "llm_profile": "fast"
+          },
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "graduation_agent",
+            "agent_role": "specialist_agent"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q20-124332",
+          "total_ms": 3046.178,
+          "attributes": {
+            "context_id": "qbench-Q20-124332",
+            "query": "Diplomamı kaybettim ve aynı zamanda e-devlette mezuniyet bilgilerim görünmüyor. Her iki sorun için ne yapmalıyım?",
+            "a2a_trace": {
+              "trace_id": "c52904a2b4db4e45b68a1b896c04fd88",
+              "span_id": "ded98fd5c5cf4ccf"
+            },
+            "conversation_resolution": {
+              "effective_query": "Diplomamı kaybettim ve aynı zamanda e-devlette mezuniyet bilgilerim görünmüyor. Her iki sorun için ne yapmalıyım?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "llm_usage": [
+              {
+                "kind": "generate",
+                "model_role": "routing",
+                "provider": "openai_compatible",
+                "provider_label": "groq",
+                "display_name": "groq",
+                "model": "llama-3.1-8b-instant",
+                "path": "primary",
+                "status": "success",
+                "json_mode": true,
+                "llm_profile": "fast"
+              }
+            ],
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "academic_query",
+              "confidence": 0.95,
+              "intent": {
+                "complexity": "process_chain",
+                "is_personal": true,
+                "force_llm_synthesis": true,
+                "query_type": "procedural"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.033,
+              "ended_at_ms": 3046.167,
+              "duration_ms": 3046.134,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 23.145,
+              "ended_at_ms": 3046.145,
+              "duration_ms": 3023.0,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q20-124332"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 23.275,
+              "ended_at_ms": 29.817,
+              "duration_ms": 6.542,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 29.956,
+              "ended_at_ms": 868.082,
+              "duration_ms": 838.126,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "llm.generate",
+              "started_at_ms": 30.799,
+              "ended_at_ms": 867.579,
+              "duration_ms": 836.78,
+              "parent": "main.router.route",
+              "meta": {
+                "json_mode": true
+              }
+            },
+            {
+              "name": "llm.generate.openai_compatible",
+              "started_at_ms": 30.915,
+              "ended_at_ms": 867.469,
+              "duration_ms": 836.554,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "llama-3.1-8b-instant",
+                "role": "routing"
+              }
+            },
+            {
+              "name": "llm.generate.validate_json",
+              "started_at_ms": 867.503,
+              "ended_at_ms": 867.574,
+              "duration_ms": 0.071,
+              "parent": "llm.generate"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 868.122,
+              "ended_at_ms": 898.705,
+              "duration_ms": 30.582,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 898.756,
+              "ended_at_ms": 3007.791,
+              "duration_ms": 2109.035,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 3007.927,
+              "ended_at_ms": 3007.934,
+              "duration_ms": 0.007,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 3007.941,
+              "ended_at_ms": 3015.456,
+              "duration_ms": 7.515,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 3015.471,
+              "ended_at_ms": 3026.005,
+              "duration_ms": 10.534,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 3026.032,
+              "ended_at_ms": 3046.123,
+              "duration_ms": 20.09,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "graduation_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:graduation_agent",
+              "total_ms": 1950.294,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 0.163,
+                  "ended_at_ms": 1949.704,
+                  "duration_ms": 1949.541,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 0.203,
+                  "ended_at_ms": 0.626,
+                  "duration_ms": 0.423,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 0.65,
+                  "ended_at_ms": 2.808,
+                  "duration_ms": 2.158,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 2.841,
+                  "ended_at_ms": 2.851,
+                  "duration_ms": 0.011,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 2.859,
+                  "ended_at_ms": 1949.599,
+                  "duration_ms": 1946.74,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 3.038,
+                  "ended_at_ms": 1949.595,
+                  "duration_ms": 1946.557,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 3.803,
+                  "ended_at_ms": 1949.586,
+                  "duration_ms": 1945.783,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 3.947,
+                  "ended_at_ms": 1949.512,
+                  "duration_ms": 1945.566,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 3.979,
+                  "ended_at_ms": 1949.487,
+                  "duration_ms": 1945.507,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 2057.921,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.155,
+                  "ended_at_ms": 2057.789,
+                  "duration_ms": 2057.634,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "academic_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.174,
+                  "ended_at_ms": 0.271,
+                  "duration_ms": 0.098,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.362,
+                  "ended_at_ms": 1997.882,
+                  "duration_ms": 1997.521,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1997.923,
+                  "ended_at_ms": 2057.382,
+                  "duration_ms": 59.458,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q22",
+      "category": "F_edge_cases",
+      "question": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "kural",
+      "actual_generation_mode": "llm",
+      "mode_match": false,
+      "expected_key_facts": [],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 0,
+      "elapsed_ms": 1297.1,
+      "reported_response_time_ms": 1224.9,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "graduation_agent",
+          "agent_role": "specialist_agent"
+        }
+      ],
+      "llm_usage_summary": {
+        "specialist_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ]
+      },
+      "answer": "Benchmark, Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?\n\nSınava kopya çekilmesinin cezası, öğrencinin stajından başarısız sayılmasıdır. Birbirine benzeyen, aynı konuları içeren, kopya izlenimi veren ve ders kitaplarındaki bilgilerden oluşan staj raporu veren öğrencilerin stajları staj değerlendirme formlarına bakılmaksızın tamamen reddedilir.\n\nDisiplin süreci, Yükseköğretim Kurumları Öğrenci Disiplin Yönetmeliği hükümlerine göre yürütülür. Soruşturma, Fakülte Dekanlığı/Yüksekokul Müdürlüğü veya Meslek Yüksekokulu Müdürlüğünde yapılır ve sonuç, işletmeye yazılı olarak bildirilir.\n\nTarih: Bilgi bulunamadı. (Herhangi bir spesifik tarih bulunamadı.)\n\nSayı: Bilgi bulunamadı. (Herhangi bir spesifik sayı bulunamadı.)\n\nYüzde: Bilgi bulunamadı. (Herhangi bir spesifik yüzde bulunamadı.)\n\nSüre: Bilgi bulunamadı. (Herhangi bir spesifik süre bulunamadı.)\n\nAmaç: Bilgi bulunamadı. (Herhangi bir spesifik amaç bulunamadı.)\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: mühendislik_fakültesi_sınav_uygulama_kuralları.pdf\n- Belge: staj_ilkeleri_23122019_inş_müh.pdf\n- Belge: işyeri_staj_sözleşmesi.pdf",
+      "profiling": {
+        "total_ms": 1297.133,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "graduation_agent",
+            "agent_role": "specialist_agent"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q22-124340",
+          "total_ms": 1283.945,
+          "attributes": {
+            "context_id": "qbench-Q22-124340",
+            "query": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+            "a2a_trace": {
+              "trace_id": "911f553c51164f49a356de62d8ca3534",
+              "span_id": "ef5a20fc287f45ad"
+            },
+            "conversation_resolution": {
+              "effective_query": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "course_query",
+              "confidence": 0.83,
+              "intent": {
+                "complexity": "process_chain",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "procedural"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.026,
+              "ended_at_ms": 1283.922,
+              "duration_ms": 1283.896,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 19.409,
+              "ended_at_ms": 1283.875,
+              "duration_ms": 1264.466,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q22-124340"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 19.656,
+              "ended_at_ms": 28.265,
+              "duration_ms": 8.609,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 28.435,
+              "ended_at_ms": 29.039,
+              "duration_ms": 0.604,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 29.065,
+              "ended_at_ms": 50.414,
+              "duration_ms": 21.348,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 50.452,
+              "ended_at_ms": 1239.554,
+              "duration_ms": 1189.102,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 1239.852,
+              "ended_at_ms": 1239.864,
+              "duration_ms": 0.012,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 1239.876,
+              "ended_at_ms": 1248.928,
+              "duration_ms": 9.052,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 1248.954,
+              "ended_at_ms": 1262.895,
+              "duration_ms": 13.941,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 1262.921,
+              "ended_at_ms": 1283.836,
+              "duration_ms": 20.914,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "graduation_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:graduation_agent",
+              "total_ms": 1082.056,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 0.13,
+                  "ended_at_ms": 1081.355,
+                  "duration_ms": 1081.225,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 0.18,
+                  "ended_at_ms": 0.692,
+                  "duration_ms": 0.513,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 0.725,
+                  "ended_at_ms": 1.541,
+                  "duration_ms": 0.816,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 1.563,
+                  "ended_at_ms": 1.571,
+                  "duration_ms": 0.007,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 1.578,
+                  "ended_at_ms": 1081.225,
+                  "duration_ms": 1079.647,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 1.716,
+                  "ended_at_ms": 1081.218,
+                  "duration_ms": 1079.502,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 2.235,
+                  "ended_at_ms": 1081.207,
+                  "duration_ms": 1078.972,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 2.331,
+                  "ended_at_ms": 1081.125,
+                  "duration_ms": 1078.794,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 2.352,
+                  "ended_at_ms": 1081.096,
+                  "duration_ms": 1078.744,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 1156.75,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.238,
+                  "ended_at_ms": 1156.586,
+                  "duration_ms": 1156.348,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "course_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.257,
+                  "ended_at_ms": 0.375,
+                  "duration_ms": 0.117,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.47,
+                  "ended_at_ms": 1109.614,
+                  "duration_ms": 1109.144,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "graduation_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1109.727,
+                  "ended_at_ms": 1155.651,
+                  "duration_ms": 45.924,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q23",
+      "category": "G_semantic_paraphrase",
+      "question": "Üniversiteyi bırakıp ayrılmak istiyorum, tüm işlemleri ve dikkat etmem gereken hususları söyler misin?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "ilişik kesme",
+        "UBYS",
+        "form",
+        "birim"
+      ],
+      "key_fact_results": {
+        "ilişik kesme": false,
+        "UBYS": false,
+        "form": false,
+        "birim": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 2744.7,
+      "reported_response_time_ms": 2645.4,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast"
+        },
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "registration_agent",
+          "agent_role": "specialist_agent"
+        }
+      ],
+      "llm_usage_summary": {
+        "routing": [
+          "groq/llama-3.1-8b-instant"
+        ],
+        "specialist_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ]
+      },
+      "answer": "Benchmark, Üniversiteyi bırakıp ayrılmak istiyorsanız, aşağıdaki işlemleri takip edin:\n\nEğer kaydınızı silmek istiyorum:\n- Kaydınızı sildirme isteğinizi, öğrenci bilgi sistemi üzerinden, \"Kayıt İşlemi\" sekmesinden ve \"Kayıt Sorgulama\" sekmesinden yapabilirsiniz.\n- Kaydınızı sildirecek olan öğrenci, ÖSYM tarafından yeniden yerleştirilmediği veya Üniversite tarafından yapılan ölçme ve değerlendirme sonucunda kayıt hakkı kazanmadığı sürece, Üniversiteye tekrar kaydolamaz.\n- Kaydınızı sildirdiğiniz tarihte, 7 gün içinde, SKSDB'ye itiraz başvurusunda bulunabilirsiniz. İtiraz başvurusu, başvuru tarihinden sonra toplanan ilk Etkinlik Kurulunda görüşülerek karara bağlanır.\n\nEğer kaydınızı silmek istemiyorsanız, ama ders kaydınızı yaptırmak veya kaydınızı yenilemek istemiyorsanız:\n- Akademik takvimde belirlenen süre içinde, öğrenci bilgi sistemi üzerinden alacağı dersleri seçecek ve ders kaydı, danışman onayı ile kesinleşecektir.\n- Akademik takvimde belirlenen süre içinde ders kaydını yapmayan öğrenciler, o dönemde öğrenimine devam etme hakkını kaybederler. Kaybedilen dönem öğrenim süresinden sayılır.\n\nAyrılma nedenlerinim nelerdir:\n- Geçerli bir mazereti olmaksızın, üst üste iki Genel Kurul toplantısına katılmaması,\n- Topluluğun amaçlarına aykırı faaliyette bulunulması,\n- Verilen görevlerin yerine getirilmemesi durumlarında, Yönetim Kurulu kararı ve Akademik danışman onayı ile üyeliğiniz sonlandırılır.\n\nAyrılma işlemini takip eden adımlar:\n- Üyeliğiniz sonlandırma tarihi, 7 gün içinde SKSDB'ye itiraz başvurusunda bulunabilirsiniz.\n- İtiraz başvurusu, başvuru tarihinden sonra toplanan ilk Etkinlik Kurulunda görüşülerek karara bağlanır.\n\nKAYNAK DOGRULAMA:\n- [Kaynak 1: öğrenci_toplulukları_yönergesi.pdf]\n- [Kaynak 2: yonetmelik_onlisans_lisans_egitim_ogretim.pdf]\n- [Kaynak 3: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf]\n- [Kaynak 4: işyeri_staj_sözleşmesi.pdf]\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: öğrenci_toplulukları_yönergesi.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: işyeri_staj_sözleşmesi.pdf",
+      "profiling": {
+        "total_ms": 2744.729,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "routing",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": true,
+            "llm_profile": "fast"
+          },
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "registration_agent",
+            "agent_role": "specialist_agent"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q23-124346",
+          "total_ms": 2693.498,
+          "attributes": {
+            "context_id": "qbench-Q23-124346",
+            "query": "Üniversiteyi bırakıp ayrılmak istiyorum, tüm işlemleri ve dikkat etmem gereken hususları söyler misin?",
+            "a2a_trace": {
+              "trace_id": "159adba77e20405aa0f5bb6cabf8d404",
+              "span_id": "0fd9e6fa02f546e6"
+            },
+            "conversation_resolution": {
+              "effective_query": "Üniversiteyi bırakıp ayrılmak istiyorum, tüm işlemleri ve dikkat etmem gereken hususları söyler misin?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "llm_usage": [
+              {
+                "kind": "generate",
+                "model_role": "routing",
+                "provider": "openai_compatible",
+                "provider_label": "groq",
+                "display_name": "groq",
+                "model": "llama-3.1-8b-instant",
+                "path": "primary",
+                "status": "success",
+                "json_mode": true,
+                "llm_profile": "fast"
+              }
+            ],
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "registration_query",
+              "confidence": 0.95,
+              "intent": {
+                "complexity": "process_chain",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "procedural"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.027,
+              "ended_at_ms": 2693.489,
+              "duration_ms": 2693.462,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 18.851,
+              "ended_at_ms": 2693.467,
+              "duration_ms": 2674.616,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q23-124346"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 19.006,
+              "ended_at_ms": 23.09,
+              "duration_ms": 4.085,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 23.24,
+              "ended_at_ms": 819.817,
+              "duration_ms": 796.578,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "llm.generate",
+              "started_at_ms": 23.794,
+              "ended_at_ms": 819.574,
+              "duration_ms": 795.78,
+              "parent": "main.router.route",
+              "meta": {
+                "json_mode": true
+              }
+            },
+            {
+              "name": "llm.generate.openai_compatible",
+              "started_at_ms": 23.826,
+              "ended_at_ms": 819.516,
+              "duration_ms": 795.69,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "llama-3.1-8b-instant",
+                "role": "routing"
+              }
+            },
+            {
+              "name": "llm.generate.validate_json",
+              "started_at_ms": 819.545,
+              "ended_at_ms": 819.571,
+              "duration_ms": 0.026,
+              "parent": "llm.generate"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 819.842,
+              "ended_at_ms": 858.34,
+              "duration_ms": 38.498,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 858.383,
+              "ended_at_ms": 2659.641,
+              "duration_ms": 1801.259,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 2659.78,
+              "ended_at_ms": 2659.787,
+              "duration_ms": 0.007,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 2659.793,
+              "ended_at_ms": 2668.544,
+              "duration_ms": 8.751,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 2668.563,
+              "ended_at_ms": 2678.316,
+              "duration_ms": 9.753,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 2678.338,
+              "ended_at_ms": 2693.451,
+              "duration_ms": 15.113,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "registration_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:registration_agent",
+              "total_ms": 1666.56,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 0.109,
+                  "ended_at_ms": 1665.787,
+                  "duration_ms": 1665.678,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 0.147,
+                  "ended_at_ms": 0.546,
+                  "duration_ms": 0.398,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 0.566,
+                  "ended_at_ms": 1.416,
+                  "duration_ms": 0.85,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 1.441,
+                  "ended_at_ms": 2.184,
+                  "duration_ms": 0.742,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 2.196,
+                  "ended_at_ms": 1665.655,
+                  "duration_ms": 1663.46,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 2.365,
+                  "ended_at_ms": 1665.647,
+                  "duration_ms": 1663.282,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 2.993,
+                  "ended_at_ms": 1665.592,
+                  "duration_ms": 1662.599,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 3.139,
+                  "ended_at_ms": 1665.485,
+                  "duration_ms": 1662.346,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 3.164,
+                  "ended_at_ms": 1665.45,
+                  "duration_ms": 1662.286,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 1782.2,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.157,
+                  "ended_at_ms": 1782.065,
+                  "duration_ms": 1781.908,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.177,
+                  "ended_at_ms": 0.294,
+                  "duration_ms": 0.117,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.383,
+                  "ended_at_ms": 1715.477,
+                  "duration_ms": 1715.094,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1715.51,
+                  "ended_at_ms": 1781.63,
+                  "duration_ms": 66.12,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q24",
+      "category": "G_semantic_paraphrase",
+      "question": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "kayıt",
+        "yenileme",
+        "UBYS",
+        "müfredat"
+      ],
+      "key_fact_results": {
+        "kayıt": true,
+        "yenileme": false,
+        "UBYS": false,
+        "müfredat": true
+      },
+      "key_facts_found": 2,
+      "key_facts_total": 4,
+      "elapsed_ms": 1643.9,
+      "reported_response_time_ms": 1555.7,
+      "source_count": 8,
+      "quality_warnings": [],
+      "intent_analysis": {
+        "complexity": "simple",
+        "is_personal": true,
+        "force_llm_synthesis": false,
+        "query_type": "factual"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "specialist_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "fast",
+          "agent_id": "registration_agent",
+          "agent_role": "specialist_agent"
+        }
+      ],
+      "llm_usage_summary": {
+        "specialist_synthesis": [
+          "groq/llama-3.1-8b-instant"
+        ]
+      },
+      "answer": "Benchmark, Sorunun DOGRUDAN yaniti:\n\n- Ders seçimini, akademik takvimde belirtilen süre içerisinde öğrenci bilgi yönetim sistemi (UOYS) üzerinden internet ortamında yapabilirsiniz.\n- Kayıt dönemi başlamadan önce, öğrencilerin transkript/müfredat kontrolüne giderek ders seçimini yapmaları gerektiği, derslere başladığında ise sınıf yoklama listesinde adları yoksa danışmanlarına uğramaları gerektiği bilgisini paylaşılması önerilir.\n- Danışman onayını vermek için öğrencinin şahsen gelmesi zorunlu değildir. Öğrenci, internet ortamında ders kaydını yapan Öğrenci Bilgi Yönetim Sistemi üzerinden danışman onayına gönderilebilir.\n- Öğrenci, ders kaydını yapmak, yaptığı kaydı danışman onayına göndermek ve onaya gönderdiği kaydın danışman tarafından kesin kayda dönüşmesini takip etmekle yükümlüdür.\n\nKAYNAK İZLENTİLERİ:\n- Kayıt dondurma süresinin bitiminde öğrenci, ayrıldığı dönemin/yılın başından başlamak koşuluyla, öğrenimine kaldığı yerden devam edebilir (Kaynak 1 ve 2).\n- Kayıt dönemi başlamadan transkript/müfredat kontrolünü yaparak akademik takvimde tanımlanan süre içerisinde ders kaydını yapmaları gerektiği, derslere başladığında ise sınıf yoklama listesinde adları yoksa danışmanlarına uğramaları gerektiği bilgisini paylaşılmalıdır (Kaynak 3).\n- Öğrenci, internet ortamında UOYS adresine giriş yaparak ders kaydını yapabilir (Kaynak 5).\n- Ders kaydı yapmadığınız dönem eğitim süresinden sayılır (Kaynak 5).\n- Güz yarıyılı ders kaydı yaptırmadım, ancak bir sonraki yarıyıl (bahar) ders kaydı yaptırabilirim (Kaynak 5).\n\nBu soru acıklaca lisans ve ön lisans ders seçimine ilişkinydi, ancak Ondokuz Mayıs Üniversitesi'nin (OMU) ders seçim kuralları hususunda net bilgi yoktur.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- RAG + LLM\n\nKaynak Ozeti:\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: sık_sorulan_sorular.txt",
+      "profiling": {
+        "total_ms": 1643.889,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "specialist_synthesis",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": false,
+            "llm_profile": "fast",
+            "agent_id": "registration_agent",
+            "agent_role": "specialist_agent"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q24-124354",
+          "total_ms": 1622.17,
+          "attributes": {
+            "context_id": "qbench-Q24-124354",
+            "query": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+            "a2a_trace": {
+              "trace_id": "468d8bc9b486447fb8eb0611d30afe7f",
+              "span_id": "8cbe42039451426b"
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "registration_query",
+              "confidence": 0.84,
+              "intent": {
+                "complexity": "simple",
+                "is_personal": true,
+                "force_llm_synthesis": false,
+                "query_type": "factual"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.024,
+              "ended_at_ms": 1622.161,
+              "duration_ms": 1622.136,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 23.785,
+              "ended_at_ms": 1622.142,
+              "duration_ms": 1598.357,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q24-124354"
+              }
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 24.213,
+              "ended_at_ms": 25.07,
+              "duration_ms": 0.857,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 25.113,
+              "ended_at_ms": 45.7,
+              "duration_ms": 20.588,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 45.738,
+              "ended_at_ms": 1575.1,
+              "duration_ms": 1529.362,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 1575.229,
+              "ended_at_ms": 1575.236,
+              "duration_ms": 0.007,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 1575.243,
+              "ended_at_ms": 1583.516,
+              "duration_ms": 8.273,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 1583.542,
+              "ended_at_ms": 1595.357,
+              "duration_ms": 11.815,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 1595.376,
+              "ended_at_ms": 1622.127,
+              "duration_ms": 26.752,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "registration_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:registration_agent",
+              "total_ms": 1433.564,
+              "attributes": {
+                "llm_usage": [
+                  {
+                    "kind": "generate",
+                    "model_role": "specialist_synthesis",
+                    "provider": "openai_compatible",
+                    "provider_label": "groq",
+                    "display_name": "groq",
+                    "model": "llama-3.1-8b-instant",
+                    "path": "primary",
+                    "status": "success",
+                    "json_mode": false,
+                    "llm_profile": "fast"
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "name": "agent.handle_task",
+                  "started_at_ms": 0.092,
+                  "ended_at_ms": 1432.642,
+                  "duration_ms": 1432.55,
+                  "parent": null,
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.search",
+                  "started_at_ms": 0.126,
+                  "ended_at_ms": 0.693,
+                  "duration_ms": 0.567,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.retriever.enrich_results",
+                  "started_at_ms": 0.712,
+                  "ended_at_ms": 4.705,
+                  "duration_ms": 3.992,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.filter_results",
+                  "started_at_ms": 4.728,
+                  "ended_at_ms": 12.988,
+                  "duration_ms": 8.26,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent",
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "agent.generate_answer",
+                  "started_at_ms": 13.03,
+                  "ended_at_ms": 1432.488,
+                  "duration_ms": 1419.458,
+                  "parent": "agent.handle_task",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_synthesize",
+                  "started_at_ms": 13.213,
+                  "ended_at_ms": 1432.483,
+                  "duration_ms": 1419.27,
+                  "parent": "agent.generate_answer",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "agent.llm_generate",
+                  "started_at_ms": 13.767,
+                  "ended_at_ms": 1432.473,
+                  "duration_ms": 1418.706,
+                  "parent": "agent.llm_synthesize",
+                  "meta": {
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "llm.generate",
+                  "started_at_ms": 14.067,
+                  "ended_at_ms": 1432.391,
+                  "duration_ms": 1418.324,
+                  "parent": "agent.llm_generate",
+                  "meta": {
+                    "json_mode": false
+                  }
+                },
+                {
+                  "name": "llm.generate.openai_compatible",
+                  "started_at_ms": 14.101,
+                  "ended_at_ms": 1432.331,
+                  "duration_ms": 1418.23,
+                  "parent": "llm.generate",
+                  "meta": {
+                    "model": "llama-3.1-8b-instant",
+                    "role": "specialist_synthesis"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 1511.033,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.156,
+                  "ended_at_ms": 1510.886,
+                  "duration_ms": 1510.73,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.176,
+                  "ended_at_ms": 0.276,
+                  "duration_ms": 0.1,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.366,
+                  "ended_at_ms": 1455.635,
+                  "duration_ms": 1455.269,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1455.666,
+                  "ended_at_ms": 1510.314,
+                  "duration_ms": 54.649,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    }
+  ],
+  "diagnostics": {
+    "overview_before": {
+      "query_count": 7,
+      "query_failure_count": 0,
+      "agent_task_count": 9,
+      "agent_task_failure_count": 0
+    },
+    "overview_after": {
+      "query_count": 14,
+      "query_failure_count": 0,
+      "agent_task_count": 18,
+      "agent_task_failure_count": 0
+    },
+    "overview_delta": {
+      "query_count": 7,
+      "query_failure_count": 0,
+      "agent_task_count": 9,
+      "agent_task_failure_count": 0
+    },
+    "agent_deltas": [
+      {
+        "agent_id": "graduation_agent",
+        "department": "student_affairs",
+        "role": "specialist_agent",
+        "task_delta": 3,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 12700.59,
+        "max_latency_ms": 37983.96
+      },
+      {
+        "agent_id": "international_agent",
+        "department": "academic_programs",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 24180.49,
+        "max_latency_ms": 41047.17
+      },
+      {
+        "agent_id": "registration_agent",
+        "department": "student_affairs",
+        "role": "specialist_agent",
+        "task_delta": 3,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 8019.15,
+        "max_latency_ms": 38744.33
+      },
+      {
+        "agent_id": "regulation_agent",
+        "department": "academic_programs",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 24037.44,
+        "max_latency_ms": 43598.39
+      },
+      {
+        "agent_id": "tuition_agent",
+        "department": "finance",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 624.96,
+        "max_latency_ms": 765.93
+      }
+    ],
+    "new_recent_failures": []
+  }
+}

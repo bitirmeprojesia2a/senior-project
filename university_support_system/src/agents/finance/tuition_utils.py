@@ -5,9 +5,22 @@ from __future__ import annotations
 import re
 from typing import Sequence
 
-from src.core.text_normalization import collapse_whitespace, normalize_text
+from src.core.text_normalization import (
+    collapse_whitespace,
+    iter_alias_matches_longest_first,
+    normalize_text,
+)
 
 PERSONAL_KEYWORDS = ("borc", "borcum", "odeme", "taksit", "dekont", "gecmisim", "odemem", "harcim", "borclu")
+PERSONAL_OWNERSHIP_KEYWORDS = (
+    "borcum",
+    "borclarim",
+    "harcim",
+    "harc borcum",
+    "odemem",
+    "odeme durumum",
+    "borc durumum",
+)
 STRUCTURED_FEE_QUERY_KEYWORDS = (
     "ucret",
     "harc",
@@ -16,18 +29,6 @@ STRUCTURED_FEE_QUERY_KEYWORDS = (
     "kayit yenileme",
     "ne kadar",
     "tutar",
-)
-PROCEDURAL_SOURCE_ONLY_KEYWORDS = (
-    "ucret",
-    "harc",
-    "odeme",
-    "taksit",
-    "dekont",
-    "kayit yenileme",
-    "ne kadar",
-    "ne zaman",
-    "nasil odenir",
-    "nereye yatirilir",
 )
 INTERNATIONAL_QUERY_MARKERS = (
     "uluslararasi",
@@ -64,6 +65,15 @@ FEE_AMOUNT_KEYWORDS = (
     "tutar",
     "toplam ucret",
 )
+NON_TUITION_FEE_MARKERS = (
+    "yemekhane",
+    "yemek ucreti",
+    "yemekhanede",
+    "kantin",
+    "servis ucreti",
+    "ulasim ucreti",
+    "otopark",
+)
 TUITION_TABLE_SOURCE_MARKERS = (
     "ogrenim_ucret",
     "ogrenim ucret",
@@ -77,6 +87,20 @@ TUITION_TABLE_SOURCE_MARKERS = (
 UNIT_QUERY_PATTERN = re.compile(
     r"([a-z ]+?(?:fakultesi|yuksekokulu|meslek yuksekokulu|meslekyuksekokulu|enstitusu|konservatuvari))",
     re.IGNORECASE,
+)
+UNIT_ALIAS_MARKERS = (
+    ("dis hekimligi", "dis hekimligi fakultesi"),
+    ("tip", "tip fakultesi"),
+    ("hukuk", "hukuk fakultesi"),
+    ("ilahiyat", "ilahiyat fakultesi"),
+    ("veteriner", "veteriner fakultesi"),
+    ("eczacilik", "eczacilik fakultesi"),
+    ("muhendislik", "muhendislik fakultesi"),
+    ("muhendisligi", "muhendislik fakultesi"),
+    ("egitim", "egitim fakultesi"),
+    ("ziraat", "ziraat fakultesi"),
+    ("iletisim", "iletisim fakultesi"),
+    ("mimarlik", "mimarlik fakultesi"),
 )
 
 
@@ -93,9 +117,22 @@ _PERSONAL_PROCEDURAL_OVERRIDE = (
 _PERSONAL_POLICY_OVERRIDE = (
     "kesilir mi", "odenir mi", "muaf miyim", "odenmezse",
     "muafiyet", "odeme zorunlu", "zorunda miyim",
+    "gerekir mi", "oder miyim", "odemem gerekir mi",
     "icermiyor", "yansir mi", "etkilenir mi",
     "ne kadar", "kac tl", "kac lira",
     "odeyebilir miyim", "taksitle", "taksitli",
+)
+_OWNERSHIP_POLICY_OVERRIDE = (
+    "kesilir mi",
+    "odenir mi",
+    "muaf miyim",
+    "zorunda miyim",
+    "gerekir mi",
+    "oder miyim",
+    "odemem gerekir mi",
+    "odeyebilir miyim",
+    "taksitle",
+    "taksitli",
 )
 
 
@@ -104,6 +141,12 @@ def is_personal_query(query_text: str) -> bool:
     lowered = normalize_finance_text(query_text)
     if not any(keyword in lowered for keyword in PERSONAL_KEYWORDS):
         return False
+    if any(keyword in lowered for keyword in PERSONAL_OWNERSHIP_KEYWORDS):
+        if any(signal in lowered for signal in _PERSONAL_PROCEDURAL_OVERRIDE):
+            return False
+        if any(signal in lowered for signal in _OWNERSHIP_POLICY_OVERRIDE):
+            return False
+        return True
     if any(signal in lowered for signal in _PERSONAL_PROCEDURAL_OVERRIDE):
         return False
     if any(signal in lowered for signal in _PERSONAL_POLICY_OVERRIDE):
@@ -122,12 +165,18 @@ _FEE_PROCEDURAL_SIGNALS = (
     "nereye", "nasil odenir", "nasil yatirilir", "hangi banka",
     "hangi hesap", "odeme yontemi", "odeme sekli",
     "ne zaman odenir", "son odeme", "taksitlendirme",
+    "nasil odeyebilirim", "nasil odeyecegim", "nasil odemeliyim",
+    "nasil yatirabilirim", "nasil yatiracagim",
+    "odeyebilir", "odeyecegim", "odemeliyim",
+    "yatirabilirim", "yatiracagim",
 )
 
 
 def is_structured_fee_query(query_text: str) -> bool:
     """Return whether the query should prefer structured fee lookup."""
     lowered = normalize_finance_text(query_text)
+    if any(signal in lowered for signal in NON_TUITION_FEE_MARKERS):
+        return False
     if any(signal in lowered for signal in _FEE_POLICY_SIGNALS):
         return False
     return any(keyword in lowered for keyword in STRUCTURED_FEE_QUERY_KEYWORDS)
@@ -204,6 +253,10 @@ def extract_requested_unit(query_text: str) -> str | None:
     normalized_query = normalize_finance_text(query_text)
     match = UNIT_QUERY_PATTERN.search(normalized_query)
     if match is None:
+        alias_groups = ((unit_name, (marker,)) for marker, unit_name in UNIT_ALIAS_MARKERS)
+        for unit_name, marker in iter_alias_matches_longest_first(alias_groups):
+            if marker in normalized_query:
+                return unit_name
         return None
     return collapse_whitespace(match.group(1))
 
@@ -242,6 +295,8 @@ def needs_fee_context_clarification(
 ) -> bool:
     """Return whether the system needs student type/unit clarification."""
     lowered = normalize_finance_text(query_text)
+    if any(signal in lowered for signal in NON_TUITION_FEE_MARKERS):
+        return False
     if not any(keyword in lowered for keyword in FEE_AMOUNT_KEYWORDS):
         return False
     if any(signal in lowered for signal in _FEE_POLICY_SIGNALS):

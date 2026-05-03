@@ -1,9 +1,14 @@
 from datetime import time
 from pathlib import Path
 
+from src.core.text_normalization import normalize_text
 from src.db.schedule_ingest import (
     classify_schedule_document,
     _normalize_day_label,
+    _looks_like_plausible_department,
+    _infer_department_from_filename,
+    _merge_source_override,
+    _source_override_for,
     infer_schedule_context,
     parse_schedule_table,
 )
@@ -12,6 +17,11 @@ from src.db.schedule_ingest import (
 def test_normalize_day_label_handles_vertical_reversed_text():
     assert _normalize_day_label("i\ns\ne\ntr\na\nz\na\nP") == "Pazartesi"
     assert _normalize_day_label("Çarşamba") == "Carsamba"
+
+
+def test_normalize_day_label_handles_real_turkish_text():
+    assert _normalize_day_label("\u00c7ar\u015famba") == "Carsamba"
+    assert _normalize_day_label("Per\u015fembe") == "Persembe"
 
 
 def test_parse_grouped_weekly_table_extracts_schedule_group_and_missing_code():
@@ -286,6 +296,95 @@ def test_infer_schedule_context_uses_preview_text_before_filename():
     assert context["academic_year"] == "2025-2026"
     assert context["term"] == "bahar"
     assert context["department"] == "INSAAT"
+
+
+def test_infer_schedule_context_handles_real_turkish_department_text():
+    context = infer_schedule_context(
+        Path("2025_2026_bahar_program.pdf"),
+        (
+            "ONDOKUZ MAYIS \u00dcNIVERSITESI M\u00dcHENDISLIK FAK\u00dcLTESI "
+            "ELEKTRIK-ELEKTRONIK M\u00dcHENDISLIGI B\u00d6L\u00dcM\u00dc "
+            "2025-2026 BAHAR D\u00d6NEMI HAFTALIK DERS PROGRAMI"
+        ),
+    )
+
+    assert normalize_text(context["department"]) == "elektrik-elektronik muhendisligi"
+
+
+def test_infer_schedule_context_rejects_filename_fragments_as_department():
+    context = infer_schedule_context(
+        Path("2526baharfizikson.pdf"),
+        "2025-2026 BAHAR DONEMI HAFTALIK DERS PROGRAMI Pazartesi 08:15-09:00",
+    )
+
+    assert context["department"] == "bilinmiyor"
+
+
+def test_infer_schedule_context_rejects_explanatory_sentence_as_department():
+    context = infer_schedule_context(
+        Path("lisans_pedagojik_formasyon_ders_programi.pdf"),
+        (
+            "Bu ders ogretmenlik uygulamasi kapsaminda alinan bir derstir. "
+            "Bu dersin 2025-2026 BAHAR DONEMI HAFTALIK DERS PROGRAMI"
+        ),
+    )
+
+    assert context["department"] == "bilinmiyor"
+
+
+def test_plausible_department_allows_explicit_program_names():
+    assert _looks_like_plausible_department("Fizik")
+    assert _looks_like_plausible_department("Elektrik-Elektronik Muhendisligi")
+    assert not _looks_like_plausible_department("2526baharfizikson")
+    assert not _looks_like_plausible_department("derstir. Bu dersin")
+
+
+def test_infer_department_from_descriptive_schedule_filename():
+    assert _infer_department_from_filename(
+        Path("2025_2026_bahar_resim_is_ogretmenligi_ders_programi.xlsx")
+    ) == "Resim Is Ogretmenligi"
+    assert _infer_department_from_filename(
+        Path("25_26_bahar_sinif_egt_ders_prog.pdf")
+    ) == "Sinif Ogretmenligi"
+    assert _infer_department_from_filename(
+        Path("2526baharfizikson.pdf")
+    ) is None
+
+
+def test_source_override_supplies_context_for_compact_schedule_filename():
+    override = _source_override_for(Path("2526baharfizikson.pdf"))
+
+    assert override["academic_year"] == "2025-2026"
+    assert override["term"] == "bahar"
+    assert override["department"] == "Fizik Eğitimi"
+
+    academic_year, term, department, source_url, skip = _merge_source_override(
+        Path("2526baharfizikson.pdf"),
+        academic_year=None,
+        term=None,
+        department=None,
+        source_url=None,
+    )
+
+    assert academic_year == "2025-2026"
+    assert term == "bahar"
+    assert department == "Fizik Eğitimi"
+    assert source_url is None
+    assert skip is False
+
+
+def test_explicit_ingest_context_takes_precedence_over_source_override():
+    academic_year, term, department, _, _ = _merge_source_override(
+        Path("2526baharfizikson.pdf"),
+        academic_year="2024-2025",
+        term="guz",
+        department="Fizik",
+        source_url=None,
+    )
+
+    assert academic_year == "2024-2025"
+    assert term == "guz"
+    assert department == "Fizik"
 
 
 def test_classify_schedule_document_distinguishes_weekly_and_catalog_sources():

@@ -1,0 +1,434 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "run_timestamp": "20260424_131424",
+  "total_questions": 7,
+  "summary": {
+    "dept_accuracy": 0.0,
+    "mode_accuracy": 0.0,
+    "key_fact_coverage": 0.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 24.7,
+    "median_time_ms": 19.5,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0,
+    "a2a_query_failure_delta": 0,
+    "a2a_agent_task_failure_delta": 0
+  },
+  "results": [
+    {
+      "id": "Q3",
+      "category": "A_multi_source_synthesis",
+      "question": "Başarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "unknown",
+      "mode_match": false,
+      "expected_key_facts": [
+        "değiştirebilir",
+        "devam koşulu",
+        "yeni",
+        "ders"
+      ],
+      "key_fact_results": {
+        "değiştirebilir": false,
+        "devam koşulu": false,
+        "yeni": false,
+        "ders": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 9.7,
+      "reported_response_time_ms": 0.0,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin.",
+      "profiling": {
+        "total_ms": 9.709,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q3-131353",
+          "total_ms": 3.945,
+          "attributes": {},
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.017,
+              "ended_at_ms": 3.926,
+              "duration_ms": 3.909,
+              "parent": null
+            }
+          ]
+        },
+        "remote_profiles": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q6",
+      "category": "B_cross_department_parallel",
+      "question": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "unknown",
+      "mode_match": false,
+      "expected_key_facts": [
+        "not ortalaması",
+        "harç",
+        "ödeme",
+        "başvuru"
+      ],
+      "key_fact_results": {
+        "not ortalaması": false,
+        "harç": false,
+        "ödeme": false,
+        "başvuru": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 42.7,
+      "reported_response_time_ms": 0.0,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin.",
+      "profiling": {
+        "total_ms": 42.642,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q6-131358",
+          "total_ms": 7.18,
+          "attributes": {},
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.384,
+              "ended_at_ms": 7.149,
+              "duration_ms": 6.766,
+              "parent": null
+            }
+          ]
+        },
+        "remote_profiles": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q13",
+      "category": "D_comparison",
+      "question": "Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar nelerdir? Başvuru şartları ve değerlendirme kriterleri nasıl farklılık gösterir?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "unknown",
+      "mode_match": false,
+      "expected_key_facts": [
+        "kurum içi",
+        "kurumlar arası",
+        "Ek Madde",
+        "GANO",
+        "YKS"
+      ],
+      "key_fact_results": {
+        "kurum içi": false,
+        "kurumlar arası": false,
+        "Ek Madde": false,
+        "GANO": false,
+        "YKS": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 14.0,
+      "reported_response_time_ms": 0.0,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin.",
+      "profiling": {
+        "total_ms": 14.027,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q13-131403",
+          "total_ms": 4.147,
+          "attributes": {},
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.024,
+              "ended_at_ms": 4.124,
+              "duration_ms": 4.1,
+              "parent": null
+            }
+          ]
+        },
+        "remote_profiles": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q20",
+      "category": "F_edge_cases",
+      "question": "Diplomamı kaybettim ve aynı zamanda e-devlette mezuniyet bilgilerim görünmüyor. Her iki sorun için ne yapmalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "unknown",
+      "mode_match": false,
+      "expected_key_facts": [
+        "2. nüsha",
+        "diploma",
+        "e-devlet",
+        "YÖKSİS"
+      ],
+      "key_fact_results": {
+        "2. nüsha": false,
+        "diploma": false,
+        "e-devlet": false,
+        "YÖKSİS": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 12.4,
+      "reported_response_time_ms": 0.0,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin.",
+      "profiling": {
+        "total_ms": 12.414,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q20-131408",
+          "total_ms": 4.006,
+          "attributes": {},
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.019,
+              "ended_at_ms": 3.987,
+              "duration_ms": 3.968,
+              "parent": null
+            }
+          ]
+        },
+        "remote_profiles": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q22",
+      "category": "F_edge_cases",
+      "question": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "kural",
+      "actual_generation_mode": "unknown",
+      "mode_match": false,
+      "expected_key_facts": [],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 0,
+      "elapsed_ms": 19.5,
+      "reported_response_time_ms": 0.0,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin.",
+      "profiling": {
+        "total_ms": 19.475,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q22-131413",
+          "total_ms": 5.932,
+          "attributes": {},
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.068,
+              "ended_at_ms": 5.901,
+              "duration_ms": 5.833,
+              "parent": null
+            }
+          ]
+        },
+        "remote_profiles": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q23",
+      "category": "G_semantic_paraphrase",
+      "question": "Üniversiteyi bırakıp ayrılmak istiyorum, tüm işlemleri ve dikkat etmem gereken hususları söyler misin?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "unknown",
+      "mode_match": false,
+      "expected_key_facts": [
+        "ilişik kesme",
+        "UBYS",
+        "form",
+        "birim"
+      ],
+      "key_fact_results": {
+        "ilişik kesme": false,
+        "UBYS": false,
+        "form": false,
+        "birim": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 35.4,
+      "reported_response_time_ms": 0.0,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin.",
+      "profiling": {
+        "total_ms": 35.372,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q23-131418",
+          "total_ms": 9.874,
+          "attributes": {},
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.028,
+              "ended_at_ms": 9.812,
+              "duration_ms": 9.785,
+              "parent": null
+            }
+          ]
+        },
+        "remote_profiles": []
+      },
+      "error": null
+    },
+    {
+      "id": "Q24",
+      "category": "G_semantic_paraphrase",
+      "question": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [],
+      "dept_match": false,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "unknown",
+      "mode_match": false,
+      "expected_key_facts": [
+        "kayıt",
+        "yenileme",
+        "UBYS",
+        "müfredat"
+      ],
+      "key_fact_results": {
+        "kayıt": false,
+        "yenileme": false,
+        "UBYS": false,
+        "müfredat": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 38.9,
+      "reported_response_time_ms": 0.0,
+      "source_count": 0,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin.",
+      "profiling": {
+        "total_ms": 38.942,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q24-131423",
+          "total_ms": 10.504,
+          "attributes": {},
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.029,
+              "ended_at_ms": 10.464,
+              "duration_ms": 10.435,
+              "parent": null
+            }
+          ]
+        },
+        "remote_profiles": []
+      },
+      "error": null
+    }
+  ],
+  "diagnostics": {
+    "overview_before": {
+      "query_count": 35,
+      "query_failure_count": 0,
+      "agent_task_count": 47,
+      "agent_task_failure_count": 0
+    },
+    "overview_after": {
+      "query_count": 35,
+      "query_failure_count": 0,
+      "agent_task_count": 47,
+      "agent_task_failure_count": 0
+    },
+    "overview_delta": {
+      "query_count": 0,
+      "query_failure_count": 0,
+      "agent_task_count": 0,
+      "agent_task_failure_count": 0
+    },
+    "agent_deltas": [],
+    "new_recent_failures": []
+  }
+}

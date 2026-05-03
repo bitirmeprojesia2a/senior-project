@@ -39,10 +39,13 @@ _FOLLOW_UP_PREFIXES = (
     "bu durumda",
     "bu ders",
     "bunun",
+    "bunun icin",
     "bunlar",
     "bunlar icin",
     "onun",
+    "onun icin",
     "onlar",
+    "onlar icin",
     "o zaman",
     "ya da",
     "ya peki",
@@ -88,6 +91,8 @@ _WEAK_FOLLOW_UP_MARKERS = (
     "ne oluyor",
     "nereden",
     "nereye",
+    "derslikte",
+    "sinifta",
 )
 _FOLLOW_UP_PRONOUNS = {
     "bu", "bunu", "buna", "bunda", "bunun", "bundan",
@@ -114,6 +119,52 @@ _TURBO_WORDS = {
     "baska", "anladim", "tamamdir", "sagolun", "tesekkur",
     "iyi", "guzel", "oldu", "peki",
 }
+_CONFUSION_OR_RESET_MARKERS = (
+    "isler karisti",
+    "kafam karisti",
+    "karisti",
+    "anlamadim",
+    "emin degilim",
+    "bilmiyorum",
+)
+_INDEPENDENT_SHORT_QUERY_MARKERS = (
+    "ogrencilik hak",
+    "ogrenci hak",
+    "haklarim",
+)
+_INDEPENDENT_ACADEMIC_CALENDAR_MARKERS = (
+    "final sinav",
+    "yariyil sonu sinav",
+    "donem sonu sinav",
+    "butunleme sinav",
+    "ara sinav",
+)
+_INDEPENDENT_ACADEMIC_CALENDAR_TIME_MARKERS = (
+    "ne zaman",
+    "hangi tarihte",
+    "tarih",
+    "takvim",
+    "son gun",
+    "son tarih",
+    "giril",
+    "not giris",
+)
+_FOLLOW_UP_ANSWER_MARKERS = (
+    "turk ogrenciyim",
+    "turk ogrenci",
+    "yerli ogrenciyim",
+    "yerli ogrenci",
+    "uluslararasi ogrenciyim",
+    "uluslararasi ogrenci",
+    "yabanci ogrenciyim",
+    "yabanci ogrenci",
+)
+_EXACT_FOLLOW_UP_ANSWER_MARKERS = {
+    "turk",
+    "yerli",
+    "uluslararasi",
+    "yabanci",
+}
 _MIN_CONTENT_WORD_OVERLAP = 0.35
 _WORD_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 _INTENT_STOP_WORDS = {
@@ -124,6 +175,14 @@ _INTENT_STOP_WORDS = {
     "bunun", "bunu", "buna", "bundan", "bunlar", "bunlari", "bunlarin",
     "onun", "onu", "ona", "ondan", "onlar", "onlari", "onlarin",
     "peki", "hakkinda",
+}
+_VAGUE_FOLLOW_UP_TOKENS = {
+    "sey",
+    "basvuru",
+    "basvurusu",
+    "tarih",
+    "tarihi",
+    "zaman",
 }
 
 
@@ -163,6 +222,26 @@ def _query_depends_on_context(query: str, *, context_texts: Sequence[str] = ()) 
         or any(marker in normalized_query for marker in _WEAK_FOLLOW_UP_MARKERS)
     )
     return has_follow_up_style or len(query_content_tokens) <= 4
+
+
+def _is_answer_fragment_follow_up(query: str) -> bool:
+    normalized_query = normalize_text(query)
+    stripped = normalized_query.strip(" \t\r\n?.!,;:")
+    if stripped in _EXACT_FOLLOW_UP_ANSWER_MARKERS:
+        return True
+    return any(marker in normalized_query for marker in _FOLLOW_UP_ANSWER_MARKERS)
+
+
+def _is_standalone_academic_calendar_query(query: str) -> bool:
+    normalized_query = normalize_text(query)
+    if "program" in normalized_query:
+        return False
+    return any(
+        marker in normalized_query for marker in _INDEPENDENT_ACADEMIC_CALENDAR_MARKERS
+    ) and any(
+        marker in normalized_query
+        for marker in _INDEPENDENT_ACADEMIC_CALENDAR_TIME_MARKERS
+    )
 
 
 def _rewrite_preserves_intent(
@@ -350,6 +429,39 @@ def _build_heuristic_follow_up_query(query: str, *, topic: str | None) -> str:
     return f"{topic_seed} hakkinda: {stripped_query}"
 
 
+def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") -> str | None:
+    """Merge short answer fragments with the last concrete question."""
+    if not _is_answer_fragment_follow_up(query):
+        return None
+    previous_query = (state.last_resolved_query or state.last_user_query or "").strip()
+    if not previous_query:
+        return None
+    normalized_current = normalize_text(query)
+    if normalized_current and normalized_current in normalize_text(previous_query):
+        return previous_query
+    previous_context = normalize_text(
+        " ".join(
+            item
+            for item in (
+                previous_query,
+                state.active_topic,
+                state.last_assistant_answer,
+            )
+            if item
+        )
+    )
+    tuition_context = (
+        state.last_task_type == TaskType.TUITION_QUERY.value
+        or any(
+            marker in previous_context
+            for marker in ("harc", "ucret", "ogrenim ucreti", "katki payi")
+        )
+    )
+    if tuition_context:
+        return f"{previous_query.rstrip('?.!,;:')} {query}".strip()
+    return None
+
+
 def _query_is_pronoun_led_follow_up(query: str) -> bool:
     normalized_query = normalize_text(query).strip()
     return any(
@@ -515,6 +627,9 @@ class ConversationResolution:
     source_hints: list[str]
     task_type_hint: TaskType | None = None
     clarification_message: str | None = None
+    announcement_context: bool = False
+    rewrite_method: str = "none"  # none | heuristic | llm | answer_fragment
+    standalone_query: str | None = None  # explicit standalone form for telemetry
 
 
 class ConversationContextService:
@@ -589,10 +704,39 @@ class ConversationContextService:
                 active_topic=heuristic["topic"],
                 department_hints=[],
                 source_hints=[],
+                rewrite_method="none",
+                standalone_query=query,
             )
 
         rewrite_method = "heuristic"
         llm_resolution = None
+        deterministic_answer_fragment_query = _build_answer_fragment_query(
+            query,
+            state=state,
+        )
+        if deterministic_answer_fragment_query:
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=true "
+                "rewrite_method=answer_fragment original=%r effective=%r topic=%s",
+                context_id,
+                query,
+                deterministic_answer_fragment_query,
+                state.active_topic,
+            )
+            return ConversationResolution(
+                original_query=query,
+                effective_query=deterministic_answer_fragment_query,
+                is_follow_up=True,
+                used_context=deterministic_answer_fragment_query != query,
+                active_topic=state.active_topic,
+                department_hints=self._parse_departments(state.last_departments),
+                source_hints=list(state.last_source_refs),
+                task_type_hint=self._parse_task_type(state.last_task_type),
+                announcement_context=self._has_announcement_department_hint(state.last_departments),
+                rewrite_method="answer_fragment",
+                standalone_query=deterministic_answer_fragment_query,
+            )
+
         if settings.conversation.rewrite_with_llm and llm_service is not None:
             llm_resolution = await self._rewrite_with_llm(
                 query=query,
@@ -639,6 +783,9 @@ class ConversationContextService:
             department_hints=self._parse_departments(state.last_departments),
             source_hints=list(state.last_source_refs),
             task_type_hint=self._parse_task_type(state.last_task_type),
+            announcement_context=self._has_announcement_department_hint(state.last_departments),
+            rewrite_method=rewrite_method,
+            standalone_query=effective_query if effective_query != query else None,
         )
 
     async def record_turn(
@@ -760,6 +907,8 @@ class ConversationContextService:
             active_topic=None,
             department_hints=[],
             source_hints=[],
+            rewrite_method="none",
+            standalone_query=query,
         )
 
     def _is_state_stale(self, state: ConversationStateData) -> bool:
@@ -778,6 +927,24 @@ class ConversationContextService:
     ) -> dict[str, str | bool | None]:
         normalized_query = normalize_text(query)
         query_tokens = _normalized_tokens(query)
+
+        if any(marker in normalized_query for marker in _CONFUSION_OR_RESET_MARKERS):
+            return {
+                "is_follow_up": False,
+                "topic": state.active_topic,
+            }
+
+        if any(marker in normalized_query for marker in _INDEPENDENT_SHORT_QUERY_MARKERS):
+            return {
+                "is_follow_up": False,
+                "topic": self._infer_topic(query),
+            }
+
+        if _is_standalone_academic_calendar_query(query):
+            return {
+                "is_follow_up": False,
+                "topic": self._infer_topic(query),
+            }
 
         # Kısa / yanıt niteliğinde ifadeler follow-up olarak değerlendirilmez
         if len(query_tokens) <= 2 and any(t in _TURBO_WORDS for t in query_tokens):
@@ -809,13 +976,34 @@ class ConversationContextService:
             token in _FOLLOW_UP_PRONOUNS
             for token in query_tokens[:4]
         )
+        answer_fragment = (
+            state.turn_count > 0
+            and state.last_departments
+            and _is_answer_fragment_follow_up(query)
+        )
 
-        signal_based = starts_with_follow_up or has_strong_marker or has_weak_marker or pronoun_like
+        signal_based = (
+            starts_with_follow_up
+            or has_strong_marker
+            or has_weak_marker
+            or pronoun_like
+            or answer_fragment
+        )
         short_context_follow_up = (
             state.turn_count > 0
             and not signal_based
-            and 2 < len(query_tokens) <= 4
+            and 1 < len(query_tokens) <= 4
         )
+        if short_context_follow_up:
+            new_topic = self._infer_topic(query)
+            if (
+                len(query_tokens) <= 2
+                and
+                new_topic is not None
+                and state.active_topic is not None
+                and normalize_text(new_topic) != normalize_text(state.active_topic)
+            ):
+                short_context_follow_up = False
 
         is_follow_up = bool(
             state.turn_count > 0
@@ -834,6 +1022,26 @@ class ConversationContextService:
             and not starts_with_follow_up
             and not pronoun_like
         )
+        if marker_only_follow_up and "sey" in query_tokens:
+            query_content_tokens = _content_tokens(query)
+            state_context_tokens = _content_tokens(
+                " ".join(
+                    text
+                    for text in (
+                        state.active_topic,
+                        state.last_user_query,
+                        state.last_resolved_query,
+                    )
+                    if text
+                )
+            )
+            if (
+                query_content_tokens
+                and query_content_tokens <= _VAGUE_FOLLOW_UP_TOKENS
+                and _count_token_overlap(query_content_tokens, state_context_tokens) == 0
+            ):
+                is_follow_up = False
+
         if marker_only_follow_up and len(query_tokens) > 3:
             new_topic = self._infer_topic(query)
             if (
@@ -846,7 +1054,7 @@ class ConversationContextService:
         return {
             "is_follow_up": is_follow_up,
             "allow_llm_downgrade": (
-                short_context_follow_up
+                short_context_follow_up or answer_fragment or has_weak_marker
             ),
             "topic": state.active_topic if is_follow_up else self._infer_topic(query),
         }
@@ -902,6 +1110,12 @@ class ConversationContextService:
 
         if is_follow_up:
             context_texts = [state.active_topic] if state.active_topic else []
+            if _is_answer_fragment_follow_up(query):
+                context_texts.extend(
+                    text
+                    for text in (state.last_resolved_query, state.last_user_query)
+                    if text
+                )
             heuristic_query = self._rewrite_with_heuristics(query=query, state=state)
             if not _rewrite_preserves_question_type(query, standalone_query):
                 logger.warning(
@@ -969,6 +1183,9 @@ class ConversationContextService:
             clarification_message=(
                 clarification_message if payload.get("needs_clarification") and clarification_message else None
             ),
+            announcement_context=self._has_announcement_department_hint(state.last_departments) if is_follow_up else False,
+            rewrite_method="llm",
+            standalone_query=standalone_query if standalone_query != query else None,
         )
 
     @staticmethod
@@ -1056,6 +1273,8 @@ class ConversationContextService:
         await session.flush()
         return row
 
+    _ANNOUNCEMENT_DEPT_HINT = "announcement"
+
     @staticmethod
     def _parse_departments(raw_departments: Sequence[str]) -> list[Department]:
         parsed: list[Department] = []
@@ -1065,6 +1284,10 @@ class ConversationContextService:
             except ValueError:
                 continue
         return list(dict.fromkeys(parsed))
+
+    @staticmethod
+    def _has_announcement_department_hint(raw_departments: Sequence[str]) -> bool:
+        return "announcement" in raw_departments
 
     @staticmethod
     def _parse_task_type(raw_task_type: str | None) -> TaskType | None:

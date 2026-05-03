@@ -1,0 +1,258 @@
+{
+  "run_timestamp": "20260423_203958",
+  "questions": [
+    "Q4",
+    "Q5",
+    "Q6",
+    "Q23"
+  ],
+  "llm_profile": "fast",
+  "warmups": 0,
+  "repeats": 1,
+  "disable_cache": true,
+  "summaries": {
+    "http_a2a": {
+      "count": 4,
+      "avg_ms": 15463.8,
+      "median_ms": 15431.5,
+      "min_ms": 13625.5,
+      "max_ms": 17366.8
+    },
+    "inprocess": {
+      "count": 4,
+      "avg_ms": 53434.2,
+      "median_ms": 49183.7,
+      "min_ms": 12257.3,
+      "max_ms": 103112.0
+    }
+  },
+  "http_to_inprocess_median_ratio": 0.314,
+  "results": [
+    {
+      "mode": "http_a2a",
+      "health": {
+        "status": "healthy",
+        "app": {
+          "api": "healthy",
+          "build": {
+            "version": "1.0.0",
+            "build_id": "codex-20260423-191918",
+            "build_timestamp": "2026-04-23T19:19:18.499693+03:00",
+            "git_sha": "local",
+            "image_ref": "university_support_system-app:latest"
+          },
+          "runtime": {
+            "label": "api-a2a-http",
+            "llm_profile": "balanced"
+          },
+          "active_departments": [
+            "finance",
+            "student_affairs",
+            "academic_programs"
+          ],
+          "a2a_mode": "http",
+          "a2a_transport_protocol": "jsonrpc",
+          "auth_mode": "otp_session"
+        },
+        "llm": {
+          "status": "healthy",
+          "primary": {
+            "name": "groq",
+            "status": "healthy",
+            "model_loaded": true
+          },
+          "fallback": {
+            "name": "google_ai",
+            "status": "unhealthy",
+            "available": true,
+            "model_loaded": false
+          }
+        }
+      },
+      "runs": [
+        {
+          "question_id": "Q4",
+          "elapsed_ms": 13625.5,
+          "response_time_ms": 13520.94,
+          "departments": [
+            "academic_programs"
+          ],
+          "generation_modes": [
+            "rag+llm"
+          ],
+          "source_count": 4,
+          "answer_preview": "Benchmark, Soruya cevabı yazacağım...\n\n- Sorunun ilk kısmına (Pedagojik formasyon dersleri transkripte dahil ediliyor mu) cevabım:\n\nEvet, pedagojik formasyon dersleri transkripte dahil edilecektir. \n[Birinci kaynaktan]: \"Sadece bir Transkript düzenlenecek ve bu dersler bu transkr"
+        },
+        {
+          "question_id": "Q5",
+          "elapsed_ms": 17366.8,
+          "response_time_ms": 17223.75,
+          "departments": [
+            "academic_programs",
+            "student_affairs",
+            "finance"
+          ],
+          "generation_modes": [
+            "llm",
+            "rag+llm",
+            "vt"
+          ],
+          "source_count": 10,
+          "answer_preview": "Benchmark, İçerenkoy'daki Ondokuz Mayis Universitesi'ne uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretimi Ziraat Bankası şubesinden yatırmanız gerekmektedir.\n\nİkamet izni için aşağıda belirtilen belgeleri hazırlamanız ve Göç İdaresi Başkanlığına sunmanız gerekmektedi"
+        },
+        {
+          "question_id": "Q6",
+          "elapsed_ms": 16040.6,
+          "response_time_ms": 15960.31,
+          "departments": [
+            "finance",
+            "academic_programs"
+          ],
+          "generation_modes": [
+            "llm",
+            "vt",
+            "rag+llm"
+          ],
+          "source_count": 3,
+          "answer_preview": "Benchmark, ÇAP programına başvurmak için gereken koşullar ve harç borcunu nasıl ödeyebileceğiniz hakkında bilgi etmek için açıklamalar yapılır.\n\nÇAP programına başvurmak isteyen öğrenciler için başvuru şartları ve koşulları aşağıdaki gibidir:\n\n* ÇAP'ta kaydolmak için öğrencinin b"
+        },
+        {
+          "question_id": "Q23",
+          "elapsed_ms": 14822.4,
+          "response_time_ms": 14768.42,
+          "departments": [
+            "student_affairs"
+          ],
+          "generation_modes": [
+            "rag+llm"
+          ],
+          "source_count": 5,
+          "answer_preview": "Benchmark, Üniversiteyi bırakıp ayrılmak istediğinizde, lütfen aşağıdaki bilgileri dikkate alın.\n\nSebebiniz: Üniversiteyi bırakmak istediğinizde, geçerli bir sebep olmaksızın üst üste iki Genel Kurul toplantısına katılmamak, Topluluğun amaçlarına aykırı faaliyette bulunmak, veril"
+        }
+      ],
+      "diagnostics": {
+        "overview_before": {
+          "query_count": 28,
+          "query_failure_count": 1,
+          "agent_task_count": 44,
+          "agent_task_failure_count": 3
+        },
+        "overview_after": {
+          "query_count": 32,
+          "query_failure_count": 1,
+          "agent_task_count": 51,
+          "agent_task_failure_count": 3
+        },
+        "overview_delta": {
+          "query_count": 4,
+          "query_failure_count": 0,
+          "agent_task_count": 7,
+          "agent_task_failure_count": 0
+        },
+        "agent_deltas": [
+          {
+            "agent_id": "regulation_agent",
+            "department": "academic_programs",
+            "role": "specialist_agent",
+            "task_delta": 2,
+            "failed_delta": 0,
+            "last_error": "a2a_specialist_transport_failed",
+            "avg_latency_ms": 26796.48,
+            "max_latency_ms": 61105.61
+          },
+          {
+            "agent_id": "international_agent",
+            "department": "academic_programs",
+            "role": "specialist_agent",
+            "task_delta": 1,
+            "failed_delta": 0,
+            "last_error": null,
+            "avg_latency_ms": 16486.79,
+            "max_latency_ms": 24104.64
+          },
+          {
+            "agent_id": "registration_agent",
+            "department": "student_affairs",
+            "role": "specialist_agent",
+            "task_delta": 2,
+            "failed_delta": 0,
+            "last_error": null,
+            "avg_latency_ms": 11499.48,
+            "max_latency_ms": 20224.45
+          },
+          {
+            "agent_id": "tuition_agent",
+            "department": "finance",
+            "role": "specialist_agent",
+            "task_delta": 2,
+            "failed_delta": 0,
+            "last_error": null,
+            "avg_latency_ms": 6427.03,
+            "max_latency_ms": 30524.39
+          }
+        ],
+        "new_recent_failures": []
+      }
+    },
+    {
+      "mode": "inprocess",
+      "runs": [
+        {
+          "question_id": "Q4",
+          "elapsed_ms": 103112.0,
+          "response_time_ms": 102999.46,
+          "departments": [
+            "academic_programs"
+          ],
+          "generation_modes": [
+            "rag"
+          ],
+          "source_count": 3,
+          "answer_preview": "Benchmark, Eldeki en ilgili kaynakta su bilgi yer aliyor:\nÖğrenciler seçmeli ders olarak aldıklarından dolayı dersler transkript içinde yer alacaktır. Sadece bir Transkript düzenlenecek ve bu dersler bu transkript içinde yer alacaktır. Mezuniyet ortalamasına dahil edilecektir. Di"
+        },
+        {
+          "question_id": "Q5",
+          "elapsed_ms": 85780.2,
+          "response_time_ms": 85729.45,
+          "departments": [
+            "academic_programs",
+            "student_affairs",
+            "finance"
+          ],
+          "generation_modes": [
+            "rag",
+            "vt"
+          ],
+          "source_count": 9,
+          "answer_preview": "Benchmark, Ogrenci Isleri:\nEldeki en ilgili kaynakta su bilgi yer aliyor:\nII. Öğretim öğrencisiyim. Kayıt dondurmak istediğimde harç ücretimi yatırmak zorunda mıyım? Kayıt dondurma isteğinizin ilgili yönetim kurulunca kabul edilmesi durumunda öğrenim ücretini yatırmanıza gerek yo"
+        },
+        {
+          "question_id": "Q6",
+          "elapsed_ms": 12257.3,
+          "response_time_ms": 12198.95,
+          "departments": [
+            "finance"
+          ],
+          "generation_modes": [
+            "vt"
+          ],
+          "source_count": 0,
+          "answer_preview": "Benchmark, Ogrenim ucreti icin Turk ogrenci / Mühendislik Fakültesi bilgisi veritabaninda kayitli. Yillik ucret: 2.397,00 TL. Donemlik ucret: 1.198,50 TL.\n\n(Kaynak: 2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf)\n\nUretim Turu:\n- VT\n\nKaynak Ozeti:\n- Veritabani kaydi:"
+        },
+        {
+          "question_id": "Q23",
+          "elapsed_ms": 12587.1,
+          "response_time_ms": 12549.84,
+          "departments": [
+            "student_affairs"
+          ],
+          "generation_modes": [
+            "rag"
+          ],
+          "source_count": 5,
+          "answer_preview": "Benchmark, En ilgili ogrenci isleri kaynaginda su bilgi yer aliyor:\nMADDE 18 - (1) Öğrencinin mezuniyet ve benzeri nedenlerle Üniversitemiz ile ilişiğinin kesilmesi gibi olağan süreçler dışında; a) Öğrencinin yazılı talebi, b) Geçerli bir mazereti olmaksızın, üst üste iki Genel K"
+        }
+      ]
+    }
+  ]
+}

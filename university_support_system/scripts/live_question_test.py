@@ -13,6 +13,8 @@ Kullanim:
   python scripts/live_question_test.py --kategori 5       # Coklu Departman
   python scripts/live_question_test.py --kategori 6       # Belirsiz / Clarification
   python scripts/live_question_test.py --kategori 7       # Kisisel Veri (Auth)
+  python scripts/live_question_test.py --kategori 8       # Etkinlikler
+  python scripts/live_question_test.py --kategori 9       # Mufredat Genisletilmis
   python scripts/live_question_test.py -v                 # SQL echo + DEBUG (RAG dahil)
 """
 from __future__ import annotations
@@ -49,7 +51,7 @@ from src.orchestrators.response_utils import (
     LOW_CONFIDENCE_RERANKER_SCORE_THRESHOLD,
     LOW_CONFIDENCE_RETRIEVAL_SCORE_THRESHOLD,
 )
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, HTTPError
 
 BENCHMARK_FILE = Path(__file__).resolve().with_name("profile_benchmarks.json")
 
@@ -141,6 +143,24 @@ QUESTIONS: dict[str, list[dict]] = {
         {"soru": "Burs alıyor muyum?", "beklenen_dept": "finance", "auth": True},
         {"soru": "Mezuniyetime kaç dersim kaldı?", "beklenen_dept": "student_affairs", "auth": True},
         {"soru": "Kaç AKTS tamamladım?", "beklenen_dept": "student_affairs", "auth": True},
+    ],
+    "8 - Etkinlikler": [
+        {"soru": "Muhendislik fakultesindeki etkinlikler neler?", "beklenen_dept": "event"},
+        {"soru": "Fen edebiyattaki etkinlikler neler?", "beklenen_dept": "event"},
+        {"soru": "Bu hafta seminer var mi?", "beklenen_dept": "event"},
+    ],
+    "9 - Mufredat Genisletilmis": [
+        {"soru": "EEM214 on kosulu nedir?", "beklenen_dept": "academic_programs"},
+        {"soru": "EEM465 on kosulu nedir?", "beklenen_dept": "academic_programs"},
+        {"soru": "FIZ204 on kosulu nedir?", "beklenen_dept": "academic_programs"},
+        {
+            "soru": "Matematik Ogretmenligi 4. yariyil dersleri nelerdir?",
+            "beklenen_dept": "academic_programs",
+        },
+        {
+            "soru": "Muzik Ogretmenligi 4. yariyil dersleri nelerdir?",
+            "beklenen_dept": "academic_programs",
+        },
     ],
 }
 
@@ -381,6 +401,30 @@ def _build_profile_submission(profile: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def _format_exception(exc: Exception) -> str:
+    parts = [type(exc).__name__]
+    message = str(exc).strip()
+    if message:
+        parts.append(message)
+
+    if isinstance(exc, HTTPError):
+        request = getattr(exc, "request", None)
+        response = getattr(exc, "response", None)
+        if request is not None:
+            parts.append(f"request={request.method} {request.url}")
+        if response is not None:
+            parts.append(f"status={response.status_code}")
+            try:
+                body = response.text.strip()
+            except Exception:
+                body = ""
+            if body:
+                compact_body = " ".join(body.split())
+                parts.append(f"body={compact_body[:400]}")
+
+    return " | ".join(parts)
+
+
 async def _prime_profile_context(
     client: AsyncClient,
     *,
@@ -411,7 +455,10 @@ async def _prime_profile_context(
 def _create_api_client(api_base_url: str | None = None) -> AsyncClient:
     """In-process test client veya gercek HTTP client olusturur."""
     if api_base_url:
-        return AsyncClient(base_url=api_base_url.rstrip("/"))
+        # httpx'in 5 saniyelik varsayilan timeout'u agir RAG/LLM sorularinda
+        # benchmark'i sahte negatifle kesebilir; canli kalite testi biraz daha
+        # toleransli bir istemci kullanmali.
+        return AsyncClient(base_url=api_base_url.rstrip("/"), timeout=30.0)
 
     transport = ASGITransport(app=api_app)
     return AsyncClient(transport=transport, base_url="http://testserver")
@@ -485,6 +532,9 @@ async def run_single_question(
         elapsed = round((time.perf_counter() - start) * 1000, 1)
         profile_snapshot = profiler.snapshot()
         profile_summary = _summarize_profile(profile_snapshot)
+        cache_info = profile_snapshot.get("attributes", {}).get("question_cache") or {}
+        cache_status = str(cache_info.get("status") or "unknown")
+        cache_reason = str(cache_info.get("reason") or "")
 
         depts = response.departments_involved
         dept_match = _dept_match(
@@ -509,6 +559,9 @@ async def run_single_question(
         print(f"  {BOLD}Durum:{RESET}     {status}")
         print(f"  {BOLD}Departman:{RESET} {depts if depts else '[yok - clarification]'}  (beklenen: {beklenen})")
         print(f"  {BOLD}Sure:{RESET}      {elapsed} ms")
+        if cache_status != "unknown":
+            cache_suffix = f" ({cache_reason})" if cache_reason else ""
+            print(f"  {BOLD}Cache:{RESET}     {cache_status}{cache_suffix}")
         print(f"  {BOLD}Kaynak:{RESET}    {len(response.sources)} adet")
         print(f"  {BOLD}Kalite:{RESET}    {kalite_status}")
         if kalite_uyarilari:
@@ -531,6 +584,8 @@ async def run_single_question(
             "sure_ms": elapsed,
             "yanit_uzunluk": len(response.answer),
             "kaynak_sayisi": len(response.sources),
+            "cache_status": cache_status,
+            "cache_reason": cache_reason,
             "kalite_dogru": kalite_dogru,
             "kalite_uyarilari": kalite_uyarilari,
             "yanit": answer_text,
@@ -544,7 +599,8 @@ async def run_single_question(
         elapsed = round((time.perf_counter() - start) * 1000, 1)
         profile_snapshot = profiler.snapshot()
         profile_summary = _summarize_profile(profile_snapshot)
-        print(f"  {RED}HATA:{RESET} {e}")
+        error_text = _format_exception(e)
+        print(f"  {RED}HATA:{RESET} {error_text}")
         return {
             "soru": soru,
             "beklenen_dept": beklenen,
@@ -560,7 +616,7 @@ async def run_single_question(
             "profil_toplam_ms": round(profile_snapshot["total_ms"], 3),
             "profil_ozet": profile_summary,
             "profil_ham": profile_snapshot,
-            "hata": str(e),
+            "hata": error_text,
         }
 
 

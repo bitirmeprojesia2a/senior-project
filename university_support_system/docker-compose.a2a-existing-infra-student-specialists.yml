@@ -1,0 +1,219 @@
+# Existing-infra overlay for student affairs specialist-agent services.
+#
+# This keeps the student affairs department orchestrator as the public
+# department A2A service, while letting it call its specialists over HTTP A2A.
+
+x-a2a-model-cache-env: &a2a-model-cache-env
+  HF_HOME: /models/huggingface
+  SENTENCE_TRANSFORMERS_HOME: /models/huggingface/hub
+  A2A_TRANSPORT_PROTOCOL: ${A2A_TRANSPORT_PROTOCOL:-rest}
+  A2A_REQUIRE_SERVICE_IDENTITY: ${A2A_REQUIRE_SERVICE_IDENTITY:-true}
+  A2A_REQUIRE_REQUEST_SIGNATURE: ${A2A_REQUIRE_REQUEST_SIGNATURE:-true}
+  A2A_REQUEST_SIGNATURE_SECRET: ${A2A_REQUEST_SIGNATURE_SECRET:-}
+  A2A_ALLOWED_CALLER_IDS: ${A2A_ALLOWED_CALLER_IDS:-main_orchestrator,agent-student-affairs,agent-academic,agent-finance}
+  A2A_DISCOVERY_AGENT_CARD_ENABLED: ${A2A_DISCOVERY_AGENT_CARD_ENABLED:-true}
+  SERVER_APP_VERSION: ${APP_VERSION:-1.0.0}
+  SERVER_BUILD_ID: ${A2A_BUILD_ID:-local-dev}
+  SERVER_BUILD_TIMESTAMP: ${A2A_BUILD_TIMESTAMP:-unknown}
+  SERVER_GIT_SHA: ${A2A_GIT_SHA:-unknown}
+  SERVER_IMAGE_REF: ${A2A_IMAGE_REF:-university_support_system-app:latest}
+  RETRIEVAL_SERVICE_ENABLED: ${RETRIEVAL_SERVICE_ENABLED:-true}
+  RETRIEVAL_SERVICE_URL: ${RETRIEVAL_SERVICE_URL:-http://retrieval-service:8140}
+  RETRIEVAL_SERVICE_FALLBACK_TO_LOCAL: ${RETRIEVAL_SERVICE_FALLBACK_TO_LOCAL:-false}
+
+x-a2a-model-cache-volumes: &a2a-model-cache-volumes
+  - ${MODEL_CACHE_HOST_DIR:-./data/models}:/models
+
+services:
+  agent-student-affairs:
+    environment:
+      A2A_SPECIALIST_MODE: http
+      A2A_TIMEOUT_SECONDS: ${A2A_SPECIALIST_TIMEOUT_SECONDS:-60}
+      A2A_SPECIALIST_TIMEOUT_SECONDS: ${A2A_SPECIALIST_TIMEOUT_SECONDS:-60}
+      A2A_SPECIALIST_ENDPOINTS: registration_agent=http://agent-student-registration:8120,graduation_agent=http://agent-student-graduation:8121,internship_agent=http://agent-student-internship:8122,student_life_agent=http://agent-student-life:8123
+    depends_on:
+      agent-student-registration:
+        condition: service_healthy
+      agent-student-graduation:
+        condition: service_healthy
+      agent-student-internship:
+        condition: service_healthy
+      agent-student-life:
+        condition: service_healthy
+
+  agent-student-registration:
+    image: university_support_system-app:latest
+    container_name: uni_a2a_agent_student_registration
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      <<: *a2a-model-cache-env
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      OLLAMA_HOST: http://ollama:11434
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8120
+      SERVER_RUNTIME_LABEL: agent-student-registration
+      SERVER_WARMUP_ENABLED: "true"
+      SERVER_WARMUP_INCLUDE_RERANKER: "true"
+      EMBEDDING_DEVICE: cpu
+      RERANKER_DEVICE: cpu
+      SERVER_INTERNAL_API_KEY: ${SERVER_INTERNAL_API_KEY:-local-a2a-secret}
+      A2A_INTERNAL_API_KEY: ${A2A_INTERNAL_API_KEY:-local-a2a-secret}
+      AGENT_DEPARTMENT: student_affairs
+      AGENT_SPECIALIST_ID: registration_agent
+      AGENT_SERVICE_ID: agent-student-registration
+      AGENT_PUBLIC_URL: http://agent-student-registration:8120
+    ports:
+      - "${A2A_STUDENT_REGISTRATION_PORT:-8120}:8120"
+    volumes: *a2a-model-cache-volumes
+    networks:
+      a2a_infra:
+        aliases:
+          - agent-student-registration
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8120/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    command: ["python", "-m", "scripts.run_agent_service"]
+
+  agent-student-graduation:
+    image: university_support_system-app:latest
+    container_name: uni_a2a_agent_student_graduation
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      <<: *a2a-model-cache-env
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      OLLAMA_HOST: http://ollama:11434
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8121
+      SERVER_RUNTIME_LABEL: agent-student-graduation
+      SERVER_WARMUP_ENABLED: "false"
+      SERVER_WARMUP_INCLUDE_RERANKER: "false"
+      EMBEDDING_DEVICE: cpu
+      RERANKER_DEVICE: cpu
+      SERVER_INTERNAL_API_KEY: ${SERVER_INTERNAL_API_KEY:-local-a2a-secret}
+      A2A_INTERNAL_API_KEY: ${A2A_INTERNAL_API_KEY:-local-a2a-secret}
+      AGENT_DEPARTMENT: student_affairs
+      AGENT_SPECIALIST_ID: graduation_agent
+      AGENT_SERVICE_ID: agent-student-graduation
+      AGENT_PUBLIC_URL: http://agent-student-graduation:8121
+    ports:
+      - "${A2A_STUDENT_GRADUATION_PORT:-8121}:8121"
+    volumes: *a2a-model-cache-volumes
+    networks:
+      a2a_infra:
+        aliases:
+          - agent-student-graduation
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8121/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    command: ["python", "-m", "scripts.run_agent_service"]
+
+  agent-student-internship:
+    image: university_support_system-app:latest
+    container_name: uni_a2a_agent_student_internship
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      <<: *a2a-model-cache-env
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      OLLAMA_HOST: http://ollama:11434
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8122
+      SERVER_RUNTIME_LABEL: agent-student-internship
+      SERVER_WARMUP_ENABLED: "false"
+      SERVER_WARMUP_INCLUDE_RERANKER: "false"
+      EMBEDDING_DEVICE: cpu
+      RERANKER_DEVICE: cpu
+      SERVER_INTERNAL_API_KEY: ${SERVER_INTERNAL_API_KEY:-local-a2a-secret}
+      A2A_INTERNAL_API_KEY: ${A2A_INTERNAL_API_KEY:-local-a2a-secret}
+      AGENT_DEPARTMENT: student_affairs
+      AGENT_SPECIALIST_ID: internship_agent
+      AGENT_SERVICE_ID: agent-student-internship
+      AGENT_PUBLIC_URL: http://agent-student-internship:8122
+    ports:
+      - "${A2A_STUDENT_INTERNSHIP_PORT:-8122}:8122"
+    volumes: *a2a-model-cache-volumes
+    networks:
+      a2a_infra:
+        aliases:
+          - agent-student-internship
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8122/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    command: ["python", "-m", "scripts.run_agent_service"]
+
+  agent-student-life:
+    image: university_support_system-app:latest
+    container_name: uni_a2a_agent_student_life
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      <<: *a2a-model-cache-env
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      OLLAMA_HOST: http://ollama:11434
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8123
+      SERVER_RUNTIME_LABEL: agent-student-life
+      SERVER_WARMUP_ENABLED: "false"
+      SERVER_WARMUP_INCLUDE_RERANKER: "false"
+      EMBEDDING_DEVICE: cpu
+      RERANKER_DEVICE: cpu
+      SERVER_INTERNAL_API_KEY: ${SERVER_INTERNAL_API_KEY:-local-a2a-secret}
+      A2A_INTERNAL_API_KEY: ${A2A_INTERNAL_API_KEY:-local-a2a-secret}
+      AGENT_DEPARTMENT: student_affairs
+      AGENT_SPECIALIST_ID: student_life_agent
+      AGENT_SERVICE_ID: agent-student-life
+      AGENT_PUBLIC_URL: http://agent-student-life:8123
+    ports:
+      - "${A2A_STUDENT_LIFE_PORT:-8123}:8123"
+    volumes: *a2a-model-cache-volumes
+    networks:
+      a2a_infra:
+        aliases:
+          - agent-student-life
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8123/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    command: ["python", "-m", "scripts.run_agent_service"]
+
+networks:
+  a2a_infra:
+    external: true
+    name: ${A2A_INFRA_NETWORK:-v2_default}

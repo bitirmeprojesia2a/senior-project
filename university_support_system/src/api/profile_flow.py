@@ -28,6 +28,7 @@ async def resolve_auth_inputs(
     slack_user_id: str | None,
     auth_service: AuthService,
     allow_slack_identity: bool = False,
+    allow_trusted_identity_claims: bool = False,
 ) -> dict[str, Any]:
     """Gelen API istegi icin auth baglamini cozumler."""
     if session_token:
@@ -38,7 +39,7 @@ async def resolve_auth_inputs(
             "student_id": resolved.student_db_id,
             "student_department": resolved.student_department,
             "student_faculty": resolved.student_faculty,
-            "student_type": None,
+            "student_type": resolved.student_type,
             "full_name": resolved.full_name,
             "student_number": resolved.student_number,
             "is_authenticated": True,
@@ -54,7 +55,7 @@ async def resolve_auth_inputs(
                 "student_id": resolved.student_db_id,
                 "student_department": resolved.student_department,
                 "student_faculty": resolved.student_faculty,
-                "student_type": None,
+                "student_type": resolved.student_type,
                 "full_name": resolved.full_name,
                 "student_number": resolved.student_number,
                 "is_authenticated": True,
@@ -62,6 +63,20 @@ async def resolve_auth_inputs(
                 "auth_state": "verified",
                 "verification_source": "slack_mapping",
             }
+
+    if allow_trusted_identity_claims and is_authenticated and student_id is not None:
+        return {
+            "student_id": student_id,
+            "student_department": student_department,
+            "student_faculty": student_faculty,
+            "student_type": student_type,
+            "full_name": full_name,
+            "student_number": student_number,
+            "is_authenticated": True,
+            "slack_user_id": slack_user_id,
+            "auth_state": "verified",
+            "verification_source": "trusted_internal",
+        }
 
     auth_state = (
         "declared"

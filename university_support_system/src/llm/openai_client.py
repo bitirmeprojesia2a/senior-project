@@ -6,10 +6,10 @@ Yine zero dependency hedefine uygun olarak REST API uzerinden (httpx ile)
 implemente edilmistir.
 """
 
-import itertools
 import json
 import logging
-from typing import Any, AsyncGenerator, Dict, Optional
+from itertools import cycle
+from typing import Any, AsyncGenerator, Dict, Optional, Protocol
 
 import httpx
 
@@ -26,21 +26,39 @@ class OpenAIClientError(Exception):
         self.retryable = retryable
 
 
+class OpenAICompatibleConfig(Protocol):
+    """Minimum config surface required by OpenAI-compatible providers."""
+
+    api_key: Optional[str]
+    base_url: str
+    model: str
+    timeout: int
+    provider_name: str
+
+
 class OpenAIClient:
     """OpenAI-compatible HTTP REST API istemcisi."""
 
-    def __init__(self):
-        raw_key = settings.openai.api_key or ""
+    def __init__(
+        self,
+        config: OpenAICompatibleConfig | None = None,
+        *,
+        api_key_env_name: str = "OPENAI_API_KEY",
+    ):
+        provider_config = config or settings.openai
+        self.api_key_env_name = api_key_env_name
+        raw_key = provider_config.api_key or ""
         self._api_keys: list[str] = [k.strip() for k in raw_key.split(",") if k.strip()]
-        self._key_cycle = itertools.cycle(self._api_keys) if self._api_keys else None
+        self._key_cycle = cycle(self._api_keys) if self._api_keys else None
         if len(self._api_keys) > 1:
             logger.info("openai_client_key_rotation enabled=%d keys", len(self._api_keys))
         self.api_key = self._api_keys[0] if self._api_keys else ""
-        self.model = settings.openai.model
-        self.base_url = settings.openai.base_url.rstrip("/")
+        self.model = provider_config.model
+        self.base_url = provider_config.base_url.rstrip("/")
         self.chat_url = f"{self.base_url}/chat/completions"
-        self.timeout = float(settings.openai.timeout)
-        self.provider_name = settings.openai.provider_name or "openai_compatible"
+        self.timeout = float(provider_config.timeout)
+        self.provider_name = provider_config.provider_name or "openai_compatible"
+        self.reasoning_effort = getattr(provider_config, "reasoning_effort", None)
 
     @property
     def is_available(self) -> bool:
@@ -51,7 +69,7 @@ class OpenAIClient:
         """Round-robin ile siradaki API key'i dondurur."""
         if self._key_cycle is None:
             raise OpenAIClientError(
-                f"{self.provider_name} API anahtari (OPENAI_API_KEY) yapilandirilmamis."
+                f"{self.provider_name} API anahtari ({self.api_key_env_name}) yapilandirilmamis."
             )
         return next(self._key_cycle)
 
@@ -63,7 +81,15 @@ class OpenAIClient:
         }
 
     @staticmethod
-    def _extract_available_models(payload: Any) -> list[str]:
+    def _normalize_model_name(model_name: str) -> str:
+        """Normalize provider-specific model ids to a comparable form."""
+        normalized = model_name.strip()
+        if normalized.startswith("models/"):
+            normalized = normalized.split("/", 1)[1]
+        return normalized
+
+    @classmethod
+    def _extract_available_models(cls, payload: Any) -> list[str]:
         """Normalize model-list payloads returned by OpenAI-compatible providers."""
         raw_models: Any
         if isinstance(payload, dict):
@@ -78,12 +104,12 @@ class OpenAIClient:
         available_models: list[str] = []
         for item in raw_models or []:
             if isinstance(item, str):
-                available_models.append(item)
+                available_models.append(cls._normalize_model_name(item))
                 continue
             if isinstance(item, dict):
                 model_name = item.get("id") or item.get("name")
                 if model_name:
-                    available_models.append(str(model_name))
+                    available_models.append(cls._normalize_model_name(str(model_name)))
 
         return list(dict.fromkeys(available_models))
 
@@ -167,6 +193,8 @@ class OpenAIClient:
             "messages": messages,
             "stream": False,
         }
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
 
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
@@ -231,6 +259,8 @@ class OpenAIClient:
             "messages": messages,
             "stream": True,
         }
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:

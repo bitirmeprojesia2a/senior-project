@@ -1,6 +1,18 @@
 # FAZ 1 — RAG Pipeline Teknik Dokümantasyonu
 
-> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 1 kaydidir. RAG katmani buyuk olcude aktif kalsa da moduller, koleksiyon stratejisi ve benchmark akislari zaman icinde degismistir. Guncel operasyon bilgisi icin once `README.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/PROJE_ANATOMISI_KILAVUZU.md` okunmalidir.
+> Durum Notu (Nisan 2026): Bu belge tarihsel bir FAZ 1 kaydidir. Arsivlenecek/cop belge degildir; RAG pipeline'inin nasil dogdugunu ve hangi kalite problemlerinden gectigini anlatir. Guncel operasyon ve nihai mimari icin once `README.md`, `docs/A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md`, `docs/KURULUM_VE_CALISTIRMA.md` ve `docs/DOKUMANTASYON_OKUMA_SIRASI.md` okunmalidir.
+
+## Guncel Konumlandirma (Nisan 2026)
+
+FAZ 1, belge yukleme, chunking, embedding, hybrid retrieval, reranking ve benchmark altyapisinin kuruldugu donemi temsil eder. Bu dosyadaki RAG kavramlari hala sistemin kalbinde yer alir; ancak bugunku calisma bicimi bire bir bu ilk fazdaki gibi degildir.
+
+Bu fazdan sonra sistem su yonde evrildi:
+
+- `BAAI/bge-m3` embedding modeli ve reranker davranisi farkli departman/veri aileleriyle daha genis test edildi.
+- DOCX/PDF/TXT veri kapsami, doc registry ve department metadata davranisi iyilestirildi.
+- Query expansion yaklasimi daha kontrollu hale getirildi; routing LLM'in `canonical_query`, `primary_intent`, `required_slots` ve `missing_slots` sinyalleriyle birlesik dusunulmeye baslandi.
+- Her agent'in kendi embedding/reranker modelini isitmasi yerine merkezi `retrieval-service` yaklasimi benimsendi.
+- RAG kaynaklari structured DB, announcement/event capability agent'lari ve Slack follow-up context'i ile birlikte kullanilir hale geldi.
 
 **Proje:** Üniversite Kurumsal Destek Sistemi  
 **Doküman Tarihi:** 28 Şubat 2026  
@@ -100,7 +112,7 @@ src/rag/
 │  Deduplication — İçerik bazlı tekrar eleme (max skor korunur)      │
 │      │                                                             │
 │      ▼                                                             │
-│  CrossEncoderReranker — seroe/bge-reranker-v2-m3-turkish-triplet   │
+│  CrossEncoderReranker — nreimers/mmarco-mMiniLMv2-L6-H384-v1       │
 │      │                                                             │
 │      ▼                                                             │
 │  Source Relevance — Konu-kaynak uyumsuzluğuna soft penalty          │
@@ -123,7 +135,7 @@ FAZ 1 sürecinde, iteratif testler ve araştırma sonuçlarına dayanarak model 
 | **Embedding Modeli** | `dbmdz/bert-base-turkish-cased` (768-D) | `BAAI/bge-m3` (1024-D) | BERTurk yalnızca Türkçe; bge-m3 100+ dilde SOTA, MIRACL benchmark'ta üstün performans, 8192 token penceresi |
 | **Ara Model** | `intfloat/multilingual-e5-base` (768-D) | `BAAI/bge-m3` (1024-D) | E5-base 514 token sınırı, prefix zorunluluğu; bge-m3 prefix gerektirmez, daha geniş token penceresi |
 | **Chunking** | `RecursiveCharacterTextSplitter` (512 char) | MADDE-aware chunker (1024 char) | Yasal belgelerdeki MADDE başlıkları kesiliyordu, bağlam kaybı yaşanıyordu |
-| **Reranking** | Özel heuristik formül | Cross-encoder (`seroe/bge-reranker-v2-m3-turkish-triplet`) | Heuristik formül keyword density'ye aşırı ağırlık veriyordu, context mixing sorunu vardı |
+| **Reranking** | Özel heuristik formül | Cross-encoder (`nreimers/mmarco-mMiniLMv2-L6-H384-v1`) | Heuristik formül keyword density'ye aşırı ağırlık veriyordu, context mixing sorunu vardı |
 | **BM25 Preprocessing** | Normalize edilmiş `page_content` | Orijinal metin + custom tokenizer | BM25 ve ChromaDB'den gelen `page_content` farklı olduğu için deduplication hatası vardı |
 
 ### 3.2 Güncel Model Kartları
@@ -138,11 +150,11 @@ FAZ 1 sürecinde, iteratif testler ve araştırma sonuçlarına dayanarak model 
 | Prefix Gereksinimi | Yok (E5 ailesi prefix gerektirir, bge-m3 gerektirmez) |
 | Benchmark | MIRACL retrieval benchmark'ta SOTA |
 
-#### Reranker: seroe/bge-reranker-v2-m3-turkish-triplet
+#### Reranker: nreimers/mmarco-mMiniLMv2-L6-H384-v1
 | Özellik | Değer |
 |---------|-------|
-| HuggingFace Adı | `seroe/bge-reranker-v2-m3-turkish-triplet` |
-| Temel Model | BAAI/bge-reranker-v2-m3 |
+| HuggingFace Adı | `nreimers/mmarco-mMiniLMv2-L6-H384-v1` |
+| Temel Model | multilingual MiniLM cross-encoder |
 | Fine-tune | Türkçe triplet verisi ile |
 | MAP (val / test) | 0.79 / 0.789 |
 | Maksimum Token | 512 (sorgu + belge birlikte) |
@@ -322,7 +334,7 @@ HybridRetriever.search(query)
     │     → Aynı içerik BM25 ve ChromaDB'den geldiyse max skor korunur
     │
     ├─ 4. CrossEncoderReranker.rerank(original_query, candidates)
-    │     → seroe/bge-reranker-v2-m3-turkish-triplet ile yeniden sıralama
+    │     → nreimers/mmarco-mMiniLMv2-L6-H384-v1 ile yeniden sıralama
     │
     ├─ 5. Source Relevance (_apply_source_relevance)
     │     → Konu-kaynak uyumsuzluğuna 0.75 penalty
@@ -568,7 +580,7 @@ Her indeksleme sonrası `data/metadata/doc_registry.json` dosyası otomatik olar
 | `RAG_CHUNK_OVERLAP` | `128` | Parçalar arası örtüşme |
 | `RAG_TOP_K` | `5` | Döndürülecek sonuç sayısı |
 | `RAG_MIN_SIMILARITY` | `0.0` | Minimum skor eşiği (cross-encoder skorları negatif olabilir) |
-| `RERANKER_MODEL` | `seroe/bge-reranker-v2-m3-turkish-triplet` | Cross-encoder modeli |
+| `RERANKER_MODEL` | `nreimers/mmarco-mMiniLMv2-L6-H384-v1` | Cross-encoder modeli |
 | `RERANKER_MAX_LENGTH` | `512` | Reranker max token (sorgu + belge) |
 | `RERANKER_BATCH_SIZE` | `16` | Reranker batch boyutu |
 
@@ -589,7 +601,7 @@ class RAGSettings(BaseSettings):
 
 class RerankerSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="RERANKER_", extra="ignore")
-    model: str = "seroe/bge-reranker-v2-m3-turkish-triplet"
+    model: str = "nreimers/mmarco-mMiniLMv2-L6-H384-v1"
     max_length: int = 512
     batch_size: int = 16
 ```
@@ -1033,7 +1045,7 @@ Source Relevance mekanizması öncesi ve sonrası karşılaştırma:
 
 **Sorun:** Özel formüldeki `bigram_count × 0.5` ağırlığı, keyword density'si yüksek ama semantik olarak alakasız belgelerin #1'e çıkmasına neden oluyordu. Örneğin "diploma not ortalaması" sorulduğunda, "not ortalaması" kelimesi 3 kez geçen ÇAP yönergesi yatay geçiş yönergesinin önüne geçiyordu.
 
-**Çözüm:** Tüm heuristik formül (`_rerank`, `_turkish_pseudo_stem`, `QUERY_NOISE_WORDS`, `_normalize_turkish`) kaldırıldı. Yerine `seroe/bge-reranker-v2-m3-turkish-triplet` cross-encoder modeli entegre edildi.
+**Çözüm:** Tüm heuristik formül (`_rerank`, `_turkish_pseudo_stem`, `QUERY_NOISE_WORDS`, `_normalize_turkish`) kaldırıldı. Yerine `nreimers/mmarco-mMiniLMv2-L6-H384-v1` cross-encoder modeli entegre edildi.
 
 ### 8.4 MADDE Başlığı Kesilmesi
 
@@ -1098,19 +1110,19 @@ Pipeline'ı bypass ederek doğrudan ChromaDB'de semantik arama yapar:
 venv\Scripts\python.exe scripts\query_db.py "Yaz okulu harç ücreti" --top-k 5
 ```
 
-### 9.3 Hibrit Arama Testi (`scripts/test_hybrid_search.py`)
+### 9.3 Hibrit Arama Testi (`scripts/hybrid_search_probe.py`)
 
 Tam arama pipeline'ını (BM25 + Semantic + Cross-Encoder) test eder:
 
 ```powershell
 # Standart test
-venv\Scripts\python.exe scripts\test_hybrid_search.py "ÇAP başvurusu için gereken not ortalaması kaçtır"
+venv\Scripts\python.exe scripts\hybrid_search_probe.py "ÇAP başvurusu için gereken not ortalaması kaçtır"
 
 # Tam metin gösterimi
-venv\Scripts\python.exe scripts\test_hybrid_search.py "kayıt dondurma süresi ne kadar" --full
+venv\Scripts\python.exe scripts\hybrid_search_probe.py "kayıt dondurma süresi ne kadar" --full
 
 # Ağırlık özelleştirme
-venv\Scripts\python.exe scripts\test_hybrid_search.py "staj süresi" --bm25-weight 0.6 --vector-weight 0.4
+venv\Scripts\python.exe scripts\hybrid_search_probe.py "staj süresi" --bm25-weight 0.6 --vector-weight 0.4
 ```
 
 ### 9.4 RAG Değerlendirme (`scripts/evaluate_rag.py`)
@@ -1129,8 +1141,8 @@ venv\Scripts\python.exe scripts\evaluate_rag.py --no-cache
 ```
 
 **Çıktılar:**
-- `docs/rag_evaluation_report.md` — Markdown formatında detaylı rapor
-- `docs/rag_evaluation_report.json` — Makine okunabilir metrikler ve detaylar
+- `docs/archive/benchmarks/rag_evaluation_report.md` — Markdown formatında detaylı rapor
+- `docs/archive/benchmarks/rag_evaluation_report.json` — Makine okunabilir metrikler ve detaylar
 
 **Hesaplanan Metrikler:**
 - Precision@1, @3, @5 (kaynak doğruluğu)
@@ -1185,7 +1197,7 @@ venv\Scripts\python.exe -m pytest tests/integration/ -v --tb=short
 | `src/rag/indexer.py` | Güncellendi | `upsert_documents()` ve `_batch_write()` eklendi (idempotent indeksleme) |
 | `src/rag/__init__.py` | Güncellendi | CrossEncoderReranker export'u |
 | `src/core/config.py` | Güncellendi | RerankerSettings eklendi, EmbeddingSettings güncellendi, min_similarity=0.0 |
-| `scripts/test_hybrid_search.py` | Güncellendi | v3 başlığı, `--full` parametresi, karakter sayısı gösterimi |
+| `scripts/hybrid_search_probe.py` | Güncellendi | v3 başlığı, `--full` parametresi, karakter sayısı gösterimi |
 | `scripts/evaluate_rag.py` | Yeni Dosya | Otomatik RAG değerlendirme — Precision@k, rapor üretimi |
 | `data/test/rag_test_questions.json` | Güncellendi | Departman etiketli ortak test havuzu (20 `student_affairs`, 10 `academic_programs`) |
 | `.env.example` | Güncellendi | Güncel model adları, RAG parametreleri, Reranker ayarları |
@@ -1233,7 +1245,7 @@ Bu bölüm, FAZ 1 tamamlandıktan sonra RAG ve test katmanında yapılan güncel
 ### 13.2 Dinamik Script ve Pipeline Akışı
 
 * `scripts/index_documents.py` kaynak klasöre göre koleksiyon adını dinamik çözebilir.
-* `scripts/query_db.py`, `scripts/test_hybrid_search.py`, `scripts/compare_collections.py` ve `scripts/evaluate_rag.py` departman veya koleksiyon parametreleriyle yeni çok koleksiyonlu yapıyı kullanabilir.
+* `scripts/query_db.py`, `scripts/hybrid_search_probe.py`, `scripts/compare_collections.py` ve `scripts/evaluate_rag.py` departman veya koleksiyon parametreleriyle yeni çok koleksiyonlu yapıyı kullanabilir.
 * Bu güncel durumda aktif departman kümesi `student_affairs`, `academic_programs` ve `finance` ile sınırlıdır.
 * `evaluate_rag.py` artık soru havuzunu `department` alanına göre filtreleyebilir.
 

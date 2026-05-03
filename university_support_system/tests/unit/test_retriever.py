@@ -7,22 +7,50 @@ Ağır bağımlılıklar (ChromaDB, Embedder, CrossEncoder) mock'lanır.
 
 import time
 from unittest.mock import MagicMock, patch, call
+from fnmatch import fnmatch
 
 import pytest
 from langchain_core.documents import Document
 
+from src.core.config import settings
 from src.core.constants import Department
-from src.rag.candidate_utils import deduplicate_documents
+from src.rag.candidate_utils import deduplicate_documents, sort_candidates_by_score
 from src.rag.retriever import (
     OFF_TOPIC_PENALTY,
     HybridRetriever,
     _QueryCache,
+    _extract_relevant_faq_block,
     _apply_source_relevance,
     _detect_query_topic,
     _plan_search_departments,
     _score_departments,
     turkish_bm25_preprocess,
 )
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+    def set(self, key: str, value: str, ex: int | None = None) -> None:
+        _ = ex
+        self.store[key] = value
+
+    def delete(self, *keys: str) -> None:
+        for key in keys:
+            self.store.pop(key, None)
+
+    def scan(self, cursor: int = 0, match: str | None = None, count: int = 200):
+        _ = count
+        keys = [
+            key
+            for key in self.store
+            if match is None or fnmatch(key, match)
+        ]
+        return 0, keys
 
 
 # ═══════════════════════════════════════════════════
@@ -62,7 +90,21 @@ class TestTurkishBm25Preprocess:
 
     def test_whitespace_normalization(self):
         tokens = turkish_bm25_preprocess("kayıt   dondurma    işlemi")
-        assert tokens == ["kayıt", "dondurma", "işlemi"]
+        assert tokens[:3] == ["kayıt", "kayit", "dondurma"]
+        assert "işlemi" in tokens
+        assert "islemi" in tokens
+
+    def test_ascii_variants_are_added_for_turkish_tokens(self):
+        tokens = turkish_bm25_preprocess("ÇAP başvurusu")
+        assert "çap" in tokens
+        assert "cap" in tokens
+        assert "başvuru" in tokens
+        assert "basvuru" in tokens
+
+    def test_possessive_suffixes_are_reduced_for_recall(self):
+        tokens = turkish_bm25_preprocess("Sınav notuma nasıl itiraz ederim?")
+        assert "not" in tokens
+        assert "sinav" in tokens
 
     def test_ogrenci_not_stripped_to_ogren(self):
         """-ci eki kaldirildi; 'ogrenci' -> 'ogren' hatasi olmamali."""
@@ -230,6 +272,95 @@ class TestDeduplicationLogic:
     def test_dedup_empty_list(self):
         assert self._run_dedup([]) == []
 
+    def test_dedup_keeps_same_filename_different_relative_path(self):
+        docs = [
+            Document(
+                page_content="Ayni madde metni",
+                metadata={
+                    "source": "ortak.pdf",
+                    "relative_path": "a/ortak.pdf",
+                    "madde_no": "5",
+                    "chunk_index": 1,
+                },
+            ),
+            Document(
+                page_content="Ayni madde metni",
+                metadata={
+                    "source": "ortak.pdf",
+                    "relative_path": "b/ortak.pdf",
+                    "madde_no": "5",
+                    "chunk_index": 1,
+                },
+            ),
+        ]
+
+        results = self._run_dedup(docs)
+
+        assert len(results) == 2
+
+    def test_dedup_preserves_retrieval_rank_for_zero_score_candidates(self):
+        docs = [
+            Document(page_content="Ilk aday", metadata={}),
+            Document(page_content="Ikinci aday", metadata={}),
+        ]
+
+        results = self._run_dedup(docs)
+
+        assert results[0]["metadata"]["retrieval_rank"] == 0
+        assert results[1]["metadata"]["retrieval_rank"] == 1
+
+    def test_dedup_assigns_rank_fusion_score_to_bm25_only_candidates(self):
+        docs = [
+            Document(page_content="Tam kelime eslesen BM25 adayi", metadata={}),
+            Document(page_content="Ikinci BM25 adayi", metadata={}),
+        ]
+
+        results = self._run_dedup(docs)
+
+        assert results[0]["score"] > results[1]["score"] > 0
+        assert results[0]["metadata"]["score_type"] == "rank_fusion"
+        assert results[0]["metadata"]["retrieval_score"] == results[0]["score"]
+
+    def test_sort_candidates_by_score_uses_retrieval_rank_as_tiebreaker(self):
+        candidates = [
+            {
+                "source": "ikinci.txt",
+                "content": "B",
+                "score": 0.3,
+                "metadata": {"retrieval_rank": 1},
+            },
+            {
+                "source": "ilk.txt",
+                "content": "A",
+                "score": 0.3,
+                "metadata": {"retrieval_rank": 0},
+            },
+        ]
+
+        sorted_candidates = sort_candidates_by_score(candidates)
+
+        assert [item["source"] for item in sorted_candidates] == ["ilk.txt", "ikinci.txt"]
+
+
+def test_extract_relevant_faq_block_prefers_matching_question_for_grade_objection():
+    content = (
+        "Muafiyet talep ettiğim dersin notu en az ne olmadır?\n"
+        "Bir dersten muaf olabilmesi için notunun en az CC ve üzeri olması gerekir.\n\n"
+        "Sınav sonuçlarına nasıl itiraz edebilirim?\n"
+        "Akademik takvimde belirtilen sınav not girişlerinin öğrenci otomasyon sistemine "
+        "girilmesinin son gününden itibaren beş iş günü içerisinde ilgili birime "
+        "(Bölüm Başkanlığına ) dilekçe vererek itiraz edebilirsiniz."
+    )
+
+    extracted = _extract_relevant_faq_block(
+        content,
+        "Sinav notuma itiraz etmek istiyorum. Basvuru sureci ve suresi nedir? beş iş günü bölüm başkanlığı",
+    )
+
+    lowered = extracted.lower()
+    assert "sınav sonuçlarına nasıl itiraz edebilirim" in lowered
+    assert "beş iş günü" in lowered
+
     def test_dedup_keeps_distinct_chunk_identities_with_same_content(self):
         docs = [
             Document(
@@ -336,6 +467,50 @@ class TestQueryCache:
         cache.put("q2::5", [{"score": 0.7}])
         assert cache.get("q1::5")[0]["score"] == 0.9
         assert cache.get("q2::5")[0]["score"] == 0.7
+
+    def test_disabled_cache_is_noop(self):
+        cache = _QueryCache(ttl=300, enabled=False)
+        cache.put("q1", [{"score": 0.9}])
+
+        assert cache.get("q1") is None
+        assert cache.size == 0
+
+    def test_query_cache_restores_results_from_redis(self, monkeypatch):
+        fake_redis = _FakeRedis()
+        monkeypatch.setattr("src.cache.runtime_redis.get_runtime_redis", lambda: fake_redis)
+        monkeypatch.setattr(settings.cache, "enabled", True)
+        monkeypatch.setattr(settings.cache, "retriever_query_cache_enabled", True)
+        monkeypatch.setattr(settings.cache, "redis_retriever_query_cache_enabled", True)
+        monkeypatch.setattr(settings.redis, "enabled", True)
+
+        writer = _QueryCache(ttl=300, enabled=True)
+        reader = _QueryCache(ttl=300, enabled=True)
+
+        writer.put("same-query", [{"content": "test", "score": 0.91}])
+
+        restored = reader.get("same-query")
+
+        assert restored == [{"content": "test", "score": 0.91}]
+        assert reader.size == 1
+
+    def test_query_cache_invalidate_clears_redis_namespace(self, monkeypatch):
+        fake_redis = _FakeRedis()
+        monkeypatch.setattr("src.cache.runtime_redis.get_runtime_redis", lambda: fake_redis)
+        monkeypatch.setattr(settings.cache, "enabled", True)
+        monkeypatch.setattr(settings.cache, "retriever_query_cache_enabled", True)
+        monkeypatch.setattr(settings.cache, "redis_retriever_query_cache_enabled", True)
+        monkeypatch.setattr(settings.redis, "enabled", True)
+
+        cache = _QueryCache(ttl=300, enabled=True)
+        cache.put("q1", [{"score": 0.9}])
+        cache.put("q2", [{"score": 0.7}])
+
+        assert _QueryCache.distributed_size() == 2
+
+        cache.invalidate()
+
+        assert _QueryCache.distributed_size() == 0
+        assert cache.size == 0
 
 
 class TestDepartmentPlanning:
@@ -540,6 +715,82 @@ class TestHybridRetrieverDepartmentSearch:
         assert enriched[0]["metadata"]["context_expanded"] is True
         assert enriched[0]["metadata"]["merged_chunk_count"] == 3
 
+    def test_enrich_results_uses_relative_path_for_same_filename(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content="A klasoru ilk parca.",
+                metadata={
+                    "source": "ortak.pdf",
+                    "relative_path": "a/ortak.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "1/2",
+                    "chunk_index": 1,
+                },
+            ),
+            Document(
+                page_content="A klasoru ikinci parca.",
+                metadata={
+                    "source": "ortak.pdf",
+                    "relative_path": "a/ortak.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "2/2",
+                    "chunk_index": 2,
+                },
+            ),
+            Document(
+                page_content="B klasoru ilk parca.",
+                metadata={
+                    "source": "ortak.pdf",
+                    "relative_path": "b/ortak.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "1/2",
+                    "chunk_index": 1,
+                },
+            ),
+            Document(
+                page_content="B klasoru ikinci parca.",
+                metadata={
+                    "source": "ortak.pdf",
+                    "relative_path": "b/ortak.pdf",
+                    "department": "academic_programs",
+                    "madde_no": "5",
+                    "sub_chunk": "2/2",
+                    "chunk_index": 2,
+                },
+            ),
+        ]
+
+        enriched = HybridRetriever.enrich_results(
+            retriever,
+            [
+                {
+                    "content": "B klasoru ilk parca.",
+                    "source": "ortak.pdf",
+                    "score": 0.8,
+                    "metadata": {
+                        "source": "ortak.pdf",
+                        "relative_path": "b/ortak.pdf",
+                        "department": "academic_programs",
+                        "madde_no": "5",
+                        "sub_chunk": "1/2",
+                        "chunk_index": 1,
+                    },
+                }
+            ],
+            department=Department.ACADEMIC_PROGRAMS,
+        )
+
+        assert len(enriched) == 1
+        assert "B klasoru ilk parca" in enriched[0]["content"]
+        assert "B klasoru ikinci parca" in enriched[0]["content"]
+        assert "A klasoru" not in enriched[0]["content"]
+        assert enriched[0]["metadata"]["merged_chunk_count"] == 2
+
     def test_enrich_results_deduplicates_repeated_expanded_rows(self):
         retriever = self._make_retriever()
         retriever.collection_name = None
@@ -599,6 +850,26 @@ class TestHybridRetrieverDepartmentSearch:
 
         assert len(enriched) == 1
         assert enriched[0]["score"] == 0.84
+
+    def test_search_does_not_reuse_query_cache_when_disabled(self, monkeypatch):
+        retriever = self._make_retriever()
+        retriever.collection_name = "finance_docs"
+        retriever._search_collection_candidates = MagicMock(
+            side_effect=[
+                [self._make_candidate("ilk_sonuc.pdf")],
+                [self._make_candidate("ikinci_sonuc.pdf")],
+            ]
+        )
+        monkeypatch.setattr(settings.cache, "enabled", True)
+        monkeypatch.setattr(settings.cache, "retriever_query_cache_enabled", False)
+        retriever._cache = _QueryCache(ttl=300, enabled=False)
+
+        first = HybridRetriever.search(retriever, "Ayni soru")
+        second = HybridRetriever.search(retriever, "Ayni soru")
+
+        assert first[0]["source"] == "ilk_sonuc.pdf"
+        assert second[0]["source"] == "ikinci_sonuc.pdf"
+        assert retriever._search_collection_candidates.call_count == 2
 
 
 class TestHybridRetrieverScoreThresholds:

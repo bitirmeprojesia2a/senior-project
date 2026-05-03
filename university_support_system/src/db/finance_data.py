@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from sqlalchemy import desc, select
 
 from src.core.text_normalization import collapse_whitespace, normalize_text
@@ -13,6 +16,9 @@ from src.db.scholarship_models import (
     ScholarshipApplication,
 )
 from src.db.student_models import Student
+
+_ROOT_DIR = Path(__file__).resolve().parents[2]
+_TUITION_FEE_CATALOG_FILE = _ROOT_DIR / "data" / "metadata" / "tuition_fee_catalog.json"
 
 
 def _normalize_text(value: str | None) -> str:
@@ -33,6 +39,52 @@ def _normalize_unit_name(value: str | None) -> str:
     for source, target in replacements.items():
         normalized = normalized.replace(source, target)
     return " ".join(normalized.split())
+
+
+def _load_tuition_catalog_fallback(
+    *,
+    normalized_type: str,
+    normalized_unit: str,
+    academic_year: str | None = None,
+) -> dict[str, object] | None:
+    """Read bundled catalog metadata when DB seed is stale or incomplete."""
+    if not _TUITION_FEE_CATALOG_FILE.exists():
+        return None
+    try:
+        payload = json.loads(_TUITION_FEE_CATALOG_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    candidates = []
+    for item in payload:
+        if _normalize_text(item.get("student_type")) != normalized_type:
+            continue
+        if _normalize_unit_name(item.get("unit_name")) != normalized_unit:
+            continue
+        if academic_year and item.get("academic_year") != academic_year:
+            continue
+        candidates.append(item)
+
+    if not candidates:
+        return None
+
+    entry = sorted(
+        candidates,
+        key=lambda item: str(item.get("academic_year") or ""),
+        reverse=True,
+    )[0]
+    semester_amount = entry.get("semester_amount")
+    return {
+        "academic_year": entry.get("academic_year"),
+        "student_type": _normalize_text(entry.get("student_type")),
+        "unit_name": entry.get("unit_name"),
+        "normalized_unit_name": _normalize_unit_name(entry.get("unit_name")),
+        "annual_amount": float(entry["annual_amount"]),
+        "semester_amount": float(semester_amount) if semester_amount is not None else None,
+        "currency": entry.get("currency", "TRY"),
+        "source_document": entry.get("source_document"),
+        "notes": entry.get("notes"),
+    }
 
 
 async def fetch_student_tuition_snapshot(student_id: int) -> dict[str, object] | None:
@@ -94,7 +146,11 @@ async def fetch_tuition_fee_catalog_entry(
         stmt = stmt.order_by(desc(TuitionFeeCatalog.academic_year), desc(TuitionFeeCatalog.id)).limit(1)
         entry = (await session.execute(stmt)).scalar_one_or_none()
         if entry is None:
-            return None
+            return _load_tuition_catalog_fallback(
+                normalized_type=normalized_type,
+                normalized_unit=normalized_unit,
+                academic_year=academic_year,
+            )
 
         return {
             "academic_year": entry.academic_year,

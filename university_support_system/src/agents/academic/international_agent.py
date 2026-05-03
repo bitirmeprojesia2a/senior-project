@@ -6,12 +6,17 @@ from a2a.types import Task
 
 from src.agents.academic.regulation_utils import (
     build_regulation_intro,
+    exchange_grant_context_rank,
+    incoming_exchange_context_rank,
     needs_international_finance_reference,
     pick_preferred_regulation_result,
-    should_skip_regulation_llm_synthesis,
+    rank_regulation_results,
+    wants_exchange_grant_info,
+    wants_incoming_exchange_info,
 )
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.core.constants import Department, TaskType
+from src.core.text_normalization import normalize_text
 from src.db.schemas import DepartmentResponse
 from src.llm.prompt_templates import INTERNATIONAL_AGENT_SYSTEM_PROMPT
 
@@ -35,10 +40,10 @@ class InternationalAgent(BaseSpecialistAgent):
         )
 
     async def handle_department_task(self, task: Task) -> DepartmentResponse:
-        response = await super().handle_department_task(task)
-
         metadata = task.metadata or {}
         query_text = str(metadata.get("query_text", "")).strip()
+
+        response = await super().handle_department_task(task)
 
         if response.success and self._needs_finance_reference(query_text):
             response = response.model_copy(
@@ -57,15 +62,6 @@ class InternationalAgent(BaseSpecialistAgent):
     def _needs_finance_reference(query_text: str) -> bool:
         return needs_international_finance_reference(query_text)
 
-    def _should_skip_llm_synthesis(
-        self,
-        query_text: str,
-        results: list[dict] | tuple[dict, ...],
-        *,
-        db_context: str | None = None,
-    ) -> bool:
-        return should_skip_regulation_llm_synthesis(query_text, results)
-
     def _build_source_only_answer(
         self,
         query_text: str,
@@ -73,6 +69,14 @@ class InternationalAgent(BaseSpecialistAgent):
         *,
         db_context: str | None = None,
     ) -> str:
+        grant_answer = self._build_exchange_grant_answer(
+            query_text,
+            results,
+            db_context=db_context,
+        )
+        if grant_answer is not None:
+            return grant_answer
+
         preferred = self._pick_preferred_result(query_text, results)
         if preferred is None:
             return super()._build_source_only_answer(query_text, results, db_context=db_context)
@@ -82,6 +86,111 @@ class InternationalAgent(BaseSpecialistAgent):
         prefix = f"{db_context}\n\n" if db_context else ""
         intro = build_regulation_intro(query_text)
         return f"{prefix}{intro}\n{content}\n\n(Kaynak: {source})"
+
+    def _filter_results_for_answer(
+        self,
+        query_text: str,
+        results: list[dict] | tuple[dict, ...],
+    ) -> list[dict]:
+        ranked = rank_regulation_results(query_text, results)
+        if wants_incoming_exchange_info(query_text):
+            incoming_results = [
+                item
+                for item in ranked
+                if incoming_exchange_context_rank(item, True) <= 1
+            ]
+            if incoming_results:
+                return incoming_results[:5]
+        return ranked or list(results)
+
+    def _search_top_k(self, query_text: str, metadata: dict) -> int | None:
+        _ = metadata
+        if wants_exchange_grant_info(query_text) or wants_incoming_exchange_info(query_text):
+            return 10
+        return None
+
+    def _build_exchange_grant_answer(
+        self,
+        query_text: str,
+        results: list[dict] | tuple[dict, ...],
+        *,
+        db_context: str | None = None,
+    ) -> str | None:
+        if not wants_exchange_grant_info(query_text):
+            return None
+
+        ranked = rank_regulation_results(query_text, results)
+        payment = next(
+            (item for item in ranked if exchange_grant_context_rank(item, True) == 0),
+            None,
+        )
+        if payment is None:
+            return None
+
+        payment_text = normalize_text(payment.get("content", ""))
+        source = payment.get("source", "bilinmiyor")
+        lines = []
+        if db_context:
+            lines.append(db_context)
+            lines.append("")
+        lines.append(build_regulation_intro(query_text))
+
+        if "her yil ulusal ajans" in payment_text or "ulusal ajans tarafindan belirlenir" in payment_text:
+            lines.append(
+                "- Kaynakta sabit bir TL/Euro hibe tutari yer almiyor; hibe miktari, "
+                "odeme usulu ve tarihi her yil Ulusal Ajans tarafindan belirlenir."
+            )
+        else:
+            lines.append(
+                "- Kaynakta sabit bir hibe tutari net olarak bulunamadi; ilgili kaynak "
+                "hibe odeme kosullarini acikliyor."
+            )
+
+        if "iki taksitte" in payment_text or "%80" in payment_text or "% 80" in payment_text:
+            lines.append(
+                "- Odeme iki taksitte yapilir: ilk odeme, ongorulen sureye gore "
+                "hesaplanan hibenin %80'i; ikinci odeme ise hareketlilik sonunda "
+                "kesinlesen sureye gore yeniden hesaplanan tutardir."
+            )
+        if "hibe sozlesmesi" in payment_text:
+            lines.append(
+                "- Ilk taksit oncesinde Ogrenci Hibe Sozlesmesi imzalanir; ikinci "
+                "taksit icin donus belgelerinin UIB'ye teslim edilmesi gerekir."
+            )
+
+        if any(marker in normalize_text(query_text) for marker in ("basvuru", "nasil", "surec")):
+            application = self._find_exchange_application_result(ranked)
+            if application is not None:
+                lines.append(
+                    "- Basvuru bilgileri UIB/OMU internet sayfalarinda ve bolum/program "
+                    "duyuru alanlarinda ilan edilir; ogrenciler duyuruda belirtilen "
+                    "tarihler arasinda basvuru yapar."
+                )
+                source = f"{source}; {application.get('source', 'bilinmiyor')}"
+            else:
+                lines.append(
+                    "- Bu kaynak setinde basvuru adimlarini netlestiren ek bir parca "
+                    "bulunamadi; guncel basvuru duyurusu ayrica kontrol edilmeli."
+                )
+
+        lines.append("")
+        lines.append(f"(Kaynak: {source})")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _find_exchange_application_result(results: list[dict]) -> dict | None:
+        markers = (
+            "basvurularla ilgili bilgi",
+            "basvuru tarihleri",
+            "duyurularda belirtilen tarihler",
+            "online basvuru",
+            "internet sayfalarinda",
+        )
+        for item in results:
+            content = normalize_text(item.get("content", ""))
+            if any(marker in content for marker in markers):
+                return item
+        return None
 
     def _pick_preferred_result(
         self,

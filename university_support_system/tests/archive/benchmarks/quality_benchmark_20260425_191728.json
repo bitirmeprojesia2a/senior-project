@@ -1,0 +1,1537 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "run_timestamp": "20260425_191728",
+  "total_questions": 5,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 20.0,
+    "key_fact_coverage": 11.8,
+    "clean_quality_pct": 0.0,
+    "avg_time_ms": 2830.0,
+    "median_time_ms": 2194.2,
+    "intent_analysis_active": 5,
+    "force_llm_synthesis_count": 4,
+    "a2a_query_failure_delta": 0,
+    "a2a_agent_task_failure_delta": 12
+  },
+  "results": [
+    {
+      "id": "Q1",
+      "category": "A_multi_source_synthesis",
+      "question": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "kural",
+      "mode_match": false,
+      "expected_key_facts": [
+        "üç hafta",
+        "dilekçe",
+        "komisyon",
+        "derslere devam"
+      ],
+      "key_fact_results": {
+        "üç hafta": false,
+        "dilekçe": false,
+        "komisyon": false,
+        "derslere devam": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 4,
+      "elapsed_ms": 4920.6,
+      "reported_response_time_ms": 4841.9,
+      "source_count": 0,
+      "quality_warnings": [
+        "a2a_transport_fallback"
+      ],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.1-8b-instant",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "llm_usage_summary": {
+        "routing": [
+          "groq/llama-3.1-8b-instant"
+        ]
+      },
+      "answer": "Ogrenci Isleri:\nKayit Agent agent servisine su anda ulasilamadi. Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin.\n\nAkademik Programlar:\nCurriculum Agent agent servisine su anda ulasilamadi. Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin.\n\nUretim Turu:\n- Ogrenci Isleri: Kural\n- Akademik Programlar: Kural\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenci isleri",
+      "profiling": {
+        "total_ms": 4919.701,
+        "events": [],
+        "llm_usage": [
+          {
+            "kind": "generate",
+            "model_role": "routing",
+            "provider": "openai_compatible",
+            "provider_label": "groq",
+            "display_name": "groq",
+            "model": "llama-3.1-8b-instant",
+            "path": "primary",
+            "status": "success",
+            "json_mode": true,
+            "llm_profile": "balanced"
+          }
+        ],
+        "local_profile": {
+          "label": "api.query:qbench-Q1-191654",
+          "total_ms": 4903.08,
+          "attributes": {
+            "context_id": "qbench-Q1-191654",
+            "query": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?",
+            "a2a_trace": {
+              "trace_id": "c27edfbc9f114d57b4736ccca8f14512",
+              "span_id": "0924667097614c45"
+            },
+            "conversation_resolution": {
+              "effective_query": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "llm_usage": [
+              {
+                "kind": "generate",
+                "model_role": "routing",
+                "provider": "openai_compatible",
+                "provider_label": "groq",
+                "display_name": "groq",
+                "model": "llama-3.1-8b-instant",
+                "path": "primary",
+                "status": "success",
+                "json_mode": true,
+                "llm_profile": "balanced"
+              }
+            ],
+            "routing": {
+              "departments": [
+                "student_affairs",
+                "academic_programs"
+              ],
+              "strategy": "parallel",
+              "task_type": "registration_query",
+              "confidence": 0.95,
+              "intent": {
+                "complexity": "process_chain",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "procedural"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.021,
+              "ended_at_ms": 4903.067,
+              "duration_ms": 4903.046,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 23.77,
+              "ended_at_ms": 4903.033,
+              "duration_ms": 4879.263,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q1-191654"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 23.942,
+              "ended_at_ms": 28.227,
+              "duration_ms": 4.285,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 28.387,
+              "ended_at_ms": 845.059,
+              "duration_ms": 816.672,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "llm.generate",
+              "started_at_ms": 28.97,
+              "ended_at_ms": 844.664,
+              "duration_ms": 815.693,
+              "parent": "main.router.route",
+              "meta": {
+                "json_mode": true
+              }
+            },
+            {
+              "name": "llm.generate.openai_compatible",
+              "started_at_ms": 29.009,
+              "ended_at_ms": 844.571,
+              "duration_ms": 815.561,
+              "parent": "llm.generate",
+              "meta": {
+                "model": "llama-3.1-8b-instant",
+                "role": "routing"
+              }
+            },
+            {
+              "name": "llm.generate.validate_json",
+              "started_at_ms": 844.608,
+              "ended_at_ms": 844.648,
+              "duration_ms": 0.039,
+              "parent": "llm.generate"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 845.085,
+              "ended_at_ms": 865.323,
+              "duration_ms": 20.238,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 865.362,
+              "ended_at_ms": 3942.047,
+              "duration_ms": 3076.685,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.record_department_transport_failure",
+              "started_at_ms": 3942.077,
+              "ended_at_ms": 3978.934,
+              "duration_ms": 36.857,
+              "parent": "main.handle_query",
+              "meta": {
+                "department": "student_affairs"
+              }
+            },
+            {
+              "name": "main.telemetry.record_department_transport_failure",
+              "started_at_ms": 3979.019,
+              "ended_at_ms": 4009.697,
+              "duration_ms": 30.678,
+              "parent": "main.handle_query",
+              "meta": {
+                "department": "academic_programs"
+              }
+            },
+            {
+              "name": "main.related_announcements",
+              "started_at_ms": 4010.909,
+              "ended_at_ms": 4864.361,
+              "duration_ms": 853.452,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 4864.386,
+              "ended_at_ms": 4864.462,
+              "duration_ms": 0.077,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 4864.469,
+              "ended_at_ms": 4866.748,
+              "duration_ms": 2.278,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 4866.76,
+              "ended_at_ms": 4875.586,
+              "duration_ms": 8.826,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 4875.604,
+              "ended_at_ms": 4903.015,
+              "duration_ms": 27.411,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 3046.465,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.168,
+                  "ended_at_ms": 3046.367,
+                  "duration_ms": 3046.199,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.188,
+                  "ended_at_ms": 0.713,
+                  "duration_ms": 0.525,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.951,
+                  "ended_at_ms": 3006.433,
+                  "duration_ms": 3005.482,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 3006.464,
+                  "ended_at_ms": 3046.018,
+                  "duration_ms": 39.554,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "academic_programs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:academic_programs",
+              "total_ms": 29.634,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.157,
+                  "ended_at_ms": 29.476,
+                  "duration_ms": 29.32,
+                  "parent": null,
+                  "meta": {
+                    "department": "academic_programs",
+                    "task_type": "course_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.175,
+                  "ended_at_ms": 0.69,
+                  "duration_ms": 0.514,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.923,
+                  "ended_at_ms": 1.527,
+                  "duration_ms": 0.604,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs",
+                    "agent_id": "curriculum_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1.552,
+                  "ended_at_ms": 29.109,
+                  "duration_ms": 27.557,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "academic_programs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q11",
+      "category": "C_conditional_scenario",
+      "question": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "actual_departments": [
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "vt",
+      "mode_match": false,
+      "expected_key_facts": [
+        "öğrenim ücreti",
+        "gerek yok",
+        "yönetim kurulu",
+        "sayılma"
+      ],
+      "key_fact_results": {
+        "öğrenim ücreti": true,
+        "gerek yok": false,
+        "yönetim kurulu": false,
+        "sayılma": false
+      },
+      "key_facts_found": 1,
+      "key_facts_total": 4,
+      "elapsed_ms": 1843.2,
+      "reported_response_time_ms": 1691.8,
+      "source_count": 0,
+      "quality_warnings": [
+        "a2a_transport_fallback"
+      ],
+      "intent_analysis": {
+        "complexity": "complex",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "conditional"
+      },
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Ogrenci Isleri:\nKayit Agent agent servisine su anda ulasilamadi. Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin.\n\nFinans:\nOgrenim ucreti icin Turk ogrenci / Mühendislik Fakültesi bilgisi veritabaninda kayitli. Yillik ucret: 2.397,00 TL. Donemlik ucret: 1.198,50 TL.\n\n(Kaynak: 2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf)\n\nUretim Turu:\n- Ogrenci Isleri: Kural\n- Finans: VT\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenci isleri\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "profiling": {
+        "total_ms": 1843.209,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q11-191704",
+          "total_ms": 1766.911,
+          "attributes": {
+            "context_id": "qbench-Q11-191704",
+            "query": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?",
+            "a2a_trace": {
+              "trace_id": "c704c8c24730482aa30038a39e8f9caf",
+              "span_id": "11d7bb65ac804d87"
+            },
+            "conversation_resolution": {
+              "effective_query": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs",
+                "finance"
+              ],
+              "strategy": "parallel",
+              "task_type": "tuition_query",
+              "confidence": 0.87,
+              "intent": {
+                "complexity": "complex",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "conditional"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.02,
+              "ended_at_ms": 1766.896,
+              "duration_ms": 1766.876,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 15.76,
+              "ended_at_ms": 1766.861,
+              "duration_ms": 1751.101,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q11-191704"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 15.912,
+              "ended_at_ms": 19.35,
+              "duration_ms": 3.438,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 19.504,
+              "ended_at_ms": 20.028,
+              "duration_ms": 0.524,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 20.622,
+              "ended_at_ms": 47.051,
+              "duration_ms": 26.429,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 47.092,
+              "ended_at_ms": 1679.372,
+              "duration_ms": 1632.28,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.record_department_transport_failure",
+              "started_at_ms": 1679.4,
+              "ended_at_ms": 1705.861,
+              "duration_ms": 26.461,
+              "parent": "main.handle_query",
+              "meta": {
+                "department": "student_affairs"
+              }
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 1706.03,
+              "ended_at_ms": 1706.124,
+              "duration_ms": 0.094,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 1706.132,
+              "ended_at_ms": 1709.963,
+              "duration_ms": 3.832,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 1710.001,
+              "ended_at_ms": 1744.035,
+              "duration_ms": 34.034,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 1744.062,
+              "ended_at_ms": 1766.834,
+              "duration_ms": 22.772,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 1591.825,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.19,
+                  "ended_at_ms": 1591.729,
+                  "duration_ms": 1591.539,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.211,
+                  "ended_at_ms": 0.427,
+                  "duration_ms": 0.216,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.547,
+                  "ended_at_ms": 1562.125,
+                  "duration_ms": 1561.578,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1562.152,
+                  "ended_at_ms": 1591.378,
+                  "duration_ms": 29.226,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "agent_id": "tuition_agent",
+            "agent_role": "specialist_agent",
+            "profile": {
+              "label": "remote_specialist:tuition_agent",
+              "total_ms": 7.062,
+              "attributes": {},
+              "events": []
+            }
+          },
+          {
+            "agent_id": "finance_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:finance",
+              "total_ms": 70.791,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.189,
+                  "ended_at_ms": 70.672,
+                  "duration_ms": 70.483,
+                  "parent": null,
+                  "meta": {
+                    "department": "finance",
+                    "task_type": "tuition_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.213,
+                  "ended_at_ms": 0.981,
+                  "duration_ms": 0.768,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "finance"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 1.624,
+                  "ended_at_ms": 35.63,
+                  "duration_ms": 34.006,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "finance",
+                    "agent_id": "tuition_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 35.671,
+                  "ended_at_ms": 70.29,
+                  "duration_ms": 34.619,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "finance"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q17",
+      "category": "E_process_chain",
+      "question": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "kural",
+      "mode_match": false,
+      "expected_key_facts": [
+        "UBYS",
+        "ders seçimi",
+        "danışman",
+        "onay",
+        "yoklama"
+      ],
+      "key_fact_results": {
+        "UBYS": false,
+        "ders seçimi": false,
+        "danışman": false,
+        "onay": false,
+        "yoklama": false
+      },
+      "key_facts_found": 0,
+      "key_facts_total": 5,
+      "elapsed_ms": 3028.8,
+      "reported_response_time_ms": 2973.7,
+      "source_count": 0,
+      "quality_warnings": [
+        "a2a_transport_fallback"
+      ],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Kayit Agent agent servisine su anda ulasilamadi. Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin.\n\nUretim Turu:\n- Kural\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenci isleri",
+      "profiling": {
+        "total_ms": 3028.813,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q17-191711",
+          "total_ms": 3015.706,
+          "attributes": {
+            "context_id": "qbench-Q17-191711",
+            "query": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+            "a2a_trace": {
+              "trace_id": "6eab51ef2a7a48bd90f7f90fcd5d370b",
+              "span_id": "a9d60c8fde104098"
+            },
+            "conversation_resolution": {
+              "effective_query": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "registration_query",
+              "confidence": 0.84,
+              "intent": {
+                "complexity": "process_chain",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "procedural"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.02,
+              "ended_at_ms": 3015.693,
+              "duration_ms": 3015.673,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 16.614,
+              "ended_at_ms": 3015.672,
+              "duration_ms": 2999.058,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q17-191711"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 16.749,
+              "ended_at_ms": 20.912,
+              "duration_ms": 4.163,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 21.073,
+              "ended_at_ms": 21.584,
+              "duration_ms": 0.512,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 21.603,
+              "ended_at_ms": 39.384,
+              "duration_ms": 17.78,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 39.421,
+              "ended_at_ms": 2960.941,
+              "duration_ms": 2921.52,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.record_department_transport_failure",
+              "started_at_ms": 2960.969,
+              "ended_at_ms": 2989.334,
+              "duration_ms": 28.364,
+              "parent": "main.handle_query",
+              "meta": {
+                "department": "student_affairs"
+              }
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 2989.479,
+              "ended_at_ms": 2989.488,
+              "duration_ms": 0.009,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 2989.494,
+              "ended_at_ms": 2990.83,
+              "duration_ms": 1.336,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 2990.843,
+              "ended_at_ms": 2999.056,
+              "duration_ms": 8.214,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 2999.075,
+              "ended_at_ms": 3015.653,
+              "duration_ms": 16.577,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 2896.403,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.263,
+                  "ended_at_ms": 2896.31,
+                  "duration_ms": 2896.048,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.294,
+                  "ended_at_ms": 0.537,
+                  "duration_ms": 0.243,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.803,
+                  "ended_at_ms": 2866.32,
+                  "duration_ms": 2865.516,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 2866.347,
+                  "ended_at_ms": 2895.937,
+                  "duration_ms": 29.59,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q22",
+      "category": "F_edge_cases",
+      "question": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "kural",
+      "actual_generation_mode": "kural",
+      "mode_match": true,
+      "expected_key_facts": [],
+      "key_fact_results": {},
+      "key_facts_found": 0,
+      "key_facts_total": 0,
+      "elapsed_ms": 2194.2,
+      "reported_response_time_ms": 2112.2,
+      "source_count": 0,
+      "quality_warnings": [
+        "a2a_transport_fallback"
+      ],
+      "intent_analysis": {
+        "complexity": "process_chain",
+        "is_personal": false,
+        "force_llm_synthesis": true,
+        "query_type": "procedural"
+      },
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Kayit Agent agent servisine su anda ulasilamadi. Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin.\n\nUretim Turu:\n- Kural\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenci isleri",
+      "profiling": {
+        "total_ms": 2194.25,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q22-191719",
+          "total_ms": 2168.004,
+          "attributes": {
+            "context_id": "qbench-Q22-191719",
+            "query": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+            "a2a_trace": {
+              "trace_id": "df339f0412694920888edf2bc9b17262",
+              "span_id": "9a3f4b3a71354709"
+            },
+            "conversation_resolution": {
+              "effective_query": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+              "is_follow_up": false,
+              "used_context": false,
+              "active_topic": null,
+              "department_hints": []
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "registration_query",
+              "confidence": 0.83,
+              "intent": {
+                "complexity": "process_chain",
+                "is_personal": false,
+                "force_llm_synthesis": true,
+                "query_type": "procedural"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.088,
+              "ended_at_ms": 2167.992,
+              "duration_ms": 2167.904,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 24.623,
+              "ended_at_ms": 2167.972,
+              "duration_ms": 2143.349,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q22-191719"
+              }
+            },
+            {
+              "name": "main.conversation.resolve",
+              "started_at_ms": 24.829,
+              "ended_at_ms": 32.827,
+              "duration_ms": 7.998,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 33.161,
+              "ended_at_ms": 33.926,
+              "duration_ms": 0.765,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 34.001,
+              "ended_at_ms": 53.496,
+              "duration_ms": 19.495,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 53.533,
+              "ended_at_ms": 2098.981,
+              "duration_ms": 2045.448,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.record_department_transport_failure",
+              "started_at_ms": 2099.015,
+              "ended_at_ms": 2135.841,
+              "duration_ms": 36.826,
+              "parent": "main.handle_query",
+              "meta": {
+                "department": "student_affairs"
+              }
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 2135.973,
+              "ended_at_ms": 2135.982,
+              "duration_ms": 0.009,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 2135.989,
+              "ended_at_ms": 2137.449,
+              "duration_ms": 1.46,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 2137.463,
+              "ended_at_ms": 2146.626,
+              "duration_ms": 9.163,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 2146.66,
+              "ended_at_ms": 2167.953,
+              "duration_ms": 21.293,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 2026.371,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.152,
+                  "ended_at_ms": 2026.093,
+                  "duration_ms": 2025.941,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.17,
+                  "ended_at_ms": 0.428,
+                  "duration_ms": 0.258,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.576,
+                  "ended_at_ms": 1995.12,
+                  "duration_ms": 1994.545,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1995.151,
+                  "ended_at_ms": 2025.663,
+                  "duration_ms": 30.511,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "Q24",
+      "category": "G_semantic_paraphrase",
+      "question": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+      "difficulty": "medium",
+      "expected_departments": [
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "student_affairs"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "kural",
+      "mode_match": false,
+      "expected_key_facts": [
+        "kayıt",
+        "yenileme",
+        "UBYS",
+        "müfredat"
+      ],
+      "key_fact_results": {
+        "kayıt": true,
+        "yenileme": false,
+        "UBYS": false,
+        "müfredat": false
+      },
+      "key_facts_found": 1,
+      "key_facts_total": 4,
+      "elapsed_ms": 2163.0,
+      "reported_response_time_ms": 2117.5,
+      "source_count": 0,
+      "quality_warnings": [
+        "a2a_transport_fallback"
+      ],
+      "intent_analysis": {
+        "complexity": "simple",
+        "is_personal": true,
+        "force_llm_synthesis": false,
+        "query_type": "factual"
+      },
+      "llm_usage": [],
+      "llm_usage_summary": {},
+      "answer": "Kayit Agent agent servisine su anda ulasilamadi. Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin.\n\nUretim Turu:\n- Kural\n\nKaynak Ozeti:\n- Veritabani kaydi: ogrenci isleri",
+      "profiling": {
+        "total_ms": 2163.048,
+        "events": [],
+        "llm_usage": [],
+        "local_profile": {
+          "label": "api.query:qbench-Q24-191726",
+          "total_ms": 2151.556,
+          "attributes": {
+            "context_id": "qbench-Q24-191726",
+            "query": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+            "a2a_trace": {
+              "trace_id": "cb719225e6064cda9b05ee2477ebd292",
+              "span_id": "e042e4d9c82842ce"
+            },
+            "question_cache": {
+              "eligible": false,
+              "status": "bypass",
+              "reason": "request_disabled"
+            },
+            "routing": {
+              "departments": [
+                "student_affairs"
+              ],
+              "strategy": "direct",
+              "task_type": "registration_query",
+              "confidence": 0.84,
+              "intent": {
+                "complexity": "simple",
+                "is_personal": true,
+                "force_llm_synthesis": false,
+                "query_type": "factual"
+              }
+            }
+          },
+          "events": [
+            {
+              "name": "api.query",
+              "started_at_ms": 0.021,
+              "ended_at_ms": 2151.544,
+              "duration_ms": 2151.523,
+              "parent": null
+            },
+            {
+              "name": "main.handle_query",
+              "started_at_ms": 12.006,
+              "ended_at_ms": 2151.524,
+              "duration_ms": 2139.519,
+              "parent": "api.query",
+              "meta": {
+                "context_id": "qbench-Q24-191726"
+              }
+            },
+            {
+              "name": "main.router.route",
+              "started_at_ms": 12.297,
+              "ended_at_ms": 16.306,
+              "duration_ms": 4.009,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.create_query_log",
+              "started_at_ms": 16.342,
+              "ended_at_ms": 31.949,
+              "duration_ms": 15.607,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.dispatch_departments",
+              "started_at_ms": 31.987,
+              "ended_at_ms": 2090.169,
+              "duration_ms": 2058.182,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.record_department_transport_failure",
+              "started_at_ms": 2090.199,
+              "ended_at_ms": 2128.603,
+              "duration_ms": 38.404,
+              "parent": "main.handle_query",
+              "meta": {
+                "department": "student_affairs"
+              }
+            },
+            {
+              "name": "main.filter_low_confidence",
+              "started_at_ms": 2128.741,
+              "ended_at_ms": 2128.751,
+              "duration_ms": 0.01,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.compose_response",
+              "started_at_ms": 2128.758,
+              "ended_at_ms": 2130.146,
+              "duration_ms": 1.388,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.telemetry.finalize_success",
+              "started_at_ms": 2130.16,
+              "ended_at_ms": 2138.852,
+              "duration_ms": 8.692,
+              "parent": "main.handle_query"
+            },
+            {
+              "name": "main.conversation.record",
+              "started_at_ms": 2138.874,
+              "ended_at_ms": 2151.508,
+              "duration_ms": 12.634,
+              "parent": "main.handle_query"
+            }
+          ]
+        },
+        "remote_profiles": [
+          {
+            "agent_id": "student_affairs_orchestrator",
+            "agent_role": "department_orchestrator",
+            "profile": {
+              "label": "remote_department:student_affairs",
+              "total_ms": 2039.887,
+              "attributes": {},
+              "events": [
+                {
+                  "name": "department.handle",
+                  "started_at_ms": 0.176,
+                  "ended_at_ms": 2039.787,
+                  "duration_ms": 2039.611,
+                  "parent": null,
+                  "meta": {
+                    "department": "student_affairs",
+                    "task_type": "registration_query"
+                  }
+                },
+                {
+                  "name": "department.select_agent",
+                  "started_at_ms": 0.195,
+                  "ended_at_ms": 0.335,
+                  "duration_ms": 0.14,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                },
+                {
+                  "name": "department.agent_handle_task",
+                  "started_at_ms": 0.871,
+                  "ended_at_ms": 1999.128,
+                  "duration_ms": 1998.257,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs",
+                    "agent_id": "registration_agent"
+                  }
+                },
+                {
+                  "name": "department.telemetry.record_success",
+                  "started_at_ms": 1999.161,
+                  "ended_at_ms": 2039.434,
+                  "duration_ms": 40.273,
+                  "parent": "department.handle",
+                  "meta": {
+                    "department": "student_affairs"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "error": null
+    }
+  ],
+  "diagnostics": {
+    "overview_before": {
+      "query_count": 81,
+      "query_failure_count": 1,
+      "agent_task_count": 132,
+      "agent_task_failure_count": 11
+    },
+    "overview_after": {
+      "query_count": 86,
+      "query_failure_count": 1,
+      "agent_task_count": 146,
+      "agent_task_failure_count": 23
+    },
+    "overview_delta": {
+      "query_count": 5,
+      "query_failure_count": 0,
+      "agent_task_count": 14,
+      "agent_task_failure_count": 12
+    },
+    "agent_deltas": [
+      {
+        "agent_id": "registration_agent",
+        "department": "student_affairs",
+        "role": "specialist_agent",
+        "task_delta": 5,
+        "failed_delta": 5,
+        "last_error": "a2a_specialist_transport_failed",
+        "avg_latency_ms": 1932.1,
+        "max_latency_ms": 6324.84
+      },
+      {
+        "agent_id": "student_affairs_orchestrator",
+        "department": "student_affairs",
+        "role": "department_orchestrator",
+        "task_delta": 5,
+        "failed_delta": 5,
+        "last_error": "a2a_specialist_transport_failed",
+        "avg_latency_ms": null,
+        "max_latency_ms": null
+      },
+      {
+        "agent_id": "academic_programs_orchestrator",
+        "department": "academic_programs",
+        "role": "department_orchestrator",
+        "task_delta": 1,
+        "failed_delta": 1,
+        "last_error": "a2a_specialist_endpoint_missing",
+        "avg_latency_ms": null,
+        "max_latency_ms": null
+      },
+      {
+        "agent_id": "curriculum_agent",
+        "department": "academic_programs",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 1,
+        "last_error": "a2a_specialist_endpoint_missing",
+        "avg_latency_ms": 4313.81,
+        "max_latency_ms": 60178.5
+      },
+      {
+        "agent_id": "announcement_agent",
+        "department": "announcement",
+        "role": "capability_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 258.81,
+        "max_latency_ms": 820.22
+      },
+      {
+        "agent_id": "tuition_agent",
+        "department": "finance",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 461.93,
+        "max_latency_ms": 1823.4
+      }
+    ],
+    "new_recent_failures": [
+      {
+        "task_id": "qbench-Q24-191726:department:student_affairs",
+        "sender_agent_id": "main_orchestrator",
+        "receiver_agent_id": "student_affairs_orchestrator",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:28.694453+00:00",
+        "trace_id": null,
+        "query_preview": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?"
+      },
+      {
+        "task_id": "482cc482-ceb7-45c0-9e44-2f6d37f3d1c1",
+        "sender_agent_id": "student_affairs_orchestrator",
+        "receiver_agent_id": "registration_agent",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:28.653192+00:00",
+        "trace_id": "cb719225e6064cda9b05ee2477ebd292",
+        "query_preview": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?"
+      },
+      {
+        "task_id": "qbench-Q22-191719:department:student_affairs",
+        "sender_agent_id": "main_orchestrator",
+        "receiver_agent_id": "student_affairs_orchestrator",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:21.520329+00:00",
+        "trace_id": null,
+        "query_preview": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?"
+      },
+      {
+        "task_id": "e7edee85-ef43-486d-98da-a10d6723a101",
+        "sender_agent_id": "student_affairs_orchestrator",
+        "receiver_agent_id": "registration_agent",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:21.479592+00:00",
+        "trace_id": "df339f0412694920888edf2bc9b17262",
+        "query_preview": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?"
+      },
+      {
+        "task_id": "qbench-Q17-191711:department:student_affairs",
+        "sender_agent_id": "main_orchestrator",
+        "receiver_agent_id": "student_affairs_orchestrator",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:14.316499+00:00",
+        "trace_id": null,
+        "query_preview": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?"
+      },
+      {
+        "task_id": "940c3ac6-2539-46f5-af21-7d509e74838a",
+        "sender_agent_id": "student_affairs_orchestrator",
+        "receiver_agent_id": "registration_agent",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:14.283300+00:00",
+        "trace_id": "6eab51ef2a7a48bd90f7f90fcd5d370b",
+        "query_preview": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?"
+      },
+      {
+        "task_id": "qbench-Q11-191704:department:student_affairs",
+        "sender_agent_id": "main_orchestrator",
+        "receiver_agent_id": "student_affairs_orchestrator",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:06.242910+00:00",
+        "trace_id": null,
+        "query_preview": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?"
+      },
+      {
+        "task_id": "e23a2d65-38c1-44c5-a04d-9e2f4a037ad4",
+        "sender_agent_id": "student_affairs_orchestrator",
+        "receiver_agent_id": "registration_agent",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:17:06.211686+00:00",
+        "trace_id": "c704c8c24730482aa30038a39e8f9caf",
+        "query_preview": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?"
+      },
+      {
+        "task_id": "qbench-Q1-191654:department:academic_programs",
+        "sender_agent_id": "main_orchestrator",
+        "receiver_agent_id": "academic_programs_orchestrator",
+        "status": "failed",
+        "error": "a2a_specialist_endpoint_missing",
+        "completed_at": "2026-04-25T16:16:58.511776+00:00",
+        "trace_id": null,
+        "query_preview": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?"
+      },
+      {
+        "task_id": "qbench-Q1-191654:department:student_affairs",
+        "sender_agent_id": "main_orchestrator",
+        "receiver_agent_id": "student_affairs_orchestrator",
+        "status": "failed",
+        "error": "a2a_specialist_transport_failed",
+        "completed_at": "2026-04-25T16:16:58.479798+00:00",
+        "trace_id": null,
+        "query_preview": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?"
+      }
+    ]
+  }
+}

@@ -1,0 +1,169 @@
+name: A2A Docker E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/a2a-docker-e2e.yml"
+      - "Dockerfile"
+      - "docker-compose*.yml"
+      - "requirements*.txt"
+      - "pyproject.toml"
+      - "alembic.ini"
+      - "migrations/**"
+      - "scripts/a2a_*.py"
+      - "scripts/run_agent_service.py"
+      - "scripts/seed_curriculum_data.py"
+      - "scripts/seed_synthetic_data.py"
+      - "src/**"
+      - "tests/unit/test_a2a*.py"
+      - "tests/unit/test_agent_service.py"
+      - "tests/unit/test_api.py"
+      - "tests/unit/test_orchestrators.py"
+      - "tests/unit/test_telemetry.py"
+
+jobs:
+  docker-a2a-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      COMPOSE_PROJECT_NAME: omu_a2a_ci
+      A2A_INFRA_NETWORK: omu_a2a_ci_default
+      SERVER_INTERNAL_API_KEY: local-a2a-secret
+      A2A_INTERNAL_API_KEY: local-a2a-secret
+      A2A_REQUIRE_SERVICE_IDENTITY: "true"
+      A2A_REQUIRE_REQUEST_SIGNATURE: "true"
+      A2A_DISCOVERY_AGENT_CARD_ENABLED: "true"
+      A2A_TRANSPORT_PROTOCOL: jsonrpc
+      A2A_REQUEST_SIGNATURE_SECRET: ""
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: university_support
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      CHROMA_HOST: localhost
+      CHROMA_PORT: "8100"
+      EMBEDDING_DEVICE: cpu
+      RERANKER_DEVICE: cpu
+      SERVER_WARMUP_ENABLED: "false"
+      SERVER_WARMUP_INCLUDE_RERANKER: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime = Path("requirements.txt").read_text(encoding="utf-8")
+          runtime = runtime.replace("torch==2.6.0", "torch==2.6.0+cpu")
+          Path("/tmp/requirements-ci.txt").write_text(runtime, encoding="utf-8")
+
+          dev = Path("requirements-dev.txt").read_text(encoding="utf-8")
+          dev = dev.replace("-r requirements.txt", "-r /tmp/requirements-ci.txt")
+          Path("/tmp/requirements-dev-ci.txt").write_text(dev, encoding="utf-8")
+          PY
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -r /tmp/requirements-dev-ci.txt
+
+      - name: Write CI environment file
+        run: |
+          cat > .env <<'ENV'
+          POSTGRES_HOST=localhost
+          POSTGRES_PORT=5432
+          POSTGRES_DB=university_support
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres123
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          CHROMA_HOST=localhost
+          CHROMA_PORT=8100
+          SERVER_INTERNAL_API_KEY=local-a2a-secret
+          A2A_INTERNAL_API_KEY=local-a2a-secret
+          A2A_REQUIRE_SERVICE_IDENTITY=true
+          A2A_REQUIRE_REQUEST_SIGNATURE=true
+          A2A_REQUEST_SIGNATURE_SECRET=
+          A2A_DISCOVERY_AGENT_CARD_ENABLED=true
+          A2A_TRANSPORT_PROTOCOL=jsonrpc
+          SERVER_WARMUP_ENABLED=false
+          SERVER_WARMUP_INCLUDE_RERANKER=false
+          EMBEDDING_DEVICE=cpu
+          RERANKER_DEVICE=cpu
+          ENV
+
+      - name: Run targeted A2A unit tests
+        run: |
+          python -m pytest \
+            tests/unit/test_a2a_service_identity.py \
+            tests/unit/test_a2a_helpers.py \
+            tests/unit/test_agent_service.py \
+            tests/unit/test_api.py \
+            tests/unit/test_orchestrators.py \
+            tests/unit/test_telemetry.py \
+            -q
+
+      - name: Start infrastructure
+        run: |
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f docker-compose.yml up -d --wait postgres redis chromadb
+
+      - name: Migrate and seed database
+        run: |
+          python -m alembic upgrade head
+          python -m scripts.seed_curriculum_data
+          python -m scripts.seed_synthetic_data
+
+      - name: Roll out full JSON-RPC A2A topology
+        run: |
+          python -m scripts.a2a_rollout \
+            --transport-protocol jsonrpc \
+            --include-student \
+            --include-academic \
+            --include-announcement \
+            --include-event \
+            --include-all-specialists \
+            --health-timeout-seconds 240
+
+      - name: Smoke-test full A2A stack
+        run: |
+          python -m scripts.a2a_docker_stack_smoke \
+            --expect-protocol jsonrpc \
+            --min-active 15 \
+            --timeout 120
+
+      - name: Dump container status on failure
+        if: failure()
+        run: |
+          docker compose \
+            -f docker-compose.a2a-existing-infra.yml \
+            -f docker-compose.a2a-existing-infra-student.yml \
+            -f docker-compose.a2a-existing-infra-academic.yml \
+            -f docker-compose.a2a-existing-infra-capabilities.yml \
+            -f docker-compose.a2a-existing-infra-finance-specialists.yml \
+            -f docker-compose.a2a-existing-infra-student-specialists.yml \
+            -f docker-compose.a2a-existing-infra-academic-specialists.yml \
+            ps || true
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f docker-compose.yml ps || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose \
+            -f docker-compose.a2a-existing-infra.yml \
+            -f docker-compose.a2a-existing-infra-student.yml \
+            -f docker-compose.a2a-existing-infra-academic.yml \
+            -f docker-compose.a2a-existing-infra-capabilities.yml \
+            -f docker-compose.a2a-existing-infra-finance-specialists.yml \
+            -f docker-compose.a2a-existing-infra-student-specialists.yml \
+            -f docker-compose.a2a-existing-infra-academic-specialists.yml \
+            down --remove-orphans || true
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f docker-compose.yml down -v --remove-orphans || true

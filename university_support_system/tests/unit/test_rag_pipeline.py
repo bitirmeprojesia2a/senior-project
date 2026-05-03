@@ -105,6 +105,7 @@ class TestDocumentLoader:
 
         assert len(docs) == 1
         assert docs[0].metadata["category"] == "yönergeler"
+        assert docs[0].metadata["relative_path"] == "yönergeler/yonerge1.txt"
 
     def test_nonexistent_directory(self):
         """Var olmayan klasör boş liste döndürür."""
@@ -300,6 +301,16 @@ class TestTextChunker:
         assert chunker.split_text("") == []
         assert chunker.split_text("   ") == []
 
+    def test_min_chunk_chars_filters_title_only_fragments(self):
+        chunker = TextChunker(min_chunk_chars=50)
+        text = "Amaç\n\nBu bölüm öğrencilerin kayıt ve ders işlemlerini açıklayan yeterli uzunlukta bir içeriktir."
+
+        chunks = chunker.split_text(text, metadata={"source": "yonerge.pdf"})
+
+        assert chunks
+        assert all(chunk.char_count >= 50 for chunk in chunks)
+        assert all(chunk.content != "Amaç" for chunk in chunks)
+
     def test_get_stats(self):
         """Chunk istatistikleri doğru hesaplanır."""
         chunker = TextChunker(chunk_size=100, chunk_overlap=10)
@@ -384,6 +395,51 @@ class TestContentHashIds:
         )
         assert ids[0] != ids[1]
 
+    def test_relative_path_disambiguates_same_filename(self):
+        from src.rag.pipeline import IndexingPipeline
+
+        ids = IndexingPipeline._generate_content_hash_ids(
+            ["aynı metin", "aynı metin"],
+            [
+                {"source": "yonerge.pdf", "relative_path": "uygulama/yonerge.pdf"},
+                {"source": "yonerge.pdf", "relative_path": "yonergeler/yonerge.pdf"},
+            ],
+        )
+
+        assert ids[0] != ids[1]
+
+    def test_validate_unique_ids_rejects_collisions(self):
+        from src.rag.pipeline import IndexingPipeline
+
+        with pytest.raises(ValueError):
+            IndexingPipeline._validate_unique_ids(["chunk_a", "chunk_b", "chunk_a"])
+
+
+class TestIndexingPipelineEmbeddingValidation:
+    """Pipeline embedding output validation tests."""
+
+    def test_generate_embeddings_rejects_count_mismatch(self):
+        pipeline = IndexingPipeline()
+        pipeline.embedder = MagicMock()
+        pipeline.embedder.model_name = "mock-model"
+        pipeline.embedder.dimension = 3
+        pipeline.embedder.embed_texts.return_value = [[0.1, 0.2, 0.3]]
+
+        result = pipeline._generate_embeddings(["metin 1", "metin 2"])
+
+        assert result is None
+
+    def test_generate_embeddings_rejects_dimension_mismatch(self):
+        pipeline = IndexingPipeline()
+        pipeline.embedder = MagicMock()
+        pipeline.embedder.model_name = "mock-model"
+        pipeline.embedder.dimension = 3
+        pipeline.embedder.embed_texts.return_value = [[0.1, 0.2]]
+
+        result = pipeline._generate_embeddings(["metin"])
+
+        assert result is None
+
 
 class TestPipelineCollectionResolution:
     """Pipeline koleksiyon çözümleme testleri."""
@@ -438,3 +494,12 @@ class TestPipelineCollectionResolution:
         collection_name = pipeline._resolve_collection_name(source_dir)
 
         assert collection_name == "ozel_koleksiyon"
+
+    def test_indexing_invalidates_retrieval_caches(self):
+        with patch("src.rag.query_cache.clear_shared_query_cache") as clear_query_cache, patch(
+            "src.rag.retriever.HybridRetriever.clear_resource_cache"
+        ) as clear_resource_cache:
+            IndexingPipeline._invalidate_retrieval_caches()
+
+        clear_query_cache.assert_called_once_with()
+        clear_resource_cache.assert_called_once_with()

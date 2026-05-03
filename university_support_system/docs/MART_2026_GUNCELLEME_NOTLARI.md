@@ -1,6 +1,6 @@
 # Mart 2026 Guncelleme Notlari
 
-> Durum Notu (Nisan 2026): Bu belge Mart 2026 doneminin snapshot ozetidir. Sonraki refactor, benchmark ve deployment degisiklikleri icin guncel ana referans seti `README.md`, `docs/KURULUM_VE_CALISTIRMA.md`, `docs/PROJE_ANATOMISI_KILAVUZU.md` ve `docs/AZURE_VM_RUNBOOK.md` dosyalaridir.
+> Durum Notu (Nisan 2026): Bu belge Mart 2026 doneminin snapshot ozetidir. Sonraki A2A servislesmesi, merkezi retrieval, Slack A2A, benchmark ve deployment degisiklikleri icin guncel ana referans seti `README.md`, `docs/A2A_DAGITIK_MIMARI_VE_CALISMA_OZETI.md`, `docs/KURULUM_VE_CALISTIRMA.md`, `docs/PROJE_ANATOMISI_KILAVUZU.md` ve `docs/AZURE_VM_RUNBOOK.md` dosyalaridir.
 
 Bu dokuman, proje uzerinde Mart 2026 boyunca yapilan guncellemeleri, dogrulamalari ve kalan teknik borclari tek yerde toplar. Bazi eski faz dokumanlarinda yer alan anlatilar tarihsel baglam tasidigi icin, mevcut repo durumunu degerlendirirken bu belge oncelikli referans kabul edilmelidir.
 
@@ -51,7 +51,7 @@ Bu dinamik yapi su alanlara yansitilmistir:
 * `src/rag/retriever.py`
 * `scripts/index_documents.py`
 * `scripts/query_db.py`
-* `scripts/test_hybrid_search.py`
+* `scripts/hybrid_search_probe.py`
 * `scripts/compare_collections.py`
 * `scripts/evaluate_rag.py`
 

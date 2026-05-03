@@ -7,7 +7,7 @@ değerlendirir. Precision@k, kaynak doğruluğu ve performans metrikleri hesapla
 Kullanım:
     python scripts/evaluate_rag.py
     python scripts/evaluate_rag.py --top-k 3
-    python scripts/evaluate_rag.py --output docs/rag_evaluation_report.md
+    python scripts/evaluate_rag.py --output docs/archive/benchmarks/rag_evaluation_report.md
     python scripts/evaluate_rag.py --department academic_programs
 """
 
@@ -231,7 +231,7 @@ def main():
     parser.add_argument(
         "--output",
         type=str,
-        default="docs/rag_evaluation_report.md",
+        default="docs/archive/benchmarks/rag_evaluation_report.md",
         help="Rapor çıktı dosyası",
     )
     parser.add_argument(

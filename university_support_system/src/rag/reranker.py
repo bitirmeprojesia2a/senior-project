@@ -64,7 +64,7 @@ class CrossEncoderReranker:
                 settings.reranker.local_files_only,
             )
             cached_model = self._MODEL_CACHE.get(cache_key)
-            if cached_model is not None:
+            if settings.cache.enabled and settings.cache.reranker_model_cache_enabled and cached_model is not None:
                 self._model = cached_model
                 logger.info(
                     "reranker_model_cache_hit",
@@ -92,7 +92,8 @@ class CrossEncoderReranker:
                     device=self.resolved_device,
                     local_files_only=settings.reranker.local_files_only,
                 )
-                self._MODEL_CACHE[cache_key] = self._model
+                if settings.cache.enabled and settings.cache.reranker_model_cache_enabled:
+                    self._MODEL_CACHE[cache_key] = self._model
             logger.info(
                 "reranker_model_loaded",
                 model=self.model_name,

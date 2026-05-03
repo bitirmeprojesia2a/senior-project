@@ -5,20 +5,24 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from src.core.text_normalization import normalize_text
+from src.core.text_normalization import iter_alias_matches_longest_first, normalize_text
+
+EXTRA_COURSE_LIST_KEYWORDS = (
+    "dersleri neler",
+    "dersleri nelerdir",
+    "donem dersleri",
+    "yariyil dersleri",
+)
 
 COURSE_LIST_KEYWORDS = (
-    "acik ders", "açık ders", "bu donem", "bu dönem", "hangi dersler", "ders listesi",
-    "sinif dersleri", "sınıf dersleri", "bolum dersleri", "bölüm dersleri",
+    "acik ders", "bu donem", "hangi dersler", "ders listesi",
+    "sinif dersleri", "bolum dersleri",
 )
 SCHEDULE_QUERY_MARKERS = (
     "ders programi",
-    "ders programı",
     "haftalik program",
-    "haftalık program",
     "hangi saatte",
     "hangi gun",
-    "hangi gün",
     "derslik",
     "ne zaman",
 )
@@ -57,19 +61,14 @@ DEPARTMENT_CONTEXT_MARKERS = (
     "ders listesi",
     "hangi dersler",
     "ders plani",
-    "ders planı",
     "ders programi",
-    "ders programı",
     "ders icerigi",
-    "ders içeriği",
     "akts gerekli",
     "kredi gerekli",
     "toplam akts",
     "toplam kredi",
     "bolum dersleri",
-    "bölüm dersleri",
     "sinif dersleri",
-    "sınıf dersleri",
 )
 DEPARTMENT_CONTEXT_MESSAGE = (
     "Bu akademik program sorusunu dogru cevaplayabilmem icin once bolum veya program bilgisini bilmem gerekiyor. "
@@ -95,7 +94,25 @@ SEMESTER_QUERY_PATTERN = re.compile(
     r"\b([1-8])\s*\.?\s*(?:yariyil|yarıyıl|donem|dönem)\b",
     re.IGNORECASE,
 )
+SEMESTER_WORDS = {
+    "birinci": 1,
+    "ilk": 1,
+    "ikinci": 2,
+    "ucuncu": 3,
+    "dorduncu": 4,
+    "besinci": 5,
+    "altinci": 6,
+    "yedinci": 7,
+    "sekizinci": 8,
+}
 ELECTIVE_GROUP_TYPES = {"secmeli_grup", "teknik_secmeli", "lab_secmeli", "sosyal_secmeli"}
+LANGUAGE_COURSE_CODE_PREFIXES = ("YD", "YDA", "YDF", "YDI")
+LANGUAGE_COURSE_NAME_MARKERS = (
+    "almanca",
+    "fransizca",
+    "ingilizce",
+    "yabanci dil",
+)
 SHARED_DEPARTMENT_MARKERS = (
     "temel bilimler",
     "yabanci diller",
@@ -114,6 +131,105 @@ DEPARTMENT_NAME_SUFFIXES = (
     "abd",
     "lisans",
     "onlisans",
+)
+KNOWN_DEPARTMENT_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "Bilgisayar Muhendisligi",
+        ("bilgisayar muhendisligi", "bil muh", "bil-muhendislik"),
+    ),
+    (
+        "Elektrik-Elektronik Mühendisliği",
+        ("elektrik elektronik muhendisligi", "eem", "eem muhendislik"),
+    ),
+    (
+        "İstatistik",
+        ("istatistik", "ist bolumu", "ist-fen"),
+    ),
+    (
+        "Fizik",
+        ("fizik", "fizik-fen"),
+    ),
+    (
+        "Fen Bilgisi Öğretmenliği",
+        ("fen bilgisi ogretmenligi", "fen bilgisi", "mfbeb"),
+    ),
+    (
+        "Matematik Öğretmenliği",
+        ("matematik ogretmenligi", "mf matematik"),
+    ),
+    (
+        "Müzik Öğretmenliği",
+        ("muzik ogretmenligi", "guzel sanatlar muzik", "müzik öğretmenliği"),
+    ),
+    (
+        "Resim İş Öğretmenliği",
+        ("resim is ogretmenligi", "resim ogretmenligi", "guzel sanatlar resim"),
+    ),
+)
+
+EXTRA_DEPARTMENT_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    # Daha ozel egitim/program adlari, "fizik" veya "matematik" gibi
+    # kisa bolum adlarindan once denenmelidir.
+    (
+        "Biyoloji Egitimi",
+        ("biyoloji egitimi", "biyoloji ogretmenligi"),
+    ),
+    (
+        "Fen Bilgisi Egitimi",
+        ("fen bilgisi egitimi", "fen bilgisi ogretmenligi", "fen bilgisi", "mfbeb"),
+    ),
+    (
+        "Fizik Egitimi",
+        ("fizik egitimi", "fizik ogretmenligi"),
+    ),
+    (
+        "Ilkogretim Matematik Egitimi",
+        (
+            "ilkogretim matematik egitimi",
+            "ilkogretim matematik ogretmenligi",
+            "ilkmat",
+        ),
+    ),
+    (
+        "Matematik Egitimi",
+        ("matematik egitimi",),
+    ),
+    (
+        "Okul Oncesi Ogretmenligi",
+        ("okul oncesi ogretmenligi", "okul oncesi"),
+    ),
+    (
+        "Sinif Ogretmenligi",
+        ("sinif ogretmenligi", "sinif egitimi"),
+    ),
+    (
+        "Biyoloji",
+        ("biyoloji",),
+    ),
+    (
+        "Matematik",
+        ("matematik",),
+    ),
+    (
+        "Fizik",
+        ("fizik", "fizik-fen"),
+    ),
+    (
+        "Elektrik-Elektronik Muhendisligi",
+        ("elektrik elektronik muhendisligi", "eem", "eem muhendislik"),
+    ),
+    (
+        "Istatistik",
+        ("istatistik", "ist bolumu", "ist-fen"),
+    ),
+    (
+        "Muzik Ogretmenligi",
+        ("muzik ogretmenligi", "guzel sanatlar muzik"),
+    ),
+    (
+        "Resim Is Ogretmenligi",
+        ("resim is ogretmenligi", "resim ogretmenligi", "guzel sanatlar resim"),
+    ),
 )
 
 
@@ -181,6 +297,31 @@ def partition_courses_for_department(
     return core_courses, service_courses, elective_groups
 
 
+def split_language_choice_courses(
+    courses: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Separate foreign-language alternatives from the main course list."""
+    regular_courses: list[dict[str, Any]] = []
+    language_courses: list[dict[str, Any]] = []
+
+    for course in courses:
+        if is_language_choice_course(course):
+            language_courses.append(course)
+        else:
+            regular_courses.append(course)
+
+    return regular_courses, language_courses
+
+
+def is_language_choice_course(course: dict[str, Any]) -> bool:
+    """Return whether a course row is a foreign-language option."""
+    code = str(course.get("course_code") or "").upper().replace(" ", "")
+    name = normalize_text(course.get("course_name"))
+    if not code.startswith(LANGUAGE_COURSE_CODE_PREFIXES):
+        return False
+    return any(marker in name for marker in LANGUAGE_COURSE_NAME_MARKERS)
+
+
 def is_department_specific_match(
     normalized_department: str,
     course_department: str,
@@ -213,6 +354,17 @@ def canonical_department_name(value: str) -> str:
     return " ".join(normalized.split())
 
 
+def infer_department_from_query(query_text: str) -> str | None:
+    """Known program adlarini soru metninden cikar."""
+    normalized = normalize_text(query_text)
+    for department, alias in iter_alias_matches_longest_first(
+        EXTRA_DEPARTMENT_ALIASES + KNOWN_DEPARTMENT_ALIASES
+    ):
+        if alias in normalized:
+            return department
+    return None
+
+
 def format_course_lines(courses: list[dict[str, Any]]) -> list[str]:
     """Format course items into bullet strings."""
     return [f"- {format_course_line(course)}" for course in sorted(courses, key=lambda item: item["course_code"])]
@@ -226,12 +378,23 @@ def format_course_line(course: dict[str, Any]) -> str:
 
 def is_course_list_query(lowered: str) -> bool:
     """Return whether the query asks for a course list."""
-    return any(keyword in lowered for keyword in COURSE_LIST_KEYWORDS)
+    return any(
+        keyword in lowered
+        for keyword in COURSE_LIST_KEYWORDS + EXTRA_COURSE_LIST_KEYWORDS
+    )
 
 
 def is_schedule_query(lowered: str) -> bool:
     """Return whether the query asks about timetable/schedule details."""
     return any(keyword in lowered for keyword in SCHEDULE_QUERY_MARKERS)
+
+
+def is_generic_schedule_listing_query(lowered: str) -> bool:
+    """Return whether the query asks for the department timetable as a whole."""
+    return any(
+        marker in lowered
+        for marker in ("ders programi", "haftalik program")
+    )
 
 
 def extract_schedule_day(lowered: str) -> str | None:
@@ -259,7 +422,9 @@ def wants_specific_schedule_lookup(lowered: str, query_text: str) -> bool:
         return True
     if extract_schedule_groups(lowered):
         return True
-    return any(marker in lowered for marker in ("hangi saatte", "hangi gun", "hangi gün", "derslik"))
+    if is_generic_schedule_listing_query(lowered):
+        return True
+    return any(marker in lowered for marker in ("hangi saatte", "hangi gun", "derslik"))
 
 
 def is_prerequisite_query(lowered: str) -> bool:
@@ -270,9 +435,19 @@ def is_prerequisite_query(lowered: str) -> bool:
 def extract_curriculum_semester(query_text: str) -> int | None:
     """Extract curriculum semester number from a query."""
     match = SEMESTER_QUERY_PATTERN.search(query_text)
-    if match is None:
+    if match is not None:
+        return int(match.group(1))
+
+    normalized = normalize_text(query_text)
+    semester_context_markers = ("donem", "yariyil")
+    has_semester_context = any(marker in normalized for marker in semester_context_markers)
+    has_course_list_context = is_course_list_query(normalized)
+    if not has_semester_context and not has_course_list_context:
         return None
-    return int(match.group(1))
+    for marker, semester in SEMESTER_WORDS.items():
+        if marker in normalized:
+            return semester
+    return None
 
 
 _RULE_CONTEXT_BYPASS: tuple[str, ...] = (

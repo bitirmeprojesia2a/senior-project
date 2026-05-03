@@ -11,7 +11,7 @@ Kullanim:
     python scripts/analyze_reranker_scores.py --profile core
     python scripts/analyze_reranker_scores.py --query "Erasmus basvurusu nasil yapilir"
     python scripts/analyze_reranker_scores.py --all-profiles
-    python scripts/analyze_reranker_scores.py --output docs/reranker_score_analysis.md
+    python scripts/analyze_reranker_scores.py --output docs/archive/benchmarks/reranker_score_analysis.md
 """
 
 import argparse
@@ -412,7 +412,7 @@ def main() -> None:
         "--output",
         type=str,
         default=None,
-        help="Markdown rapor cikti dosyasi (ornegin: docs/reranker_score_analysis.md)",
+        help="Markdown rapor cikti dosyasi (ornegin: docs/archive/benchmarks/reranker_score_analysis.md)",
     )
     args = parser.parse_args()
 

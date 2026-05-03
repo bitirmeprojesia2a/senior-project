@@ -166,6 +166,7 @@ class ChromaIndexer:
     ) -> None:
         """Batch halinde add veya upsert yapar."""
         collection_id = self.get_collection_id()
+        self._validate_write_payload(ids, documents, embeddings, metadatas)
 
         clean_metadatas = None
         if metadatas:
@@ -203,6 +204,46 @@ class ChromaIndexer:
             )
 
         logger.info(f"documents_{operation}", total=total_written, collection=self.collection_name)
+
+    @staticmethod
+    def _validate_write_payload(
+        ids: List[str],
+        documents: List[str],
+        embeddings: List[List[float]],
+        metadatas: List[Dict[str, Any]] | None,
+    ) -> None:
+        """Validate payload shape before sending a batch to Chroma."""
+        if not (len(ids) == len(documents) == len(embeddings)):
+            raise ValueError(
+                "Chroma write payload length mismatch: "
+                f"ids={len(ids)}, documents={len(documents)}, embeddings={len(embeddings)}"
+            )
+        if metadatas is not None and len(metadatas) != len(ids):
+            raise ValueError(
+                "Chroma write metadata length mismatch: "
+                f"ids={len(ids)}, metadatas={len(metadatas)}"
+            )
+        if not ids:
+            return
+
+        expected_dimension = len(embeddings[0])
+        if expected_dimension <= 0:
+            raise ValueError("Chroma write payload contains an empty embedding vector")
+
+        bad_embedding = next(
+            (
+                (index, len(vector))
+                for index, vector in enumerate(embeddings)
+                if len(vector) != expected_dimension
+            ),
+            None,
+        )
+        if bad_embedding is not None:
+            index, actual_dimension = bad_embedding
+            raise ValueError(
+                "Chroma write embedding dimension mismatch: "
+                f"expected={expected_dimension}, index={index}, actual={actual_dimension}"
+            )
 
     @staticmethod
     def _infer_department_from_collection_name(collection_name: str) -> str:

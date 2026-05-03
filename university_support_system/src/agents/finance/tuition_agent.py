@@ -8,7 +8,6 @@ from a2a.types import Task
 
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.agents.finance.tuition_utils import (
-    PROCEDURAL_SOURCE_ONLY_KEYWORDS,
     build_catalog_fee_answer,
     build_honest_fee_fallback,
     build_structured_fee_answer,
@@ -67,7 +66,9 @@ class TuitionAgent(BaseSpecialistAgent):
         query_text = str(metadata.get("query_text", "")).strip()
         student_id = metadata.get("student_id")
         is_authenticated = bool(metadata.get("is_authenticated", False))
-        student_type = normalize_student_type(metadata.get("student_type"))
+        profile_student_type = normalize_student_type(metadata.get("student_type"))
+        requested_student_type = infer_requested_student_type(query_text)
+        student_type = requested_student_type or profile_student_type
         requested_unit = (
             extract_requested_unit(query_text)
             or str(metadata.get("student_faculty") or "").strip()
@@ -140,17 +141,6 @@ class TuitionAgent(BaseSpecialistAgent):
                         generation_mode="vt",
                         success=True,
                     )
-                return DepartmentResponse(
-                    department=self.department,
-                    answer=(
-                        f"{display_unit_name(requested_unit)} / "
-                        f"{'Turk ogrenci' if requested_type == 'domestic' else 'uluslararasi ogrenci'} "
-                        "icin ogrenim ucreti veritabaninda bulunmuyor."
-                    ),
-                    generation_mode="kural",
-                    success=False,
-                    error="tuition_catalog_missing",
-                )
 
         return await super().handle_department_task(task)
 
@@ -159,26 +149,6 @@ class TuitionAgent(BaseSpecialistAgent):
 
     def _is_structured_fee_query(self, query_text: str) -> bool:
         return is_structured_fee_query(query_text)
-
-    def _should_skip_llm_synthesis(
-        self,
-        query_text: str,
-        results: Sequence[dict],
-        *,
-        db_context: str | None = None,
-    ) -> bool:
-        lowered = normalize_finance_text(query_text)
-        if not results or not any(
-            keyword in lowered for keyword in PROCEDURAL_SOURCE_ONLY_KEYWORDS
-        ):
-            return False
-        preferred = self._pick_preferred_result(query_text, results)
-        if preferred is None:
-            return False
-        return (
-            build_structured_fee_answer(query_text, preferred, db_context=db_context)
-            is not None
-        )
 
     def _build_source_only_answer(
         self,

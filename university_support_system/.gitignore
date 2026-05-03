@@ -38,6 +38,7 @@ htmlcov/
 .pytest-tmp/
 .pytest_tmp/
 .codex_pytest_tmp/
+pytest-cache-files-*/
 tests/live_test_results_*.json
 tests/live_test_profile_*.json
 
@@ -46,6 +47,7 @@ tests/live_test_profile_*.json
 # Database
 *.db
 *.sqlite3
+*.dump
 
 # ChromaDB Local
 chroma_db/
@@ -59,6 +61,7 @@ models/
 *.log
 *.tmp
 tmp/
+tmp_*/
 temp/
 temp_*.txt
 debug_*.py

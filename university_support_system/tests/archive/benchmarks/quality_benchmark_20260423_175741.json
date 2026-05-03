@@ -1,0 +1,115 @@
+{
+  "benchmark_version": "1.0",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "run_timestamp": "20260423_175741",
+  "total_questions": 1,
+  "summary": {
+    "dept_accuracy": 100.0,
+    "mode_accuracy": 100.0,
+    "key_fact_coverage": 100.0,
+    "clean_quality_pct": 100.0,
+    "avg_time_ms": 16749.2,
+    "median_time_ms": 16749.2,
+    "intent_analysis_active": 0,
+    "force_llm_synthesis_count": 0,
+    "a2a_query_failure_delta": 0,
+    "a2a_agent_task_failure_delta": 0
+  },
+  "results": [
+    {
+      "id": "Q5",
+      "category": "B_cross_department_parallel",
+      "question": "Uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretimi nereye yatırmam gerekiyor ve ayrıca ikamet izni için hangi belgeleri hazırlamalıyım?",
+      "difficulty": "hard",
+      "expected_departments": [
+        "academic_programs",
+        "finance",
+        "student_affairs"
+      ],
+      "actual_departments": [
+        "academic_programs",
+        "student_affairs",
+        "finance"
+      ],
+      "dept_match": true,
+      "expected_generation_mode": "llm",
+      "actual_generation_mode": "llm",
+      "mode_match": true,
+      "expected_key_facts": [
+        "ücret",
+        "ikamet",
+        "belge"
+      ],
+      "key_fact_results": {
+        "ücret": true,
+        "ikamet": true,
+        "belge": true
+      },
+      "key_facts_found": 3,
+      "key_facts_total": 3,
+      "elapsed_ms": 16749.2,
+      "source_count": 5,
+      "quality_warnings": [],
+      "intent_analysis": null,
+      "answer": "Benchmark, Uluslararası öğrenci olarak kayıt yaptırmak isteyenlere önerimiz şudur:\n\nÖğrenim ücretinizi yatırmadan önce, önce öğrenim ücretini nereye yatırmalısınız diye sorulmaktadır. Öncelikle belirtelim ki, OMU için öğrenim ücretini Üniversite’ye yatırmazsınız. Öğrenim ücreti, öğrenci tarafından önceden ödenir ve öğrenci bu ücreti Yurt Dışından Öğrenci İşleri Daire Başkanlığı'nın belirlediği bankalara yollamalıdır. \n\nÖğrenim ücretimi yatırdıktan sonra, Türkiye’deleri yasal kalış süresi içerisinde olduğunuzu belgelemek için ikamet izin belgemizi Göç İdaresi Başkanlığına başvuruda bulunmak zorundasınız. \n\nBunun için gereken bazı adımlar:\n- Sağlık sigortasını ve yabancı kimlik numarasını vermeniz\n- İkamet tezkeresini kaybetmemeniz veya kaybetmeniz halinde, ikamet tezkerenizi derhal müracaat ederek 15 gün içinde yenisini almanız\n\nBu süreci tamamladıktan sonra Türkiye'de yasal kalış süresi içerisinde olduğunuzu belgeleyebilirsiniz.\n\n---\nDaha iyi yardimci olabilmem icin sorunuzu daha detayli aciklayabilirsiniz ya da ilgili sekreterin iletisim bilgilerini paylasirim. \"Iletisim bilgisi\" yazarak ulasabilirsiniz.\n\nUretim Turu:\n- Akademik Programlar: RAG + LLM\n- Finans: VT\n\nKaynak Ozeti:\n- Belge: uluslararası_öğrenci_kayıt_taahhüt_ve_evrak_teslim_formu.pdf\n- Belge: uluslararası_öğrenci_yönergesi.pdf\n- Belge: lisansüstü_eğitim_enstitüsü.pdf\n- Belge: ön_lisans_ve_lisans_programları.pdf\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "profiling": {
+        "total_ms": 16749.17,
+        "events": []
+      },
+      "error": null
+    }
+  ],
+  "diagnostics": {
+    "overview_before": {
+      "query_count": 54,
+      "query_failure_count": 0,
+      "agent_task_count": 97,
+      "agent_task_failure_count": 4
+    },
+    "overview_after": {
+      "query_count": 55,
+      "query_failure_count": 0,
+      "agent_task_count": 100,
+      "agent_task_failure_count": 4
+    },
+    "overview_delta": {
+      "query_count": 1,
+      "query_failure_count": 0,
+      "agent_task_count": 3,
+      "agent_task_failure_count": 0
+    },
+    "agent_deltas": [
+      {
+        "agent_id": "international_agent",
+        "department": "academic_programs",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": "a2a_specialist_transport_failed",
+        "avg_latency_ms": 17006.03,
+        "max_latency_ms": 61048.32
+      },
+      {
+        "agent_id": "registration_agent",
+        "department": "student_affairs",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": "a2a_specialist_transport_failed",
+        "avg_latency_ms": 13422.89,
+        "max_latency_ms": 61007.98
+      },
+      {
+        "agent_id": "tuition_agent",
+        "department": "finance",
+        "role": "specialist_agent",
+        "task_delta": 1,
+        "failed_delta": 0,
+        "last_error": null,
+        "avg_latency_ms": 4684.53,
+        "max_latency_ms": 31054.83
+      }
+    ],
+    "new_recent_failures": []
+  }
+}

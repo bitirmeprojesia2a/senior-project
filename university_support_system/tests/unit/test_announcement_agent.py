@@ -8,7 +8,11 @@ import pytest
 
 from src.agents.announcement.agent import AnnouncementAgent
 from src.a2a.helpers import extract_department_response
-from src.db.announcements import AnnouncementRecord, extract_announcement_keywords
+from src.db.announcements import (
+    AnnouncementLinkRecord,
+    AnnouncementRecord,
+    extract_announcement_keywords,
+)
 
 
 def _build_task(metadata: dict | None = None):
@@ -27,22 +31,34 @@ async def test_announcement_agent_formats_matching_announcements():
             AnnouncementRecord(
                 id=1,
                 title="Cap Basvurulari Acildi",
+                display_summary="CAP basvurulari 5 Nisan'a kadar devam ediyor.",
                 summary="Cap basvurulari 5 Nisan'a kadar aciktir.",
                 original_text=None,
                 source_url="https://omu.edu.tr/duyuru/cap",
                 faculty="Muhendislik Fakultesi",
+                unit_name=None,
                 department="academic_programs",
                 published_at=None,
+                links=(
+                    AnnouncementLinkRecord(
+                        label="Basvuru Kilavuzu",
+                        url="https://omu.edu.tr/dosyalar/cap-kilavuz.pdf",
+                        link_type="attachment",
+                    ),
+                ),
             ),
             AnnouncementRecord(
                 id=2,
                 title="Yeni Ders Programi",
+                display_summary=None,
                 summary="Bahar donemi ders programi yayinlandi.",
                 original_text=None,
                 source_url=None,
                 faculty=None,
+                unit_name=None,
                 department="academic_programs",
                 published_at=None,
+                links=(),
             ),
         ]
     )
@@ -62,13 +78,17 @@ async def test_announcement_agent_formats_matching_announcements():
     assert response.success is True
     assert "Cap Basvurulari Acildi" in response.answer
     assert "https://omu.edu.tr/duyuru/cap" in response.answer
+    assert "CAP basvurulari 5 Nisan'a kadar devam ediyor." in response.answer
+    assert "Basvuru Kilavuzu" in response.answer
+    assert response.sources[0].metadata["links"][0]["url"] == "https://omu.edu.tr/dosyalar/cap-kilavuz.pdf"
     assert len(response.sources) == 2
     assert response.sources[0].metadata["record_type"] == "announcement"
     fetcher.assert_awaited_once_with(
         "Cap duyurulari neler?",
         department="academic_programs",
         faculty=None,
-        limit=3,
+        unit_name=None,
+        limit=8,
         allow_latest_fallback=True,
     )
 
@@ -113,6 +133,7 @@ async def test_announcement_agent_uses_all_departments_when_multiple_departments
         "Yatay gecis ve burs duyurulari neler?",
         department=["student_affairs", "finance"],
         faculty=None,
-        limit=3,
+        unit_name=None,
+        limit=8,
         allow_latest_fallback=True,
     )
