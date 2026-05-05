@@ -40,6 +40,10 @@ HYBRID_KEYWORDS: tuple[str, ...] = (
 
 GENERAL_AKTS_RULE_KEYWORDS: tuple[str, ...] = (
     "kac akts gerekir",
+    "kac akts tamamlamali",
+    "kac akts tamamlamalidir",
+    "akts tamamlamali",
+    "akts tamamlamalidir",
     "akts gerekli",
     "akts gerekir",
     "toplam akts",

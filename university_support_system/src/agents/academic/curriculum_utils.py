@@ -71,10 +71,10 @@ DEPARTMENT_CONTEXT_MARKERS = (
     "sinif dersleri",
 )
 DEPARTMENT_CONTEXT_MESSAGE = (
-    "Bu akademik program sorusunu dogru cevaplayabilmem icin once bolum veya program bilgisini bilmem gerekiyor. "
-    "Ornegin 'Bilgisayar Muhendisligi icin 1. yariyil dersleri nelerdir?' veya "
-    "'Kimya bolumu teknik secmeli dersleri hangileri?' seklinde sorabilirsin. "
-    "Kisisel ilerleme bilgisi istiyorsan OTP ile giris yapman yeterli; bolum bilgin oturumdan alinabilir."
+    "Bu akademik program sorusunu doğru cevaplayabilmem için önce bölüm veya program bilgisini bilmem gerekiyor. "
+    "Örneğin 'Bilgisayar Mühendisliği için 1. yarıyıl dersleri nelerdir?' veya "
+    "'Kimya bölümü teknik seçmeli dersleri hangileri?' şeklinde sorabilirsin. "
+    "Kişisel ilerleme bilgisi istiyorsan OTP ile giriş yapman yeterli; bölüm bilgin oturumdan alınabilir."
 )
 PERSONAL_PROGRESS_MARKERS = (
     "tamamladım",

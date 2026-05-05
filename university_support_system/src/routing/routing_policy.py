@@ -309,6 +309,10 @@ ROUTING_SUMMER_SCHOOL_MARKERS: tuple[str, ...] = (
 ROUTING_GENERAL_AKTS_MARKERS: tuple[str, ...] = (
     "mezun olmak icin kac akts gerekir",
     "mezuniyet icin kac akts gerekir",
+    "kac akts tamamlamali",
+    "kac akts tamamlamalidir",
+    "akts tamamlamali",
+    "akts tamamlamalidir",
     "toplam akts",
     "akts gerekli",
     "kredi gerekli",
@@ -431,9 +435,11 @@ _NON_PERSONAL_QUERY_PATTERNS = (
     "girebilir miyim", "tekrar alabilir",
     # Prosedur/politika sinyalleri — kisisel veri talebi degildir
     "ne yapabilirim", "ne yapmaliyim", "ne yapmam gerekiyor",
+    "ne yapacagim", "ne yapacağım",
     "nasil yapabilirim", "nasil yapmaliyim",
     "kesilir mi", "odenir mi", "oder miyim", "sayilir mi",
     "etkilenir mi", "etkiler mi", "gerekir mi",
+    "yapabilir miyim", "yapabilir miydim", "basvurabilir miyim",
     "zorunda miyim", "muaf miyim",
 )
 

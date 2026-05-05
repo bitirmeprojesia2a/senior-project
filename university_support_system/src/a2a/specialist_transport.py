@@ -475,23 +475,23 @@ class HttpA2ASpecialistTransport:
     ) -> Task:
         if error_code == "a2a_specialist_transport_timeout":
             answer = (
-                f"{agent.definition.name} agent servisi zamaninda yanit veremedi. "
-                "Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; "
+                f"{agent.definition.name} agent servisi zamanında yanıt veremedi. "
+                "Bu modda uzman ajanlar yalnızca A2A HTTP üzerinden çalışır; "
                 "gerekirse biraz sonra tekrar deneyin."
             )
         elif error_code == "a2a_specialist_circuit_open":
             answer = (
-                f"{agent.definition.name} agent servisi gecici olarak korumaya alindi. "
-                "Arka arkaya ulasilamama hatalari goruldugu icin kisa bir sure yeni istek gonderilmeyecek; "
+                f"{agent.definition.name} agent servisi geçici olarak korumaya alındı. "
+                "Arka arkaya ulaşılamama hataları görüldüğü için kısa bir süre yeni istek gönderilmeyecek; "
                 "biraz sonra tekrar deneyin."
             )
         else:
             answer = (
-                f"{agent.definition.name} agent servisine su anda ulasilamadi. "
-                "Bu modda uzman ajanlar yalnizca A2A HTTP uzerinden calisir; "
+                f"{agent.definition.name} agent servisine şu anda ulaşılamadı. "
+                "Bu modda uzman ajanlar yalnızca A2A HTTP üzerinden çalışır; "
                 "gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin."
             )
-        # Zengin diagnostics — kullaniciya sade mesaj, log/telemetry'de detay
+        # Zengin diagnostics: kullanıcıya sade mesaj, log/telemetry'de detay.
         diagnostics = {
             "transport": "http",
             "protocol": self.transport_protocol,

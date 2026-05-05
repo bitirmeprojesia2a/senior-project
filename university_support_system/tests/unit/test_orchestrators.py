@@ -671,6 +671,28 @@ def test_build_missing_slot_clarification_ignores_academic_calendar_slots():
     assert message is None
 
 
+def test_build_missing_slot_clarification_uses_program_named_in_query():
+    intent = IntentAnalysis(
+        primary_intent="summer_school",
+        required_slots=["faculty_or_program"],
+        missing_slots=["faculty_or_program"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={},
+        query="Fizik ogretmenligi bolumu ogrencisiyim yaz okuluna katilabilir miyim?",
+    )
+
+    assert message is None
+
+
+def test_general_akts_rule_detector_handles_tamamlamali_wording():
+    from src.agents.student.graduation_utils import is_general_akts_rule_query
+
+    assert is_general_akts_rule_query("Onlisans ogrencileri kac AKTS tamamlamali?")
+
+
 @pytest.mark.asyncio
 async def test_announcement_http_mode_keeps_remote_failure_without_local_fallback(monkeypatch):
     import src.orchestrators.announcement_utils as announcement_utils_module
@@ -1313,7 +1335,8 @@ def test_build_global_synthesis_prompt_generates_prompt_for_single_department():
     assert len(meaningful) == 1
     # Tek departman icin de sentez promptu uretiliyor
     assert prompt != ""
-    assert "Kullanici sorusu" in prompt
+    assert "Kullanıcı sorusu" in prompt
+    assert "Aşağıdaki JSON yalnızca iç bağlamdır" in prompt
 
 
 def test_build_global_synthesis_prompt_prefers_evidence_packet():
@@ -1769,7 +1792,7 @@ def test_build_final_user_response_keeps_routed_departments_after_answer_filteri
 
 
 @pytest.mark.asyncio
-async def test_main_orchestrator_returns_clarification_when_no_department_selected():
+async def test_main_orchestrator_returns_smalltalk_for_greeting_without_routing():
     router = AsyncMock()
     router.route = AsyncMock(
         return_value=RoutingResult(
@@ -1796,9 +1819,10 @@ async def test_main_orchestrator_returns_clarification_when_no_department_select
 
     response = await orchestrator.handle_query("Merhaba", context_id="ctx-4")
 
-    assert "belirleyemedim" in response.answer
-    assert "Öğrenci İşleri" in response.answer
+    assert "Merhaba" in response.answer
+    assert "yardımcı olabilirim" in response.answer
     assert response.departments_involved == []
+    router.route.assert_not_awaited()
     announcement_agent.handle_task.assert_not_awaited()
 
 
@@ -1888,9 +1912,9 @@ async def test_main_orchestrator_returns_smalltalk_for_naber_without_routing():
         telemetry_service=telemetry,
     )
 
-    response = await orchestrator.handle_query("Naber", context_id="ctx-smalltalk")
+    response = await orchestrator.handle_query("Selam", context_id="ctx-smalltalk")
 
-    assert "Iyiyim" in response.answer
+    assert "Merhaba" in response.answer
     assert response.departments_involved == []
     router.route.assert_not_awaited()
     announcement_agent.handle_task.assert_not_awaited()
@@ -1914,7 +1938,7 @@ async def test_main_orchestrator_returns_acknowledgement_for_short_confirmation_
 
     response = await orchestrator.handle_query("Evet", context_id="ctx-ack-2")
 
-    assert "Hazirim" in response.answer
+    assert "Hazırım" in response.answer
     assert response.departments_involved == []
     router.route.assert_not_awaited()
     announcement_agent.handle_task.assert_not_awaited()

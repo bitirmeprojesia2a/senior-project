@@ -50,8 +50,8 @@ class InternationalAgent(BaseSpecialistAgent):
                 update={
                     "answer": response.answer
                     + (
-                        "\n\nNot: Uluslararasi ogrenci harc ucretleri ve odeme detaylari icin "
-                        "finans birimi (tuition_agent) ile iletisime gecmeniz onerilir."
+                        "\n\nNot: Uluslararası öğrenci harç ücretleri ve ödeme detayları için "
+                        "finans birimi (tuition_agent) ile iletişime geçmeniz önerilir."
                     )
                 }
             )
@@ -137,40 +137,40 @@ class InternationalAgent(BaseSpecialistAgent):
 
         if "her yil ulusal ajans" in payment_text or "ulusal ajans tarafindan belirlenir" in payment_text:
             lines.append(
-                "- Kaynakta sabit bir TL/Euro hibe tutari yer almiyor; hibe miktari, "
-                "odeme usulu ve tarihi her yil Ulusal Ajans tarafindan belirlenir."
+                "- Kaynakta sabit bir TL/Euro hibe tutarı yer almıyor; hibe miktarı, "
+                "ödeme usulü ve tarihi her yıl Ulusal Ajans tarafından belirlenir."
             )
         else:
             lines.append(
-                "- Kaynakta sabit bir hibe tutari net olarak bulunamadi; ilgili kaynak "
-                "hibe odeme kosullarini acikliyor."
+                "- Kaynakta sabit bir hibe tutarı net olarak bulunamadı; ilgili kaynak "
+                "hibe ödeme koşullarını açıklıyor."
             )
 
         if "iki taksitte" in payment_text or "%80" in payment_text or "% 80" in payment_text:
             lines.append(
-                "- Odeme iki taksitte yapilir: ilk odeme, ongorulen sureye gore "
-                "hesaplanan hibenin %80'i; ikinci odeme ise hareketlilik sonunda "
-                "kesinlesen sureye gore yeniden hesaplanan tutardir."
+                "- Ödeme iki taksitte yapılır: ilk ödeme, öngörülen süreye göre "
+                "hesaplanan hibenin %80'i; ikinci ödeme ise hareketlilik sonunda "
+                "kesinleşen süreye göre yeniden hesaplanan tutardır."
             )
         if "hibe sozlesmesi" in payment_text:
             lines.append(
-                "- Ilk taksit oncesinde Ogrenci Hibe Sozlesmesi imzalanir; ikinci "
-                "taksit icin donus belgelerinin UIB'ye teslim edilmesi gerekir."
+                "- İlk taksit öncesinde Öğrenci Hibe Sözleşmesi imzalanır; ikinci "
+                "taksit için dönüş belgelerinin UİB'ye teslim edilmesi gerekir."
             )
 
         if any(marker in normalize_text(query_text) for marker in ("basvuru", "nasil", "surec")):
             application = self._find_exchange_application_result(ranked)
             if application is not None:
                 lines.append(
-                    "- Basvuru bilgileri UIB/OMU internet sayfalarinda ve bolum/program "
-                    "duyuru alanlarinda ilan edilir; ogrenciler duyuruda belirtilen "
-                    "tarihler arasinda basvuru yapar."
+                    "- Başvuru bilgileri UİB/OMÜ internet sayfalarında ve bölüm/program "
+                    "duyuru alanlarında ilan edilir; öğrenciler duyuruda belirtilen "
+                    "tarihler arasında başvuru yapar."
                 )
                 source = f"{source}; {application.get('source', 'bilinmiyor')}"
             else:
                 lines.append(
-                    "- Bu kaynak setinde basvuru adimlarini netlestiren ek bir parca "
-                    "bulunamadi; guncel basvuru duyurusu ayrica kontrol edilmeli."
+                    "- Bu kaynak setinde başvuru adımlarını netleştiren ek bir parça "
+                    "bulunamadı; güncel başvuru duyurusu ayrıca kontrol edilmeli."
                 )
 
         lines.append("")

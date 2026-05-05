@@ -5,6 +5,7 @@ from src.core.text_normalization import normalize_text
 from src.db.schedule_ingest import (
     classify_schedule_document,
     _normalize_day_label,
+    _looks_like_classroom,
     _looks_like_plausible_department,
     _infer_department_from_filename,
     _merge_source_override,
@@ -22,6 +23,12 @@ def test_normalize_day_label_handles_vertical_reversed_text():
 def test_normalize_day_label_handles_real_turkish_text():
     assert _normalize_day_label("\u00c7ar\u015famba") == "Carsamba"
     assert _normalize_day_label("Per\u015fembe") == "Persembe"
+
+
+def test_classroom_token_regex_handles_turkish_letters_and_dash_forms():
+    assert _looks_like_classroom("\u00d6\u011eR-101")
+    assert _looks_like_classroom("MBG-L1")
+    assert _looks_like_classroom("BD-206")
 
 
 def test_parse_grouped_weekly_table_extracts_schedule_group_and_missing_code():

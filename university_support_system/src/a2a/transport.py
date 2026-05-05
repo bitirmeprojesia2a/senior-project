@@ -641,29 +641,29 @@ class HttpA2ADepartmentTransport:
     ) -> Task:
         if error_code == "a2a_transport_timeout":
             answer = (
-                f"{department.display_name} agent servisi zamaninda yanit veremedi. "
-                "Diger mevcut kaynaklarla yanit verilebiliyorsa isleme devam edilecek; "
+                f"{department.display_name} agent servisi zamanında yanıt veremedi. "
+                "Diğer mevcut kaynaklarla yanıt verilebiliyorsa işleme devam edilecek; "
                 "gerekirse biraz sonra tekrar deneyin."
             )
         elif error_code == "a2a_circuit_open":
             answer = (
-                f"{department.display_name} agent servisi gecici olarak korumaya alindi. "
-                "Arka arkaya ulasilamama hatalari goruldugu icin kisa bir sure yeni istek gonderilmeyecek; "
+                f"{department.display_name} agent servisi geçici olarak korumaya alındı. "
+                "Arka arkaya ulaşılamama hataları görüldüğü için kısa bir süre yeni istek gönderilmeyecek; "
                 "biraz sonra tekrar deneyin."
             )
         elif error_code == "a2a_endpoint_missing":
             answer = (
-                f"{department.display_name} agent servisine su anda ulasilamadi. "
-                "Diger mevcut kaynaklarla yanit verilebiliyorsa isleme devam edilecek; "
+                f"{department.display_name} agent servisine şu anda ulaşılamadı. "
+                "Diğer mevcut kaynaklarla yanıt verilebiliyorsa işleme devam edilecek; "
                 "gerekirse biraz sonra tekrar deneyin."
             )
         else:
             answer = (
-                f"{department.display_name} agent servisine su anda ulasilamadi. "
-                "Diger mevcut kaynaklarla yanit verilebiliyorsa isleme devam edilecek; "
+                f"{department.display_name} agent servisine şu anda ulaşılamadı. "
+                "Diğer mevcut kaynaklarla yanıt verilebiliyorsa işleme devam edilecek; "
                 "gerekirse biraz sonra tekrar deneyin."
             )
-        # Zengin diagnostics — kullaniciya sade mesaj, log/telemetry'de detay
+        # Zengin diagnostics: kullanıcıya sade mesaj, log/telemetry'de detay.
         diagnostics = {
             "transport": "http",
             "transport_error": error_code,

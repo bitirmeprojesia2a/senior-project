@@ -216,8 +216,8 @@ class HttpA2ACapabilityTransport:
         response = build_failed_agent_response(
             department=self._response_department_for(capability),
             answer=(
-                f"{capability.display_name} agent servisine su anda ulasilamadi. "
-                "Bu modda capability agent'lari yalnizca A2A HTTP uzerinden calisir; "
+                f"{capability.display_name} agent servisine şu anda ulaşılamadı. "
+                "Bu modda capability agent'ları yalnızca A2A HTTP üzerinden çalışır; "
                 "gerekirse servis durumunu kontrol edip biraz sonra tekrar deneyin."
             ),
             error_code=error_code,

@@ -53,7 +53,6 @@ services:
       REDIS_PORT: 6379
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      OLLAMA_HOST: http://ollama:11434
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8110
       SERVER_RUNTIME_LABEL: agent-finance-tuition
@@ -96,7 +95,6 @@ services:
       REDIS_PORT: 6379
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      OLLAMA_HOST: http://ollama:11434
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8111
       SERVER_RUNTIME_LABEL: agent-finance-scholarship

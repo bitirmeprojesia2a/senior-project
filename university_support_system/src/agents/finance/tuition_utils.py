@@ -353,10 +353,10 @@ def build_structured_fee_answer(
     student_type_label = "Türk öğrenci" if requested_type == "domestic" else "uluslararası öğrenci"
     prefix = f"{db_context}\n\n" if db_context else ""
     normalized_query = normalize_finance_text(query_text)
-    question_label = "Kayit yenileme ucreti" if "kayit yenileme" in normalized_query else "Ogrenim ucreti"
+    question_label = "Kayıt yenileme ücreti" if "kayit yenileme" in normalized_query else "Öğrenim ücreti"
     intro = (
-        f"{question_label} icin {student_type_label} / {display_unit_name(requested_unit)} "
-        "baglaminda ilgili ucret tablosunda su satir yer aliyor:"
+        f"{question_label} için {student_type_label} / {display_unit_name(requested_unit)} "
+        "bağlamında ilgili ücret tablosunda şu satır yer alıyor:"
     )
     return f"{prefix}{intro}\n{fee_line}\n\n(Kaynak: {source})"
 
@@ -367,23 +367,23 @@ def build_catalog_fee_answer(query_text: str, catalog_entry: dict) -> str:
     student_type_label = (
         "Türk öğrenci" if catalog_entry["student_type"] == "domestic" else "uluslararası öğrenci"
     )
-    question_label = "Kayit yenileme ucreti" if "kayit yenileme" in normalized_query else "Ogrenim ucreti"
+    question_label = "Kayıt yenileme ücreti" if "kayit yenileme" in normalized_query else "Öğrenim ücreti"
     semester_amount = catalog_entry.get("semester_amount")
     annual_amount = catalog_entry.get("annual_amount")
-    source = catalog_entry.get("source_document", "veritabani")
+    source = catalog_entry.get("source_document", "veritabanı")
     annual_text = format_currency_tr(annual_amount)
 
     if semester_amount is not None:
         semester_text = format_currency_tr(semester_amount)
         return (
-            f"{question_label} icin {student_type_label} / {catalog_entry['unit_name']} bilgisi veritabaninda kayitli. "
-            f"Yillik ucret: {annual_text}. Donemlik ucret: {semester_text}."
+            f"{question_label} için {student_type_label} / {catalog_entry['unit_name']} bilgisi veritabanında kayıtlı. "
+            f"Yıllık ücret: {annual_text}. Dönemlik ücret: {semester_text}."
             f"\n\n(Kaynak: {source})"
         )
 
     return (
-        f"{question_label} icin {student_type_label} / {catalog_entry['unit_name']} bilgisi veritabaninda kayitli. "
-        f"Yillik ucret: {annual_text}."
+        f"{question_label} için {student_type_label} / {catalog_entry['unit_name']} bilgisi veritabanında kayıtlı. "
+        f"Yıllık ücret: {annual_text}."
         f"\n\n(Kaynak: {source})"
     )
 
@@ -428,7 +428,7 @@ def format_tuition_snapshot(snapshot: dict) -> str:
     debt_amount = float(tuition["debt_amount"] or 0.0)
     paid_amount = float(tuition["paid_amount"] or 0.0)
     total_amount = float(tuition["total_amount"] or 0.0)
-    due_date = tuition.get("due_date") or "belirtilmemis"
+    due_date = tuition.get("due_date") or "belirtilmemiş"
 
     if debt_amount > 0:
         return (

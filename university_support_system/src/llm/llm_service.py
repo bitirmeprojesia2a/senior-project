@@ -1,7 +1,7 @@
 """
 LLM cekirdek servisi.
 
-Ollama ve OpenAI-compatible provider'lari primary/fallback olarak koordine eder.
+OpenAI-compatible ve Google AI provider'lari primary/fallback olarak koordine eder.
 """
 
 import json
@@ -17,29 +17,12 @@ from tenacity import (
 
 from src.core.config import LLMProvider, settings
 from src.core.profiling import get_current_profiler, profile_stage
-from src.llm.ollama_client import OllamaClient, OllamaClientError
 from src.llm.openai_client import OpenAIClient, OpenAIClientError
 
 logger = logging.getLogger(__name__)
 
 TOKEN_WARNING_LIMIT = 100000
 APPROX_CHARS_PER_TOKEN = 4
-
-
-def _is_missing_model_error_message(message: str) -> bool:
-    lowered = message.lower()
-    return (
-        "model" in lowered
-        and (
-            "not found" in lowered
-            or "pull" in lowered
-            or "missing" in lowered
-        )
-    )
-
-
-def _should_retry_ollama_error(exc: BaseException) -> bool:
-    return isinstance(exc, OllamaClientError) and not _is_missing_model_error_message(str(exc))
 
 
 def _should_retry_openai_error(exc: BaseException) -> bool:
@@ -51,10 +34,9 @@ class LLMServiceError(Exception):
 
 
 class LLMService:
-    """Ollama ve OpenAI-compatible provider'lari koordine eden ana LLM servisi."""
+    """OpenAI-compatible ve Google AI provider'lari koordine eden ana LLM servisi."""
 
     def __init__(self):
-        self.ollama = OllamaClient()
         self.openai = OpenAIClient()
         self.google_ai = OpenAIClient(
             settings.google_ai,
@@ -73,11 +55,9 @@ class LLMService:
 
     def _is_provider_available(self, provider: str) -> bool:
         """Return whether a configured provider can be used."""
-        if provider == "ollama":
-            return True
         if provider in {"openai_compatible", "google_ai"}:
             return self._openai_client_for_provider(provider).is_available
-        return False
+        return False  # pragma: no cover
 
     def _has_fallback(self) -> bool:
         """Return whether a distinct, usable fallback provider exists."""
@@ -89,22 +69,18 @@ class LLMService:
 
     def _provider_display_name(self, provider: str) -> str:
         """Render a human-friendly provider label for logs/errors."""
-        if provider == "ollama":
-            return "Ollama"
         if provider == "openai_compatible":
             return self.openai.provider_name or "OpenAI-compatible"
         if provider == "google_ai":
             return self.google_ai.provider_name or "Google AI"
-        return provider
+        return provider  # pragma: no cover
 
     @staticmethod
     def _is_provider_exception(provider: str, exc: BaseException) -> bool:
         """Return whether exception belongs to the selected provider type."""
-        if provider == "ollama":
-            return isinstance(exc, OllamaClientError)
         if provider in {"openai_compatible", "google_ai"}:
             return isinstance(exc, OpenAIClientError)
-        return False
+        return False  # pragma: no cover
 
     def _provider_usage_label(self, provider: str) -> str:
         """Return a stable provider label for profiler/debug output."""
@@ -180,18 +156,6 @@ class LLMService:
             logger.error("LLM yaniti JSON olarak ayrisamadi. Yanit: %s...", response[:100])
             raise LLMServiceError(f"Gecersiz JSON formati: {str(exc)}") from exc
 
-    def _resolve_ollama_model(
-        self,
-        *,
-        model: str | None = None,
-        model_role: str = "default",
-        llm_profile: str | None = None,
-    ) -> str:
-        """Cagri bazli Ollama modelini cozumler."""
-        if model:
-            return model
-        return settings.resolve_llm_model(role=model_role, profile=llm_profile)
-
     def _resolve_provider_model(
         self,
         provider: LLMProvider,
@@ -203,43 +167,10 @@ class LLMService:
         """Resolve model name for a specific provider."""
         if model:
             return model
-        if provider in {"openai_compatible", "google_ai"}:
-            return settings.resolve_llm_model(
-                role=model_role,
-                profile=llm_profile,
-                provider=provider,
-            )
-        return self._resolve_ollama_model(
-            model=model,
-            model_role=model_role,
-            llm_profile=llm_profile,
-        )
-
-    @staticmethod
-    def _looks_like_missing_model_error(exc: OllamaClientError) -> bool:
-        """Ollama model eksikligi benzeri hatalari ayiklar."""
-        return _is_missing_model_error_message(str(exc))
-
-    @retry(
-        retry=retry_if_exception(_should_retry_ollama_error),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        reraise=True,
-    )
-    async def _generate_ollama_with_retry(
-        self,
-        prompt: str,
-        system: Optional[str] = None,
-        json_mode: bool = False,
-        *,
-        model: str | None = None,
-        ) -> str:
-        """Ollama uzerinden retry mantigi ile uretim yapar."""
-        return await self.ollama.generate(
-            prompt=prompt,
-            system=system,
-            json_mode=json_mode,
-            model=model,
+        return settings.resolve_llm_model(
+            role=model_role,
+            profile=llm_profile,
+            provider=provider,
         )
 
     @retry(
@@ -276,13 +207,6 @@ class LLMService:
         model: str,
     ) -> str:
         """Dispatch generate calls to the configured provider."""
-        if provider == "ollama":
-            return await self._generate_ollama_with_retry(
-                prompt=prompt,
-                system=system,
-                json_mode=json_mode,
-                model=model,
-            )
         if provider in {"openai_compatible", "google_ai"}:
             return await self._generate_openai_with_retry(
                 prompt=prompt,
@@ -302,10 +226,6 @@ class LLMService:
         model: str,
     ) -> AsyncGenerator[str, None]:
         """Dispatch streaming calls to the configured provider."""
-        if provider == "ollama":
-            async for chunk in self.ollama.generate_stream(prompt, system, model=model):
-                yield chunk
-            return
         if provider in {"openai_compatible", "google_ai"}:
             client = self._openai_client_for_provider(provider)
             async for chunk in client.generate_stream(prompt, system, model=model):
@@ -350,7 +270,6 @@ class LLMService:
             return list(dict.fromkeys(str(model_map[key]) for key in keys if model_map.get(key)))
 
         provider_model_maps: Dict[str, Dict[str, Any]] = {
-            "ollama": _provider_model_map("ollama"),
             "openai_compatible": _provider_model_map("openai_compatible"),
             "google_ai": _provider_model_map("google_ai"),
         }
@@ -361,15 +280,10 @@ class LLMService:
         }
 
         provider_healths: Dict[str, Dict[str, Any] | None] = {
-            "ollama": None,
             "openai_compatible": None,
             "google_ai": None,
         }
 
-        if "ollama" in needed_providers:
-            provider_healths["ollama"] = await self.ollama.get_health(
-                models=_requested_models(provider_model_maps["ollama"])
-            )
         for provider in ("openai_compatible", "google_ai"):
             if provider in needed_providers:
                 client = self._openai_client_for_provider(provider)
@@ -378,21 +292,6 @@ class LLMService:
                 )
 
         def _provider_health_payload(provider: str) -> Dict[str, Any]:
-            if provider == "ollama":
-                payload = provider_healths["ollama"] or {
-                    "status": "unhealthy",
-                    "reason": "NOT_CHECKED",
-                    "model_found": False,
-                }
-                return {
-                    "name": "ollama",
-                    "status": payload.get("status", "unhealthy"),
-                    "model_loaded": payload.get("model_found", False),
-                    "configured_models": payload.get("configured_models", provider_model_maps["ollama"]),
-                    "available_models": payload.get("available_models", []),
-                    "configured_models_found": payload.get("configured_models_found", {}),
-                }
-
             client = self._openai_client_for_provider(provider)
             payload = provider_healths.get(provider) or {
                 "status": "unhealthy",
@@ -404,7 +303,7 @@ class LLMService:
                 "name": payload.get("provider", client.provider_name),
                 "status": payload.get("status", "unhealthy"),
                 "model_loaded": payload.get("model_found", False),
-                "configured_models": payload.get("configured_models", provider_model_maps[provider]),
+                "configured_models": payload.get("configured_models", provider_model_maps.get(provider, {})),
                 "available_models": payload.get("available_models", []),
                 "configured_models_found": payload.get("configured_models_found", {}),
                 "base_url": payload.get("base_url", client.base_url),
@@ -497,50 +396,6 @@ class LLMService:
                     llm_profile=llm_profile,
                     error=primary_error,
                 )
-
-                if primary_provider == "ollama":
-                    ollama_error = primary_error
-                else:
-                    ollama_error = None
-
-                primary_model = settings.ollama.model
-                if (
-                    primary_provider == "ollama"
-                    and ollama_error is not None
-                    and resolved_model != primary_model
-                    and self._looks_like_missing_model_error(ollama_error)
-                ):
-                    logger.warning(
-                        "Istenen Ollama modeli kullanilamadi (%s). Birincil modele dusuluyor: %s",
-                        resolved_model,
-                        primary_model,
-                    )
-                    try:
-                        with profile_stage("llm.generate.ollama_primary_fallback", model=primary_model, role=model_role):
-                            response_text = await self._generate_ollama_with_retry(
-                                prompt=prompt,
-                                system=system,
-                                json_mode=json_mode,
-                                model=primary_model,
-                            )
-                        self._record_llm_usage(
-                            kind="generate",
-                            model_role=model_role,
-                            provider=primary_provider,
-                            model=primary_model,
-                            path="primary_model_fallback",
-                            status="success",
-                            json_mode=json_mode,
-                            llm_profile=llm_profile,
-                            fallback_from_model=resolved_model,
-                        )
-                    except OllamaClientError as primary_error:
-                        ollama_error = primary_error
-                    else:
-                        if json_mode:
-                            with profile_stage("llm.generate.validate_json"):
-                                return self._validate_json(response_text)
-                        return response_text
 
                 logger.warning(
                     "%s basarisiz oldu: %s. Fallback mekanizmasi kontrol ediliyor...",
@@ -674,40 +529,6 @@ class LLMService:
                 llm_profile=llm_profile,
                 error=primary_error,
             )
-
-            if primary_provider == "ollama":
-                ollama_error = primary_error
-            else:
-                ollama_error = None
-
-            primary_model = settings.ollama.model
-            if (
-                primary_provider == "ollama"
-                and ollama_error is not None
-                and resolved_model != primary_model
-                and self._looks_like_missing_model_error(ollama_error)
-            ):
-                logger.warning(
-                    "Istenen Ollama stream modeli kullanilamadi (%s). Birincil modele dusuluyor: %s",
-                    resolved_model,
-                    primary_model,
-                )
-                try:
-                    async for chunk in self.ollama.generate_stream(prompt, system, model=primary_model):
-                        yield chunk
-                    self._record_llm_usage(
-                        kind="stream",
-                        model_role=model_role,
-                        provider=primary_provider,
-                        model=primary_model,
-                        path="primary_model_fallback",
-                        status="success",
-                        llm_profile=llm_profile,
-                        fallback_from_model=resolved_model,
-                    )
-                    return
-                except OllamaClientError as primary_error:
-                    ollama_error = primary_error
 
             logger.warning(
                 "%s stream hata verdi: %s. Fallback stream araniyor...",

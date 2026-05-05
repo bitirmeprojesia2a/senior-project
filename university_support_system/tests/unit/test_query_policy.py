@@ -62,3 +62,29 @@ def test_direct_cap_announcement_lookup_stays_announcement():
 
 def test_contact_query_tolerates_small_typo():
     assert looks_like_contact_query("Ogrenci isleri iletiism bilgisi nedir?")
+
+
+def test_personal_phone_update_is_not_contact_short_circuit():
+    assert not looks_like_contact_query("Telefon numarami degistirmek istiyorum nasil yapabilirim?")
+    assert not looks_like_contact_query("Telefonum degisti ne yapmaliyim?")
+
+
+def test_office_phone_request_stays_contact_query():
+    assert looks_like_contact_query("Ogrenci isleri telefonu nedir?")
+
+
+def test_office_phone_request_tolerates_typo_without_personal_phone_false_positive():
+    assert looks_like_contact_query("Ogrenci isleri telefom bilgisi nedir?")
+    assert not looks_like_contact_query("Telefom numarami degistirmek istiyorum")
+
+
+def test_contact_query_does_not_match_dahil_or_nereden_false_positives():
+    assert not looks_like_contact_query("Pedagojik formasyon dersleri transkripte dahil mi?")
+    assert not looks_like_contact_query("Sinav notlarimi ve derslerimi nereden gorebilirim?")
+
+
+def test_ubys_link_query_is_not_announcement_short_circuit():
+    query = "Ubys linki ne"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)

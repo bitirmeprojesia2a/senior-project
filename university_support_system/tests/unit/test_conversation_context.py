@@ -101,6 +101,47 @@ async def test_resolve_query_rewrites_follow_up_with_heuristics(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_strong_marker_topic_shift_is_not_forced_follow_up(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Harc ve Ogrenim Ucretleri",
+                departments=[Department.FINANCE.value],
+                task_type=TaskType.TUITION_QUERY.value,
+                last_query="Harc ucreti ne kadar?",
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": false, '
+                '"standalone_query": "Staj zorunlu mu?", '
+                '"active_topic": "Staj ve Uygulamali Egitim", '
+                '"carry_over_departments": [], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Staj zorunlu mu?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "Staj zorunlu mu?"
+    assert resolution.department_hints == []
+    fake_llm.generate.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_resolve_query_merges_student_type_answer_fragment_without_profile_drift(monkeypatch):
     service = ConversationContextService()
     monkeypatch.setattr(
@@ -169,6 +210,99 @@ async def test_resolve_query_merges_bare_student_type_only_in_fee_context(monkey
         "Elektrik elektronik muhendisligi ogrenim ucreti ne kadar Turk"
     )
     assert resolution.department_hints == [Department.FINANCE]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_merges_program_name_as_missing_slot(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mufredat ve Ders Yapisi",
+                departments=[Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.COURSE_QUERY.value,
+                last_query="Her donem kac AKTS hakkim var?",
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(generate=AsyncMock())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Bilgisayar muhendisligi",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "Bilgisayar Muhendisligi icin Her donem kac AKTS hakkim var?"
+    assert resolution.department_hints == [Department.ACADEMIC_PROGRAMS]
+    assert resolution.rewrite_method == "answer_fragment"
+    fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_merges_student_type_fragment_outside_fee_context(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yaz Okulu",
+                departments=[Department.STUDENT_AFFAIRS.value, Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Yaz okuluna kimler katilabilir?",
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(generate=AsyncMock())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Lisans ogrencisiyim katilabilir miyim?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "Yaz okuluna kimler katilabilir lisans ogrencisi icin"
+    assert resolution.department_hints == [Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS]
+    assert resolution.rewrite_method == "answer_fragment"
+    fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_does_not_pollute_staj_question_with_yaz_okulu_context(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yaz Okulu",
+                departments=[Department.STUDENT_AFFAIRS.value, Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Yaz okulu ne zaman, kimler katilabilir ve sinif kapasitesi ne kadar?",
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(generate=AsyncMock())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Staj yapmazsam mezun olabilir miyim?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "Staj yapmazsam mezun olabilir miyim?"
+    assert resolution.active_topic == "Staj ve Uygulamali Egitim"
+    assert resolution.department_hints == []
+    fake_llm.generate.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -572,6 +706,47 @@ async def test_resolve_query_treats_short_clear_topic_change_as_standalone(monke
     assert resolution.effective_query == "Staj nasil yapilir?"
     assert resolution.active_topic == "Staj ve Uygulamali Egitim"
     assert resolution.department_hints == []
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_ignores_state_from_previous_build(monkeypatch):
+    service = ConversationContextService()
+    stale_state = _state(
+        topic="Staj ve Uygulamali Egitim",
+        departments=[Department.STUDENT_AFFAIRS.value],
+        last_query="Staj yapmazsam mezun olabilir miyim?",
+    )
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=stale_state))
+    monkeypatch.setattr(settings.conversation, "reset_on_build", True)
+    monkeypatch.setattr(settings.server, "build_timestamp", datetime.now(timezone.utc).isoformat())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="CAP'a basvurabilir miyim?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "CAP'a basvurabilir miyim?"
+    assert resolution.active_topic is None
+    assert resolution.department_hints == []
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_keeps_state_when_build_timestamp_unknown(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+    monkeypatch.setattr(settings.conversation, "reset_on_build", True)
+    monkeypatch.setattr(settings.server, "build_timestamp", "unknown")
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Not ortalamasi kac olmali?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.active_topic == "CAP / Cift Anadal"
 
 
 @pytest.mark.asyncio

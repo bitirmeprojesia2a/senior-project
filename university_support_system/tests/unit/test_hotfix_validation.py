@@ -198,9 +198,9 @@ def test_answer_filter_detects_new_broken_tokens():
 
 def test_identity_card_prompt_contains_guard():
     from src.llm.prompt_templates import STUDENT_LIFE_AGENT_SYSTEM_PROMPT
-    assert "OGRENCI KIMLIK KARTI" in STUDENT_LIFE_AGENT_SYSTEM_PROMPT
+    assert "ÖĞRENCİ KİMLİK KARTI" in STUDENT_LIFE_AGENT_SYSTEM_PROMPT
     prompt_lower = STUDENT_LIFE_AGENT_SYSTEM_PROMPT.lower()
-    assert "ucretsiz" in prompt_lower or "\u00fccretsiz" in prompt_lower
+    assert "\u00fccretsiz" in prompt_lower
     assert "dekont" in prompt_lower
 
 
@@ -354,6 +354,9 @@ def test_judge_risk_detection_for_no_info_and_numeric():
 
     assert _is_risky_answer("3,28 GANO icin 12 AKTS artirim uygulanabilir.")
     assert _is_risky_answer("Bu konuda bilgi bulunamadi.")
+    assert _is_risky_answer("Bu konuda bilgi bulunamadı.")
+    assert _is_risky_answer("Harç ödeme ve katkı payı bilgisi kaynakta geçiyor.")
+    assert _is_risky_answer("Yönetmelik ve yönerge bu koşulu düzenliyor.")
     assert not _is_risky_answer("Ders kaydi UBYS uzerinden yapilir.")
 
 
@@ -526,10 +529,10 @@ def test_judge_model_no_namespace_leak():
     """LLM_JUDGE_MODEL must not leak into fallback provider namespace."""
     from src.core.config import Settings, LLMRuntimeSettings
 
-    llm = LLMRuntimeSettings(judge_model="some-ollama-model", primary_provider="ollama")
+    llm = LLMRuntimeSettings(judge_model="some-groq-model", primary_provider="openai_compatible")
     s = Settings(llm=llm)
     # Resolving judge for fallback provider should NOT use judge_model
-    # (it belongs to ollama namespace, not google_ai)
+    # (it belongs to primary provider namespace, not google_ai)
     judge_on_fallback = s.resolve_llm_model(role="judge", provider="google_ai")
     google_primary = s._resolve_provider_primary_model("google_ai")
     assert judge_on_fallback == google_primary

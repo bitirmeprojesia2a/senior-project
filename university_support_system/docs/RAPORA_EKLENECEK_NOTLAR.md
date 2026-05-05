@@ -1,6 +1,6 @@
 # Rapora Eklenecek Teknik Deneme Notlari
 
-Tarih: 2026-05-03 / 2026-05-04
+Tarih: 2026-05-03 / 2026-05-05
 
 Bu dosya, bitirme raporuna daha sonra eklenecek model, API ve RAG iyilestirme notlarini tek yerde toplar. Ayrintili NVIDIA API denemeleri icin `docs/NVIDIA_API_MODEL_DENEME_NOTLARI.md`, BGE skor dagilimi icin `docs/archive/benchmarks/bge_fp16_reranker_score_analysis.md` dosyalari kaynak alinabilir.
 
@@ -53,6 +53,16 @@ Mevcut yorum: BGE reranker icin fp16 performansi umut verici; ancak cevap kalite
   Varsayilanlar `true`; benchmark sirasinda tek tek `false` yapilarak BGE reranker'in tek basina siralama kalitesi olculebilir.
 - 2026-05-04 kisa canli retrieval kiyasinda 6 temsilî sorgu denenmistir. CAP/onlisans ve yaz okulu kapasitesi sorgularinda acik/kapali sonuc ayni kalmistir. Ogrenci belgesi sorgusunda `student_affairs_faq_bias` acikken top-5 tamamen `sik_sorulan_sorular.txt` olarak kalmis, kapaliyken yatay gecis/kayit ilani belgeleri top-5'e girmistir. Sinav notuna itiraz sorgusunda profil bias acikken FAQ + yonetmelik dengesi daha iyi korunmus, kapaliyken FAQ tamamen top-5 disina dusmustur. Akademik takvim sorgusunda source relevance acikken takvim kaynaklari skorda net ayrismis, kapaliyken yine top-2'de kalmistir ama FAQ ile skor farki azalmistir. Bu kisa teste gore ceza/boost sistemini tamamen kaldirmak yerine bayrakli tutup kapsamli benchmark ile parca parca olcmek daha guvenlidir.
 - 2026-05-04 ikinci canli retrieval kiyasinda 25 temsilî sorgu ile tum ceza/boost bayraklari acik ve kapali olarak karsilastirilmistir. Normalize kaynak eslesmesiyle acik durumda top-1 isabet `21/25`, top-3/top-5 isabet `23/25`; kapali durumda top-1 isabet `19/25`, top-3/top-5 isabet `22/25` olmustur. Acik durumda `kayit sildirme`, `onlisans CAP` ve `harc odemesi` sorgularinda daha iyi siralama gorulmustur. Kapali durumda yalnizca `katki payi hangi durumda odenir?` sorgusunda top-1 daha iyi gorunmustur. Bu sonuc ceza/boost sistemini tamamen kaldirmak yerine bayrakli koruyup finans tarafindaki `harc odemesi` / `katki payi` ayrimini ayrica kalibre etmenin daha dogru oldugunu gosterir.
+- 2026-05-05 genisletilmis retrieval bias kiyasinda 30 temsili sorgu ile tum ceza/boost bayraklari acik ve kapali olarak tekrar karsilastirilmistir. Rapor: `docs/archive/benchmarks/retrieval_bias_compare_30q_20260505.json`. Top-1 siralama `2/30` sorguda degismis, top-3 kaynak kumesi `12/30` sorguda degismistir. Bu sonuc ceza/boost sinyallerinin BGE reranker sonrasinda hala siralamayi etkiledigini, fakat her sorguda belirleyici olmadigini gosterir. Bu nedenle sistemi tamamen kapatmak yerine bayrakli tutmak ve problemli alt profillerde parca parca kapatip olcmek daha guvenlidir. Bu rapordaki sureler latency benchmark olarak yorumlanmamalidir; ilk sorgularda model/cache isinma etkisi gorulebilir.
 - Test notu: Lokal script calistirmalarinda `HF_HOME`, `SENTENCE_TRANSFORMERS_HOME` ve `MODEL_CACHE_HOST_DIR` process ortaminda verilmezse reranker cache bulunamayabiliyor. Dogru benchmark icin cache env'leri acikca set edilmelidir.
 - Yaz okulu sinif kapasitesi, CAP/onlisans uygunlugu ve kimlik karti kaybi gibi gercek Slack testleri benchmark setine eklenmeli.
 - Belge bulunup cevapta bilgi kullanilmiyorsa sorun reranker degil, context/evidence secimi veya sentez prompt'u tarafindadir.
+
+## Cevap Kalitesi ve Final Sentez Notu
+
+- 2026-05-05 itibariyla kaynakli tek departman cevaplari da final refinement katmanindan gececek sekilde korunmustur; cok departmanli sorularda ise global synthesis tek final cevap uretir.
+- Final synthesis prompt'unda dogal Turkce vurgusu guclendirildi. Dinamik prompt ve `MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT` ASCII Turkce yerine dogal Turkce talimatlarla guncellendi.
+- Genel QA, uzman ajan, finans ve duyuru cevap promptlari da dogal Turkce talimatlara tasindi. Routing/follow-up gibi karar katmanlarindaki normalize/ASCII marker yapisina bu adimda dokunulmadi.
+- Final synthesis katmani `answer_summary` ile `evidence/snippet` veya `extracted_facts` celistiginde somut sayi/kosul iceren evidence bilgisini esas alacak sekilde netlestirildi.
+- Judge risk tespiti dogal Turkce cevaplari da kapsayacak sekilde genisletildi: `bulunamadi/bulunamadı`, `harc/harç`, `katki payi/katkı payı`, `odeme/ödeme`, `yonerge/yönerge`, `yonetmelik/yönetmelik` formlari birlikte yakalanir.
+- Debug gorunurlugu bilincli olarak kapatilmadi; gelistirme/test asamasinda uretim modu ve kaynak ozeti takip edilmeye devam edecek.

@@ -33,6 +33,21 @@ _TURN_QUERY_PREVIEW_MAX_CHARS = 240
 _TURN_ANSWER_PREVIEW_MAX_CHARS = 560
 _TOPIC_TRANSITION_THRESHOLD = 0.68
 
+
+def _parse_build_timestamp(value: str | None) -> datetime | None:
+    if not value or value == "unknown":
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
 _COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
 _FOLLOW_UP_PREFIXES = (
     "peki",
@@ -159,13 +174,61 @@ _FOLLOW_UP_ANSWER_MARKERS = (
     "uluslararasi ogrenci",
     "yabanci ogrenciyim",
     "yabanci ogrenci",
+    "lisans ogrencisiyim",
+    "lisans ogrenci",
+    "onlisans ogrencisiyim",
+    "onlisans ogrenci",
+    "yuksek lisans ogrencisiyim",
+    "yuksek lisans ogrenci",
+    "doktora ogrencisiyim",
+    "doktora ogrenci",
+    "birinci sinifim",
+    "ikinci sinifim",
+    "ucuncu sinifim",
+    "dorduncu sinifim",
+    "son sinifim",
+    "normal ogretim",
+    "ikinci ogretim",
 )
 _EXACT_FOLLOW_UP_ANSWER_MARKERS = {
     "turk",
     "yerli",
     "uluslararasi",
     "yabanci",
+    "lisans",
+    "onlisans",
+    "doktora",
 }
+_PROGRAM_SLOT_QUESTION_MARKERS = (
+    "bolum veya program",
+    "fakulte bolum veya program",
+    "once bolum",
+    "program bilgisini",
+    "bolum bilgisini",
+    "hangi program",
+    "hangi bolum",
+    "her donem kac akts",
+    "kac akts",
+    "akts hakki",
+    "dersleri nelerdir",
+    "hangi sinifta",
+    "hangi donemde",
+)
+_STUDENT_TYPE_FRAGMENT_REWRITES: tuple[tuple[str, str], ...] = (
+    ("onlisans ogrencisiyim", "onlisans ogrencisi"),
+    ("onlisans ogrenci", "onlisans ogrencisi"),
+    ("lisans ogrencisiyim", "lisans ogrencisi"),
+    ("lisans ogrenci", "lisans ogrencisi"),
+    ("yuksek lisans ogrencisiyim", "yuksek lisans ogrencisi"),
+    ("yuksek lisans ogrenci", "yuksek lisans ogrencisi"),
+    ("doktora ogrencisiyim", "doktora ogrencisi"),
+    ("doktora ogrenci", "doktora ogrencisi"),
+    ("birinci sinifim", "birinci sinif ogrencisi"),
+    ("ikinci sinifim", "ikinci sinif ogrencisi"),
+    ("ucuncu sinifim", "ucuncu sinif ogrencisi"),
+    ("dorduncu sinifim", "dorduncu sinif ogrencisi"),
+    ("son sinifim", "son sinif ogrencisi"),
+)
 _MIN_CONTENT_WORD_OVERLAP = 0.35
 _WORD_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 _INTENT_STOP_WORDS = {
@@ -264,6 +327,28 @@ def _is_answer_fragment_follow_up(query: str) -> bool:
     if stripped in _EXACT_FOLLOW_UP_ANSWER_MARKERS:
         return True
     return any(marker in normalized_query for marker in _FOLLOW_UP_ANSWER_MARKERS)
+
+
+def _infer_program_fragment(query: str) -> str | None:
+    try:
+        from src.agents.academic.curriculum_utils import infer_department_from_query
+    except Exception:
+        return None
+    return infer_department_from_query(query)
+
+
+def _looks_like_program_slot_question(text: str) -> bool:
+    normalized = normalize_text(text)
+    return any(marker in normalized for marker in _PROGRAM_SLOT_QUESTION_MARKERS)
+
+
+def _rewrite_student_type_fragment(query: str) -> str:
+    normalized_query = normalize_text(query)
+    stripped = normalized_query.strip(" \t\r\n?.!,;:")
+    for marker, replacement in _STUDENT_TYPE_FRAGMENT_REWRITES:
+        if marker in stripped:
+            return replacement
+    return stripped
 
 
 def _is_standalone_academic_calendar_query(query: str) -> bool:
@@ -465,14 +550,20 @@ def _build_heuristic_follow_up_query(query: str, *, topic: str | None) -> str:
 
 def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") -> str | None:
     """Merge short answer fragments with the last concrete question."""
-    if not _is_answer_fragment_follow_up(query):
-        return None
     previous_query = (state.last_resolved_query or state.last_user_query or "").strip()
     if not previous_query:
         return None
     normalized_current = normalize_text(query)
     if normalized_current and normalized_current in normalize_text(previous_query):
         return previous_query
+
+    program_name = _infer_program_fragment(query)
+    if program_name and _looks_like_program_slot_question(previous_query):
+        return f"{program_name} icin {previous_query.rstrip('?.!,;:')}?".strip()
+
+    if not _is_answer_fragment_follow_up(query):
+        return None
+
     previous_context = normalize_text(
         " ".join(
             item
@@ -493,6 +584,13 @@ def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") 
     )
     if tuition_context:
         return f"{previous_query.rstrip('?.!,;:')} {query}".strip()
+    if "katil" in previous_context or "kimler" in previous_context:
+        fragment = _rewrite_student_type_fragment(query)
+        if fragment:
+            return f"{previous_query.rstrip('?.!,;:')} {fragment} icin".strip()
+    fragment = _rewrite_student_type_fragment(query)
+    if fragment:
+        return f"{previous_query.rstrip('?.!,;:')} {fragment}".strip()
     return None
 
 
@@ -982,7 +1080,17 @@ class ConversationContextService:
 
     def _is_state_stale(self, state: ConversationStateData) -> bool:
         max_age = timedelta(minutes=settings.conversation.ttl_minutes)
-        return self._now_provider() - state.updated_at > max_age
+        updated_at = state.updated_at
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+        updated_at = updated_at.astimezone(timezone.utc)
+        if self._now_provider() - updated_at > max_age:
+            return True
+        if settings.conversation.reset_on_build:
+            build_timestamp = _parse_build_timestamp(settings.server.build_timestamp)
+            if build_timestamp is not None and updated_at < build_timestamp:
+                return True
+        return False
 
     @staticmethod
     def _starts_with_any(text: str, prefixes: Sequence[str]) -> bool:
@@ -1177,6 +1285,14 @@ class ConversationContextService:
         state_context_tokens = _content_tokens(state_context)
         overlap = _count_stem_overlap(query_content_tokens, state_context_tokens)
         transition_score = _topic_transition_score(query, state)
+        inferred_topic = ConversationContextService._infer_topic(query)
+
+        if (
+            inferred_topic is not None
+            and normalize_text(inferred_topic) != normalize_text(state.active_topic)
+            and not signal_based
+        ):
+            return False
 
         if signal_based and transition_score < 0.85:
             return True

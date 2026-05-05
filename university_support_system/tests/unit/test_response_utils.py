@@ -59,7 +59,7 @@ def test_clean_final_answer_replaces_common_foreign_words_inline():
     assert "informatie" not in cleaned
     assert "several" not in cleaned
     assert "certain" not in cleaned
-    assert "su sekild" in cleaned
+    assert "şu şekild" in cleaned
     assert "bilgi" in cleaned
     assert "birden fazla kaynaktan" in cleaned
     assert "belirli bir miktarda" in cleaned
@@ -71,7 +71,7 @@ def test_clean_final_answer_replaces_english_word_with_turkish_suffix():
     cleaned = clean_final_answer(answer)
 
     assert "success" not in cleaned.lower()
-    assert "basarisini" in cleaned.lower()
+    assert "başarısını" in cleaned.lower()
 
 
 def test_clean_final_answer_replaces_additional_foreign_leaks():
@@ -86,9 +86,9 @@ def test_clean_final_answer_replaces_additional_foreign_leaks():
     assert "siguientes" not in cleaned
     assert "once_online" not in cleaned
     assert "por favor" not in cleaned.lower()
-    assert "asagidaki" in cleaned
-    assert "once online" in cleaned
-    assert "lutfen" in cleaned.lower()
+    assert "aşağıdaki" in cleaned
+    assert "önce online" in cleaned
+    assert "lütfen" in cleaned.lower()
 
 
 def test_clean_final_answer_replaces_mixed_spanish_leaks():
@@ -99,6 +99,17 @@ def test_clean_final_answer_replaces_mixed_spanish_leaks():
     assert "necessario" not in cleaned
     assert "podria" not in cleaned
     assert "gerekli" in cleaned
+
+
+def test_clean_final_answer_replaces_recent_foreign_and_broken_tokens():
+    answer = "Bilgisayar muhendisligi ile ilgili hangi Informationen almak istiyorsunuz? Kayıp veya ztr edilen kart yenilenir."
+
+    cleaned = clean_final_answer(answer)
+
+    assert "Informationen" not in cleaned
+    assert " ztr " not in f" {cleaned} "
+    assert "bilgi" in cleaned.lower()
+    assert "zayi edilen" in cleaned.lower()
 
 
 def test_clean_final_answer_removes_benchmark_and_prompt_like_prefixes():
@@ -260,7 +271,7 @@ def test_clean_final_answer_removes_internal_no_sentence_leak():
 
     assert "cumle bulunamadi" not in cleaned
     assert "yonlendir" not in cleaned
-    assert "net bilgi bulunamadi" in cleaned
+    assert "net bilgi bulunamadı" in cleaned
 
 
 def test_clean_final_answer_drops_dangling_last_clause():

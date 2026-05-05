@@ -74,6 +74,17 @@ class TestDepartmentRouter:
         assert result.task_type == TaskType.ACADEMIC_QUERY
 
     @pytest.mark.asyncio
+    async def test_route_onlisans_total_akts_rule_to_student_affairs(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock()
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route("Onlisans ogrencileri kac AKTS tamamlamali?")
+
+        assert result.departments == [Department.STUDENT_AFFAIRS]
+        assert result.task_type == TaskType.ACADEMIC_QUERY
+
+    @pytest.mark.asyncio
     async def test_route_lost_identity_card_variants_to_student_affairs_with_guardrail(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock()
@@ -397,8 +408,8 @@ class TestDepartmentRouter:
         from src.llm.prompt_templates import REGISTRATION_AGENT_SYSTEM_PROMPT
 
         prompt = REGISTRATION_AGENT_SYSTEM_PROMPT.lower()
-        assert "final sinavlari ne zaman" in prompt
-        assert "tek ders adi isteme" in prompt
+        assert "final sınavları ne zaman" in prompt
+        assert "tek ders adı isteme" in prompt
 
     def test_routing_prompt_contains_few_shot_decision_examples(self):
         from src.llm.prompt_templates import DEPARTMENT_ROUTING_SYSTEM_PROMPT
@@ -711,6 +722,22 @@ class TestDepartmentRouter:
         )
 
         assert result.departments == [Department.STUDENT_AFFAIRS, Department.FINANCE]
+        assert result.strategy == RoutingStrategy.PARALLEL
+        assert result.intent is not None
+        assert result.intent.is_personal is False
+        assert result.intent.force_llm_synthesis is True
+
+    @pytest.mark.asyncio
+    async def test_route_cap_fee_condition_is_policy_hybrid_not_personal_auth_guard(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock()
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route(
+            "CAP yapmak istiyorum ama harc borcum var, ne yapacagim?"
+        )
+
+        assert result.departments == [Department.ACADEMIC_PROGRAMS, Department.FINANCE]
         assert result.strategy == RoutingStrategy.PARALLEL
         assert result.intent is not None
         assert result.intent.is_personal is False

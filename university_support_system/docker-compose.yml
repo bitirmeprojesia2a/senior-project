@@ -57,32 +57,6 @@ services:
       IS_PERSISTENT: "TRUE"
       ANONYMIZED_TELEMETRY: "FALSE"
 
-  # ── Ollama (opsiyonel lokal LLM/fallback) ──────────────────────────────
-  ollama:
-    image: ollama/ollama:latest
-    container_name: uni_ollama
-    restart: unless-stopped
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
-    environment:
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
-      OLLAMA_SECONDARY_MODEL: ${OLLAMA_SECONDARY_MODEL:-qwen2.5:3b}
-      OLLAMA_PRELOAD_MODELS: ${OLLAMA_PRELOAD_MODELS:-qwen2.5:7b,qwen2.5:3b}
-    volumes:
-      - ollama_data:/root/.ollama
-      - ./docker/ollama-bootstrap.sh:/usr/local/bin/ollama-bootstrap.sh:ro
-    entrypoint: ["/bin/sh", "/usr/local/bin/ollama-bootstrap.sh"]
-    # LLM yolu .env icindeki LLM_PRIMARY_PROVIDER ile belirlenir.
-    # Groq/OpenAI-compatible kullanimda Ollama ana uretim yolu degildir; lokal fallback icin tutulur.
-    # GPU desteği için aşağıdaki satırları açın:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-
 volumes:
   postgres_data:
     name: uni_postgres_data
@@ -90,5 +64,3 @@ volumes:
     name: uni_redis_data
   chroma_data:
     name: uni_chroma_data
-  ollama_data:
-    name: uni_ollama_data

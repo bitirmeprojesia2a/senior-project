@@ -66,11 +66,11 @@ _NUMERIC_DATE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _FEE_PATTERN = re.compile(
-    r"\b(?:[u\u00fc]cret|katk[ıi] pay[ıi]|harc|fiyat|taksit|[o\u00f6]deyebilir)\b",
+    r"\b(?:[uü]cret|katk[ıi] pay[ıi]|har[cç]|fiyat|taksit|[oö]deyebilir|[oö]deme)\b",
     re.IGNORECASE,
 )
 _REGULATION_PATTERN = re.compile(
-    r"\b(?:y[o\u00f6]nerge|y[o\u00f6]netmelik|mevzuat|karar|esas)\b",
+    r"\b(?:y[oö]nerge|y[oö]netmelik|mevzuat|karar|esas)\b",
     re.IGNORECASE,
 )
 _NO_INFO_PATTERN = re.compile(

@@ -285,6 +285,28 @@ _EXPLICIT_ANNOUNCEMENT_ALLOW_MARKERS: tuple[str, ...] = (
     "nereden ogren",
 )
 
+_STUDENT_PORTAL_LINK_MARKERS: tuple[str, ...] = (
+    "ubys",
+    "obs",
+    "oidb",
+    "ogrenci bilgi sistemi",
+    "ogrenci sistemi",
+    "transkript",
+    "notlarimi",
+    "derslerimi",
+)
+
+_STUDENT_PORTAL_LOOKUP_MARKERS: tuple[str, ...] = (
+    "link",
+    "linki",
+    "nereden",
+    "nerede",
+    "nasil gir",
+    "giris",
+    "sifre",
+    "parola",
+)
+
 _INCIDENTAL_ANNOUNCEMENT_CONTEXT_MARKERS: tuple[str, ...] = (
     "baktim ama",
     "duyurulara baktim",
@@ -311,6 +333,13 @@ def _looks_like_incidental_announcement_context(normalized_query: str) -> bool:
         normalized_query,
         _PROCEDURAL_ANNOUNCEMENT_BLOCK_MARKERS,
     ) and contains_any_normalized(normalized_query, _PROCEDURAL_QUESTION_MARKERS)
+
+
+def _looks_like_student_portal_lookup(normalized_query: str) -> bool:
+    return contains_any_normalized(
+        normalized_query,
+        _STUDENT_PORTAL_LINK_MARKERS,
+    ) and contains_any_normalized(normalized_query, _STUDENT_PORTAL_LOOKUP_MARKERS)
 
 
 def augment_query_for_department(
@@ -350,6 +379,7 @@ def build_missing_slot_clarification_message(
     *,
     intent: IntentAnalysis | None,
     metadata: dict | None = None,
+    query: str | None = None,
 ) -> str | None:
     """Turn LLM-provided missing slot metadata into a safe clarification prompt.
 
@@ -364,12 +394,13 @@ def build_missing_slot_clarification_message(
 
     metadata = metadata or {}
     missing_slots = set(intent.missing_slots)
+    inferred_program = infer_department_from_query(query or "")
 
     if metadata.get("is_authenticated"):
         missing_slots.discard("auth")
     if metadata.get("student_type"):
         missing_slots.discard("student_type")
-    if metadata.get("student_faculty") or metadata.get("student_department"):
+    if metadata.get("student_faculty") or metadata.get("student_department") or inferred_program:
         missing_slots.discard("faculty_or_program")
         missing_slots.discard("department_or_program")
         missing_slots.discard("program")
@@ -427,6 +458,8 @@ def looks_like_announcement_query(query: str) -> bool:
     """Return whether the query primarily targets announcements."""
     normalized = normalize_text(query)
     concepts = extract_query_concepts(normalized)
+    if _looks_like_student_portal_lookup(normalized):
+        return False
     if _looks_like_incidental_announcement_context(normalized):
         return False
     if CAPABILITY_ANNOUNCEMENT in concepts.blocked_primary_capabilities:
@@ -459,6 +492,8 @@ def should_block_announcement_primary_flow(query: str) -> bool:
     """
     normalized = normalize_text(query)
     concepts = extract_query_concepts(normalized)
+    if _looks_like_student_portal_lookup(normalized):
+        return True
     if _looks_like_incidental_announcement_context(normalized):
         return True
     if CAPABILITY_ANNOUNCEMENT in concepts.explicit_capabilities:

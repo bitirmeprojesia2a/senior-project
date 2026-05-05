@@ -62,16 +62,11 @@ _ROMAN_NUMERALS = {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii"}
 _INSTRUCTOR_TOKEN_RE = re.compile(r"^[A-ZÇĞİÖŞÜ]{1,6}(?:/[A-ZÇĞİÖŞÜ]{1,6})*$")
 _INSTRUCTOR_TITLE_RE = re.compile(r"\b(?:Prof\.?|Doç\.?|Dr\.?)\b", re.IGNORECASE)
 _CLASSROOM_TOKEN_RE = re.compile(
-    r"^(?:[A-ZÇĞİÖŞÜ]{0,5}\d{1,4}[A-Z]?|[A-ZÇĞİÖŞÜ]+-L\d+|[A-ZÇĞİÖŞÜ.]+L|L\d+|D\d+|F\d+|MBG-L\d+|ORG\.KIM\.L)$",
+    r"^(?:[A-ZÇĞİÖŞÜ]{0,5}\d{1,4}[A-Z]?|[A-ZÇĞİÖŞÜ]{1,6}-\d{1,4}[A-Z]?|[A-ZÇĞİÖŞÜ]+-L\d+|[A-ZÇĞİÖŞÜ.]+L|L\d+|D\d+|F\d+|MBG-L\d+|ORG\.KIM\.L)$",
     re.IGNORECASE,
 )
 _PROGRAM_SECTION_RE = re.compile(
     r"^(?:[A-ZÇĞİÖŞÜ]{1,5}\d{0,2})(?:/(?:[A-ZÇĞİÖŞÜ]{1,5}\d{0,2}))*$",
-    re.IGNORECASE,
-)
-
-_CLASSROOM_TOKEN_RE = re.compile(
-    r"^(?:[A-ZÃ‡ÄÄ°Ã–ÅÃœ]{0,5}\d{1,4}[A-Z]?|[A-ZÃ‡ÄÄ°Ã–ÅÃœ]{1,6}-\d{1,4}[A-Z]?|[A-ZÃ‡ÄÄ°Ã–ÅÃœ]+-L\d+|[A-ZÃ‡ÄÄ°Ã–ÅÃœ.]+L|L\d+|D\d+|F\d+|MBG-L\d+|ORG\.KIM\.L)$",
     re.IGNORECASE,
 )
 

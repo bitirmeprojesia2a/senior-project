@@ -79,13 +79,13 @@ _GLOBAL_SYNTHESIS_TIMEOUT_SECONDS = settings.llm.global_synthesis_timeout_second
 logger = logging.getLogger(__name__)
 
 _ACK_ONLY_RESPONSES = {
-    "tesekkur": "Rica ederim. Baska bir sorunuz olursa yazabilirsiniz.",
-    "sagol": "Rica ederim. Baska bir sorunuz olursa yazabilirsiniz.",
-    "evet": "Hazirim. Devam etmemi istediginiz konuyu biraz daha acik yazabilirsiniz.",
-    "tamam": "Hazirim. Devam etmemi istediginiz konuyu biraz daha acik yazabilirsiniz.",
-    "anladim": "Hazirim. Devam etmemi istediginiz konuyu biraz daha acik yazabilirsiniz.",
-    "smalltalk": "Iyiyim, tesekkur ederim. Size ogrenci isleri, akademik programlar, finans, duyuru veya etkinlik konularinda yardimci olabilirim.",
-    "hayir": "Tamam. Farkli bir konuda yardim isterseniz yazabilirsiniz.",
+    "tesekkur": "Rica ederim. Başka bir sorunuz olursa yazabilirsiniz.",
+    "sagol": "Rica ederim. Başka bir sorunuz olursa yazabilirsiniz.",
+    "evet": "Hazırım. Devam etmemi istediğiniz konuyu biraz daha açık yazabilirsiniz.",
+    "tamam": "Hazırım. Devam etmemi istediğiniz konuyu biraz daha açık yazabilirsiniz.",
+    "anladim": "Hazırım. Devam etmemi istediğiniz konuyu biraz daha açık yazabilirsiniz.",
+    "smalltalk": "Merhaba. Size öğrenci işleri, akademik programlar, finans, duyuru veya etkinlik konularında yardımcı olabilirim.",
+    "hayir": "Tamam. Farklı bir konuda yardım isterseniz yazabilirsiniz.",
 }
 
 
@@ -129,7 +129,7 @@ class MainOrchestrator:
             return _ACK_ONLY_RESPONSES["sagol"]
         if normalized in {"evet", "tamam", "tamamdir", "ok", "anladim"}:
             return _ACK_ONLY_RESPONSES["tamam" if normalized != "evet" else "evet"]
-        if normalized in {"naber", "nasilsin", "ne haber"}:
+        if normalized in {"selam", "merhaba", "mrb", "naber", "nasilsin", "ne haber"}:
             return _ACK_ONLY_RESPONSES["smalltalk"]
         if normalized == "hayir":
             return _ACK_ONLY_RESPONSES["hayir"]
@@ -326,9 +326,9 @@ class MainOrchestrator:
                                 )
                         return final_response
 
-                # â”€â”€ Routing (normalization dahil) â”€â”€
+                # Routing (normalization dahil)
                 # Routing LLM hem departman bilgilendirmesi hem canonical_query,
-                # primary_intent ve target_capability uretir â€” ayri normalization cagrisina gerek yok.
+                # primary_intent ve target_capability uretir; ayri normalization cagrisina gerek yok.
                 with profile_stage("main.router.route"):
                     routing = await self.router.route(
                         effective_query,
@@ -470,7 +470,7 @@ class MainOrchestrator:
                         },
                     )
 
-                # â”€â”€ Duyuru short-circuit â”€â”€
+                # Duyuru short-circuit
                 # Duyuru sorgulari router'a gitmeden dogrudan announcement-only akisa yonlendirilir.
                 # Ayrica onceki tur duyuru akisindan geldiginde (announcement_context=True)
                 # follow-up sorular da duyuru akisinda kalir.
@@ -661,6 +661,7 @@ class MainOrchestrator:
                 missing_slot_message = build_missing_slot_clarification_message(
                     intent=routing.intent,
                     metadata=metadata_for_slot_check,
+                    query=effective_query,
                 )
                 if missing_slot_message:
                     clarification_response = self._build_clarification_response(
@@ -859,7 +860,7 @@ class MainOrchestrator:
                         llm_profile=llm_profile,
                     )
 
-                # â”€â”€ Post-synthesis judge quality gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                # Post-synthesis judge quality gate
                 # Only runs when LLM_MAIN_JUDGE_ENABLED is true AND
                 # the answer used global synthesis or is multi-department risky.
                 if settings.llm.main_judge_enabled and (
@@ -1339,7 +1340,7 @@ class MainOrchestrator:
                 return fallback, False
             return self._compose_answers(responses), False
 
-        # Claim guard on global synthesis â€” use filtered_responses' sources
+        # Claim guard on global synthesis; use filtered_responses' sources
         try:
             from src.quality.claim_guard import guard_answer as _guard_answer
             from src.quality.evidence import extract_evidence_items, EvidenceItem
@@ -1457,7 +1458,7 @@ class MainOrchestrator:
 
         # Build structured evidence summary for judge
         # NOTE: RAGSource.metadata does NOT carry selected_sentences or
-        # extracted_facts â€” those live on EvidenceItem objects which are not
+        # extracted_facts; those live on EvidenceItem objects which are not
         # available at this stage.  We use content + source name + score only.
         evidence_parts: list[str] = []
         for resp in responses:
@@ -1495,7 +1496,7 @@ class MainOrchestrator:
         )
 
         if judge_result is None:
-            # Not risky or judge failed â€” accept as-is
+            # Not risky or judge failed; accept as-is
             return answer
 
         _profiler = get_current_profiler()
@@ -1517,7 +1518,7 @@ class MainOrchestrator:
         if judge_result.approved or judge_result.action == "accept":
             return answer
 
-        # Main-level judge does NOT use ask_clarification â€” that is a
+        # Main-level judge does NOT use ask_clarification; that is a
         # specialist-agent concern.  Fall through to rewrite_only repair.
         # retrieve_again is also downgraded to rewrite_only at this level
         # because re-dispatching departments is too expensive post-synthesis.

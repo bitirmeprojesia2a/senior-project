@@ -1,4 +1,4 @@
-"""Slack Bolt uygulamasi."""
+"""Slack Bolt uygulaması."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ _recent_event_keys: dict[str, float] = {}
 
 
 def build_default_slack_service() -> SlackBotService:
-    """Prod calisma icin varsayilan Slack servislerini kurar."""
+    """Prod çalışma için varsayılan Slack servislerini kurar."""
 
     return SlackBotService(
         orchestrator=MainOrchestrator(conversation_service=ConversationContextService()),
@@ -32,12 +32,12 @@ def build_default_slack_service() -> SlackBotService:
 
 
 def create_slack_app(*, service: SlackBotService | None = None) -> AsyncApp:
-    """Slack Bolt AsyncApp olusturur ve event handler'larini baglar."""
+    """Slack Bolt AsyncApp oluşturur ve event handler'larını bağlar."""
 
     if not settings.slack.bot_token:
-        raise RuntimeError("SLACK_BOT_TOKEN ayarlanmamis.")
+        raise RuntimeError("SLACK_BOT_TOKEN ayarlanmamış.")
     if not settings.slack.signing_secret:
-        raise RuntimeError("SLACK_SIGNING_SECRET ayarlanmamis.")
+        raise RuntimeError("SLACK_SIGNING_SECRET ayarlanmamış.")
 
     active_service = service or build_default_slack_service()
     slack_client = AsyncWebClient(
@@ -98,7 +98,7 @@ def _should_ignore_event(event: dict) -> bool:
 
 
 def _is_duplicate_event(event: dict) -> bool:
-    """Ayni Slack event'i kisa sure icinde tekrar gelirse tekrar cevaplama."""
+    """Aynı Slack event'i kısa süre içinde tekrar gelirse tekrar cevaplama."""
 
     now = time.monotonic()
     expired = [
@@ -134,10 +134,10 @@ async def _process_and_reply(
     client,
     thread_ts: str | None,
 ) -> None:
-    """Slack event ack'ini bekletmeden cevabi arka planda uretir."""
+    """Slack event ack'ini bekletmeden cevabı arka planda üretir."""
 
     # Immediately post a short placeholder so the user knows the bot is working.
-    thinking_text = "Cevab\u0131n\u0131z haz\u0131rlan\u0131yor, l\u00fctfen bekleyin..."
+    thinking_text = "Cevabınız hazırlanıyor, lütfen bekleyin..."
     try:
         thinking_msg = await client.chat_postMessage(
             channel=message.channel_id,
@@ -155,7 +155,7 @@ async def _process_and_reply(
     except Exception:
         logger.exception("slack_message_failed")
         replies = [
-            "Slack iste\u011fi i\u015flenirken hata olu\u015ftu. Sistem ayaktaysa birazdan tekrar deneyebilirsiniz."
+            "Slack isteği işlenirken hata oluştu. Sistem ayaktaysa birazdan tekrar deneyebilirsiniz."
         ]
 
     # Update the thinking placeholder with the first reply chunk

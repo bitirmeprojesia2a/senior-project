@@ -230,9 +230,9 @@ class CurriculumAgent(BaseSpecialistAgent):
         semester 1-2 -> 1. sinif, 3-4 -> 2. sinif, etc.
         """
         if semester is None:
-            return "donem bilgisi kayitli degil"
+            return "dönem bilgisi kayıtlı değil"
         year = (semester + 1) // 2  # 1->1, 2->1, 3->2, 4->2, ...
-        return f"{year}. sinif, {semester}. yariyil"
+        return f"{year}. sınıf, {semester}. yarıyıl"
 
     async def _build_course_title_lookup_response(self, courses: list[dict[str, Any]]) -> DepartmentResponse:
         if len(courses) == 1:
@@ -241,7 +241,7 @@ class CurriculumAgent(BaseSpecialistAgent):
             semester_text = self._semester_to_year_text(semester)
             answer = (
                 f"{course['course_code']} {course['course_name']} dersi "
-                f"{course.get('department') or 'ilgili program'} mufredatinda {semester_text} icinde gorunuyor."
+                f"{course.get('department') or 'ilgili program'} müfredatında {semester_text} içinde görünüyor."
             )
             # Derslik bilgisini de ekle
             course_dept = course.get("department")
@@ -625,8 +625,8 @@ class CurriculumAgent(BaseSpecialistAgent):
         redirected_from = prereq_data.get("redirected_from")
         if redirected_from:
             redirect_prefix = (
-                f"Not: {redirected_from} kodu guncel mufredatta "
-                f"{prereq_data['course_code']} olarak gecmektedir.\n\n"
+                f"Not: {redirected_from} kodu güncel müfredatta "
+                f"{prereq_data['course_code']} olarak geçmektedir.\n\n"
             )
 
         groups = prereq_data.get("prerequisite_groups", {})
@@ -646,13 +646,13 @@ class CurriculumAgent(BaseSpecialistAgent):
             akts_str = f", {akts} AKTS" if akts else ""
             db_info = (
                 f"{prereq_data['course_code']} {prereq_data['course_name']} "
-                f"({prereq_data['credits']} kredi{akts_str}) dersinin onkosullari: {prereq_text}. "
-                "Onkosullu derslerden en az DD alinmis olmasi gerekir."
+                f"({prereq_data['credits']} kredi{akts_str}) dersinin önkoşulları: {prereq_text}. "
+                "Önkoşullu derslerden en az DD alınmış olması gerekir."
             )
         else:
             db_info = (
                 f"{prereq_data['course_code']} {prereq_data['course_name']} "
-                "dersinin kayitli onkosulu bulunmamaktadir."
+                "dersinin kayıtlı önkoşulu bulunmamaktadır."
             )
 
         answer = redirect_prefix + db_info
@@ -690,7 +690,7 @@ class CurriculumAgent(BaseSpecialistAgent):
             return DepartmentResponse(
                 department=self.department,
                 answer=(
-                    f"{student_department} icin {semester} ders/mufredat bilgisi veritabaninda bulunmuyor."
+                    f"{student_department} için {semester} ders/müfredat bilgisi veritabanında bulunmuyor."
                 ),
                 db_data={
                     "semester": semester,
@@ -710,9 +710,9 @@ class CurriculumAgent(BaseSpecialistAgent):
             + len(elective_groups)
             + (1 if language_courses else 0)
         )
-        lines = [f"{semester} doneminde kayitli {displayed_course_count} ders/grup bulundu:"]
+        lines = [f"{semester} döneminde kayıtlı {displayed_course_count} ders/grup bulundu:"]
         if core_courses:
-            lines.append("\nBolum dersleri:")
+            lines.append("\nBölüm dersleri:")
             lines.extend(format_course_lines(core_courses))
         if language_courses:
             unique_language_courses = list(
@@ -726,14 +726,14 @@ class CurriculumAgent(BaseSpecialistAgent):
                 for item in unique_language_courses[:8]
             )
             if len(unique_language_courses) > 8:
-                option_summary += f"; ... ve {len(unique_language_courses) - 8} secenek daha"
-            lines.append("\nYabanci dil secenekleri:")
-            lines.append(f"- Programdaki yabanci dil dersi icin kayitli secenekler: {option_summary}")
+                option_summary += f"; ... ve {len(unique_language_courses) - 8} seçenek daha"
+            lines.append("\nYabancı dil seçenekleri:")
+            lines.append(f"- Programdaki yabancı dil dersi için kayıtlı seçenekler: {option_summary}")
         if service_courses:
             lines.append("\nOrtak dersler:")
             lines.extend(format_course_lines(service_courses))
         if elective_groups:
-            lines.append("\nSecmeli gruplar:")
+            lines.append("\nSeçmeli gruplar:")
             for group_code in sorted(elective_groups):
                 bucket = elective_groups[group_code]
                 group_course = bucket["group"]
@@ -741,14 +741,14 @@ class CurriculumAgent(BaseSpecialistAgent):
                 if group_course is not None:
                     lines.append(f"- {format_course_line(group_course)}")
                 else:
-                    lines.append(f"- {group_code} secmeli grubu")
+                    lines.append(f"- {group_code} seçmeli grubu")
                 if options:
                     option_summary = "; ".join(
                         f"{item['course_code']} {item['course_name']}" for item in options[:6]
                     )
                     if len(options) > 6:
-                        option_summary += f"; ... ve {len(options) - 6} secenek daha"
-                    lines.append(f"  Secenekler: {option_summary}")
+                        option_summary += f"; ... ve {len(options) - 6} seçenek daha"
+                    lines.append(f"  Seçenekler: {option_summary}")
 
         db_info = "\n".join(lines)
         answer = db_info

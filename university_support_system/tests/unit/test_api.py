@@ -27,7 +27,7 @@ class _FakeLLMService:
     async def get_health(self):
         return {
             "status": "healthy",
-            "primary": {"name": "ollama", "status": "healthy", "model_loaded": True},
+            "primary": {"name": "groq", "status": "healthy", "model_loaded": True},
             "fallback": {"name": "openai", "available": False},
         }
 
@@ -351,7 +351,7 @@ def test_health_endpoint_returns_llm_status():
     payload = response.json()
     assert payload["status"] == "healthy"
     assert payload["llm"]["primary"]["status"] == "healthy"
-    assert payload["llm"]["primary"]["name"] == "ollama"
+    assert payload["llm"]["primary"]["name"] == "groq"
     assert payload["app"]["build"]["version"] == settings.server.app_version
     assert payload["app"]["build"]["build_id"] == "test-build"
     assert payload["app"]["build"]["git_sha"] == "abc123"

@@ -89,13 +89,13 @@ def build_help_text() -> str:
     """Slack icin kisa kullanim metni."""
 
     return (
-        "OMU destek botu kullanimi:\n"
-        "- Normal soru: `Ders kaydi ne zaman basliyor?`\n"
-        "- Giris: `login 20210001`\n"
-        "- OTP dogrulama: `verify 20210001 123456`\n"
+        "OMÜ destek botu kullanımı:\n"
+        "- Normal soru: `Ders kaydı ne zaman başlıyor?`\n"
+        "- Giriş: `login 20210001`\n"
+        "- OTP doğrulama: `verify 20210001 123456`\n"
         "- Oturum kapatma: `logout`\n\n"
-        "Giris yapmadan genel duyuru, etkinlik, harc ve mufredat sorularini sorabilirsiniz. "
-        "Kisisel bilgiler icin Slack kullanicinizi OTP ile dogrulamaniz gerekir."
+        "Giriş yapmadan genel duyuru, etkinlik, harç ve müfredat sorularını sorabilirsiniz. "
+        "Kişisel bilgiler için Slack kullanıcınızı OTP ile doğrulamanız gerekir."
     )
 
 
@@ -129,7 +129,7 @@ class SlackBotService:
 
     async def _handle_login(self, command: SlackCommand, slack_user_id: str) -> str:
         if not command.student_number:
-            return "Giris icin `login <ogrenci_no>` formatini kullanin."
+            return "Giriş için `login <ogrenci_no>` formatını kullanın."
 
         try:
             result = await self.auth_service.request_otp(
@@ -137,21 +137,21 @@ class SlackBotService:
                 slack_user_id=slack_user_id,
             )
         except EmailDeliveryError as exc:
-            return f"Dogrulama e-postasi gonderilemedi: {exc}"
+            return f"Doğrulama e-postası gönderilemedi: {exc}"
         if result is None:
-            return "Bu ogrenci numarasi icin aktif kayit bulunamadi."
+            return "Bu öğrenci numarası için aktif kayıt bulunamadı."
         if not result.get("success"):
-            return str(result.get("message") or "OTP kodu olusturulamadi.")
+            return str(result.get("message") or "OTP kodu oluşturulamadı.")
 
-        masked_email = result.get("masked_email") or "ogrenci e-postaniz"
+        masked_email = result.get("masked_email") or "öğrenci e-postanız"
         return (
-            f"Dogrulama kodu {masked_email} adresine gonderildi. "
-            f"Slack'te `verify {command.student_number} <kod>` yazarak dogrulayabilirsiniz."
+            f"Doğrulama kodu {masked_email} adresine gönderildi. "
+            f"Slack'te `verify {command.student_number} <kod>` yazarak doğrulayabilirsiniz."
         )
 
     async def _handle_verify(self, command: SlackCommand, slack_user_id: str) -> str:
         if not command.student_number or not command.otp_code:
-            return "Dogrulama icin `verify <ogrenci_no> <kod>` formatini kullanin."
+            return "Doğrulama için `verify <ogrenci_no> <kod>` formatını kullanın."
 
         result = await self.auth_service.verify_otp(
             student_number=command.student_number,
@@ -159,22 +159,22 @@ class SlackBotService:
             slack_user_id=slack_user_id,
         )
         if result is None:
-            return "Bu ogrenci numarasi icin aktif kayit bulunamadi."
+            return "Bu öğrenci numarası için aktif kayıt bulunamadı."
         if not result.get("success"):
-            return str(result.get("message") or "OTP dogrulanamadi.")
+            return str(result.get("message") or "OTP doğrulanamadı.")
 
-        full_name = result.get("full_name") or "ogrenci"
-        department = result.get("student_department") or "bolum bilgisi yok"
-        return f"Giris tamamlandi: {full_name} ({department}). Artik kisisel sorulari yanitlayabilirim."
+        full_name = result.get("full_name") or "öğrenci"
+        department = result.get("student_department") or "bölüm bilgisi yok"
+        return f"Giriş tamamlandı: {full_name} ({department}). Artık kişisel soruları yanıtlayabilirim."
 
     async def _handle_logout(self, slack_user_id: str) -> str:
         auth_context = await self.auth_service.resolve_auth_context(slack_user_id=slack_user_id)
         if auth_context is None:
-            return "Aktif Slack oturumu bulunamadi."
+            return "Aktif Slack oturumu bulunamadı."
         invalidated = await self.auth_service.invalidate_slack_sessions(slack_user_id)
         if not invalidated:
-            return "Oturum kapatilamadi; zaten pasif olabilir."
-        return "Slack oturumunuz kapatildi."
+            return "Oturum kapatılamadı; zaten pasif olabilir."
+        return "Slack oturumunuz kapatıldı."
 
     async def _handle_query(self, command: SlackCommand, message: SlackIncomingMessage) -> list[str]:
         query = command.query or normalize_slack_text(message.text)

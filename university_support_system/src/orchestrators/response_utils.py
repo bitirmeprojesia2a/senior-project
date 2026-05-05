@@ -96,64 +96,65 @@ _ARABIC_HEBREW_RE = re.compile(r'[\u0590-\u05ff\u0600-\u06ff\u0750-\u077f]+')
 
 # Yaygin Ingilizce kelimeler ve Turkce karsiliklari
 _EN_TO_TR: dict[str, str] = {
-    "international": "uluslararasi",
-    "specific": "ozel",
+    "international": "uluslararası",
+    "specific": "özel",
     "required": "gerekli",
     "needed": "gerekli",
-    "success": "basari",
-    "contribution": "katki",
+    "success": "başarı",
+    "contribution": "katkı",
     "however": "ancak",
     "therefore": "bu nedenle",
     "necessary": "gerekli",
-    "important": "onemli",
+    "important": "önemli",
     "information": "bilgi",
-    "application": "basvuru",
-    "process": "surec",
-    "condition": "kosul",
+    "informationen": "bilgi",
+    "application": "başvuru",
+    "process": "süreç",
+    "condition": "koşul",
     "requirement": "gereksinim",
     "document": "belge",
-    "student": "ogrenci",
-    "university": "universite",
+    "student": "öğrenci",
+    "university": "üniversite",
     "program": "program",
-    "education": "egitim",
+    "education": "eğitim",
     "academic": "akademik",
     "must": "zorunlu",
     "should": "meli",
-    "also": "ayrica",
-    "registration": "kayit",
+    "also": "ayrıca",
+    "registration": "kayıt",
     "renewal": "yenileme",
-    "semester": "donem",
-    "fee": "ucret",
-    "fees": "ucretler",
+    "semester": "dönem",
+    "fee": "ücret",
+    "fees": "ücretler",
     "refund": "iade",
     "refunded": "iade edilir",
     "cancel": "iptal",
     "canceled": "iptal edilir",
-    "graduate": "lisansustu",
+    "graduate": "lisansüstü",
     "doctoral": "doktora",
-    "master": "yuksek lisans",
+    "master": "yüksek lisans",
     "programs": "programlar",
     "language": "dil",
-    "following": "su sekilde",
+    "following": "şu şekilde",
     "several": "birden fazla",
     "informatie": "bilgi",
     "details": "detaylar",
     "detail": "detay",
-    "processi": "sureci",
-    "applicants": "basvuru sahipleri",
-    "applicantsi": "basvuru sahibi",
-    "different": "farkli",
-    "same": "ayni",
+    "processi": "süreci",
+    "applicants": "başvuru sahipleri",
+    "applicantsi": "başvuru sahibi",
+    "different": "farklı",
+    "same": "aynı",
     "necessario": "gerekli",
     "podria": "",
-    "requirements": "kosullar",
-    "conditions": "kosullar",
-    "overview": "ozet",
+    "requirements": "koşullar",
+    "conditions": "koşullar",
+    "overview": "özet",
     "timeline": "takvim",
     "approval": "onay",
-    "approved": "onaylandi",
+    "approved": "onaylandı",
     "certain": "belirli",
-    "siguientes": "asagidaki",
+    "siguientes": "aşağıdaki",
 }
 
 # Turkce'ye ait olmayan aksanli harfler (é, è, ê, ñ, å, ø, vb.)
@@ -199,12 +200,12 @@ def _strip_foreign_words(text: str) -> str:
         pattern = re.compile(r'\b' + re.escape(en_word) + r'\b', re.IGNORECASE)
         text = pattern.sub(lambda match: _apply_case_style(match, tr_word), text)
 
-    text = re.sub(r"\bonce_online\b", "once online", text, flags=re.IGNORECASE)
-    text = re.sub(r"\bsucces(?:s)?ini\b", "basarisini", text, flags=re.IGNORECASE)
-    text = re.sub(r"\bsucces(?:s)?i\b", "basarisi", text, flags=re.IGNORECASE)
-    text = re.sub(r"\badem(?:as|\u00e1s)\b", "ayrica", text, flags=re.IGNORECASE)
-    text = re.sub(r"\btambi(?:en|\u00e9n)\b", "ayrica", text, flags=re.IGNORECASE)
-    text = re.sub(r"\bpor favor\b", "lutfen", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bonce_online\b", "önce online", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bsucces(?:s)?ini\b", "başarısını", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bsucces(?:s)?i\b", "başarısı", text, flags=re.IGNORECASE)
+    text = re.sub(r"\badem(?:as|\u00e1s)\b", "ayrıca", text, flags=re.IGNORECASE)
+    text = re.sub(r"\btambi(?:en|\u00e9n)\b", "ayrıca", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bpor favor\b", "lütfen", text, flags=re.IGNORECASE)
     text = re.sub(r"\bnecessario\s+podria\b", "gerekebilir", text, flags=re.IGNORECASE)
 
     # 3) Turkce'ye ait olmayan aksanli kelimeleri temizle
@@ -257,43 +258,44 @@ def _strip_foreign_words(text: str) -> str:
     # 5) Temizleme sonrasi olusan cift bosluklari ve bos satirlari duzelt
     text = re.sub(r'  +', ' ', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
-    text = re.sub(r'\bsu sekilde gibidir\b', 'su sekildedir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bsu sekilde gibidir\b', 'şu şekildedir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bşu şekilde gibidir\b', 'şu şekildedir', text, flags=re.IGNORECASE)
     text = re.sub(r'\bbirden fazla kaynaklardan\b', 'birden fazla kaynaktan', text, flags=re.IGNORECASE)
     text = re.sub(r'\bbilgi verir misin\b', 'bilgi vereyim', text, flags=re.IGNORECASE)
     # Yabanci dil sızıntıları
-    text = re.sub(r'\bsiguientes\b', 'asagidaki', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bonce_online\b', 'once online', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bademás\b', 'ayrica', text, flags=re.IGNORECASE)
-    text = re.sub(r'\btambién\b', 'ayrica', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bpor favor\b', 'lutfen', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bsiguientes\b', 'aşağıdaki', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bonce_online\b', 'önce online', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bademás\b', 'ayrıca', text, flags=re.IGNORECASE)
+    text = re.sub(r'\btambién\b', 'ayrıca', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpor favor\b', 'lütfen', text, flags=re.IGNORECASE)
     # Ingilizce kelime sizintilari — LLM bazen Turkce cumle icinde Ingilizce kelimeler birakir
-    text = re.sub(r'\b-contrib\b', '-katki payi', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bcontrib\b', 'katki payi', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b-contrib\b', '-katkı payı', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bcontrib\b', 'katkı payı', text, flags=re.IGNORECASE)
     text = re.sub(r'\bhowever\b', 'ancak', text, flags=re.IGNORECASE)
     text = re.sub(r'\btherefore\b', 'bu nedenle', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bfurthermore\b', 'ayrica', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bmoreover\b', 'ayrica', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bnevertheless\b', 'buna ragmen', text, flags=re.IGNORECASE)
-    text = re.sub(r'\baccordingly\b', 'buna gore', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bconsequently\b', 'sonuc olarak', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bspecifically\b', 'ozel olarak', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bapproximately\b', 'yaklasik', text, flags=re.IGNORECASE)
-    text = re.sub(r'\brespectively\b', 'sirasiyla', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bfurthermore\b', 'ayrıca', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bmoreover\b', 'ayrıca', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bnevertheless\b', 'buna rağmen', text, flags=re.IGNORECASE)
+    text = re.sub(r'\baccordingly\b', 'buna göre', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bconsequently\b', 'sonuç olarak', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bspecifically\b', 'özel olarak', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bapproximately\b', 'yaklaşık', text, flags=re.IGNORECASE)
+    text = re.sub(r'\brespectively\b', 'sırasıyla', text, flags=re.IGNORECASE)
     text = re.sub(r'\bregarding\b', 'ilgili', text, flags=re.IGNORECASE)
-    text = re.sub(r'\badditionally\b', 'ayrica', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bcontribution\b', 'katki', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bexcluding\b', 'haric', text, flags=re.IGNORECASE)
+    text = re.sub(r'\badditionally\b', 'ayrıca', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bcontribution\b', 'katkı', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bexcluding\b', 'hariç', text, flags=re.IGNORECASE)
     text = re.sub(r'\bincluding\b', 'dahil', text, flags=re.IGNORECASE)
     # Almanca kelime sizintilari — kucuk LLM'ler bazen Almanca kelimeler de birakir
-    text = re.sub(r'\bwichtig\b', 'onemli', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bwichtig\b', 'önemli', text, flags=re.IGNORECASE)
     text = re.sub(r'\bbeachten\b', 'dikkat et', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bbitte\b', 'lutfen', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bbitte\b', 'lütfen', text, flags=re.IGNORECASE)
     text = re.sub(r'\bjedoch\b', 'ancak', text, flags=re.IGNORECASE)
-    text = re.sub(r'\baußerdem\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\baußerdem\b', 'ayrıca', text, flags=re.IGNORECASE)
     text = re.sub(r'\bdaher\b', 'bu nedenle', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bsomit\b', 'boylece', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bsomit\b', 'böylece', text, flags=re.IGNORECASE)
     text = re.sub(r'\baber\b', 'fakat', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bauch\b', 'ayrica', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bauch\b', 'ayrıca', text, flags=re.IGNORECASE)
     text = re.sub(r'\bnur\b', 'sadece', text, flags=re.IGNORECASE)
     text = re.sub(r'\bnoch\b', 'hala', text, flags=re.IGNORECASE)
     # Hintce/Devanagari karakter sizintisi — kucuk LLM'ler bazen Hintce karakter uretir
@@ -301,19 +303,21 @@ def _strip_foreign_words(text: str) -> str:
 
     # 6) Uydurma/yabanci token kalintilari — LLM bazen anlamsiz birlesik kelimeler uretir
     text = re.sub(r'\bdentroslar\w*\b', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bpossibilite\w*\b', 'olasilik', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpossibilite\w*\b', 'olasılık', text, flags=re.IGNORECASE)
     text = re.sub(r'\bkonkret\b', 'somut', text, flags=re.IGNORECASE)
     text = re.sub(r'\bbekannt\b', 'bilinen', text, flags=re.IGNORECASE)
     text = re.sub(r'\bcontinuation\b', 'devam', text, flags=re.IGNORECASE)
-    text = re.sub(r'\bverificar\w*\b', 'dogrulama', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bverificar\w*\b', 'doğrulama', text, flags=re.IGNORECASE)
     text = re.sub(r'\binformación\b', 'bilgi', text, flags=re.IGNORECASE)
     text = re.sub(r'\brequerido\b', 'gerekli', text, flags=re.IGNORECASE)
     text = re.sub(r'\bpuede\b', 'olabilir', text, flags=re.IGNORECASE)
     text = re.sub(r'\bdeber\w*\b', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\bespec\w+\b', '', text, flags=re.IGNORECASE)  # Ispanyolca "especificar" vb.
+    text = re.sub(r'\binformationen\b', 'bilgi', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bztr\b', 'zayi edilen', text, flags=re.IGNORECASE)
     # "tonabilir" — LLM bazen "tanınabilir" yerine "tonabilir" uretir
-    text = re.sub(r'\btonabilir\b', 'taninabilir', text, flags=re.IGNORECASE)
-    text = re.sub(r'\btonabilir\w*\b', 'taninabilir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\btonabilir\b', 'tanınabilir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\btonabilir\w*\b', 'tanınabilir', text, flags=re.IGNORECASE)
     # Korece "필요" (gerekli) — en sik rastlanan Hangul token
     text = re.sub(r'필요', '', text)
 

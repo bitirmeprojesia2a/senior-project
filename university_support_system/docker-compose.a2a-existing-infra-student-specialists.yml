@@ -55,7 +55,6 @@ services:
       REDIS_PORT: 6379
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      OLLAMA_HOST: http://ollama:11434
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8120
       SERVER_RUNTIME_LABEL: agent-student-registration
@@ -98,7 +97,6 @@ services:
       REDIS_PORT: 6379
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      OLLAMA_HOST: http://ollama:11434
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8121
       SERVER_RUNTIME_LABEL: agent-student-graduation
@@ -141,7 +139,6 @@ services:
       REDIS_PORT: 6379
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      OLLAMA_HOST: http://ollama:11434
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8122
       SERVER_RUNTIME_LABEL: agent-student-internship
@@ -184,7 +181,6 @@ services:
       REDIS_PORT: 6379
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      OLLAMA_HOST: http://ollama:11434
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8123
       SERVER_RUNTIME_LABEL: agent-student-life

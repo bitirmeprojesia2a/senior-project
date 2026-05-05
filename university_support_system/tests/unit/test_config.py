@@ -121,36 +121,36 @@ class TestLLMModelResolution:
     """Rol bazli model cozumleme kurallari."""
 
     def test_fast_profile_prefers_secondary_model_for_all_roles(self, monkeypatch):
-        monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:7b")
-        monkeypatch.setenv("OLLAMA_SECONDARY_MODEL", "qwen2.5:3b")
+        monkeypatch.setenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
+        monkeypatch.setenv("OPENAI_SECONDARY_MODEL", "llama-3.1-8b-instant")
         monkeypatch.setenv("LLM_PROFILE", "fast")
-        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "ollama")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
 
         test_settings = Settings()
 
-        assert test_settings.resolve_llm_model(role="routing") == "qwen2.5:3b"
-        assert test_settings.resolve_llm_model(role="conversation") == "qwen2.5:3b"
-        assert test_settings.resolve_llm_model(role="query_expansion") == "qwen2.5:3b"
-        assert test_settings.resolve_llm_model(role="global_synthesis") == "qwen2.5:3b"
+        assert test_settings.resolve_llm_model(role="routing") == "llama-3.1-8b-instant"
+        assert test_settings.resolve_llm_model(role="conversation") == "llama-3.1-8b-instant"
+        assert test_settings.resolve_llm_model(role="query_expansion") == "llama-3.1-8b-instant"
+        assert test_settings.resolve_llm_model(role="global_synthesis") == "llama-3.1-8b-instant"
 
     def test_balanced_profile_uses_role_overrides_before_primary_model(self, monkeypatch):
-        monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:7b")
-        monkeypatch.setenv("OLLAMA_SECONDARY_MODEL", "qwen2.5:3b")
+        monkeypatch.setenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
+        monkeypatch.setenv("OPENAI_SECONDARY_MODEL", "llama-3.1-8b-instant")
         monkeypatch.setenv("LLM_PROFILE", "balanced")
-        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "ollama")
-        monkeypatch.setenv("LLM_ROUTING_MODEL", "qwen2.5:3b")
-        monkeypatch.setenv("LLM_CONVERSATION_MODEL", "qwen2.5:3b")
-        monkeypatch.setenv("LLM_QUERY_EXPANSION_MODEL", "qwen2.5:7b")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_ROUTING_MODEL", "llama-3.1-8b-instant")
+        monkeypatch.setenv("LLM_CONVERSATION_MODEL", "llama-3.1-8b-instant")
+        monkeypatch.setenv("LLM_QUERY_EXPANSION_MODEL", "llama-3.3-70b-versatile")
         monkeypatch.setenv("LLM_SPECIALIST_SYNTHESIS_MODEL", "")
         monkeypatch.setenv("LLM_GLOBAL_SYNTHESIS_MODEL", "")
 
         test_settings = Settings()
 
-        assert test_settings.resolve_llm_model(role="routing") == "qwen2.5:3b"
-        assert test_settings.resolve_llm_model(role="conversation") == "qwen2.5:3b"
-        assert test_settings.resolve_llm_model(role="query_expansion") == "qwen2.5:7b"
-        assert test_settings.resolve_llm_model(role="specialist_synthesis") == "qwen2.5:7b"
-        assert test_settings.resolve_llm_model(role="global_synthesis") == "qwen2.5:7b"
+        assert test_settings.resolve_llm_model(role="routing") == "llama-3.1-8b-instant"
+        assert test_settings.resolve_llm_model(role="conversation") == "llama-3.1-8b-instant"
+        assert test_settings.resolve_llm_model(role="query_expansion") == "llama-3.3-70b-versatile"
+        assert test_settings.resolve_llm_model(role="specialist_synthesis") == "llama-3.3-70b-versatile"
+        assert test_settings.resolve_llm_model(role="global_synthesis") == "llama-3.3-70b-versatile"
 
     def test_google_ai_provider_uses_its_own_model_namespace(self, monkeypatch):
         monkeypatch.setenv("LLM_PROFILE", "balanced")

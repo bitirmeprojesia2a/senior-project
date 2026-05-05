@@ -1,1 +1,1 @@
-"""LLM modülü - Ollama/OpenAI istemcileri ve prompt şablonları."""
+"""LLM modülü - OpenAI-compatible/Google AI istemcileri ve prompt şablonları."""

@@ -644,6 +644,29 @@ class DepartmentRouter:
                 authoritative=True,
             )
 
+        if has_cap_markers(lowered) and contains_any(
+            lowered,
+            ("harc", "katki payi", "ucret", "odeme", "borc", "borclu", "bordum"),
+        ):
+            confidence = max(decision.confidence, 0.86)
+            intent = intent or IntentAnalysis(
+                complexity="process_chain",
+                is_personal=False,
+                force_llm_synthesis=True,
+                query_type="procedural",
+                reasoning="CAP/YAP kosulu finansal yukumlulukla birlikte soruluyor.",
+                primary_intent="cap_yap",
+            )
+            return _RuleRoutingDecision(
+                departments=[Department.ACADEMIC_PROGRAMS, Department.FINANCE],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.PARALLEL,
+                reasoning="CAP/YAP sureci harc/borc/odeme baglamiyla birlikte soruluyor; akademik program ve finans kaynaklari birlikte gerekli.",
+                intent=intent.model_copy(update={"is_personal": False, "force_llm_synthesis": True}),
+                authoritative=True,
+            )
+
         if contains_any(lowered, ("katki payi", "borc", "borclu", "iade", "fazla ucret", "harc burosu")):
             confidence = max(decision.confidence, 0.84)
             return _RuleRoutingDecision(

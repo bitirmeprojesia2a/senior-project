@@ -11,7 +11,7 @@ from typing import Literal, Optional
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LLMProvider = Literal["ollama", "openai_compatible", "google_ai"]
+LLMProvider = Literal["openai_compatible", "google_ai"]
 LLMRole = Literal[
     "default",
     "routing",
@@ -73,25 +73,6 @@ class RedisSettings(BaseSettings):
     @property
     def url(self) -> str:
         return f"redis://{self.host}:{self.port}/{self.db}"
-
-
-class OllamaSettings(BaseSettings):
-    """Yerel LLM ayarlari."""
-
-    model_config = SettingsConfigDict(
-        env_prefix="OLLAMA_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-    host: str = "http://localhost:11434"
-    model: str = "qwen2.5:7b"
-    secondary_model: str = "qwen2.5:3b"
-    timeout: int = 120
-    max_retries: int = 3
-    num_ctx: int = 8192
-    num_predict: int = 512
 
 
 class OpenAISettings(BaseSettings):
@@ -165,8 +146,8 @@ class LLMRuntimeSettings(BaseSettings):
     query_normalization_timeout_seconds: int = 6
     specialist_synthesis_timeout_seconds: int = 120
     global_synthesis_timeout_seconds: int = 120
-    primary_provider: LLMProvider = "ollama"
-    fallback_provider: Literal["none", "ollama", "openai_compatible", "google_ai"] = "openai_compatible"
+    primary_provider: LLMProvider = "openai_compatible"
+    fallback_provider: Literal["none", "openai_compatible", "google_ai"] = "google_ai"
 
 
 class ChromaSettings(BaseSettings):
@@ -405,6 +386,7 @@ class ConversationSettings(BaseSettings):
     max_recent_turns: int = 3
     max_answer_summary_chars: int = 320
     max_rolling_summary_chars: int = 900
+    reset_on_build: bool = True
 
 
 class CacheSettings(BaseSettings):
@@ -610,7 +592,6 @@ class Settings(BaseSettings):
 
     postgres: PostgresSettings = Field(default_factory=PostgresSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
-    ollama: OllamaSettings = Field(default_factory=OllamaSettings)
     openai: OpenAISettings = Field(default_factory=OpenAISettings)
     google_ai: GoogleAISettings = Field(default_factory=GoogleAISettings)
     llm: LLMRuntimeSettings = Field(default_factory=LLMRuntimeSettings)
@@ -649,7 +630,7 @@ class Settings(BaseSettings):
         provider: LLMProvider | None = None,
     ) -> str:
         """
-        LLM rolune gore kullanilacak Ollama modelini cozumler.
+        LLM rolune gore kullanilacak modeli cozumler.
 
         Cozumleme sirasi:
         1. Acik istek profili (`fast`, `quality`, `balanced`)
@@ -682,7 +663,7 @@ class Settings(BaseSettings):
             return provider_override
 
         # Legacy LLM_* role overrides are global and usually describe the
-        # primary provider. Do not leak Groq/Ollama model names into Google AI
+        # primary provider. Do not leak Groq model names into Google AI
         # or another fallback provider with a different model namespace.
         if active_provider == self.llm.primary_provider:
             legacy_override = self._resolve_legacy_role_model(role)
@@ -715,7 +696,7 @@ class Settings(BaseSettings):
         elif provider == "google_ai":
             provider_settings = self.google_ai
         else:
-            return None
+            return None  # pragma: no cover
 
         role_overrides = {
             "routing": provider_settings.routing_model,
@@ -738,7 +719,7 @@ class Settings(BaseSettings):
             return self.openai.model
         if provider == "google_ai":
             return self.google_ai.model
-        return self.ollama.model
+        return self.openai.model  # pragma: no cover
 
     def _resolve_provider_secondary_model(
         self,
@@ -749,7 +730,7 @@ class Settings(BaseSettings):
             return self.openai.secondary_model or self.openai.model
         if provider == "google_ai":
             return self.google_ai.secondary_model or self.google_ai.model
-        return self.ollama.secondary_model or self.ollama.model
+        return self.openai.secondary_model or self.openai.model  # pragma: no cover
 
     def configured_llm_models(self) -> dict[str, str]:
         """Saglik ve debug ciktilari icin cozumlenmis model haritasini dondurur."""

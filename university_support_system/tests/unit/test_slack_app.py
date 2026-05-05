@@ -55,9 +55,15 @@ def test_duplicate_slack_event_is_ignored_once_seen():
 class _FakeSlackClient:
     def __init__(self):
         self.messages = []
+        self.updates = []
 
     async def chat_postMessage(self, **kwargs):
         self.messages.append(kwargs)
+        return {"message": {"ts": f"msg-{len(self.messages)}"}}
+
+    async def chat_update(self, **kwargs):
+        self.updates.append(kwargs)
+        return {"ok": True}
 
 
 def test_process_and_reply_posts_generated_messages():
@@ -82,9 +88,16 @@ def test_process_and_reply_posts_generated_messages():
     assert client.messages == [
         {
             "channel": "D123",
-            "text": "ok: help",
+            "text": "Cevabınız hazırlanıyor, lütfen bekleyin...",
             "thread_ts": "100.1",
             "unfurl_links": False,
             "unfurl_media": False,
+        }
+    ]
+    assert client.updates == [
+        {
+            "channel": "D123",
+            "ts": "msg-1",
+            "text": "ok: help",
         }
     ]

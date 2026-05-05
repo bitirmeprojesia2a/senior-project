@@ -34,6 +34,6 @@ echo "Runtime baslatiliyor: ${SERVER_RUNTIME_LABEL:-default}"
 echo "Port: ${SERVER_PORT:-8000}"
 echo "Embedding device: ${EMBEDDING_DEVICE:-auto}"
 echo "Reranker device: ${RERANKER_DEVICE:-auto}"
-echo "Ollama host: ${OLLAMA_HOST:-http://localhost:11434}"
+echo "LLM provider: ${LLM_PRIMARY_PROVIDER:-openai_compatible}"
 
 exec uvicorn src.api.main:app --host "${SERVER_HOST:-0.0.0.0}" --port "${SERVER_PORT:-8000}"

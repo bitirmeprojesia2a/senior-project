@@ -125,8 +125,8 @@ async def test_slack_service_login_and_verify_use_slack_identity():
 
     assert auth_service.requested == ("20210001", "U123")
     assert auth_service.verified == ("20210001", "123456", "U123")
-    assert "Dogrulama kodu" in login_reply[0]
-    assert "Giris tamamlandi" in verify_reply[0]
+    assert "Doğrulama kodu" in login_reply[0]
+    assert "Giriş tamamlandı" in verify_reply[0]
 
 
 @pytest.mark.asyncio
@@ -184,4 +184,4 @@ async def test_slack_service_logout_invalidates_all_slack_sessions():
 
     assert auth_service.invalidated is None
     assert auth_service.invalidated_slack_user_id == "U123"
-    assert replies == ["Slack oturumunuz kapatildi."]
+    assert replies == ["Slack oturumunuz kapatıldı."]

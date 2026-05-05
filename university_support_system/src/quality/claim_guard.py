@@ -83,6 +83,16 @@ _ANSWER_DATE_RE = re.compile(
     r"\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b"
     r"|\b\d{4}\s*[-\u2013]\s*\d{4}\b",
 )
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+_REPEATED_DURATION_RE = re.compile(
+    r"\b(?P<days>\d{1,3})\s*(?:gunluk|günlük|is\s+gunluk|iş\s+günlük)\s+"
+    r"(?P<count>\d{1,2})\s*(?:farkli|farklı|ayri|ayrı)\s+staj\b",
+    re.IGNORECASE,
+)
+_TOTAL_DURATION_RE = re.compile(
+    r"\btoplam\s+(?P<total>\d{1,3})\s*(?:is\s+gunu(?:ne)?|iş\s+günü(?:ne)?|gun(?:e)?|gün(?:e)?)\b",
+    re.IGNORECASE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +237,62 @@ def check_definitive_claims(
     return ungrounded
 
 
+def check_arithmetic_consistency(answer: str) -> list[dict]:
+    """Detect simple arithmetic contradictions inside a single answer sentence."""
+    issues: list[dict] = []
+    for sentence in _SENTENCE_SPLIT_RE.split(answer.strip()):
+        repeated = _REPEATED_DURATION_RE.search(sentence)
+        total = _TOTAL_DURATION_RE.search(sentence)
+        if not repeated or not total:
+            continue
+        days = int(repeated.group("days"))
+        count = int(repeated.group("count"))
+        stated_total = int(total.group("total"))
+        computed_total = days * count
+        if computed_total != stated_total:
+            issues.append(
+                {
+                    "claim": sentence.strip(),
+                    "type": "arithmetic",
+                    "grounded": False,
+                    "computed_total": computed_total,
+                    "stated_total": stated_total,
+                }
+            )
+    return issues
+
+
+def check_known_policy_contradictions(
+    answer: str,
+    evidence_items: Sequence[EvidenceItem],
+) -> list[dict]:
+    """Catch narrow, high-signal contradictions for well-known policy phrases."""
+    issues: list[dict] = []
+    answer_normalized = normalize_text(answer)
+    evidence_text = _collect_evidence_text(evidence_items)
+
+    if "tek ders" in answer_normalized:
+        says_no_attendance_required = (
+            "dersi hic almamis" in answer_normalized
+            or "devam sartini yerine getiremeyen" in answer_normalized
+            or "devam sartini saglamayan" in answer_normalized
+        )
+        evidence_requires_attendance = (
+            "devam sartini yerine getirdigi" in evidence_text
+            or "devam sartini sagladigi" in evidence_text
+            or "devam sartini yerine getiren" in evidence_text
+        )
+        if says_no_attendance_required and evidence_requires_attendance:
+            issues.append(
+                {
+                    "claim": "Tek ders sınavı devam şartını sağlamayan veya dersi hiç almamış öğrenciye açık gösterildi.",
+                    "type": "policy_contradiction",
+                    "grounded": False,
+                }
+            )
+    return issues
+
+
 # ---------------------------------------------------------------------------
 # Main guard entry point
 # ---------------------------------------------------------------------------
@@ -253,8 +319,10 @@ def guard_answer(
     numeric_issues = check_numeric_grounding(answer, evidence_items)
     entity_issues = check_entity_grounding(answer, evidence_items)
     definitive_issues = check_definitive_claims(answer, evidence_items)
+    arithmetic_issues = check_arithmetic_consistency(answer)
+    policy_issues = check_known_policy_contradictions(answer, evidence_items)
 
-    all_issues = numeric_issues + entity_issues + definitive_issues
+    all_issues = numeric_issues + entity_issues + definitive_issues + arithmetic_issues + policy_issues
 
     if not all_issues:
         return GuardResult(
@@ -295,7 +363,38 @@ def guard_answer(
                 cleaned = cleaned.replace(claim, softened)
                 modifications += 1
 
-    # 3. Numeric issues: ONLY logged, not modified (user feedback principle #2)
+    # 3. Arithmetic issues: replace only the contradictory sentence with a guarded statement.
+    for issue in arithmetic_issues:
+        claim = issue["claim"]
+        if claim in cleaned:
+            computed_total = issue["computed_total"]
+            cleaned = cleaned.replace(
+                claim,
+                (
+                    f"Bu örnekte toplam gün hesabı {computed_total} gündür; "
+                    "stajın bölünerek kabul edilip edilmeyeceği için ilgili bölüm staj ilkeleri esas alınmalıdır."
+                ),
+            )
+            modifications += 1
+
+    # 4. Known policy contradictions: remove the contradicted phrase, keep a cautious source-bound sentence.
+    for issue in policy_issues:
+        if "tek ders" in normalize_text(issue["claim"]):
+            cleaned = re.sub(
+                r"(?i)Bu sınavlara,?\s*dersi hiç almamış olan veya devam şartını yerine getiremeyen öğrenciler girebilir\.\s*",
+                (
+                    "Tek ders sınavı için kaynakta devam şartını daha önce sağlamış olma koşulu vurgulanır. "
+                ),
+                cleaned,
+            )
+            cleaned = re.sub(
+                r"(?i)dersi hiç almamış olan veya devam şartını yerine getiremeyen öğrenciler girebilir",
+                "devam şartını daha önce sağlamış öğrenciler başvurabilir",
+                cleaned,
+            )
+            modifications += 1
+
+    # 5. Numeric issues: otherwise ONLY logged, not modified.
 
     # Add verification note ONLY if we actually modified something
     if modifications > 0:
@@ -315,6 +414,8 @@ def guard_answer(
             "numeric_issues": len(numeric_issues),
             "entity_issues": len(entity_issues),
             "definitive_issues": len(definitive_issues),
+            "arithmetic_issues": len(arithmetic_issues),
+            "policy_issues": len(policy_issues),
             "modifications_made": modifications,
             "unsupported_claims": all_issues,
         },
