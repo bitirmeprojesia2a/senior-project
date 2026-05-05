@@ -17,6 +17,7 @@ from src.agents.finance.tuition_utils import (
     extract_unit_fee_line,
     format_currency_tr,
     format_tuition_snapshot,
+    has_explicit_program_without_fee_unit,
     infer_requested_student_type,
     is_personal_query,
     is_structured_fee_query,
@@ -69,10 +70,17 @@ class TuitionAgent(BaseSpecialistAgent):
         profile_student_type = normalize_student_type(metadata.get("student_type"))
         requested_student_type = infer_requested_student_type(query_text)
         student_type = requested_student_type or profile_student_type
+        explicit_program_without_fee_unit = has_explicit_program_without_fee_unit(query_text)
         requested_unit = (
             extract_requested_unit(query_text)
-            or str(metadata.get("student_faculty") or "").strip()
-            or str(metadata.get("student_department") or "").strip()
+            or (
+                None
+                if explicit_program_without_fee_unit
+                else (
+                    str(metadata.get("student_faculty") or "").strip()
+                    or str(metadata.get("student_department") or "").strip()
+                )
+            )
         )
 
         if is_personal_query(query_text):

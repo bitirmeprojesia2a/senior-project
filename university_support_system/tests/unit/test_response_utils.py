@@ -4,6 +4,7 @@ from src.core.constants import Department
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.orchestrators.response_utils import (
     append_generation_summary,
+    append_source_summary,
     clean_final_answer,
     compose_department_answers,
     filter_low_confidence_responses,
@@ -43,6 +44,24 @@ def test_append_generation_summary_shows_global_llm_synthesis():
 
     assert "- Final Sentez: LLM" in answer
     assert "- RAG" in answer
+
+
+def test_append_source_summary_counts_duplicate_document_chunks():
+    response = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Kaynakli ara cevap",
+        sources=[
+            RAGSource(content="parca 1", score=0.9, metadata={"source": "yonerge.pdf"}),
+            RAGSource(content="parca 2", score=0.8, metadata={"source": "yonerge.pdf"}),
+            RAGSource(content="parca 3", score=0.7, metadata={"source": "takvim.pdf"}),
+        ],
+        generation_mode="rag",
+    )
+
+    answer = append_source_summary("Final cevap", [response])
+
+    assert "- Belge: yonerge.pdf (2 parça)" in answer
+    assert "- Belge: takvim.pdf" in answer
 
 
 def test_clean_final_answer_replaces_common_foreign_words_inline():

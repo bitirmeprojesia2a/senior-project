@@ -97,6 +97,7 @@ UNIT_ALIAS_MARKERS = (
     ("eczacilik", "eczacilik fakultesi"),
     ("muhendislik", "muhendislik fakultesi"),
     ("muhendisligi", "muhendislik fakultesi"),
+    ("ogretmenligi", "egitim fakultesi"),
     ("egitim", "egitim fakultesi"),
     ("ziraat", "ziraat fakultesi"),
     ("iletisim", "iletisim fakultesi"),
@@ -107,7 +108,7 @@ UNIT_ALIAS_MARKERS = (
 _PERSONAL_PROCEDURAL_OVERRIDE = (
     "nasil", "nereye", "ne yapmaliyim", "ne yapmam gerekiyor",
     "nasil odenir", "nasil yatirilir", "nasil odeyebilirim",
-    "basvuru", "sart", "kosul",
+    "basvur", "basvuru", "sart", "kosul",
     "ne yapabilirim", "yapabilir",
 )
 
@@ -134,11 +135,24 @@ _OWNERSHIP_POLICY_OVERRIDE = (
     "taksitle",
     "taksitli",
 )
+_HYPOTHETICAL_POLICY_OVERRIDE = (
+    "olsaydi",
+    "olsaydim",
+    "olursa",
+    "olursam",
+    "olabilir miydim",
+    "olabilir miydi",
+    "diyelim ki",
+    "varsayalim",
+    "farz edelim",
+)
 
 
 def is_personal_query(query_text: str) -> bool:
     """Return whether the query asks for personal tuition state."""
     lowered = normalize_finance_text(query_text)
+    if any(signal in lowered for signal in _HYPOTHETICAL_POLICY_OVERRIDE):
+        return False
     if not any(keyword in lowered for keyword in PERSONAL_KEYWORDS):
         return False
     if any(keyword in lowered for keyword in PERSONAL_OWNERSHIP_KEYWORDS):
@@ -259,6 +273,17 @@ def extract_requested_unit(query_text: str) -> str | None:
                 return unit_name
         return None
     return collapse_whitespace(match.group(1))
+
+
+def has_explicit_program_without_fee_unit(query_text: str) -> bool:
+    """Return whether a query names a program that cannot safely map to a fee unit."""
+    if extract_requested_unit(query_text) is not None:
+        return False
+    try:
+        from src.agents.academic.curriculum_utils import infer_department_from_query
+    except Exception:
+        return False
+    return infer_department_from_query(query_text) is not None
 
 
 def display_unit_name(unit: str) -> str:

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
+from src.agents.finance.tuition_utils import is_personal_query as is_personal_tuition_query
 from src.llm.llm_service import LLMServiceError
 from src.routing.routing_policy import (
     has_cap_markers,
@@ -48,12 +49,19 @@ class TestDepartmentRouter:
         assert not looks_like_personal_data_query("Ders kaydi nasil yapilir?")
         assert not looks_like_personal_data_query("Not itirazi nasil yapilir?")
         assert not looks_like_personal_data_query("Sinav notlarimi nereden gorebilirim?")
+        assert not looks_like_personal_data_query("Harc borcum olsaydi CAP'a basvurabilir miydim?")
         assert looks_like_personal_data_query("Not ortalamam kac?")
         assert looks_like_personal_data_query("Stajim ne durumda?")
 
     def test_vague_application_timing_detection_requires_context(self):
         assert looks_like_vague_application_timing_query("sey basvuru ne zaman")
         assert not looks_like_vague_application_timing_query("CAP basvurusu ne zaman?")
+        assert not looks_like_vague_application_timing_query("Harc borcum olsaydi basvurabilir miydim?")
+
+    def test_tuition_personal_detection_ignores_hypothetical_policy_question(self):
+        assert not is_personal_tuition_query("Harc borcum olsaydi CAP'a basvurabilir miydim?")
+        assert not is_personal_tuition_query("CAP basvurusu icin harc borcum olsaydi basvurabilir miydim?")
+        assert is_personal_tuition_query("Harc borcum ne kadar?")
 
     def test_negated_horizontal_transfer_correction_prefers_cap_marker(self):
         query = "Yatay gecisi sormuyorum capi soruyorum sana"

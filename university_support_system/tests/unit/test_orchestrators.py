@@ -16,6 +16,7 @@ from src.core.profiling import QueryProfiler, activate_profiler
 from src.db.conversation_context import ConversationResolution
 from src.db.events import EventLinkRecord, EventRecord
 from src.db.schemas import DepartmentResponse, IntentAnalysis, RAGSource, RoutingResult
+from src.agents.academic.curriculum_agent import CurriculumAgent
 from src.orchestrators.department import DepartmentOrchestrator
 from src.orchestrators.defaults import RemoteDepartmentTarget
 from src.orchestrators.department_dispatch import dispatch_to_departments
@@ -628,6 +629,29 @@ def test_finance_query_augmentation_uses_profile_for_generic_fee_query():
     )
 
     assert augmented == "Muhendislik Fakultesi icin: Donem ucreti ne kadar?"
+
+
+def test_schedule_group_formatter_does_not_truncate_rows():
+    rows = [
+        {
+            "day_of_week": "Pazartesi",
+            "start_time": f"{8 + index:02d}:15:00",
+            "end_time": f"{9 + index:02d}:00:00",
+            "course_name": f"Ders {index}",
+            "schedule_group": "1. sinif",
+            "classroom": "Z01",
+            "instructor": "",
+        }
+        for index in range(7)
+    ]
+
+    lines = CurriculumAgent._format_schedule_rows_by_group(
+        rows,
+        max_rows_per_group=len(rows),
+    )
+
+    assert sum(1 for line in lines if line.startswith("- ")) == 7
+    assert not any("satir daha" in line for line in lines)
 
 
 def test_build_missing_slot_clarification_uses_llm_slot_metadata():

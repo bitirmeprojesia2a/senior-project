@@ -430,9 +430,14 @@ class CurriculumAgent(BaseSpecialistAgent):
         lines.append(header)
 
         if code_match or day_filter or group_filters:
-            lines.extend(self._format_schedule_rows_flat(filtered_rows, max_rows=16))
+            lines.extend(self._format_schedule_rows_flat(filtered_rows, max_rows=len(filtered_rows)))
         else:
-            lines.extend(self._format_schedule_rows_by_group(filtered_rows, max_rows_per_group=5))
+            lines.extend(
+                self._format_schedule_rows_by_group(
+                    filtered_rows,
+                    max_rows_per_group=len(filtered_rows),
+                )
+            )
 
         return DepartmentResponse(
             department=self.department,
@@ -440,7 +445,7 @@ class CurriculumAgent(BaseSpecialistAgent):
             db_data={
                 "query_type": "schedule_lookup",
                 "match_count": len(filtered_rows),
-                "rows": filtered_rows[:32],
+                "rows": filtered_rows,
             },
             generation_mode="vt",
             sources=[],

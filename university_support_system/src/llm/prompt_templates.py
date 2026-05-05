@@ -608,12 +608,14 @@ KARAR MANTIGI:
 1. Yeni soru kendi basina anlamli ve tam bir soruysa → is_follow_up=false, standalone_query'yi AYNEN geri ver.
 2. Soru "peki", "bu", "onun", "bunun ucreti" gibi zamir veya belirsiz referans iceriyorsa → is_follow_up=true.
 3. Soru kisa (2-3 kelime) ama onceki konuyla ilgiliyse (ornegin onceki soru "kayit dondurma" iken yeni soru "ucreti nedir?") → is_follow_up=true, eksik konuyu ekle.
-4. recent_turns alaninda son 3 turun bilgisi varsa, sadece son tur degil tum konusma baglamini degerlendir. Ornegin 2 tur once "CAP basvurusu" konusuldu, 1 tur once "not ortalamasi" sorulduysa ve yeni soru "belgeler?" ise → "CAP basvurusu icin gerekli belgeler" seklinde en genis baglamla eslestir.
+4. recent_turns alaninda son 3 turun bilgisi varsa, baglami yakinlik sirasiyla kullan: once previous_turn.resolved_question, sonra previous_turn.user_question, sonra previous_turn.answer_summary, en son daha eski recent_turns/rolling_summary.
+   Daha eski turlari yalnizca yeni soru acikca o eski konuya donuyorsa kullan. Yakin turla eski tur celisirse yakin turu tercih et.
 
 STANDALONE_QUERY OLUSTURMA KURALLARI:
 - YALNIZCA eksik ozne/konu referansini tamamla. Ornek: onceki konu "CAP basvurusu" ve yeni soru "not ortalamasi kac olmali?" → "CAP basvurusu icin not ortalamasi kac olmali?"
 - Sorunun yapisini, fiilini veya soru tipini DEGISTIRME. "ne zaman" sorusu "nedir" olamaz, "var mi" sorusu "nasil" olamaz.
 - KISA VE BAGLAMA BAGLI bir soruysa, standalone_query onceki turun ana konusunu veya aktif konuyu MUTLAKA korumali.
+- Onceki soru da follow-up ise yeni soruyu onceki turun resolved_question alani uzerinden genislet; resolved_question yoksa user_question kullan.
 - YENI KONU UYDURMA. Onceki konu "yatay gecis" ise standalone_query icine "kayit dondurma", "burs", "harc" gibi ilgisiz yeni konu EKLEME.
 - Yeni kavram veya nitelendirici (ornegin "kurum ici", "resmi", "guncel") EKLEME.
 - Sorunun konusunu DEGISTIRME. "Denklik belgesi" soran birinin sorusunu "Yemek bursu" yapamazsin.
@@ -637,6 +639,29 @@ ORNEKLER:
 - onceki: "Dis hekimligi donem ucreti ne kadar?" → yeni: "Turk ogrenciyim" → standalone: "Dis hekimligi donem ucreti Turk ogrenci icin ne kadar?"
 - onceki: "Tip fakultesi ucreti ne kadar?" → yeni: "Uluslararasi ogrenciyim" → standalone: "Tip fakultesi ucreti uluslararasi ogrenci icin ne kadar?"
 - onceki: "Web teknolojileri laboratuvari hangi sinifta?" → yeni: "Hangi derslikte?" → standalone: "Web teknolojileri laboratuvari hangi derslikte?"
+
+KONU DEGISIMI KURALI (COK ONEMLI):
+- Yeni soru kendi icinde tamamen anlamli bir konu iceriyorsa ve bu konu onceki konudan farkliysa is_follow_up=false sec.
+- "basvuru", "nasil", "ne zaman", "kosul", "belge", "ucret" gibi jenerik kelimeler iki soruda da gecebilir; bu benzerlik konu ayniligini gostermez.
+- Ornek: onceki konu "CAP basvurusu", yeni soru "Staj basvurusu nasil yapilir?" ise konular farklidir, is_follow_up=false.
+- Sadece "bunu", "onun", "peki", "ucreti?", "ne zaman?" gibi bagimsiz anlami olmayan sorgular follow-up olabilir.
+- Konu degisimi konusunda emin degilsen is_follow_up=false tercih et. Yanlis baglam tasimak, baglami eksik birakmaktan daha risklidir.
+- Kosullu/hipotetik sorularda ("olsaydi", "olursa", "olabilir miydim", "yapabilir miydim") yeni soru bir eylemin nesnesini eksik birakiyorsa onceki aktif basvuru/prosedur konusunu tasi.
+  Ornek: onceki konu "CAP basvurusu", yeni soru "Harc borcum olsaydi basvurabilir miydim?" -> standalone_query="CAP basvurusu icin harc borcum olsaydi basvurabilir miydim?"
+- Onceki aktif konu application_type bilgisini sagliyorsa "hangi basvuru turu?" gibi clarification isteme.
+- "bu deger", "bu sayi", "bu oran", "bu sart" gibi ifadeler onceki cevapta verilen sayisal deger veya kosula referanstir. Yeni soru "lisans icin kac?" gibi hedef kitle/program turu degistiriyorsa onceki olcutu de tasi.
+  Ornek: onceki konu "onlisans mezuniyet AKTS", yeni soru "Bu deger lisans icin kac?" -> standalone_query="Lisans programindan mezun olmak icin kac AKTS tamamlanmali?"
+- "Lisans icin kac?", "doktora icin kac?", "bu bolum icin kac?" gibi kisa hedef-degistirme sorularinda onceki resolved_question'daki olcutu kullan. Eski CAP/staj/basvuru turlarini yalnizca son resolved_question da o konudaysa kullan.
+  Ornek: previous_turn.resolved_question="Onlisans programindan mezun olmak icin kac AKTS tamamlanmali?" -> yeni: "Lisans icin kac?" -> standalone_query="Lisans programindan mezun olmak icin kac AKTS tamamlanmali?"
+- "Ders programi ne?", "ucreti ne kadar?", "mufredati ne?" gibi kisa slot sorularinda kullanici program/birim yazmadiysa onceki resolved_question'daki ACIK program/birim adini tasi. Profildeki bolum/fakulteyi, onceki resolved_question'daki acik programin ustune yazma.
+  Ornek: previous_turn.resolved_question="Fizik ogretmenligi ucreti uluslararasi ogrenci icin ne kadar?" -> yeni: "Ders programi ne?" -> standalone_query="Fizik ogretmenligi ders programi ne?"
+
+NEGATIF ORNEKLER:
+- onceki: "CAP basvurusu icin kosullar neler?" -> yeni: "Tek ders sinavina nasil basvurabilirim?" -> is_follow_up=false, standalone_query="Tek ders sinavina nasil basvurabilirim?"
+- onceki: "Harc borcum ne kadar?" -> yeni: "Staj basvurusu icin hangi belgeler gerekli?" -> is_follow_up=false
+- onceki: "Kayit dondurma nasil yapilir?" -> yeni: "Erasmus basvurusu ne zaman?" -> is_follow_up=false
+- onceki: "CAP basvurusu" -> yeni: "Bu sinav yazin mi oluyor?" -> is_follow_up=false
+- onceki: "Harc ucreti ne kadar?" -> yeni: "Turk ogrenciyim" -> is_follow_up=true
 
 JSON FORMAT KURALLARI:
 - JSON disinda hicbir sey yazma.

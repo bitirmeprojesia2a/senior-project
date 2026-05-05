@@ -709,21 +709,30 @@ def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list
 def format_source_summary_from_responses(responses: list[DepartmentResponse]) -> str:
     """Final cevap icin kisa kaynak ozeti uretir."""
     lines: list[str] = []
-    seen: set[str] = set()
+    label_counts: dict[str, int] = {}
+    label_order: list[str] = []
 
     for response in responses:
         if response.sources:
             for source in response.sources:
                 label = _format_source_label(source)
-                if label and label not in seen:
-                    seen.add(label)
-                    lines.append(f"- {label}")
+                if not label:
+                    continue
+                if label not in label_counts:
+                    label_order.append(label)
+                    label_counts[label] = 0
+                label_counts[label] += 1
             continue
 
         label = _infer_non_document_source_label(response)
-        if label and label not in seen:
-            seen.add(label)
-            lines.append(f"- {label}")
+        if label and label not in label_counts:
+            label_order.append(label)
+            label_counts[label] = 1
+
+    for label in label_order:
+        count = label_counts[label]
+        suffix = f" ({count} parça)" if count > 1 and label.startswith("Belge:") else ""
+        lines.append(f"- {label}{suffix}")
 
     return "\n".join(lines)
 
@@ -768,15 +777,23 @@ def append_source_summary_for_sources(answer: str, sources: list[RAGSource]) -> 
         return answer
 
     labels: list[str] = []
-    seen: set[str] = set()
-    for source in sources[:5]:
+    label_counts: dict[str, int] = {}
+    label_order: list[str] = []
+    for source in sources:
         label = _format_source_label(source)
-        if label and label not in seen:
-            seen.add(label)
-            labels.append(f"- {label}")
+        if not label:
+            continue
+        if label not in label_counts:
+            label_order.append(label)
+            label_counts[label] = 0
+        label_counts[label] += 1
+    for label in label_order[:5]:
+        count = label_counts[label]
+        suffix = f" ({count} parça)" if count > 1 and label.startswith("Belge:") else ""
+        labels.append(f"- {label}{suffix}")
     if not labels:
         return answer
-    extra = len(sources) - 5
+    extra = len(label_order) - 5
     if extra > 0:
         labels.append(f"- ... ve {extra} kaynak daha")
     return f"{answer.rstrip()}\n\nKaynak Özeti:\n{chr(10).join(labels)}"

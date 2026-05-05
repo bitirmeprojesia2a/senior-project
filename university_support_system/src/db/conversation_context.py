@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 _STATE_QUERY_PREVIEW_MAX_CHARS = 280
 _TURN_QUERY_PREVIEW_MAX_CHARS = 240
 _TURN_ANSWER_PREVIEW_MAX_CHARS = 560
-_TOPIC_TRANSITION_THRESHOLD = 0.68
+_TOPIC_TRANSITION_THRESHOLD = 0.55
 
 
 def _parse_build_timestamp(value: str | None) -> datetime | None:
@@ -155,6 +155,43 @@ _INDEPENDENT_ACADEMIC_CALENDAR_MARKERS = (
     "butunleme sinav",
     "ara sinav",
 )
+_INDEPENDENT_TOPIC_CHANGE_MARKERS = (
+    "tek ders sinav",
+    "tek ders",
+    "erasmus basvuru",
+    "erasmus programi",
+    "staj",
+    "staj basvuru",
+    "zorunlu staj",
+    "yatay gecis",
+    "dikey gecis",
+    "kayit dondurma",
+    "kayit sildirme",
+    "donem dondurma",
+    "burs basvuru",
+    "yaz okulu",
+    "cap basvuru",
+    "cift anadal",
+    "yandal basvuru",
+    "yan dal",
+    "mezuniyet basvuru",
+    "diploma",
+    "transkript",
+    "bu sinav",
+    "butunleme sinav",
+    "mazeret sinav",
+    "ders tekrar",
+    "mufredat",
+    "ders programi",
+    "ogrenci belge",
+    "kimlik kart",
+    "harc ucreti",
+    "ogrenim ucreti",
+    "katki payi",
+    "devamsizlik",
+    "saglik raporu",
+    "yurt basvuru",
+)
 _INDEPENDENT_ACADEMIC_CALENDAR_TIME_MARKERS = (
     "ne zaman",
     "hangi tarihte",
@@ -214,6 +251,16 @@ _PROGRAM_SLOT_QUESTION_MARKERS = (
     "hangi sinifta",
     "hangi donemde",
 )
+_SHORT_SLOT_FOLLOW_UP_MARKERS = (
+    "ders programi",
+    "haftalik program",
+    "mufredat",
+    "ucret",
+    "ucreti",
+    "ogrenim ucreti",
+    "ne kadar",
+    "kac",
+)
 _STUDENT_TYPE_FRAGMENT_REWRITES: tuple[tuple[str, str], ...] = (
     ("onlisans ogrencisiyim", "onlisans ogrencisi"),
     ("onlisans ogrenci", "onlisans ogrencisi"),
@@ -248,6 +295,66 @@ _VAGUE_FOLLOW_UP_TOKENS = {
     "tarihi",
     "zaman",
 }
+_CONDITIONAL_FOLLOW_UP_MARKERS = (
+    "olsaydi",
+    "olsaydim",
+    "olursa",
+    "olursam",
+    "diyelim ki",
+    "varsayalim",
+    "farz edelim",
+)
+_ACTION_FOLLOW_UP_MARKERS = (
+    "basvur",
+    "yapabilir",
+    "girebilir",
+    "alabilir",
+    "edebilir",
+    "olabilir miydim",
+    "olabilir miydi",
+)
+_GENERIC_OVERLAP_WORDS = {
+    "basvuru", "basvurusu", "basvurabilir", "basvurabilirim",
+    "basvurmak", "basvurma", "nasil", "yapilir", "yapabilir",
+    "yapabilirim", "nedir", "nelerdir", "ne", "kadar", "zaman",
+    "kosul", "kosullari", "sartlari", "sart", "belge", "belgeler",
+    "belgesi", "surec", "sureci", "tarih", "tarihi", "tarihleri",
+    "ucret", "ucreti", "ucretleri", "hak", "hakki", "haklari",
+    "sonuc", "sonuclari", "durum", "durumu", "islem", "islemi",
+    "islemleri",
+}
+_VALUE_REFERENCE_TOKENS = {
+    "deger",
+    "sayi",
+    "oran",
+    "sart",
+    "kosul",
+    "miktar",
+    "tutar",
+}
+_METRIC_TARGET_TOKENS = {
+    "lisans",
+    "onlisans",
+    "doktora",
+    "program",
+    "bolum",
+    "sinif",
+}
+_VALUE_REFERENCE_CONTEXT_TOKENS = {
+    "akts",
+    "kredi",
+    "mezun",
+    "mezuniyet",
+    "ucret",
+    "harc",
+    "gun",
+    "sure",
+    "oran",
+    "not",
+    "gano",
+    "sinif",
+    "kapasite",
+}
 
 
 def _normalized_tokens(text: str) -> list[str]:
@@ -277,7 +384,7 @@ def _count_stem_overlap(base_tokens: set[str], candidate_tokens: set[str]) -> fl
 
 def _topic_transition_score(query: str, state: "ConversationStateData") -> float:
     """Return 0.0 for same-topic queries and 1.0 for likely topic changes."""
-    query_tokens = _content_tokens(query)
+    query_tokens = _content_tokens(query) - _GENERIC_OVERLAP_WORDS
     state_tokens = _content_tokens(
         " ".join(
             text
@@ -288,11 +395,48 @@ def _topic_transition_score(query: str, state: "ConversationStateData") -> float
             )
             if text
         )
-    )
+    ) - _GENERIC_OVERLAP_WORDS
     if not query_tokens or not state_tokens:
         return 0.5
     overlap = _count_stem_overlap(query_tokens, state_tokens)
     return max(0.0, 1.0 - (overlap / max(len(query_tokens), len(state_tokens))))
+
+
+def _looks_like_conditional_action_follow_up(query: str) -> bool:
+    normalized_query = normalize_text(query)
+    return (
+        any(marker in normalized_query for marker in _CONDITIONAL_FOLLOW_UP_MARKERS)
+        and any(marker in normalized_query for marker in _ACTION_FOLLOW_UP_MARKERS)
+    )
+
+
+def _looks_like_value_reference_follow_up(query: str) -> bool:
+    normalized_query = normalize_text(query)
+    query_tokens = set(_normalized_tokens(query))
+    has_reference_token = bool(query_tokens & _VALUE_REFERENCE_TOKENS)
+    has_metric_target = bool(query_tokens & _METRIC_TARGET_TOKENS)
+    has_deictic_reference = bool(query_tokens & _FOLLOW_UP_PRONOUNS) or any(
+        normalized_query.startswith(prefix) for prefix in _FOLLOW_UP_PREFIXES
+    )
+    has_question_shape = (
+        "kac" in query_tokens
+        or "nedir" in query_tokens
+        or "ne" in query_tokens
+        or "hangi" in query_tokens
+        or "mi" in query_tokens
+        or "mu" in query_tokens
+        or "midir" in normalized_query
+    )
+    has_short_metric_fragment = (
+        has_metric_target
+        and has_question_shape
+        and len(_content_tokens(query)) <= 3
+    )
+    return (
+        has_reference_token
+        and has_deictic_reference
+        and has_question_shape
+    ) or has_short_metric_fragment
 
 
 def _query_depends_on_context(query: str, *, context_texts: Sequence[str] = ()) -> bool:
@@ -335,6 +479,25 @@ def _infer_program_fragment(query: str) -> str | None:
     except Exception:
         return None
     return infer_department_from_query(query)
+
+
+def _has_explicit_program_context(state: "ConversationStateData") -> bool:
+    return any(
+        _infer_program_fragment(text) is not None
+        for text in (state.last_resolved_query, state.last_user_query)
+        if text
+    )
+
+
+def _looks_like_short_slot_follow_up(query: str, state: "ConversationStateData") -> bool:
+    if state.turn_count <= 0:
+        return False
+    if len(_content_tokens(query)) > 4:
+        return False
+    normalized = normalize_text(query)
+    if not any(marker in normalized for marker in _SHORT_SLOT_FOLLOW_UP_MARKERS):
+        return False
+    return _has_explicit_program_context(state)
 
 
 def _looks_like_program_slot_question(text: str) -> bool:
@@ -442,12 +605,23 @@ def _rewrite_supplies_needed_context(
         return True
 
     rewritten_tokens = _content_tokens(rewritten)
-    return _count_token_overlap(context_tokens, rewritten_tokens) > 0
+    if _count_token_overlap(context_tokens, rewritten_tokens) > 0:
+        return True
+
+    if _looks_like_value_reference_follow_up(original):
+        context_value_tokens = context_tokens & _VALUE_REFERENCE_CONTEXT_TOKENS
+        rewritten_value_tokens = rewritten_tokens & _VALUE_REFERENCE_CONTEXT_TOKENS
+        if context_value_tokens and rewritten_value_tokens:
+            return True
+        return _count_stem_overlap(context_tokens, rewritten_tokens) > 0
+
+    return False
 
 
 _QUESTION_TYPE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("ne_zaman", ("ne zaman", "hangi tarihte", "son tarihi", "son tarih")),
     ("ne_kadar", ("ne kadar", "kac tl", "kac para")),
+    ("kac_sayi", ("kac",)),
     ("var_mi", ("var mi", "gerekli mi", "zorunlu mu", "olur mu", "odenir mi", "odeyebilir miyim")),
     ("nedir", ("nedir", "ne demek", "ne oluyor")),
     ("nasil", ("nasil", "nasil yapilir", "nasil basvurulur")),
@@ -575,12 +749,9 @@ def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") 
             if item
         )
     )
-    tuition_context = (
-        state.last_task_type == TaskType.TUITION_QUERY.value
-        or any(
-            marker in previous_context
-            for marker in ("harc", "ucret", "ogrenim ucreti", "katki payi")
-        )
+    tuition_context = any(
+        marker in normalize_text(previous_query)
+        for marker in ("harc", "ucret", "ogrenim ucreti", "katki payi")
     )
     if tuition_context:
         return f"{previous_query.rstrip('?.!,;:')} {query}".strip()
@@ -827,6 +998,33 @@ class ConversationContextService:
             )
             return self._direct_resolution(query)
 
+        deterministic_answer_fragment_query = _build_answer_fragment_query(
+            query,
+            state=state,
+        )
+        if deterministic_answer_fragment_query:
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=true "
+                "rewrite_method=answer_fragment original=%r effective=%r topic=%s",
+                context_id,
+                query,
+                deterministic_answer_fragment_query,
+                state.active_topic,
+            )
+            return ConversationResolution(
+                original_query=query,
+                effective_query=deterministic_answer_fragment_query,
+                is_follow_up=True,
+                used_context=deterministic_answer_fragment_query != query,
+                active_topic=state.active_topic,
+                department_hints=self._parse_departments(state.last_departments),
+                source_hints=list(state.last_source_refs),
+                task_type_hint=self._parse_task_type(state.last_task_type),
+                announcement_context=self._has_announcement_department_hint(state.last_departments),
+                rewrite_method="answer_fragment",
+                standalone_query=deterministic_answer_fragment_query,
+            )
+
         heuristic = self._classify_follow_up(query=query, state=state)
         if not heuristic["is_follow_up"]:
             if (
@@ -877,33 +1075,6 @@ class ConversationContextService:
 
         rewrite_method = "heuristic"
         llm_resolution = None
-        deterministic_answer_fragment_query = _build_answer_fragment_query(
-            query,
-            state=state,
-        )
-        if deterministic_answer_fragment_query:
-            logger.info(
-                "conversation_resolution context_id=%s is_follow_up=true "
-                "rewrite_method=answer_fragment original=%r effective=%r topic=%s",
-                context_id,
-                query,
-                deterministic_answer_fragment_query,
-                state.active_topic,
-            )
-            return ConversationResolution(
-                original_query=query,
-                effective_query=deterministic_answer_fragment_query,
-                is_follow_up=True,
-                used_context=deterministic_answer_fragment_query != query,
-                active_topic=state.active_topic,
-                department_hints=self._parse_departments(state.last_departments),
-                source_hints=list(state.last_source_refs),
-                task_type_hint=self._parse_task_type(state.last_task_type),
-                announcement_context=self._has_announcement_department_hint(state.last_departments),
-                rewrite_method="answer_fragment",
-                standalone_query=deterministic_answer_fragment_query,
-            )
-
         if settings.conversation.rewrite_with_llm and llm_service is not None:
             llm_resolution = await self._rewrite_with_llm(
                 query=query,
@@ -1127,6 +1298,33 @@ class ConversationContextService:
             }
 
         # Kısa / yanıt niteliğinde ifadeler follow-up olarak değerlendirilmez
+        query_content_tokens = _content_tokens(query)
+        short_slot_follow_up = _looks_like_short_slot_follow_up(query, state)
+        if (
+            "sey" in query_tokens
+            and query_content_tokens
+            and query_content_tokens <= _VAGUE_FOLLOW_UP_TOKENS
+        ):
+            return {
+                "is_follow_up": False,
+                "needs_llm_decision": False,
+                "topic": self._infer_topic(query),
+            }
+
+        query_inferred_topic = self._infer_topic(query)
+        if (
+            state.active_topic is not None
+            and query_inferred_topic is not None
+            and normalize_text(query_inferred_topic) != normalize_text(state.active_topic)
+            and any(marker in normalized_query for marker in _INDEPENDENT_TOPIC_CHANGE_MARKERS)
+            and not short_slot_follow_up
+        ):
+            return {
+                "is_follow_up": False,
+                "needs_llm_decision": False,
+                "topic": query_inferred_topic,
+            }
+
         if len(query_tokens) <= 2 and any(t in _TURBO_WORDS for t in query_tokens):
             return {
                 "is_follow_up": False,
@@ -1145,7 +1343,7 @@ class ConversationContextService:
         # Zayif marker'lar: yalnizca kisa sorgularda (<=5 kelime) follow-up sinyali
         # 'Erasmus basvurusu nasil yapilir?' gibi uzun bagimsiz sorulari korur
         has_weak_marker = (
-            len(query_tokens) <= 5
+            len(query_tokens) <= 3
             and any(
                 marker in normalized_query
                 for marker in _WEAK_FOLLOW_UP_MARKERS
@@ -1162,6 +1360,11 @@ class ConversationContextService:
             and state.last_departments
             and _is_answer_fragment_follow_up(query)
         )
+        conditional_action_follow_up = (
+            state.turn_count > 0
+            and state.active_topic is not None
+            and _looks_like_conditional_action_follow_up(query)
+        )
 
         signal_based = (
             starts_with_follow_up
@@ -1169,11 +1372,12 @@ class ConversationContextService:
             or has_weak_marker
             or pronoun_like
             or answer_fragment
+            or conditional_action_follow_up
         )
         short_context_follow_up = (
             state.turn_count > 0
             and not signal_based
-            and 1 < len(query_tokens) <= 4
+            and (1 < len(query_tokens) <= 4 or short_slot_follow_up)
         )
         if short_context_follow_up:
             new_topic = self._infer_topic(query)
@@ -1202,6 +1406,7 @@ class ConversationContextService:
             and signal_based
             and not starts_with_follow_up
             and not pronoun_like
+            and not conditional_action_follow_up
         )
         if marker_only_follow_up and "sey" in query_tokens:
             query_content_tokens = _content_tokens(query)
@@ -1248,6 +1453,7 @@ class ConversationContextService:
             "allow_llm_downgrade": (
                 short_context_follow_up
                 or answer_fragment
+                or conditional_action_follow_up
                 or has_weak_marker
                 or needs_llm_decision
             ),
@@ -1286,6 +1492,9 @@ class ConversationContextService:
         overlap = _count_stem_overlap(query_content_tokens, state_context_tokens)
         transition_score = _topic_transition_score(query, state)
         inferred_topic = ConversationContextService._infer_topic(query)
+
+        if _looks_like_conditional_action_follow_up(query):
+            return True
 
         if (
             inferred_topic is not None
@@ -1380,11 +1589,24 @@ class ConversationContextService:
             standalone_query = query
 
         if is_follow_up:
-            context_texts = [state.active_topic] if state.active_topic else []
-            if _is_answer_fragment_follow_up(query):
+            context_texts = [
+                text
+                for text in (
+                    state.last_resolved_query,
+                    state.last_user_query,
+                    state.active_topic,
+                )
+                if text
+            ]
+            if _looks_like_value_reference_follow_up(query):
                 context_texts.extend(
                     text
-                    for text in (state.last_resolved_query, state.last_user_query)
+                    for text in (
+                        state.last_resolved_query,
+                        state.last_user_query,
+                        state.last_assistant_answer,
+                        state.rolling_summary,
+                    )
                     if text
                 )
             heuristic_query = self._rewrite_with_heuristics(query=query, state=state)
@@ -1465,12 +1687,33 @@ class ConversationContextService:
         query: str,
         state: ConversationStateData,
     ) -> str:
+        if _looks_like_short_slot_follow_up(query, state):
+            previous_program = next(
+                (
+                    program
+                    for program in (
+                        _infer_program_fragment(state.last_resolved_query or ""),
+                        _infer_program_fragment(state.last_user_query or ""),
+                    )
+                    if program
+                ),
+                None,
+            )
+            if previous_program:
+                stripped_query = _strip_follow_up_prefixes(query)
+                if stripped_query:
+                    return f"{previous_program} {stripped_query}".strip()
+
         if not state.active_topic:
             return query
         lowered = normalize_text(query)
         topic_seed = _topic_rewrite_seed(state.active_topic)
         normalized_topic = normalize_text(state.active_topic)
         normalized_seed = normalize_text(topic_seed)
+        if _looks_like_conditional_action_follow_up(query):
+            stripped_query = _strip_follow_up_prefixes(query)
+            if stripped_query and normalized_seed not in normalize_text(stripped_query):
+                return f"{topic_seed} icin {stripped_query}".strip()
         if (normalized_topic and normalized_topic in lowered) or (
             normalized_seed and normalized_seed in lowered
         ):

@@ -442,6 +442,21 @@ _NON_PERSONAL_QUERY_PATTERNS = (
     "yapabilir miyim", "yapabilir miydim", "basvurabilir miyim",
     "zorunda miyim", "muaf miyim",
 )
+_HYPOTHETICAL_QUERY_MARKERS = (
+    "olsaydi",
+    "olsaydim",
+    "olabilir miydim",
+    "olabilir miydi",
+    "olsa ne olur",
+    "olursa ne olur",
+    "deseydi",
+    "desem",
+    "yapabilir miydim",
+    "farz edelim",
+    "diyelim ki",
+    "varsayalim",
+    "olsaydi ne olurdu",
+)
 
 _VAGUE_APPLICATION_TIMING_TOKENS = {
     "sey",
@@ -461,6 +476,9 @@ def looks_like_personal_data_query(query: str) -> bool:
     lowered = normalize_routing_text(query)
 
     if has_pedagogical_formation_markers(lowered):
+        return False
+
+    if contains_any(lowered, _HYPOTHETICAL_QUERY_MARKERS):
         return False
 
     # Kural/fark/karsilastirma sorulari kisisel veri talebi degildir.
@@ -483,12 +501,16 @@ def looks_like_vague_application_timing_query(query: str) -> bool:
     """Return whether application timing intent lacks a concrete application domain."""
     lowered = normalize_routing_text(query)
     tokens = set(re.findall(r"[a-z0-9]+", lowered))
+    if contains_any(lowered, _HYPOTHETICAL_QUERY_MARKERS):
+        return False
     if "basvuru" not in lowered:
         return False
     if not contains_any(lowered, ROUTING_TIMING_MARKERS):
         return False
     if tokens and tokens <= _VAGUE_APPLICATION_TIMING_TOKENS:
         return True
+    if len(tokens) > 4:
+        return False
     known_context_markers = (
         ROUTING_CAP_MARKERS
         + ROUTING_REGISTRATION_MARKERS

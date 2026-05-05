@@ -5,6 +5,7 @@ from pathlib import Path
 
 from src.agents.finance.tuition_utils import (
     extract_requested_unit,
+    has_explicit_program_without_fee_unit,
     is_personal_query,
     is_structured_fee_query,
     needs_fee_context_clarification,
@@ -36,6 +37,18 @@ def test_extract_requested_unit_maps_engineering_department_to_faculty():
         extract_requested_unit("Elektrik elektronik muhendisligi ogrenim ucreti ne kadar?")
         == "muhendislik fakultesi"
     )
+
+
+def test_extract_requested_unit_maps_teaching_program_to_education_faculty():
+    assert (
+        extract_requested_unit("Fizik ogretmenligi ucreti ne kadar?")
+        == "egitim fakultesi"
+    )
+
+
+def test_explicit_program_without_fee_unit_blocks_profile_unit_fallback():
+    assert has_explicit_program_without_fee_unit("Fizik ogretmenligi ucreti ne kadar?") is False
+    assert has_explicit_program_without_fee_unit("Elektrik elektronik muhendisligi ucreti ne kadar?") is False
 
 
 def test_meal_fee_does_not_trigger_tuition_clarification():
