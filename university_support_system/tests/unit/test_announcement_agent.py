@@ -107,6 +107,55 @@ async def test_announcement_agent_returns_empty_state_when_no_announcement_found
     assert response.sources == []
 
 
+@pytest.mark.asyncio
+async def test_announcement_agent_summarizes_selected_follow_up_source_ref():
+    fetcher = AsyncMock(
+        return_value=[
+            AnnouncementRecord(
+                id=42,
+                title="CAP Basvuru Duyurusu",
+                display_summary=None,
+                summary="CAP basvurulari icin gerekli belgeler ve basvuru takvimi duyuruda aciklanmistir.",
+                original_text="Uzun duyuru metni",
+                source_url="https://omu.edu.tr/duyuru/cap-basvuru",
+                faculty="Muhendislik Fakultesi",
+                unit_name=None,
+                department="academic_programs",
+                published_at=None,
+                links=(),
+            ),
+        ]
+    )
+    agent = AnnouncementAgent(announcement_fetcher=fetcher)
+
+    response_task = await agent.handle_task(
+        _build_task(
+            {
+                "query_text": "2. duyuruyu ozetle",
+                "department": "academic_programs",
+                "conversation_source_refs": [
+                    "Bahar Yariyili Ders Programi",
+                    "CAP Basvuru Duyurusu",
+                ],
+            }
+        )
+    )
+    response = extract_department_response(response_task)
+
+    assert response is not None
+    assert "Duyuru özeti: CAP Basvuru Duyurusu" in response.answer
+    assert "https://omu.edu.tr/duyuru/cap-basvuru" in response.answer
+    assert response.sources[0].metadata["title"] == "CAP Basvuru Duyurusu"
+    fetcher.assert_awaited_once_with(
+        "CAP Basvuru Duyurusu",
+        department="academic_programs",
+        faculty=None,
+        unit_name=None,
+        limit=1,
+        allow_latest_fallback=False,
+    )
+
+
 def test_extract_announcement_keywords_filters_generic_words():
     keywords = extract_announcement_keywords("Son CAP duyurulari ve burs duyurulari neler?")
 

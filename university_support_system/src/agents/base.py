@@ -18,12 +18,14 @@ from src.core.constants import (
     TaskType,
 )
 from src.core.config import settings
+from src.core.contact_intent import looks_like_contact_intent
 from src.core.profiling import profile_stage
 from src.core.text_normalization import normalize_text
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.quality.evidence import (
     build_evidence_context_chunks,
     build_evidence_diagnostics,
+    extract_factual_claims,
     extract_evidence_items,
     select_evidence_sentences,
 )
@@ -42,12 +44,6 @@ _EVIDENCE_QUERY_PREPROCESSOR = QueryPreprocessor()
 _SHARED_RETRIEVER: HybridRetriever | None = None
 _SHARED_LOCAL_FALLBACK_RETRIEVER: HybridRetriever | None = None
 _LLM_SYNTHESIS_TIMEOUT_SECONDS = settings.llm.specialist_synthesis_timeout_seconds
-
-_CONTACT_REQUEST_KEYWORDS = (
-    "iletisim", "iletisim bilgisi", "telefon", "dahili", "e-posta",
-    "eposta", "email", "sekreter", "sekreterlik", "ofis", "telefon numarasi",
-    "adres", "kime basvurayim", "kimle gorusmeliyim", "birim", "mudurluk",
-)
 
 _SPECIALIST_LLM_CONTEXT_MAX_LEN = 2000
 _SPECIALIST_EVIDENCE_MAX_SENTENCES = 7
@@ -238,6 +234,8 @@ class BaseSpecialistAgent:
             source_hints = meta.get("conversation_source_refs") or []
             topic_hint = meta.get("conversation_topic")
             disable_specialist_llm = bool(meta.get("disable_specialist_llm", False))
+            final_answer_owner = str(meta.get("final_answer_owner") or "").strip() or None
+            specialist_response_mode = str(meta.get("specialist_response_mode") or "").strip() or None
             llm_profile = meta.get("llm_profile")
             student_department = meta.get("student_department")
             intent_force_llm = bool(meta.get("force_llm_synthesis", False))
@@ -286,18 +284,29 @@ class BaseSpecialistAgent:
             with profile_stage("agent.filter_results", agent_id=self.agent_id, department=self.department.value):
                 results = self._filter_results_for_answer(query_text, results)
             with profile_stage("agent.generate_answer", agent_id=self.agent_id):
-                answer, generation_mode = await self._generate_answer(
-                    query_text,
-                    results,
-                    force_llm=intent_force_llm,
-                    allow_llm=not disable_specialist_llm,
-                    llm_profile=llm_profile,
-                )
+                if self._should_return_evidence_packet_only(
+                    final_answer_owner=final_answer_owner,
+                    specialist_response_mode=specialist_response_mode,
+                    results=results,
+                ):
+                    answer = self._build_evidence_handoff_answer(query_text, results)
+                    generation_mode = self._derive_non_llm_generation_mode(results)
+                else:
+                    answer, generation_mode = await self._generate_answer(
+                        query_text,
+                        results,
+                        force_llm=intent_force_llm,
+                        allow_llm=not disable_specialist_llm,
+                        llm_profile=llm_profile,
+                    )
             return self._build_department_response(
                 answer=answer,
+                query_text=query_text,
                 results=results,
                 generation_mode=generation_mode,
                 include_contact_suggestion=True,
+                final_answer_owner=final_answer_owner,
+                specialist_response_mode=specialist_response_mode,
             )
 
     def _agent_response_metadata(self) -> dict[str, str]:
@@ -322,12 +331,30 @@ class BaseSpecialistAgent:
         self,
         *,
         answer: str,
+        query_text: str,
         results: Sequence[dict],
         generation_mode: str | None = None,
         include_contact_suggestion: bool = False,
         success: bool = True,
+        final_answer_owner: str | None = None,
+        specialist_response_mode: str | None = None,
     ) -> DepartmentResponse:
         """RAG sonuc listesiyle birlikte standart departman cevabi kurar."""
+        response_metadata = {}
+        if results:
+            response_metadata["evidence_packet"] = self._build_evidence_packet(
+                query_text=query_text,
+                answer=answer,
+                results=results,
+                generation_mode=generation_mode,
+                final_answer_owner=final_answer_owner,
+                specialist_response_mode=specialist_response_mode,
+            )
+        if final_answer_owner:
+            response_metadata["final_answer_owner"] = final_answer_owner
+        if specialist_response_mode:
+            response_metadata["specialist_response_mode"] = specialist_response_mode
+
         return DepartmentResponse(
             department=self.department,
             answer=answer,
@@ -342,7 +369,132 @@ class BaseSpecialistAgent:
             generation_mode=generation_mode,
             include_contact_suggestion=include_contact_suggestion,
             success=success,
+            metadata=response_metadata,
         )
+
+    @staticmethod
+    def _should_return_evidence_packet_only(
+        *,
+        final_answer_owner: str | None,
+        specialist_response_mode: str | None,
+        results: Sequence[dict],
+    ) -> bool:
+        """Return whether the specialist should hand off evidence instead of writing the final answer."""
+        return (
+            final_answer_owner == "main_orchestrator"
+            and specialist_response_mode == "evidence_packet"
+            and bool(results)
+        )
+
+    def _build_evidence_handoff_answer(
+        self,
+        query_text: str,
+        results: Sequence[dict],
+    ) -> str:
+        """Build a readable fallback summary while the main orchestrator owns final synthesis."""
+        lines = ["Kaynak bilgisi final cevap için hazırlandı."]
+        for item in list(results)[:3]:
+            content = str(item.get("content") or "")
+            if not content.strip():
+                continue
+            source = str(item.get("source") or (item.get("metadata") or {}).get("source") or "kaynak")
+            snippet = select_evidence_sentences(
+                query_text,
+                content,
+                max_sentences=2,
+                min_score=0.25,
+            )
+            snippet = " ".join((snippet or content[:360]).split())
+            if len(snippet) > 360:
+                snippet = f"{snippet[:357].rstrip()}..."
+            if snippet:
+                lines.append(f"- {source}: {snippet}")
+        return "\n".join(lines)
+
+    def _build_evidence_packet(
+        self,
+        *,
+        query_text: str,
+        answer: str,
+        results: Sequence[dict],
+        generation_mode: str | None,
+        final_answer_owner: str | None = None,
+        specialist_response_mode: str | None = None,
+    ) -> dict:
+        """Build compact grounding material for final synthesis."""
+        selected_sources: list[dict] = []
+        facts: list[dict] = []
+        seen_facts: set[tuple[str, str]] = set()
+
+        for item in list(results)[:5]:
+            content = str(item.get("content") or "")
+            if not content.strip():
+                continue
+            metadata = self._build_source_metadata(item)
+            source_name = str(
+                metadata.get("source")
+                or metadata.get("filename")
+                or metadata.get("file_name")
+                or item.get("source")
+                or "kaynak"
+            )
+            try:
+                score = round(float(item.get("score", 0.0)), 4)
+            except (TypeError, ValueError):
+                score = 0.0
+            support = select_evidence_sentences(
+                query_text,
+                content,
+                max_sentences=3,
+                min_score=0.30,
+            )
+            support = support[:700].strip()
+            selected_sources.append(
+                {
+                    "source": source_name,
+                    "score": score,
+                    "snippet": support or content[:420].strip(),
+                }
+            )
+
+            for claim in extract_factual_claims(content)[:5]:
+                key = (claim, source_name)
+                if key in seen_facts:
+                    continue
+                seen_facts.add(key)
+                facts.append(
+                    {
+                        "claim": claim,
+                        "source": source_name,
+                        "score": score,
+                        "support": support[:420],
+                    }
+                )
+                if len(facts) >= 12:
+                    break
+            if len(facts) >= 12:
+                break
+
+        top_score = max((float(source.get("score") or 0.0) for source in selected_sources), default=0.0)
+        confidence = "high" if top_score >= 0.65 else "medium" if top_score >= 0.35 else "low"
+        limits: list[str] = []
+        if not facts and selected_sources:
+            limits.append("Kaynaklarda sayi, tarih veya kosul biciminde ayiklanmis net olgu bulunmadi.")
+
+        return {
+            "version": 1,
+            "department": self.department.value,
+            "answer_role": "evidence_packet",
+            "final_answer_owner": final_answer_owner,
+            "specialist_response_mode": specialist_response_mode,
+            "query_interpretation": query_text[:240],
+            "confidence": confidence,
+            "generation_mode": generation_mode,
+            "answer_summary": answer[:500],
+            "facts": facts,
+            "limits": limits,
+            "selected_sources": selected_sources,
+        }
 
     @staticmethod
     def _build_source_metadata(item: dict) -> dict:
@@ -373,8 +525,7 @@ class BaseSpecialistAgent:
 
     @staticmethod
     def _is_contact_request(query_text: str) -> bool:
-        lowered = normalize_text(query_text)
-        return any(kw in lowered for kw in _CONTACT_REQUEST_KEYWORDS)
+        return looks_like_contact_intent(query_text)
 
     async def _fetch_contacts(
         self,
@@ -408,14 +559,14 @@ class BaseSpecialistAgent:
             return DepartmentResponse(
                 department=self.department,
                 answer=(
-                    "Su anda bu alan icin kayitli iletisim bilgisi bulunamadi. "
-                    "Ogrenci Isleri Daire Baskanligi genel hattindan yardim alabilirsiniz."
+                    "Şu anda bu alan için kayıtlı iletişim bilgisi bulunamadı. "
+                    "Öğrenci İşleri Daire Başkanlığı genel hattından yardım alabilirsiniz."
                 ),
                 generation_mode="kural",
                 success=True,
             )
 
-        lines = ["Ilgili birim iletisim bilgileri:"]
+        lines = ["İlgili birim iletişim bilgileri:"]
         for contact in contacts:
             parts = [f"- {contact.unit_name}"]
             if contact.person_name:
@@ -470,8 +621,8 @@ class BaseSpecialistAgent:
                 return None
             # Eksik — uyari don
             return (
-                f"Bu konuda elimdeki kaynaklarda net {q_type.replace('_', ' ')} bilgisi bulunamadi. "
-                "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin."
+                f"Bu konuda elimdeki kaynaklarda net {q_type.replace('_', ' ')} bilgisi bulunamadı. "
+                "Soruyu daha detaylı sorabilir veya ilgili birimle iletişime geçebilirsin."
             )
         return None
 
@@ -540,8 +691,8 @@ class BaseSpecialistAgent:
 
         if not results and not db_context:
             return (
-                "Bu konuda elimde yeterli kaynak bulunamadi. "
-                "Soruyu biraz daha detaylandirirsan veya ilgili birimle iletisime gecersen daha net yardimci olabilirim."
+                "Bu konuda elimde yeterli kaynak bulunamadı. "
+                "Soruyu biraz daha detaylandırırsan veya ilgili birimle iletişime geçersen daha net yardımcı olabilirim."
             ), "kural"
 
         if results and not db_context:
@@ -791,8 +942,8 @@ class BaseSpecialistAgent:
         if judge_result.action == "ask_clarification":
             judge_meta["retry_count"] = 1
             clarification = (
-                "Bu soruyu dogru cevaplayabilmem icin eksik bir bilgi var. "
-                "Bolum/program, ogrenci turu veya hangi basvuru/islem hakkinda sordugunuzu belirtir misiniz?"
+                "Bu soruyu doğru cevaplayabilmem için eksik bir bilgi var. "
+                "Bölüm/program, öğrenci türü veya hangi başvuru/işlem hakkında sorduğunuzu belirtir misiniz?"
             )
             return clarification, judge_meta
 
@@ -836,14 +987,14 @@ class BaseSpecialistAgent:
         try:
             with profile_stage("agent.judge_repair", agent_id=self.agent_id, action=judge_result.action):
                 repair_prompt = (
-                    f"Kullanici sorusu:\n{repair_query}\n\n"
-                    f"Onceki cevap:\n{answer}\n\n"
+                    f"Kullan\u0131c\u0131 sorusu:\n{repair_query}\n\n"
+                    f"\u00d6nceki cevap:\n{answer}\n\n"
                     f"Judge sorunu:\n{judge_result.failure_reason or judge_result.action}\n\n"
-                    f"Kaynak baglami:\n{repair_context}\n\n"
-                    "Cevabi ayni kaynaklara dayanarak yeniden yaz. "
-                    "Eksik alt niyetleri tamamla, yanlis/unsupported iddialari cikar, "
-                    "sayi/tarih/ucret/AKTS/GANO bilgilerini kaynakta gecen sekliyle koru. "
-                    "Kaynakta yoksa uydurma. Dogal Turkce disinda kelime kullanma."
+                    f"Kaynak ba\u011flam\u0131:\n{repair_context}\n\n"
+                    "Cevab\u0131 ayn\u0131 kaynaklara dayanarak yeniden yaz. "
+                    "Eksik alt niyetleri tamamla, yanl\u0131\u015f/desteklenmeyen iddialar\u0131 \u00e7\u0131kar, "
+                    "say\u0131/tarih/\u00fccret/AKTS/GANO bilgilerini kaynakta ge\u00e7en \u015fekliyle koru. "
+                    "Kaynakta yoksa uydurma. Do\u011fal T\u00fcrk\u00e7e d\u0131\u015f\u0131nda kelime kullanma."
                 )
                 repaired = await asyncio.wait_for(
                     self.llm_service.generate(
@@ -1047,8 +1198,8 @@ class BaseSpecialistAgent:
                         selection_decision.status,
                     )
                     return (
-                        "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamadi. "
-                        "Soruyu daha detayli sorabilir veya ilgili birimle iletisime gecebilirsin.",
+                        "Bu konuda elimdeki kaynaklarda yeterli bilgi bulunamad\u0131. "
+                        "Soruyu daha detayl\u0131 sorabilir veya ilgili birimle ileti\u015fime ge\u00e7ebilirsin.",
                         "kural",
                     )
             context_chunks = build_evidence_context_chunks(
@@ -1101,7 +1252,7 @@ class BaseSpecialistAgent:
             self._last_evidence_items = evidence_items
             self._last_intent_coverage = _intent_coverage
 
-        safe_prompt = f"Kullanici sorusu:\n{query_text}\n\n"
+        safe_prompt = f"Kullan\u0131c\u0131 sorusu:\n{query_text}\n\n"
         if db_context:
             safe_prompt += f"Veritabani Bilgisi:\n{db_context}\n\n"
         if context_chunks:
@@ -1121,7 +1272,7 @@ CEVAP YAZIM KURALLARI:
 - Kullaniciya ikinci sahisla hitap et: "siz", "ders kaydinizi", "basvurunuzu" gibi. Kaynakta gecen "ogrenci/ogrenciler" ifadelerini gerekirse kullaniciya uygun bicime cevir.
 - Kendi adina veya kurum adina islem yapmis gibi yazma; "kaydimi yaptirdim", "kaydmizi", "sorumluyuz" gibi ozne kaymalarindan kacin.
 - "Soru:", "Yanit:", "Benchmark", "Kaynak Bilgisi", "KAYNAK DOGRULAMA KURALLARI", "KURALLAR", "Belge Baglami", "Kanit" gibi ic basliklari cevapta kullanma.
-- Cevabi Turkce yaz; "certain", "about", "regarding", "information" gibi Ingilizce dolgu veya yer tutucu kelimeler kullanma.
+- Cevabi dogal Turkce yaz (ASCII degil: "ogrenci" degil "\u00f6\u011frenci", "ucret" degil "\u00fccret", "basvuru" degil "ba\u015fvuru"); "certain", "about", "regarding", "information" gibi Ingilizce dolgu veya yer tutucu kelimeler kullanma.
 - Kaynakta gecen sayi, tarih, yuzde, sure veya kosul esigi sorunun cevabi icin gerekliyse koru; kaynakta olmayan sayi, tarih, portal, menu, odeme kanali veya form adi uretme.
 - Prosedur sorularinda kaynakta varsa su alanlari ozellikle koru: sure/deadline, basvuru belgesi veya form, yetkili kurul/komisyon/birim, platform/sistem adi, devam/devamsizlik kosulu, sayisal esik ve istisna.
 - Resmi kisaltma veya ad kaynakta geciyorsa sadelestirip kaybetme; gerekirse birlikte yaz: "UBYS/ogrenci bilgi sistemi" gibi.
@@ -1177,8 +1328,8 @@ CEVAP YAZIM KURALLARI:
                 try:
                     rewrite_system = system + REWRITE_ONLY_SYSTEM_SUFFIX
                     rewrite_prompt = (
-                        f"Onceki cevapta yabanci kelime ve bozuk tokenlar vardi. "
-                        f"Ayni anlami koruyarak dogal Turkce ile yeniden yaz:\n\n{answer}"
+                        f"Önceki cevapta yabancı kelime ve bozuk tokenlar vardı. "
+                        f"Aynı anlamı koruyarak doğal Türkçe ile yeniden yaz:\n\n{answer}"
                     )
                     rewritten = await asyncio.wait_for(
                         self.llm_service.generate(
@@ -1258,8 +1409,8 @@ CEVAP YAZIM KURALLARI:
         if not results:
             return (
                 prefix
-                + "Bu konuda ilgili kaynaklara ulasmaya calistim ancak su anda kisa bir ozet uretemedim. "
-                "Soruyu daha spesifik sorman veya ilgili birimle iletisime gecmen faydali olur."
+                + "Bu konuda ilgili kaynaklara ula\u015fmaya \u00e7al\u0131\u015ft\u0131m ancak \u015fu anda k\u0131sa bir \u00f6zet \u00fcretemedim. "
+                "Soruyu daha spesifik sorman veya ilgili birimle ileti\u015fime ge\u00e7men faydal\u0131 olur."
             )
 
         top = results[0]

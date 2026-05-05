@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
+from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.db.conversation_context import (
     ConversationContextService,
     ConversationStateData,
+    ConversationTurnData,
 )
 
 pytestmark = pytest.mark.followup
@@ -38,6 +41,31 @@ def _state(
         last_assistant_answer="Basvuru takvimini takip et.",
         turn_count=1,
         updated_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+    )
+
+
+def _turn(
+    turn_index: int,
+    *,
+    user_query: str,
+    resolved_query: str,
+    answer_summary: str,
+    active_topic: str,
+) -> ConversationTurnData:
+    return ConversationTurnData(
+        id=turn_index,
+        context_id="ctx-1",
+        turn_index=turn_index,
+        user_query=user_query,
+        resolved_query=resolved_query,
+        assistant_answer=answer_summary,
+        answer_summary=answer_summary,
+        active_topic=active_topic,
+        task_type=TaskType.PROCEDURE_QUERY.value,
+        is_follow_up=turn_index > 1,
+        departments=[Department.STUDENT_AFFAIRS.value, Department.ACADEMIC_PROGRAMS.value],
+        source_refs=["cap_yonergesi.pdf"],
+        created_at=datetime.now(timezone.utc) - timedelta(minutes=turn_index),
     )
 
 
@@ -312,6 +340,56 @@ async def test_resolve_query_uses_llm_when_available(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_followup_llm_prompt_includes_configured_recent_turn_window(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+    monkeypatch.setattr(settings.conversation, "max_recent_turns", 2)
+    recent_turns = [
+        _turn(
+            1,
+            user_query="CAP basvurusu nasil yapilir?",
+            resolved_query="CAP basvurusu nasil yapilir?",
+            answer_summary="CAP basvurusu akademik takvimde ilan edilir.",
+            active_topic="CAP / Cift Anadal",
+        ),
+        _turn(
+            2,
+            user_query="Not ortalamasi kac olmali?",
+            resolved_query="CAP basvurusu icin not ortalamasi kac olmali?",
+            answer_summary="CAP icin not ortalamasi kosulu vardir.",
+            active_topic="CAP / Cift Anadal",
+        ),
+    ]
+    get_recent_turns = AsyncMock(return_value=recent_turns)
+    monkeypatch.setattr(service, "_get_recent_turns", get_recent_turns)
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "CAP basvurusu icin hangi belgeler gerekli?", '
+                '"active_topic": "CAP / Cift Anadal", '
+                '"carry_over_departments": ["student_affairs", "academic_programs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Peki hangi belgeler gerekli?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    get_recent_turns.assert_awaited_once_with(context_id="ctx-1", n=2)
+    prompt_payload = json.loads(fake_llm.generate.await_args.kwargs["prompt"])
+    assert [turn["turn_index"] for turn in prompt_payload["recent_turns"]] == [1, 2]
+    assert prompt_payload["recent_turns"][0]["active_topic"] == "CAP / Cift Anadal"
+    assert resolution.effective_query == "CAP basvurusu icin hangi belgeler gerekli?"
+
+
+@pytest.mark.asyncio
 async def test_resolve_query_uses_llm_for_short_signal_free_follow_up(monkeypatch):
     service = ConversationContextService()
     monkeypatch.setattr(
@@ -348,6 +426,52 @@ async def test_resolve_query_uses_llm_for_short_signal_free_follow_up(monkeypatc
     assert resolution.effective_query == "Yatay gecis icin not ortalamasi kac olmali?"
     assert resolution.active_topic == "Yatay ve Dikey Gecis"
     assert resolution.department_hints == [Department.STUDENT_AFFAIRS]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_uses_llm_for_ambiguous_contextual_query(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "CAP basvuru belgeleri elektronik ortamdan yuklenebilir mi?", '
+                '"active_topic": "CAP / Cift Anadal", '
+                '"carry_over_departments": ["student_affairs", "academic_programs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Basvuru belgeleri elektronik ortamdan yuklenebilir mi?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "CAP basvuru belgeleri elektronik ortamdan yuklenebilir mi?"
+    assert resolution.active_topic == "CAP / Cift Anadal"
+    fake_llm.generate.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_keeps_ambiguous_query_direct_when_llm_unavailable(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Basvuru belgeleri elektronik ortamdan yuklenebilir mi?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "Basvuru belgeleri elektronik ortamdan yuklenebilir mi?"
+    assert resolution.department_hints == []
 
 
 @pytest.mark.asyncio
@@ -420,6 +544,34 @@ async def test_resolve_query_treats_topic_changed_weak_marker_query_as_standalon
     assert resolution.is_follow_up is False
     assert resolution.effective_query == "Erasmus programina nasil basvururum?"
     assert resolution.active_topic == "Erasmus ve Uluslararasi Surecler"
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_treats_short_clear_topic_change_as_standalone(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Harc ve Ogrenim Ucretleri",
+                departments=[Department.FINANCE.value],
+                task_type=TaskType.TUITION_QUERY.value,
+                last_query="Harc ucreti ne kadar?",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Staj nasil yapilir?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "Staj nasil yapilir?"
+    assert resolution.active_topic == "Staj ve Uygulamali Egitim"
+    assert resolution.department_hints == []
 
 
 @pytest.mark.asyncio

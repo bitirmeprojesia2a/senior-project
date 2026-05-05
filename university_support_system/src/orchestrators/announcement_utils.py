@@ -32,6 +32,7 @@ async def request_announcement_response(
     departments: list[str] | None = None,
     faculty: str | None = None,
     unit_name: str | None = None,
+    conversation_source_refs: list[str] | None = None,
     allow_latest_fallback: bool = True,
     trace_metadata: dict | None = None,
 ):
@@ -44,6 +45,7 @@ async def request_announcement_response(
         departments=departments,
         faculty=faculty,
         unit_name=unit_name,
+        conversation_source_refs=conversation_source_refs,
         trace_id=announcement_trace.get("trace_id"),
         span_id=announcement_trace.get("span_id"),
         parent_span_id=announcement_trace.get("parent_span_id"),
@@ -65,6 +67,7 @@ async def request_announcement_response(
                 departments=list(departments or []),
                 faculty=faculty,
                 unit_name=unit_name,
+                conversation_source_refs=list(conversation_source_refs or []),
                 allow_latest_fallback=allow_latest_fallback,
                 trace_id=announcement_trace.get("trace_id"),
                 span_id=announcement_trace.get("span_id"),
@@ -107,6 +110,7 @@ async def build_announcement_response(
     task_type,
     faculty: str | None = None,
     unit_name: str | None = None,
+    conversation_source_refs: list[str] | None = None,
     allow_latest_fallback: bool = True,
     trace_metadata: dict | None = None,
 ):
@@ -121,6 +125,7 @@ async def build_announcement_response(
         task_type=task_type,
         faculty=faculty,
         unit_name=unit_name,
+        conversation_source_refs=conversation_source_refs,
         allow_latest_fallback=allow_latest_fallback,
         trace_metadata=trace_metadata,
     )

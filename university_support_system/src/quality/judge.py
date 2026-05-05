@@ -26,15 +26,15 @@ logger = logging.getLogger(__name__)
 _JUDGE_TIMEOUT_SECONDS = 12
 
 JUDGE_SYSTEM_PROMPT = """\
-Gorev: Verilen soru, cevap ve kaynak baglamini degerlendir. Cevap kalitesini denetle.
+G\u00f6rev: Verilen soru, cevap ve kaynak ba\u011flam\u0131n\u0131 de\u011ferlendir. Cevap kalitesini denetle.
 
-DEGERLENDIRME KRITERLERI:
-1. Sayi/tarih/ucret/AKTS/GANO bilgisi dogru mu? Kaynakta varsa aynen korundu mu? Kaynakta yoksa uydurulmus mi?
-2. Mevzuat/uygunluk cevabi kaynakla celisiyor mu? Kaynakta belirsizlik varsa cevap kesinlik ifade ediyor mu?
-3. "Bilgi bulunamadi" denmis ama kaynaklarda ilgili bilgi var mi?
-4. Cok departmanli cevapta her departmanin katkisi var mi?
-5. Yabanci kelime/bozuk token var mi?
-6. Cok parcali soruda tum alt niyetler cevaplandi mi?
+DE\u011eERLEND\u0130RME KR\u0130TERLER\u0130:
+1. Say\u0131/tarih/\u00fccret/AKTS/GANO bilgisi do\u011fru mu? Kaynakta varsa aynen korundu mu? Kaynakta yoksa uydurulmu\u015f m\u0131?
+2. Mevzuat/uygunluk cevab\u0131 kaynakla \u00e7eli\u015fiyor mu? Kaynakta belirsizlik varsa cevap kesinlik ifade ediyor mu?
+3. "Bilgi bulunamad\u0131" denmi\u015f ama kaynaklarda ilgili bilgi var m\u0131?
+4. \u00c7ok departmanl\u0131 cevapta her departman\u0131n katk\u0131s\u0131 var m\u0131?
+5. Yabanc\u0131 kelime/bozuk token var m\u0131?
+6. \u00c7ok par\u00e7al\u0131 soruda t\u00fcm alt niyetler cevapland\u0131 m\u0131?
 
 JSON FORMAT:
 {
@@ -47,13 +47,13 @@ JSON FORMAT:
   "suggested_query": "string|null"
 }
 
-AKSİYON KURALLARI:
+AKS\u0130YON KURALLARI:
 - accept: Cevap yeterli, kaynakla uyumlu.
-- rewrite_only: Evidence iyi ama cevap kotu (yanlis sayi, yabanci token, eksik alt baslik).
-- retrieve_again: Evidence soruyu kapsamiyor veya yanlis kaynaklar baskin.
-- ask_clarification: Bolum/program/ogrenci turu gibi zorunlu bilgi eksik.
+- rewrite_only: Evidence iyi ama cevap k\u00f6t\u00fc (yanl\u0131\u015f say\u0131, yabanc\u0131 token, eksik alt ba\u015fl\u0131k).
+- retrieve_again: Evidence soruyu kapsam\u0131yor veya yanl\u0131\u015f kaynaklar bask\u0131n.
+- ask_clarification: B\u00f6l\u00fcm/program/\u00f6\u011frenci t\u00fcr\u00fc gibi zorunlu bilgi eksik.
 
-SADECE JSON yaz, baska hicbir sey yazma.
+SADECE JSON yaz, ba\u015fka hi\u00e7bir \u015fey yazma.
 """
 
 
@@ -61,16 +61,16 @@ SADECE JSON yaz, baska hicbir sey yazma.
 
 _NUMERIC_DATE_PATTERN = re.compile(
     r"\b\d+[.,]\d+\b"   # 3.28, 2,50
-    r"|\b\d+\s*(?:AKTS|akts|kredi|TL|tl|€|\$)\b"
+    r"|\b\d+\s*(?:AKTS|akts|kredi|TL|tl|\u20ac|\$)(?=\b|$)"
     r"|\b(?:GANO|gano|GNO|gno)\s*\d",
     re.IGNORECASE,
 )
 _FEE_PATTERN = re.compile(
-    r"\b(?:ucret|katki payi|harc|fiyat|taksit|odeyebilir)\b",
+    r"\b(?:[u\u00fc]cret|katk[ıi] pay[ıi]|harc|fiyat|taksit|[o\u00f6]deyebilir)\b",
     re.IGNORECASE,
 )
 _REGULATION_PATTERN = re.compile(
-    r"\b(?:yonerge|yonetmelik|yonetmelik|mevzuat|yonerge|karar|esas)\b",
+    r"\b(?:y[o\u00f6]nerge|y[o\u00f6]netmelik|mevzuat|karar|esas)\b",
     re.IGNORECASE,
 )
 _NO_INFO_PATTERN = re.compile(

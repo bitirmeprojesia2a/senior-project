@@ -323,6 +323,11 @@ def _strip_foreign_words(text: str) -> str:
 def clean_final_answer(answer: str) -> str:
     """LLM veya birlesik cevaptan kalan basit bicim artefaktlarini temizler."""
     cleaned = answer.replace("**", "").strip()
+    cleaned = re.split(
+        r"(?im)^\s*(?:Uretim Turu|Üretim Türü|Kaynak Ozeti|Kaynak Özeti)\s*:\s*$",
+        cleaned,
+        maxsplit=1,
+    )[0].rstrip()
     cleaned = re.sub(r"(?im)^\s*Merhaba,?\s*$", "", cleaned)
     cleaned = re.sub(
         r"(?im)^\s*(?:Siz,?\s*)?.{0,180}?(?:bilgi almak istiyorsunuz|hakkinda bilgi ariyorsunuz|hakkinda bilgi almak istiyorsunuz)\.?\s*$",
@@ -360,12 +365,12 @@ def clean_final_answer(answer: str) -> str:
         cleaned,
     )
     cleaned = re.sub(
-        r"(?im)^\s*(?:Yanit|YanÄ±t|Cevap|Sorunun cevabi|Sorunun cevabÄ±)\s*:\s*",
+        r"(?im)^\s*(?:Yanit|Yanıt|Cevap|Sorunun cevabı|Sorunun cevabi)\s*:\s*",
         "",
         cleaned,
     )
     cleaned = re.sub(
-        r"(?im)^\s*(?:Kaynak Bilgisi|Belge kaynaklari|Kaynak DoÄŸrulama|Kaynak Dogrulama)\s*:\s*.*?$",
+        r"(?im)^\s*(?:Kaynak Bilgisi|Belge kaynaklari|Kaynak Doğrulama|Kaynak Dogrulama)\s*:\s*.*?$",
         "",
         cleaned,
     )
@@ -408,12 +413,12 @@ def clean_final_answer(answer: str) -> str:
     )
     cleaned = re.sub(
         r"(?im)^\s*Acik bir bilgi kaynagi bulamadim, ancak.*?$",
-        "Verilen kaynaklarda bu soruyu dogrudan yanitlayan net bir bilgi bulunmuyor.",
+        "Verilen kaynaklarda bu soruyu doğrudan yanıtlayan net bir bilgi bulunmuyor.",
         cleaned,
     )
     cleaned = re.sub(
         r"(?im)^\s*Açık bir bilgi kaynağı bulamadım, ancak.*?$",
-        "Verilen kaynaklarda bu soruyu dogrudan yanitlayan net bir bilgi bulunmuyor.",
+        "Verilen kaynaklarda bu soruyu doğrudan yanıtlayan net bir bilgi bulunmuyor.",
         cleaned,
     )
     cleaned = re.sub(
@@ -434,7 +439,7 @@ def clean_final_answer(answer: str) -> str:
     )
     cleaned = re.sub(
         r"(?im)^.*?\bcumle bulunamad[ıi]\.?\s*(?:.*?\byonlendir\.?)?\s*$",
-        "Bu konuda elimdeki kaynaklarda net bilgi bulunamadi.",
+        "Bu konuda elimdeki kaynaklarda net bilgi bulunamadı.",
         cleaned,
     )
     cleaned = re.sub(
@@ -448,7 +453,7 @@ def clean_final_answer(answer: str) -> str:
         cleaned,
     )
     cleaned = re.sub(
-        r"(?im)^\s*(?:Bu cevap|Bu yanit),?\s+OMU.*?i[cÃ§]in\s+uretilmistir\.?\s*$",
+        r"(?im)^\s*(?:Bu cevap|Bu yanit),?\s+OMU.*?i[çc]in\s+uretilmistir\.?\s*$",
         "",
         cleaned,
     )
@@ -458,7 +463,7 @@ def clean_final_answer(answer: str) -> str:
         cleaned,
     )
     cleaned = re.sub(
-        r"(?im)^\s*Yukar[Äıi]daki bilgilendirmeler dogrultusunda,?\s*(?:OMU ogrencileri icin)?\s*:?\s*$",
+        r"(?im)^\s*Yukar[ıi]daki bilgilendirmeler dogrultusunda,?\s*(?:OMU ogrencileri icin)?\s*:?\s*$",
         "",
         cleaned,
     )
@@ -721,31 +726,39 @@ def format_source_summary_from_responses(responses: list[DepartmentResponse]) ->
 
 def append_source_summary(answer: str, responses: list[DepartmentResponse]) -> str:
     """Cevabin sonuna kaynak ozetini ekler."""
-    if not answer.strip() or "Kaynak Ozeti:" in answer:
+    if not answer.strip() or "Kaynak Ozeti:" in answer or "Kaynak Özeti:" in answer:
         return answer
 
     summary = format_source_summary_from_responses(responses)
     if not summary:
         return answer
-    return f"{answer.rstrip()}\n\nKaynak Ozeti:\n{summary}"
+    return f"{answer.rstrip()}\n\nKaynak Özeti:\n{summary}"
 
 
-def append_generation_summary(answer: str, responses: list[DepartmentResponse]) -> str:
+def append_generation_summary(
+    answer: str,
+    responses: list[DepartmentResponse],
+    *,
+    used_global_synthesis: bool = False,
+) -> str:
     """Cevabin sonuna hangi veri yollarinin kullanildigini ekler."""
-    if not answer.strip() or "Uretim Turu:" in answer:
+    if not answer.strip() or "Uretim Turu:" in answer or "Üretim Türü:" in answer:
         return answer
-    if not responses:
+    if not responses and not used_global_synthesis:
         return answer
 
-    lines = format_generation_summary_lines(responses)
+    lines = format_generation_summary_lines(
+        responses,
+        used_global_synthesis=used_global_synthesis,
+    )
     if not lines:
         return answer
-    return f"{answer.rstrip()}\n\nUretim Turu:\n{chr(10).join(lines)}"
+    return f"{answer.rstrip()}\n\nÜretim Türü:\n{chr(10).join(lines)}"
 
 
 def append_source_summary_for_sources(answer: str, sources: list[RAGSource]) -> str:
     """Tek basina kaynak listesi verilen cevaplara kaynak ozeti ekler."""
-    if not answer.strip() or "Kaynak Ozeti:" in answer:
+    if not answer.strip() or "Kaynak Ozeti:" in answer or "Kaynak Özeti:" in answer:
         return answer
     if not sources:
         return answer
@@ -762,13 +775,17 @@ def append_source_summary_for_sources(answer: str, sources: list[RAGSource]) -> 
     extra = len(sources) - 5
     if extra > 0:
         labels.append(f"- ... ve {extra} kaynak daha")
-    return f"{answer.rstrip()}\n\nKaynak Ozeti:\n{chr(10).join(labels)}"
+    return f"{answer.rstrip()}\n\nKaynak Özeti:\n{chr(10).join(labels)}"
 
 
-def format_generation_summary_lines(responses: list[DepartmentResponse]) -> list[str]:
+def format_generation_summary_lines(
+    responses: list[DepartmentResponse],
+    *,
+    used_global_synthesis: bool = False,
+) -> list[str]:
     """Departman bazinda cevap uretim turlerini etiketler."""
     meaningful = [response for response in responses if response.answer.strip()]
-    if not meaningful:
+    if not meaningful and not used_global_synthesis:
         return []
 
     non_announcement = [
@@ -778,6 +795,8 @@ def format_generation_summary_lines(responses: list[DepartmentResponse]) -> list
     multi_department = len({response.department for response in target}) > 1
 
     lines: list[str] = []
+    if used_global_synthesis:
+        lines.append("- Final Sentez: LLM")
     for response in target:
         label = _format_generation_mode_label(_infer_generation_mode(response))
         if multi_department:

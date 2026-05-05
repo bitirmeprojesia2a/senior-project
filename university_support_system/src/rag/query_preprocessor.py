@@ -150,6 +150,10 @@ SYNONYM_MAP: Dict[str, List[str]] = {
 
     # Yaz Okulu
     "yaz okulu": ["yaz dönemi", "yaz okulu eğitimi"],
+    "sinif kapasitesi": ["kontenjan", "ogrenci sayisi", "kisi", "sube"],
+    "sınıf kapasitesi": ["kontenjan", "öğrenci sayısı", "kişi", "şube"],
+    "kapasite": ["kontenjan", "ogrenci sayisi", "kisi", "sube"],
+    "kontenjan": ["kapasite", "ogrenci sayisi", "kisi", "sube"],
 
     # Lisansüstü
     "lisansüstü": ["yüksek lisans", "master", "doktora", "lisansüstü eğitim"],
@@ -247,6 +251,17 @@ PROCEDURAL_KEYWORDS = {
 }
 
 _TURKISH_SUFFIX_CHARS = "abcçdefgğhıijklmnoöprsştuüvyz"
+_NEGATION_WORDS = (
+    "sormuyorum",
+    "sormuyodum",
+    "sormadim",
+    "sormadım",
+    "degil",
+    "değil",
+    "istemiyorum",
+    "bahsetmiyorum",
+    "kastetmiyorum",
+)
 
 
 class QueryPreprocessor:
@@ -372,6 +387,8 @@ class QueryPreprocessor:
         matched_keys: Set[str] = set()
         for key in sorted_keys:
             if self._matches_synonym_key(normalized_text_value, key) and key not in matched_keys:
+                if self._is_negated_topic(normalized_text_value, key):
+                    continue
                 synonyms = self._normalized_synonym_map[key]
                 expanded.update(synonyms)
                 matched_keys.add(key)
@@ -412,15 +429,26 @@ class QueryPreprocessor:
         if exact_pattern.search(text_lower):
             return True
 
-        if " " not in key:
-            return False
-
         # Turkish process phrases are often inflected on the final word:
         # "ders kaydı" -> "ders kaydından", "kayıt yenileme" -> "kayıt yenilemede".
         suffix_pattern = re.compile(
             rf"(?<!\w){re.escape(key)}[{_TURKISH_SUFFIX_CHARS}]*(?!\w)"
         )
         return bool(suffix_pattern.search(text_lower))
+
+    def _is_negated_topic(self, text_lower: str, key: str) -> bool:
+        """Negated correction phrases should not expand the rejected topic."""
+        match = re.search(
+            rf"(?<!\w){re.escape(key)}[{_TURKISH_SUFFIX_CHARS}]*(?!\w)",
+            text_lower,
+        )
+        if not match:
+            return False
+        following = text_lower[match.end() : match.end() + 48]
+        return any(
+            re.search(rf"(?<!\w){re.escape(word)}(?!\w)", following)
+            for word in _NEGATION_WORDS
+        )
 
     def detect_query_type(self, query: str) -> str:
         """

@@ -32,12 +32,19 @@ EVIDENCE_STOPWORDS: frozenset[str] = frozenset({
     "ogrenci", "universite", "soru", "cevap", "bilgi",
 })
 
+_CAPACITY_QUERY_TERMS: frozenset[str] = frozenset({
+    "kapasite", "kapasiteleri", "kontenjan", "kontenjanlari",
+    "sinif", "mevcut", "mevcudu", "sube", "subeler", "kisi",
+    "ogrenci", "sayisi", "acilabilmesi", "bolunebilir", "belirlenir",
+})
+
 EVIDENCE_MAX_SENTENCES = 7
 EVIDENCE_MIN_SCORE = 0.35
 
 # Specificity patterns for scoring sentences
 _SPECIFICITY_RE = re.compile(
-    r"\b(?:madde|fikra|bent|oran|yuzde|akts|gno|not|tarih|sure)\b",
+    r"\b(?:madde|fikra|bent|oran|yuzde|akts|gno|not|tarih|sure"
+    r"|kontenjan|ogrenci\s+sayisi|kisi|sube)\b",
 )
 _NUMERIC_RE = re.compile(r"(?:%|\b\d+(?:[,.]\d+)?\b)")
 
@@ -54,7 +61,7 @@ _ACADEMIC_TERM_RE = re.compile(
 )
 _NUMERIC_FACT_RE = re.compile(
     r"\b\d+(?:[,.]\d+)?\s*"
-    r"(?:akts|ects|gno|kredi|gun|hafta|ay|yil|donem|tl|lira)\b",
+    r"(?:akts|ects|gno|kredi|gun|hafta|ay|yil|donem|tl|lira|kisi\w*|ogrenci\w*|sube\w*)\b",
     re.IGNORECASE,
 )
 _GNO_RE = re.compile(
@@ -66,7 +73,7 @@ _CONDITION_TAIL_RE = re.compile(
     r"|gerekir|gereklidir|yapilabilir|odenir|odenmez"
     r"|muaf|muaftir|kesilir|kesilmez|ekleme yapilamaz"
     r"|kabul edilmez|kabul edilir|verilir|verilmez"
-    r"|iptal edilir|gecersiz sayilir)\b",
+    r"|iptal edilir|gecersiz sayilir|bolunebilir|belirlenir)\b",
 )
 
 # Reference pronouns that signal context window should expand
@@ -82,6 +89,18 @@ KNOWN_SYSTEM_ENTITIES: frozenset[str] = frozenset({
     "ogrenci bilgi sistemi", "ogrenci bilgi yonetim sistemi",
     "e-devlet", "kyk", "turkiye burs",
 })
+
+
+def _expand_query_terms_for_evidence(query_terms: set[str], normalized_query: str) -> set[str]:
+    """Add deterministic concept aliases used in policy documents."""
+    expanded = set(query_terms)
+    if expanded & _CAPACITY_QUERY_TERMS or "ogrenci sayisi" in normalized_query:
+        expanded.update(_CAPACITY_QUERY_TERMS)
+        expanded.update({
+            "yaz", "okulu", "dersin", "ders", "acilabilmesi",
+            "bolunebilir", "bolunur", "belirlenir", "mevcut",
+        })
+    return expanded
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +210,7 @@ def _detect_supported_aspects(
         ("fee", ("ucret", "harc", "odeme", "katki payi", "tl")),
         ("document", ("belge", "evrak", "form", "dokuman")),
         ("process", ("nasil", "surec", "basvuru", "adim", "islem")),
+        ("capacity", ("kapasite", "kontenjan", "ogrenci sayisi", "kisi", "sube", "mevcut", "bolunebilir", "acilabilmesi")),
     )
     for aspect_name, markers in aspect_definitions:
         if any(m in content_normalized for m in markers):
@@ -276,6 +296,7 @@ def select_evidence_sentences(
         for token in normalized_query.split()
         if len(token) > 2 and token not in EVIDENCE_STOPWORDS
     }
+    query_terms = _expand_query_terms_for_evidence(query_terms, normalized_query)
     if not query_terms:
         return content
 
@@ -378,6 +399,7 @@ def extract_evidence_items(
         t for t in normalized_query.split()
         if len(t) > 2 and t not in EVIDENCE_STOPWORDS
     }
+    query_terms = _expand_query_terms_for_evidence(query_terms, normalized_query)
 
     items: list[EvidenceItem] = []
     for index, result in enumerate(results):

@@ -71,6 +71,21 @@ def test_evidence_item_missing_fields_raises():
         )
 
 
+def test_capacity_query_selects_yaz_okulu_threshold_sentence():
+    content = (
+        "Yaz okulu en az otuz bes egitim-ogretim gununden olusur. "
+        "Dersin acilabilmesi icin gerekli ogrenci sayisi ilgili yonetim kurulu tarafindan belirlenir. "
+        "Gerekli gorulmesi halinde siniflar subelere bolunebilir. "
+        "Cumartesi gunleri de egitim-ogretime dahildir."
+    )
+
+    selected = select_evidence_sentences("Yaz okulu sinif kapasitesi nedir?", content)
+
+    assert "Dersin acilabilmesi" in selected
+    assert "ogrenci sayisi" in selected
+    assert "subelere bolunebilir" in selected
+
+
 # ---------------------------------------------------------------------------
 # 2. EEM alias scope detection
 # ---------------------------------------------------------------------------
@@ -352,3 +367,182 @@ def test_intent_coverage_detects_missing_multi_part_evidence():
     assert "time_date" in coverage.sub_intents
     assert "eligibility" in coverage.sub_intents
     assert coverage.is_low
+
+
+# ---------------------------------------------------------------------------
+# 12. FAZ 1 — Natural Turkish in user-facing messages + mojibake absence
+# ---------------------------------------------------------------------------
+
+
+def test_no_mojibake_in_response_utils_regex():
+    """Regex patterns in clean_final_answer must not contain mojibake."""
+    import inspect
+    from src.orchestrators.response_utils import clean_final_answer
+
+    source = inspect.getsource(clean_final_answer)
+    # These mojibake sequences must never appear in source code
+    for bad in ("\u00c3\u00bc", "\u00c3\u00b6", "\u00c3\u00a7", "\u00e2\u2020",
+                "Yan\u00c4\u00b1", "cevab\u00c4\u00b1", "Do\u00c4\u0178", "c\u00c3\u00a7"):
+        assert bad not in source, f"Mojibake sequence found in clean_final_answer"
+
+
+def test_no_mojibake_in_prompt_templates():
+    """prompt_templates.py must not contain mojibake arrow or broken chars."""
+    import inspect
+    from src.llm import prompt_templates
+
+    source = inspect.getsource(prompt_templates)
+    assert "\u00e2\u2020\u2019" not in source, "Mojibake arrow â†' found in prompt_templates"
+
+
+def test_clarification_messages_use_natural_turkish():
+    """User-facing clarification messages must use proper Turkish diacritics."""
+    from src.orchestrators.query_policy import (
+        CLARIFICATION_MESSAGE,
+        AUTH_CLARIFICATION_MESSAGE,
+        FEE_CONTEXT_CLARIFICATION_MESSAGE,
+        APPLICATION_TYPE_CLARIFICATION_MESSAGE,
+    )
+
+    for msg in (
+        CLARIFICATION_MESSAGE,
+        AUTH_CLARIFICATION_MESSAGE,
+        FEE_CONTEXT_CLARIFICATION_MESSAGE,
+        APPLICATION_TYPE_CLARIFICATION_MESSAGE,
+    ):
+        # Must contain at least one Turkish diacritic
+        has_diacritic = any(c in msg for c in "\u00e7\u011f\u0131\u00f6\u015f\u00fc\u00c7\u011e\u0130\u00d6\u015e\u00dc")
+        assert has_diacritic, f"Message lacks Turkish diacritics: {msg[:60]}..."
+        # Must NOT contain ASCII Turkish artifacts
+        for bad in ("dogru", "bulunamadi", "belirtir misiniz", "ogrenci"):
+            assert bad not in msg, f"ASCII Turkish '{bad}' found in: {msg[:60]}..."
+
+
+def test_announcement_agent_uses_natural_turkish():
+    """Announcement agent fallback messages must use proper Turkish diacritics."""
+    import inspect
+    from src.agents.announcement.agent import AnnouncementAgent
+
+    source = inspect.getsource(AnnouncementAgent._format_announcements)
+    assert "\u0130lgili duyurular:" in source
+    assert "Ilgili duyurular:" not in source
+
+    source_handle = inspect.getsource(AnnouncementAgent.handle_department_task)
+    assert "bulunam\u0131yor" in source_handle or "bulunamad\u0131" in source_handle
+    assert "bulunamadi" not in source_handle
+
+
+def test_base_agent_no_info_uses_natural_turkish():
+    """Base agent no-info fallback must use proper Turkish diacritics."""
+    import inspect
+    from src.agents.base import BaseSpecialistAgent
+
+    source = inspect.getsource(BaseSpecialistAgent)
+    assert "bulunamad\u0131" in source
+    assert "ileti\u015fime" in source
+    assert "bulunamadi" not in source or "bulunamad\u0131" in source
+
+
+def test_slack_fallback_uses_natural_turkish():
+    """Slack fallback message must use proper Turkish diacritics."""
+    from src.slack.formatting import split_slack_message
+
+    result = split_slack_message("")
+    assert len(result) == 1
+    msg = result[0]
+    # Must have diacritics, not ASCII Turkish
+    assert "\u00fc" in msg  # ü
+    assert "uretilemedi" not in msg
+    assert "sorunuz\u0131" not in msg  # no ı after soru
+    assert "sorunuzu" in msg
+
+
+# ---------------------------------------------------------------------------
+# 13. FAZ 5 — Judge config + main-level integration
+# ---------------------------------------------------------------------------
+
+
+def test_judge_role_in_llm_role():
+    """LLMRole must include 'judge'."""
+    from src.core.config import LLMRole
+    import typing
+    args = typing.get_args(LLMRole)
+    assert "judge" in args
+
+
+def test_judge_model_config_field_exists():
+    """LLMRuntimeSettings must have judge_model and main_judge_enabled."""
+    from src.core.config import LLMRuntimeSettings
+    settings = LLMRuntimeSettings()
+    assert hasattr(settings, "judge_model")
+    assert hasattr(settings, "main_judge_enabled")
+    assert settings.main_judge_enabled is True  # default
+
+
+def test_judge_model_in_configured_llm_models():
+    """configured_llm_models health map must include judge and main_judge_enabled."""
+    from src.core.config import settings
+    models = settings.configured_llm_models()
+    assert "judge" in models
+    assert "main_judge_enabled" in models
+
+
+def test_main_judge_gate_method_exists():
+    """MainOrchestrator must have _apply_main_judge_gate method."""
+    import inspect
+    from src.orchestrators.main import MainOrchestrator
+
+    source = inspect.getsource(MainOrchestrator)
+    assert "_apply_main_judge_gate" in source
+    # Must NOT have ask_clarification as a return path
+    assert "ask_clarification" in source  # referenced in action list
+    # retrieve_again must be downgraded to rewrite_only
+    assert '"rewrite_only", "retrieve_again", "ask_clarification"' in source
+
+
+def test_main_judge_gate_respects_config_flag():
+    """Main judge gate must check settings.llm.main_judge_enabled."""
+    import inspect
+    from src.orchestrators.main import MainOrchestrator
+
+    source = inspect.getsource(MainOrchestrator.handle_query)
+    assert "main_judge_enabled" in source
+
+
+def test_judge_model_bypasses_profile():
+    """Judge role must bypass fast/quality profile — always uses dedicated or primary."""
+    from src.core.config import Settings, LLMRuntimeSettings
+
+    llm = LLMRuntimeSettings(profile="fast")
+    s = Settings(llm=llm)
+    # With profile=fast, routing goes to secondary — but judge must NOT
+    judge_model = s.resolve_llm_model(role="judge", profile="fast")
+    primary_model = s.resolve_llm_model(role="default", profile="quality")
+    # Judge should use primary model (no judge_model override set)
+    assert judge_model == primary_model
+
+
+def test_judge_model_no_namespace_leak():
+    """LLM_JUDGE_MODEL must not leak into fallback provider namespace."""
+    from src.core.config import Settings, LLMRuntimeSettings
+
+    llm = LLMRuntimeSettings(judge_model="some-ollama-model", primary_provider="ollama")
+    s = Settings(llm=llm)
+    # Resolving judge for fallback provider should NOT use judge_model
+    # (it belongs to ollama namespace, not google_ai)
+    judge_on_fallback = s.resolve_llm_model(role="judge", provider="google_ai")
+    google_primary = s._resolve_provider_primary_model("google_ai")
+    assert judge_on_fallback == google_primary
+
+
+def test_evidence_summary_uses_content_source_score_only():
+    """Main judge evidence summary must use content+source+score, not selected_sentences."""
+    import inspect
+    from src.orchestrators.main import MainOrchestrator
+
+    source = inspect.getsource(MainOrchestrator._apply_main_judge_gate)
+    # Must have the NOTE explaining RAGSource doesn't carry selected_sentences
+    assert "RAGSource.metadata does NOT carry selected_sentences" in source
+    # Must NOT try to read selected_sentences from metadata
+    assert 'metadata.get("selected_sentences"' not in source
+    assert 'metadata.get("extracted_facts"' not in source

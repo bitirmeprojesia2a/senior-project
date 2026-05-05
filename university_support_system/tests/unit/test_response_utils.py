@@ -3,6 +3,7 @@
 from src.core.constants import Department
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.orchestrators.response_utils import (
+    append_generation_summary,
     clean_final_answer,
     compose_department_answers,
     filter_low_confidence_responses,
@@ -24,6 +25,24 @@ def test_clean_final_answer_removes_foreign_headings_and_english_lines():
     assert "registration is canceled" not in cleaned
     assert "å…³äº" not in cleaned
     assert "Staj defterini teslim etme suresi" in cleaned
+
+
+def test_append_generation_summary_shows_global_llm_synthesis():
+    response = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Kaynakli ara cevap",
+        sources=[RAGSource(content="kaynak", score=0.9)],
+        generation_mode="rag",
+    )
+
+    answer = append_generation_summary(
+        "Final cevap",
+        [response],
+        used_global_synthesis=True,
+    )
+
+    assert "- Final Sentez: LLM" in answer
+    assert "- RAG" in answer
 
 
 def test_clean_final_answer_replaces_common_foreign_words_inline():

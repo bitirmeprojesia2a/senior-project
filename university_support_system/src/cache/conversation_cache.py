@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 _KEY_PREFIX = "conv:state:"
 _DEFAULT_TTL_SECONDS = settings.conversation.ttl_minutes * 60
-_CACHE_QUERY_MAX_CHARS = 180
-_CACHE_ANSWER_MAX_CHARS = 220
+_CACHE_QUERY_MAX_CHARS = 280
+_CACHE_ANSWER_MAX_CHARS = 360
 _CACHE_SOURCE_REF_MAX_CHARS = 80
 
 _redis_pool: aioredis.Redis | None = None

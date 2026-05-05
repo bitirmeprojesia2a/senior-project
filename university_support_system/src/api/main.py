@@ -298,8 +298,8 @@ def _build_generic_otp_request_response() -> OTPRequestResponse:
     return OTPRequestResponse(
         success=True,
         message=(
-            "Bilgileriniz dogruysa dogrulama kodu ogrenci e-posta adresinize gonderilecektir. "
-            "Lutfen e-posta kutunuzu kontrol edin."
+            "Bilgileriniz doğruysa doğrulama kodu öğrenci e-posta adresinize gönderilecektir. "
+            "Lütfen e-posta kutunuzu kontrol edin."
         ),
         expires_at=expires_at,
         delivery_channel="email_smtp",
@@ -543,12 +543,12 @@ def create_app() -> FastAPI:
         if result is None or not result["success"]:
             raise HTTPException(
                 status_code=400,
-                detail="Ogrenci numarasi veya dogrulama kodu gecersiz.",
+                detail="Öğrenci numarası veya doğrulama kodu geçersiz.",
             )
 
         return OTPVerifyResponse(
             success=True,
-            message="OTP dogrulandi.",
+            message="OTP doğrulandı.",
             student_id=result["student_db_id"],
             student_number=result["student_number"],
             full_name=result["full_name"],
@@ -575,7 +575,7 @@ def create_app() -> FastAPI:
             slack_user_id=payload.slack_user_id,
         )
         if resolved is None:
-            raise HTTPException(status_code=404, detail="Aktif dogrulama baglami bulunamadi.")
+            raise HTTPException(status_code=404, detail="Aktif doğrulama bağlamı bulunamadı.")
 
         return AuthResolveResponse(
             is_authenticated=True,
@@ -596,8 +596,8 @@ def create_app() -> FastAPI:
     ) -> LogoutResponse:
         invalidated = await auth_service.invalidate_session(payload.session_token)
         if not invalidated:
-            raise HTTPException(status_code=404, detail="Oturum bulunamadi.")
-        return LogoutResponse(success=True, message="Oturum kapatildi.")
+            raise HTTPException(status_code=404, detail="Oturum bulunamadı.")
+        return LogoutResponse(success=True, message="Oturum kapatıldı.")
 
     @app.post("/query", response_model=UserQueryResponse, tags=["query"])
     async def query(
@@ -724,7 +724,7 @@ def create_app() -> FastAPI:
         if department_orchestrator is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"{payload.department.value} icin aktif departman orkestratoru bulunamadi.",
+                detail=f"{payload.department.value} için aktif departman orkestratörü bulunamadı.",
             )
 
         context_id, resolved = await resolve_dispatch_context(

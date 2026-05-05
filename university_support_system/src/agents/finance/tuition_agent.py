@@ -80,8 +80,8 @@ class TuitionAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        "Kisisel sorunuza yanit verebilmem icin kimliginizi dogrulamam gerekiyor. "
-                        "Dogrulamayi ogrenci e-posta adresinize gonderecegim tek kullanimlik kod ile tamamlayabilirsiniz."
+                        "Kişisel sorunuza yanıt verebilmem için kimliğinizi doğrulamam gerekiyor. "
+                        "Doğrulamayı öğrenci e-posta adresinize göndereceğim tek kullanımlık kod ile tamamlayabilirsiniz."
                     ),
                     success=False,
                     error="authentication_required",
@@ -90,8 +90,8 @@ class TuitionAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        "Kisisel harc bilgilerin icin oturumda ogrenci numarasi gerekiyor. "
-                        "Lutfen giris yapip tekrar deneyin."
+                        "Kişisel harç bilgilerin için oturumda öğrenci numarası gerekiyor. "
+                        "Lütfen giriş yapıp tekrar deneyin."
                     ),
                     success=False,
                     error="student_id_required",
@@ -101,7 +101,7 @@ class TuitionAgent(BaseSpecialistAgent):
             if snapshot is None:
                 return DepartmentResponse(
                     department=self.department,
-                    answer="Ogrenci kaydi bulunamadi.",
+                    answer="Öğrenci kaydı bulunamadı.",
                     success=False,
                     error="student_not_found",
                 )
@@ -117,9 +117,9 @@ class TuitionAgent(BaseSpecialistAgent):
             return DepartmentResponse(
                 department=self.department,
                 answer=(
-                    "Ogrenim ucreti ogrenci turune ve birime gore degisiyor. "
-                    "Dogru ucreti paylasabilmem icin Turk ogrenci misiniz, "
-                    "uluslararasi ogrenci misiniz? Mumkunse fakulte veya bolum bilginizi de ekleyin."
+                    "Öğrenim ücreti öğrenci türüne ve birime göre değişiyor. "
+                    "Doğru ücreti paylaşabilmem için Türk öğrenci misiniz, "
+                    "uluslararası öğrenci misiniz? Mümkünse fakülte veya bölüm bilginizi de ekleyin."
                 ),
                 generation_mode="kural",
                 success=False,

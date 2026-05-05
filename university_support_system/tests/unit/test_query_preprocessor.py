@@ -171,6 +171,17 @@ class TestSynonymExpansion:
         assert "\u00e7ift ana dal" in cap_result.lower()
         assert "ba\u011f\u0131l de\u011ferlendirme y\u00f6nergesi" in grading_result.lower()
 
+    def test_negated_horizontal_transfer_does_not_poison_cap_query(self):
+        qp = QueryPreprocessor()
+        result = qp.preprocess(
+            "Yatay ge\u00e7i\u015fi sormuyorum \u00e7ap\u0131 soruyorum sana"
+        )
+        lowered = result.lower()
+
+        assert "kurum i\u00e7i yatay ge\u00e7i\u015f" not in lowered
+        assert "kurumlar aras\u0131 yatay ge\u00e7i\u015f" not in lowered
+        assert "\u00e7ift ana dal" in lowered or "ikinci lisans" in lowered
+
 
 class TestQueryTypeDetection:
     """Sorgu tipi tespiti testleri."""

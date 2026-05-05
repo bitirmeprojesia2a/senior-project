@@ -72,12 +72,12 @@ class InternshipAgent(BaseSpecialistAgent):
             return DepartmentResponse(
                 department=self.department,
                 answer=(
-                    "Matematik ogretmenligi gibi ogretmenlik programlari icin staj/ogretmenlik uygulamasi "
-                    "yukumlulugunu bu kaynaklarla bolum bazinda net dogrulayamiyorum. Bu nedenle muhendislik "
-                    "staj belgelerine gore kesin hukum vermem dogru olmaz. En dogru belge ve surec icin "
-                    "Egitim Fakultesi ilgili bolum sekreterligi veya akademik danismaninizla gorusun; varsa "
-                    "ogretmenlik uygulamasi/staj formu birimin web sayfasi, bolum duyurulari veya OMU Kalem "
-                    "formlari uzerinden paylasilir."
+                    "Matematik öğretmenliği gibi öğretmenlik programları için staj/öğretmenlik uygulaması "
+                    "yükümlülüğünü bu kaynaklarla bölüm bazında net doğrulayamıyorum. Bu nedenle mühendislik "
+                    "staj belgelerine göre kesin hüküm vermem doğru olmaz. En doğru belge ve süreç için "
+                    "Eğitim Fakültesi ilgili bölüm sekreterliği veya akademik danışmanınızla görüşün; varsa "
+                    "öğretmenlik uygulaması/staj formu birimin web sayfası, bölüm duyuruları veya OMU Kalem "
+                    "formları üzerinden paylaşılır."
                 ),
                 sources=[],
                 generation_mode="kural",

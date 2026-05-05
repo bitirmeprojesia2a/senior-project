@@ -114,8 +114,8 @@ class RegistrationAgent(BaseSpecialistAgent):
             return DepartmentResponse(
                 department=self.department,
                 answer=(
-                    "Kayit donemi tarihleri su anda veritabaninda tanimli degil. "
-                    "En guncel tarih bilgisi yayinlandiginda dogrudan paylasabilirim."
+                    "Kayıt dönemi tarihleri şu anda veritabanında tanımlı değil. "
+                    "En güncel tarih bilgisi yayımlandığında doğrudan paylaşabilirim."
                 ),
                 db_data={"registration_period_configured": False},
                 sources=[],
@@ -234,8 +234,8 @@ class RegistrationAgent(BaseSpecialistAgent):
                 prefix = f"{db_context}\n\n" if db_context else ""
                 return (
                     prefix
-                    + "Bu konuda ogrenci isleri kaynaklarinda dogrudan teyit edebildigim net bir cevap bulamadim. "
-                    "Soruyu biraz daha acik sorarsan zaman, belge veya kosul bilgisini daha dogru daraltabilirim."
+                    + "Bu konuda öğrenci işleri kaynaklarında doğrudan teyit edebildiğim net bir cevap bulamadım. "
+                    "Soruyu biraz daha açık sorarsan zaman, belge veya koşul bilgisini daha doğru daraltabilirim."
                 )
 
         content = self._compact_source_content(preferred.get("content", ""), max_len=None)

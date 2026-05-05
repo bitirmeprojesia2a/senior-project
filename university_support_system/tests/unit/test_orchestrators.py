@@ -1,5 +1,6 @@
 """Orchestrator testleri."""
 
+import asyncio
 import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -570,10 +571,41 @@ def test_announcement_latest_fallback_is_only_for_generic_latest_queries():
 
 def test_announcement_follow_up_stops_on_clear_topic_shift():
     assert should_keep_announcement_follow_up("Detay linki var mi?")
+    assert should_keep_announcement_follow_up("2. duyuruyu ozetle")
     assert not should_keep_announcement_follow_up("Staj basvurusu nasil yapilir?")
     assert not should_keep_announcement_follow_up("Kayit tarihleri ne zaman?")
     assert not should_keep_announcement_follow_up("Final sinavlari ne zaman?")
     assert not should_allow_announcement_latest_fallback("Sinav programi var mi?")
+
+
+def test_response_debug_summary_can_be_hidden(monkeypatch):
+    monkeypatch.setattr(settings.server, "response_debug_enabled", False)
+    response = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="Kimlik kartı için başvuru yapmalısınız.",
+        sources=[
+            RAGSource(
+                content="Kimlik kartı yönergesi",
+                score=0.9,
+                metadata={"source": "kimlik_kartı_yönergesi.pdf"},
+            )
+        ],
+        generation_mode="rag",
+    )
+
+    user_response = build_final_user_response(
+        answer=response.answer,
+        responses=[response],
+        department_responses=[response],
+        context_id="ctx-debug-hidden",
+        response_time_ms=1.0,
+        student_full_name=None,
+    )
+
+    assert "Üretim Türü:" not in user_response.answer
+    assert "Uretim Turu:" not in user_response.answer
+    assert "Kaynak Özeti:" not in user_response.answer
+    assert "Kaynak Ozeti:" not in user_response.answer
 
 
 def test_finance_query_augmentation_does_not_override_explicit_fee_unit():
@@ -608,8 +640,8 @@ def test_build_missing_slot_clarification_uses_llm_slot_metadata():
     message = build_missing_slot_clarification_message(intent=intent, metadata={})
 
     assert message is not None
-    assert "Turk ogrenci" in message
-    assert "uluslararasi ogrenci" in message
+    assert "Türk öğrenci" in message
+    assert "uluslararası öğrenci" in message
 
 
 def test_build_missing_slot_clarification_ignores_session_filled_slots():
@@ -905,7 +937,9 @@ async def test_main_orchestrator_records_canonical_memory_answer_without_contact
     record_kwargs = conversation_service.record_turn.await_args.kwargs
     assert CONTACT_SUGGESTION not in record_kwargs["assistant_answer"]
     assert "Kaynak Ozeti:" not in record_kwargs["assistant_answer"]
+    assert "Kaynak Özeti:" not in record_kwargs["assistant_answer"]
     assert "Uretim Turu:" not in record_kwargs["assistant_answer"]
+    assert "Üretim Türü:" not in record_kwargs["assistant_answer"]
 
 
 @pytest.mark.asyncio
@@ -944,9 +978,101 @@ async def test_main_orchestrator_skips_related_announcements_for_contact_queries
 
     assert "Program Isleri Ofisi" in response.answer
     assert "Ilgili duyurular" not in response.answer
-    assert "Kaynak Ozeti:" in response.answer
+    assert "Kaynak Özeti:" in response.answer
     assert "Ofis iletisim kaydi: Akademik Programlar" in response.answer
     announcement_agent.handle_task.assert_not_awaited()
+    task = academic_orchestrator.handle_task.await_args.args[0]
+    assert task.metadata["final_answer_owner"] == "department_orchestrator"
+    assert task.metadata["specialist_response_mode"] == "answer"
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_marks_single_department_source_queries_for_main_final_answer():
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.STUDENT_AFFAIRS],
+            confidence=0.9,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Kaynakli ogrenci isleri sorusu",
+            task_type=TaskType.REGISTRATION_QUERY,
+            intent=IntentAnalysis(
+                primary_intent="registration",
+                is_personal=False,
+                target_capability="none",
+            ),
+        )
+    )
+    response = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="Kaynak bilgisi final cevap için hazırlandı.",
+        sources=[
+            RAGSource(
+                content="Ders kaydi UBYS uzerinden yapilir.",
+                score=0.86,
+                metadata={"source": "sik_sorulan_sorular.txt", "score_type": "reranker"},
+            )
+        ],
+        metadata={
+            "evidence_packet": {
+                "version": 1,
+                "department": "student_affairs",
+                "final_answer_owner": "main_orchestrator",
+                "specialist_response_mode": "evidence_packet",
+                "confidence": "high",
+                "facts": [
+                    {
+                        "claim": "Ders kaydi UBYS uzerinden yapilir.",
+                        "source": "sik_sorulan_sorular.txt",
+                        "score": 0.86,
+                        "support": "Ders kaydi UBYS uzerinden yapilir.",
+                    }
+                ],
+                "selected_sources": [
+                    {
+                        "source": "sik_sorulan_sorular.txt",
+                        "score": 0.86,
+                        "snippet": "Ders kaydi UBYS uzerinden yapilir.",
+                    }
+                ],
+            }
+        },
+        generation_mode="rag",
+    )
+    student_orchestrator = _FakeDepartmentOrchestrator(
+        Department.STUDENT_AFFAIRS,
+        response.answer,
+    )
+    student_orchestrator.handle_task = AsyncMock(
+        side_effect=lambda task, *args, **kwargs: build_department_response_task(
+            response,
+            request_task=task,
+            emitter_id=f"{Department.STUDENT_AFFAIRS.value}_orchestrator",
+            emitter_name=f"{Department.STUDENT_AFFAIRS.value} Orchestrator",
+        )
+    )
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(return_value="Final cevap.")
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=307)
+    telemetry.finalize_query_log = AsyncMock()
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.STUDENT_AFFAIRS: student_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        llm_service=llm_service,
+    )
+
+    await orchestrator.handle_query("Ders kaydi nasil yapilir?", context_id="ctx-main-owner")
+
+    task = student_orchestrator.handle_task.await_args.args[0]
+    assert task.metadata["final_answer_owner"] == "main_orchestrator"
+    assert task.metadata["specialist_response_mode"] == "evidence_packet"
+    llm_service.generate.assert_awaited()
 
 
 @pytest.mark.asyncio
@@ -1190,6 +1316,102 @@ def test_build_global_synthesis_prompt_generates_prompt_for_single_department():
     assert "Kullanici sorusu" in prompt
 
 
+def test_build_global_synthesis_prompt_prefers_evidence_packet():
+    prompt, meaningful = build_global_synthesis_prompt(
+        "CAP basvurusu icin GANO sarti nedir?",
+        [
+            DepartmentResponse(
+                department=Department.ACADEMIC_PROGRAMS,
+                answer="Ara cevap burada yalnizca destekleyici ozettir.",
+                sources=[
+                    RAGSource(
+                        content="Ham kaynak metni final prompt icin ikincil kalmali.",
+                        score=0.81,
+                        metadata={"source": "ham_kaynak.pdf"},
+                    )
+                ],
+                metadata={
+                    "evidence_packet": {
+                        "version": 1,
+                        "department": "academic_programs",
+                        "query_interpretation": "CAP GANO kosulu soruluyor.",
+                        "confidence": "high",
+                        "facts": [
+                            {
+                                "claim": "CAP basvurusu icin GANO en az 2.00 olmalidir.",
+                                "source": "yonerge_cift_anadal_yandal.pdf",
+                                "score": 0.91,
+                                "support": "Basvuru icin genel not ortalamasi 2.00 ve uzeri olmalidir.",
+                            }
+                        ],
+                        "limits": ["Basvuru tarihleri bu kaynakta yer almiyor."],
+                        "selected_sources": [
+                            {
+                                "source": "yonerge_cift_anadal_yandal.pdf",
+                                "score": 0.91,
+                                "snippet": "GANO 2.00 ve uzeri olmalidir.",
+                            }
+                        ],
+                    }
+                },
+            )
+        ],
+    )
+
+    assert len(meaningful) == 1
+    assert "evidence_packet" in prompt
+    assert "CAP basvurusu icin GANO en az 2.00 olmalidir." in prompt
+    assert "Basvuru tarihleri bu kaynakta yer almiyor." in prompt
+    assert "yonerge_cift_anadal_yandal.pdf" in prompt
+
+
+def test_global_synthesis_marks_evidence_packet_mode_as_non_final_answer():
+    prompt, meaningful = build_global_synthesis_prompt(
+        "Devam kosulu nedir?",
+        [
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Kaynak bilgisi final cevap için hazırlandı.",
+                sources=[
+                    RAGSource(
+                        content="Devam kosulu teorik derslerde yuzde 70 olarak uygulanir.",
+                        score=0.88,
+                        metadata={"source": "yonetmelik.pdf"},
+                    )
+                ],
+                metadata={
+                    "evidence_packet": {
+                        "version": 1,
+                        "department": "student_affairs",
+                        "final_answer_owner": "main_orchestrator",
+                        "specialist_response_mode": "evidence_packet",
+                        "confidence": "high",
+                        "facts": [
+                            {
+                                "claim": "Devam kosulu teorik derslerde yuzde 70 olarak uygulanir.",
+                                "source": "yonetmelik.pdf",
+                                "score": 0.88,
+                                "support": "Devam kosulu teorik derslerde yuzde 70 olarak uygulanir.",
+                            }
+                        ],
+                        "selected_sources": [
+                            {
+                                "source": "yonetmelik.pdf",
+                                "score": 0.88,
+                                "snippet": "Devam kosulu teorik derslerde yuzde 70 olarak uygulanir.",
+                            }
+                        ],
+                    }
+                },
+            )
+        ],
+    )
+
+    assert len(meaningful) == 1
+    assert "Uzman ajan final cevap yazmadi" in prompt
+    assert "Devam kosulu teorik derslerde yuzde 70 olarak uygulanir." in prompt
+
+
 def test_global_synthesis_accepts_context_required_clarification_response():
     responses = [
         DepartmentResponse(
@@ -1363,7 +1585,7 @@ def test_filter_low_confidence_responses_drops_no_source_no_info_branch():
 
 
 @pytest.mark.asyncio
-async def test_compose_final_answer_skips_global_synthesis_for_single_department_response():
+async def test_compose_final_answer_uses_final_refinement_for_single_department_response():
     llm_service = AsyncMock()
     llm_service.generate = AsyncMock(return_value="Final LLM cevabi.")
     orchestrator = MainOrchestrator(
@@ -1396,9 +1618,69 @@ async def test_compose_final_answer_skips_global_synthesis_for_single_department
         llm_profile="balanced",
     )
 
+    assert used_global_synthesis is True
+    assert answer.startswith("Final LLM cevabi.")
+    llm_service.generate.assert_awaited_once()
+    assert llm_service.generate.await_args.kwargs["model_role"] == "final_refinement"
+
+
+@pytest.mark.asyncio
+async def test_compose_final_answer_uses_evidence_packet_fallback_when_final_llm_fails():
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(side_effect=asyncio.TimeoutError())
+    orchestrator = MainOrchestrator(
+        router=AsyncMock(),
+        department_orchestrators={},
+        announcement_agent=_FakeAgent("announcement", Department.STUDENT_AFFAIRS),
+        telemetry_service=AsyncMock(),
+        llm_service=llm_service,
+    )
+
+    responses = [
+        DepartmentResponse(
+            department=Department.STUDENT_AFFAIRS,
+            answer="Kaynak bilgisi final cevap için hazırlandı.",
+            sources=[
+                RAGSource(
+                    content="Devam kosulu teorik derslerde yuzde 70, uygulamalarda yuzde 80 olarak uygulanir.",
+                    score=0.88,
+                    metadata={"source": "yonetmelik.pdf", "score_type": "reranker"},
+                )
+            ],
+            success=True,
+            generation_mode="rag",
+            metadata={
+                "final_answer_owner": "main_orchestrator",
+                "specialist_response_mode": "evidence_packet",
+                "evidence_packet": {
+                    "version": 1,
+                    "department": "student_affairs",
+                    "final_answer_owner": "main_orchestrator",
+                    "specialist_response_mode": "evidence_packet",
+                    "confidence": "high",
+                    "facts": [
+                        {
+                            "claim": "Devam kosulu teorik derslerde yuzde 70, uygulamalarda yuzde 80 olarak uygulanir.",
+                            "source": "yonetmelik.pdf",
+                            "score": 0.88,
+                            "support": "Devam kosulu teorik derslerde yuzde 70, uygulamalarda yuzde 80 olarak uygulanir.",
+                        }
+                    ],
+                },
+            },
+        )
+    ]
+
+    answer, used_global_synthesis = await orchestrator._compose_final_answer(
+        query="Devam kosulu nedir?",
+        responses=responses,
+        llm_profile="balanced",
+    )
+
     assert used_global_synthesis is False
-    assert "Ders kaydi ogrenci bilgi sistemi uzerinden yapilir." in answer
-    llm_service.generate.assert_not_awaited()
+    assert "Kaynak bilgisi final cevap" not in answer
+    assert "Devam kosulu teorik derslerde yuzde 70" in answer
+    llm_service.generate.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -1515,7 +1797,7 @@ async def test_main_orchestrator_returns_clarification_when_no_department_select
     response = await orchestrator.handle_query("Merhaba", context_id="ctx-4")
 
     assert "belirleyemedim" in response.answer
-    assert "Ogrenci Isleri" in response.answer
+    assert "Öğrenci İşleri" in response.answer
     assert response.departments_involved == []
     announcement_agent.handle_task.assert_not_awaited()
 
@@ -1560,8 +1842,8 @@ async def test_main_orchestrator_uses_missing_slot_clarification_before_dispatch
         context_id="ctx-missing-slot",
     )
 
-    assert "Turk ogrenci" in response.answer
-    assert "uluslararasi ogrenci" in response.answer
+    assert "Türk öğrenci" in response.answer
+    assert "uluslararası öğrenci" in response.answer
     assert response.departments_involved == [Department.FINANCE.value]
     finance_orchestrator.handle_task.assert_not_awaited()
 
@@ -1839,7 +2121,21 @@ async def test_main_orchestrator_does_not_question_cache_announcement_queries(mo
 async def test_main_orchestrator_normalizes_short_announcement_before_routing(monkeypatch):
     monkeypatch.setattr(settings.llm, "query_normalization_enabled", True)
     router = AsyncMock()
-    router.route = AsyncMock(side_effect=AssertionError("announcement should short-circuit"))
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[],
+            confidence=0.91,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Duyuru sorgusu",
+            task_type=None,
+            intent=IntentAnalysis(
+                primary_intent="announcement",
+                target_capability="announcement",
+                confidence=0.91,
+            ),
+        )
+    )
     llm_service = AsyncMock()
     llm_service.generate = AsyncMock(
         return_value=(
@@ -1888,7 +2184,7 @@ async def test_main_orchestrator_normalizes_short_announcement_before_routing(mo
 
     assert "Guncel duyuru" in response.answer
     assert response.departments_involved == ["announcement"]
-    router.route.assert_not_awaited()
+    router.route.assert_awaited_once()
     announcement_agent.handle_task.assert_awaited_once()
 
 
@@ -1992,8 +2288,8 @@ async def test_main_orchestrator_explicit_event_query_skips_conversation_resolut
     )
 
     assert "etkinlik bulamadim" in response.answer
-    assert "Kaynak Ozeti:" in response.answer
-    assert "etkinlik aramasi" in response.answer
+    assert "Kaynak Özeti:" in response.answer
+    assert "etkinlik araması" in response.answer
     assert response.departments_involved == ["event"]
     router.route.assert_not_awaited()
     conversation_service.resolve_query.assert_not_awaited()

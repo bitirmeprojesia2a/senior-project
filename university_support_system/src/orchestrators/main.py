@@ -32,6 +32,7 @@ from src.db.telemetry import (
 )
 from src.llm.llm_service import LLMService, LLMServiceError
 from src.llm.prompt_templates import MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT
+from src.quality.judge import run_judge
 from src.orchestrators.announcement_utils import (
     build_announcement_response,
     request_announcement_response,
@@ -44,6 +45,7 @@ from src.orchestrators.query_policy import (
     CLARIFICATION_MESSAGE,
     build_missing_slot_clarification_message,
     looks_like_announcement_query,
+    looks_like_contact_query,
     looks_like_event_query,
     requires_academic_department_clarification,
     should_allow_announcement_latest_fallback,
@@ -60,6 +62,7 @@ from src.orchestrators.query_normalization import (
 from src.orchestrators.response_utils import compose_department_answers
 from src.orchestrators.response_utils import filter_low_confidence_responses
 from src.orchestrators.synthesis_utils import (
+    build_evidence_packet_fallback_answer,
     build_global_synthesis_prompt,
     responses_need_contact_suggestion,
 )
@@ -252,24 +255,6 @@ class MainOrchestrator:
                 effective_query = conversation_resolution.effective_query
                 query_normalization = unchanged_query(effective_query)
 
-                if looks_like_announcement_query(effective_query):
-                    return await self._handle_announcement_short_circuit(
-                        query=effective_query,
-                        original_query=query,
-                        context_id=context_id,
-                        start_time=start_time,
-                        user_id=user_id,
-                        student_id=student_id,
-                        student_department=student_department,
-                        student_faculty=student_faculty,
-                        conversation_resolution=conversation_resolution,
-                        trace_metadata=trace,
-                        routing_reasoning=(
-                            "Duyuru short-circuit: sorgu duyuru odakli, "
-                            "router beklenmeden duyuru akisina yonlendirildi."
-                        ),
-                    )
-
                 pre_route_cache_lookup = evaluate_question_cache_lookup(
                     query=effective_query,
                     conversation_resolution=conversation_resolution,
@@ -341,9 +326,9 @@ class MainOrchestrator:
                                 )
                         return final_response
 
-                # ── Routing (normalization dahil) ──
+                # â”€â”€ Routing (normalization dahil) â”€â”€
                 # Routing LLM hem departman bilgilendirmesi hem canonical_query,
-                # primary_intent ve target_capability uretir — ayri normalization cagrisina gerek yok.
+                # primary_intent ve target_capability uretir â€” ayri normalization cagrisina gerek yok.
                 with profile_stage("main.router.route"):
                     routing = await self.router.route(
                         effective_query,
@@ -485,7 +470,7 @@ class MainOrchestrator:
                         },
                     )
 
-                # ── Duyuru short-circuit ──
+                # â”€â”€ Duyuru short-circuit â”€â”€
                 # Duyuru sorgulari router'a gitmeden dogrudan announcement-only akisa yonlendirilir.
                 # Ayrica onceki tur duyuru akisindan geldiginde (announcement_context=True)
                 # follow-up sorular da duyuru akisinda kalir.
@@ -547,6 +532,7 @@ class MainOrchestrator:
                             task_type=None,
                             faculty=announcement_scope["faculty"],
                             unit_name=announcement_scope["unit_name"],
+                            conversation_source_refs=conversation_resolution.source_hints,
                             allow_latest_fallback=should_allow_announcement_latest_fallback(
                                 effective_query
                             ),
@@ -648,6 +634,7 @@ class MainOrchestrator:
                             task_type=routing.task_type,
                             faculty=announcement_scope["faculty"],
                             unit_name=announcement_scope["unit_name"],
+                            conversation_source_refs=conversation_resolution.source_hints,
                             trace_metadata=trace,
                         )
                     if self.conversation_service is not None:
@@ -737,6 +724,18 @@ class MainOrchestrator:
                     )
 
                 intent = routing.intent
+                selected_department_count = len(set(routing.departments or []))
+                main_can_own_final_answer = (
+                    selected_department_count >= 1
+                    and not looks_like_contact_query(effective_query)
+                    and not looks_like_personal_data_query(effective_query)
+                    and not (intent.is_personal if intent else False)
+                )
+                final_answer_owner = (
+                    "main_orchestrator"
+                    if main_can_own_final_answer
+                    else "department_orchestrator"
+                )
                 metadata = {
                     "original_query": query,
                     "resolved_query": effective_query,
@@ -757,6 +756,10 @@ class MainOrchestrator:
                     "force_llm_synthesis": intent.force_llm_synthesis if intent else False,
                     "query_complexity": intent.complexity if intent else None,
                     "is_personal_query": intent.is_personal if intent else False,
+                    "final_answer_owner": final_answer_owner,
+                    "specialist_response_mode": (
+                        "evidence_packet" if final_answer_owner == "main_orchestrator" else "answer"
+                    ),
                     **trace,
                 }
 
@@ -812,6 +815,7 @@ class MainOrchestrator:
                             task_type=routing.task_type,
                             faculty=announcement_scope["faculty"],
                             unit_name=announcement_scope["unit_name"],
+                            conversation_source_refs=conversation_resolution.source_hints,
                             trace_metadata=trace,
                         )
                         responses.append(fallback)
@@ -835,6 +839,7 @@ class MainOrchestrator:
                                 task_type=routing.task_type,
                                 faculty=announcement_scope["faculty"],
                                 unit_name=announcement_scope["unit_name"],
+                                conversation_source_refs=conversation_resolution.source_hints,
                                 allow_latest_fallback=should_allow_announcement_latest_fallback(
                                     effective_query
                                 ),
@@ -853,16 +858,32 @@ class MainOrchestrator:
                         responses=filtered_responses,
                         llm_profile=llm_profile,
                     )
-                    memory_answer = build_memory_answer(answer=answer)
-                    final_response = self._build_user_query_response(
+
+                # â”€â”€ Post-synthesis judge quality gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                # Only runs when LLM_MAIN_JUDGE_ENABLED is true AND
+                # the answer used global synthesis or is multi-department risky.
+                if settings.llm.main_judge_enabled and (
+                    used_global_synthesis
+                    or len({r.department for r in filtered_responses if r.answer.strip()}) >= 2
+                ):
+                    answer = await self._apply_main_judge_gate(
+                        query=effective_query,
                         answer=answer,
                         responses=filtered_responses,
-                        department_responses=filtered_departments,
-                        context_id=context_id,
-                        start_time=start_time,
-                        student_full_name=student_full_name,
+                        llm_profile=llm_profile,
                         used_global_synthesis=used_global_synthesis,
                     )
+
+                memory_answer = build_memory_answer(answer=answer)
+                final_response = self._build_user_query_response(
+                    answer=answer,
+                    responses=filtered_responses,
+                    department_responses=filtered_departments,
+                    context_id=context_id,
+                    start_time=start_time,
+                    student_full_name=student_full_name,
+                    used_global_synthesis=used_global_synthesis,
+                )
                 with profile_stage("main.telemetry.finalize_success"):
                     await self.telemetry_service.finalize_query_log(
                         query_log_id=query_log_id,
@@ -1091,6 +1112,7 @@ class MainOrchestrator:
                 task_type=task_type,
                 faculty=announcement_scope["faculty"],
                 unit_name=announcement_scope["unit_name"],
+                conversation_source_refs=conversation_resolution.source_hints,
                 allow_latest_fallback=should_allow_announcement_latest_fallback(query),
                 trace_metadata=trace_metadata,
             )
@@ -1302,32 +1324,22 @@ class MainOrchestrator:
         if not should_use_global_synthesis(query=query, responses=responses):
             return self._compose_answers(responses), False
 
-        # Tek departman, specialist LLM zaten basarili cevap verdiyse
-        # gereksiz ikinci LLM cagrisindan kacin.
-        from src.orchestrators.response_utils import is_no_info_response
-        meaningful_responses = [r for r in responses if r.answer.strip()]
-        departments = {r.department for r in meaningful_responses}
-        if len(departments) < 2:
-            # Specialist zaten iyi bir cevap urduyse (no-info degilse) sentez atla
-            has_no_info = any(is_no_info_response(r) for r in meaningful_responses)
-            has_sources = any(r.sources for r in meaningful_responses)
-            if not has_no_info:
-                # Specialist LLM basarili — final refinement gereksiz
-                return self._compose_answers(responses), False
-            if not has_sources:
-                # Kaynak yok, sentez de bir sey yapamazdi
-                return self._compose_answers(responses), False
-            # No-info + kaynak var → final refinement ile LLM'e gonder
-
+        # Source-backed answers are refined here even for a single department.
+        # If final refinement fails, the specialist answer remains the fallback.
         synthesized = await self._synthesize_department_answers(
             query=query,
             responses=responses,
             llm_profile=llm_profile,
         )
         if not synthesized:
+            fallback = build_evidence_packet_fallback_answer(responses)
+            if fallback:
+                if responses_need_contact_suggestion(responses):
+                    fallback += CONTACT_SUGGESTION
+                return fallback, False
             return self._compose_answers(responses), False
 
-        # Claim guard on global synthesis — use filtered_responses' sources
+        # Claim guard on global synthesis â€” use filtered_responses' sources
         try:
             from src.quality.claim_guard import guard_answer as _guard_answer
             from src.quality.evidence import extract_evidence_items, EvidenceItem
@@ -1419,3 +1431,129 @@ class MainOrchestrator:
                 type(exc).__name__,
             )
             return None
+
+    async def _apply_main_judge_gate(
+        self,
+        *,
+        query: str,
+        answer: str,
+        responses: list[DepartmentResponse],
+        llm_profile: str | None = None,
+        used_global_synthesis: bool = False,
+    ) -> str:
+        """Run the LLM-as-a-Judge quality gate on the final composed answer.
+
+        Only runs on risky answers. Maximum 1 repair loop.
+        Returns the (possibly repaired) answer string.
+        """
+        from src.quality.answer_filter import check_answer_quality
+
+        # Pre-check: foreign token suspicion
+        quality = check_answer_quality(answer)
+        has_foreign_suspicion = quality.needs_rewrite and bool(quality.bad_tokens)
+
+        # Multi-department detection
+        is_multi_department = len({r.department for r in responses if r.answer.strip()}) >= 2
+
+        # Build structured evidence summary for judge
+        # NOTE: RAGSource.metadata does NOT carry selected_sentences or
+        # extracted_facts â€” those live on EvidenceItem objects which are not
+        # available at this stage.  We use content + source name + score only.
+        evidence_parts: list[str] = []
+        for resp in responses:
+            if not resp.sources:
+                continue
+            for s in resp.sources[:3]:
+                source_name = s.metadata.get("source", s.metadata.get("filename", ""))
+                score_str = f"skor={s.score:.2f}" if s.score else ""
+                entry = f"[{resp.department.value}/{source_name}] {score_str}"
+                entry += f"\n  \u0130\u00e7erik: {s.content[:500]}"
+                evidence_parts.append(entry)
+        evidence_summary = "\n\n".join(evidence_parts)[:2000]
+
+        # Intent coverage check
+        intent_coverage_is_low = False
+        missing_intents: list[str] = []
+        try:
+            from src.quality.intent_coverage import compute_intent_coverage
+            coverage = compute_intent_coverage(query, [r.answer for r in responses if r.answer.strip()])
+            intent_coverage_is_low = coverage.is_low
+            missing_intents = coverage.uncovered
+        except Exception:
+            pass
+
+        judge_result = await run_judge(
+            query=query,
+            answer=answer,
+            evidence_summary=evidence_summary,
+            llm_service=self.llm_service,
+            llm_profile=llm_profile,
+            is_multi_department=is_multi_department,
+            has_foreign_suspicion=has_foreign_suspicion,
+            intent_coverage_is_low=intent_coverage_is_low,
+            missing_intents=missing_intents if missing_intents else None,
+        )
+
+        if judge_result is None:
+            # Not risky or judge failed â€” accept as-is
+            return answer
+
+        _profiler = get_current_profiler()
+        judge_meta = {
+            "approved": judge_result.approved,
+            "action": judge_result.action,
+            "failure_reason": judge_result.failure_reason,
+        }
+        if _profiler is not None:
+            _profiler.set_attribute("main_judge", judge_meta)
+
+        logger.info(
+            "main_judge_result approved=%s action=%s failure=%s",
+            judge_result.approved,
+            judge_result.action,
+            judge_result.failure_reason,
+        )
+
+        if judge_result.approved or judge_result.action == "accept":
+            return answer
+
+        # Main-level judge does NOT use ask_clarification â€” that is a
+        # specialist-agent concern.  Fall through to rewrite_only repair.
+        # retrieve_again is also downgraded to rewrite_only at this level
+        # because re-dispatching departments is too expensive post-synthesis.
+
+        if judge_result.action in ("rewrite_only", "retrieve_again", "ask_clarification"):
+            # Single repair attempt via LLM
+            repair_context = evidence_summary
+            if judge_result.suggested_query:
+                repair_context += f"\n\nJudge \u00f6nerisi: {judge_result.suggested_query}"
+
+            repair_prompt = (
+                f"Kullan\u0131c\u0131 sorusu:\n{query}\n\n"
+                f"\u00d6nceki cevap:\n{answer}\n\n"
+                f"Judge sorunu:\n{judge_result.failure_reason or judge_result.action}\n\n"
+                f"Kaynak ba\u011flam\u0131:\n{repair_context}\n\n"
+                "Cevab\u0131 ayn\u0131 kaynaklara dayanarak yeniden yaz. "
+                "Eksik alt niyetleri tamamla, yanl\u0131\u015f/desteklenmeyen iddialar\u0131 \u00e7\u0131kar, "
+                "say\u0131/tarih/\u00fccret/AKTS/GANO bilgilerini kaynakta ge\u00e7en \u015fekliyle koru. "
+                "Kaynakta yoksa uydurma. Do\u011fal T\u00fcrk\u00e7e d\u0131\u015f\u0131nda kelime kullanma."
+            )
+            try:
+                with profile_stage("main.judge_repair"):
+                    repaired = await asyncio.wait_for(
+                        self.llm_service.generate(
+                            prompt=repair_prompt,
+                            system=MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT,
+                            model_role="global_synthesis" if is_multi_department else "final_refinement",
+                            llm_profile=llm_profile,
+                        ),
+                        timeout=_GLOBAL_SYNTHESIS_TIMEOUT_SECONDS,
+                    )
+                if repaired and repaired.strip():
+                    logger.info("main_judge_repair_success original_len=%d repaired_len=%d", len(answer), len(repaired))
+                    return repaired.strip()
+            except (asyncio.TimeoutError, LLMServiceError) as exc:
+                logger.warning("main_judge_repair_failed reason=%s", type(exc).__name__)
+
+        # Fallback: return original answer
+        return answer

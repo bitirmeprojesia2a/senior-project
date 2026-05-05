@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from src.core.config import settings
 from src.core.profiling import get_current_profiler
 from src.db.schemas import DepartmentResponse, QueryDiagnostics, UserQueryResponse
 from src.orchestrators.query_policy import personalize_answer
@@ -145,8 +146,13 @@ def build_final_user_response(
                 surface_responses.append(response)
                 seen_surface_departments.update(response_departments)
     cleaned_answer = clean_final_answer(answer)
-    cleaned_answer = append_generation_summary(cleaned_answer, responses)
-    cleaned_answer = append_source_summary(cleaned_answer, responses)
+    if settings.server.response_debug_enabled:
+        cleaned_answer = append_generation_summary(
+            cleaned_answer,
+            responses,
+            used_global_synthesis=used_global_synthesis,
+        )
+        cleaned_answer = append_source_summary(cleaned_answer, responses)
     personalized_answer = personalize_answer(cleaned_answer, student_full_name)
     sources = [source for response in responses for source in response.sources]
     generation_modes = collect_generation_modes(responses)
@@ -183,7 +189,8 @@ def build_announcement_user_response(
 ) -> UserQueryResponse:
     departments_involved = [ANNOUNCEMENT_SURFACE_DEPARTMENT]
     answer = clean_final_answer(answer)
-    answer = append_source_summary_for_sources(answer, sources)
+    if settings.server.response_debug_enabled:
+        answer = append_source_summary_for_sources(answer, sources)
     return UserQueryResponse(
         answer=answer,
         departments_involved=departments_involved,
@@ -204,13 +211,15 @@ def build_event_user_response(
 ) -> UserQueryResponse:
     departments_involved = [EVENT_SURFACE_DEPARTMENT]
     answer = clean_final_answer(answer)
-    if sources:
+    if not settings.server.response_debug_enabled:
+        pass
+    elif sources:
         answer = append_source_summary_for_sources(answer, sources)
-    elif "Kaynak Ozeti:" not in answer:
+    elif "Kaynak Ozeti:" not in answer and "Kaynak Özeti:" not in answer:
         answer = (
             f"{answer.rstrip()}\n\n"
-            "Kaynak Ozeti:\n"
-            "- Veritabani kaydi: etkinlik aramasi (uygun kayit bulunamadi)"
+            "Kaynak Özeti:\n"
+            "- Veritabanı kaydı: etkinlik araması (uygun kayıt bulunamadı)"
         )
     return UserQueryResponse(
         answer=answer,

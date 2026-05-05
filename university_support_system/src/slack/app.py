@@ -136,13 +136,39 @@ async def _process_and_reply(
 ) -> None:
     """Slack event ack'ini bekletmeden cevabi arka planda uretir."""
 
+    # Immediately post a short placeholder so the user knows the bot is working.
+    thinking_text = "Cevab\u0131n\u0131z haz\u0131rlan\u0131yor, l\u00fctfen bekleyin..."
+    try:
+        thinking_msg = await client.chat_postMessage(
+            channel=message.channel_id,
+            text=thinking_text,
+            thread_ts=thread_ts,
+            unfurl_links=False,
+            unfurl_media=False,
+        )
+        thinking_ts = thinking_msg.get("message", {}).get("ts") or thinking_msg.get("ts")
+    except Exception:
+        thinking_ts = None
+
     try:
         replies = await service.handle_message(message)
     except Exception:
         logger.exception("slack_message_failed")
         replies = [
-            "Slack istegi islenirken hata olustu. Sistem ayakta ise birazdan tekrar deneyebilirsiniz."
+            "Slack iste\u011fi i\u015flenirken hata olu\u015ftu. Sistem ayaktaysa birazdan tekrar deneyebilirsiniz."
         ]
+
+    # Update the thinking placeholder with the first reply chunk
+    if thinking_ts and replies:
+        try:
+            await client.chat_update(
+                channel=message.channel_id,
+                ts=thinking_ts,
+                text=replies[0],
+            )
+            replies = replies[1:]
+        except Exception:
+            logger.debug("slack_thinking_update_failed", exc_info=True)
 
     for reply in replies:
         await client.chat_postMessage(

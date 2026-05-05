@@ -10,8 +10,8 @@ from src.db import AuthService, extract_profile_from_text
 from src.db.schemas import AuthenticatedUserQueryRequest, UserQueryResponse
 
 _PROFILE_PROMPT = (
-    "Merhaba, hos geldiniz. Size yardimci olabilmem icin oncelikle "
-    "ad soyad, ogrenci numarasi, bolum, fakulte ve ogrenci tipi/uyruk bilgilerinizi paylasin."
+    "Merhaba, hoş geldiniz. Size yardımcı olabilmem için öncelikle "
+    "ad soyad, öğrenci numarası, bölüm, fakülte ve öğrenci tipi/uyruk bilgilerinizi paylaşın."
 )
 
 

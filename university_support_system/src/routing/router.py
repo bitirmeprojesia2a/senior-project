@@ -144,7 +144,11 @@ class DepartmentRouter:
         queries remain deterministic (no LLM needed).
         """
         # Rule-based decision always computed — used as LLM fallback
-        rule_decision = self._apply_routing_overrides(query, self._route_with_rules(query))
+        rule_decision = self._apply_routing_overrides(
+            query,
+            self._route_with_rules(query),
+            llm_primary=False,
+        )
         rule_decision = self._apply_conversation_hints(
             query=query,
             decision=rule_decision,
@@ -172,6 +176,7 @@ class DepartmentRouter:
             llm_decision = self._apply_routing_overrides(
                 query,
                 await self._analyze_intent_with_llm(query, fallback=rule_decision, llm_profile=llm_profile),
+                llm_primary=True,
             )
             llm_decision = self._apply_conversation_hints(
                 query=query,
@@ -287,8 +292,22 @@ class DepartmentRouter:
     ) -> bool:
         return should_skip_llm_for_academic_context_query_by_policy(query, decision.departments)
 
-    def _apply_routing_overrides(self, query: str, decision: _RuleRoutingDecision) -> _RuleRoutingDecision:
+    def _apply_routing_overrides(
+        self,
+        query: str,
+        decision: _RuleRoutingDecision,
+        *,
+        llm_primary: bool = False,
+    ) -> _RuleRoutingDecision:
         overridden = self._compute_routing_override(query, decision)
+        if llm_primary and overridden is not decision and not overridden.authoritative:
+            logger.info(
+                "semantic_routing_override_skipped_after_llm query=%r original_departments=%s override_departments=%s",
+                query,
+                [dept.value for dept in decision.departments],
+                [dept.value for dept in overridden.departments],
+            )
+            return decision
         if overridden is decision or decision.intent is None or overridden.authoritative:
             return overridden
         merged_depts = list(overridden.departments)

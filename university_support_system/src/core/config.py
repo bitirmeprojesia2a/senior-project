@@ -21,6 +21,7 @@ LLMRole = Literal[
     "final_refinement",
     "specialist_synthesis",
     "global_synthesis",
+    "judge",
 ]
 
 
@@ -158,6 +159,8 @@ class LLMRuntimeSettings(BaseSettings):
     final_refinement_model: Optional[str] = None
     specialist_synthesis_model: Optional[str] = None
     global_synthesis_model: Optional[str] = None
+    judge_model: Optional[str] = None
+    main_judge_enabled: bool = True
     query_normalization_enabled: bool = True
     query_normalization_timeout_seconds: int = 6
     specialist_synthesis_timeout_seconds: int = 120
@@ -199,6 +202,7 @@ class EmbeddingSettings(BaseSettings):
     dimension: int = 1024
     batch_size: int = 32
     device: Literal["auto", "cpu", "cuda"] = "auto"
+    torch_dtype: Literal["auto", "float32", "float16", "bfloat16"] = "auto"
     cuda_fallback_to_cpu: bool = True
     local_files_only: bool = True
 
@@ -230,6 +234,11 @@ class RAGSettings(BaseSettings):
     llm_evidence_selection_min_candidates: int = 4
     llm_evidence_selection_max_candidates: int = 10
     llm_evidence_selection_max_selected: int = 5
+    source_relevance_penalty_enabled: bool = True
+    query_profile_source_bias_enabled: bool = True
+    education_level_penalty_enabled: bool = True
+    finance_source_penalty_enabled: bool = True
+    student_affairs_faq_bias_enabled: bool = True
 
 
 class RerankerSettings(BaseSettings):
@@ -246,6 +255,7 @@ class RerankerSettings(BaseSettings):
     max_length: int = 512
     batch_size: int = 16
     device: Literal["auto", "cpu", "cuda"] = "auto"
+    torch_dtype: Literal["auto", "float32", "float16", "bfloat16"] = "auto"
     local_files_only: bool = True
 
 
@@ -355,6 +365,7 @@ class ServerSettings(BaseSettings):
     runtime_label: str = "default"
     debug: bool = True
     log_level: str = "INFO"
+    response_debug_enabled: bool = True
     internal_api_key: Optional[str] = None
     warmup_enabled: bool = False
     warmup_include_reranker: bool = False
@@ -391,6 +402,7 @@ class ConversationSettings(BaseSettings):
     rewrite_timeout_seconds: int = 20
     max_source_refs: int = 5
     max_turns_in_summary: int = 6
+    max_recent_turns: int = 3
     max_answer_summary_chars: int = 320
     max_rolling_summary_chars: int = 900
 
@@ -650,6 +662,16 @@ class Settings(BaseSettings):
         primary_model = self._resolve_provider_primary_model(active_provider)
         secondary_model = self._resolve_provider_secondary_model(active_provider)
 
+        # Judge role bypasses profile entirely — it always uses a dedicated
+        # model or falls back to the *active* provider's primary model.
+        # LLM_JUDGE_MODEL is a global override that only applies to the
+        # primary provider to avoid leaking model names into a different
+        # provider namespace (e.g. Groq model name into Google AI).
+        if role == "judge":
+            if active_provider == self.llm.primary_provider and self.llm.judge_model:
+                return self.llm.judge_model
+            return primary_model
+
         if requested_profile == "fast":
             return secondary_model
         if requested_profile == "quality":
@@ -681,6 +703,7 @@ class Settings(BaseSettings):
             "final_refinement": self.llm.final_refinement_model,
             "specialist_synthesis": self.llm.specialist_synthesis_model,
             "global_synthesis": self.llm.global_synthesis_model,
+            "judge": self.llm.judge_model,
             "default": None,
         }
         return role_overrides.get(role)
@@ -743,6 +766,8 @@ class Settings(BaseSettings):
             "final_refinement": self.resolve_llm_model(role="final_refinement"),
             "specialist_synthesis": self.resolve_llm_model(role="specialist_synthesis"),
             "global_synthesis": self.resolve_llm_model(role="global_synthesis"),
+            "judge": self.resolve_llm_model(role="judge"),
+            "main_judge_enabled": str(self.llm.main_judge_enabled),
         }
 
     def configured_warmup_collections(self) -> list[str]:

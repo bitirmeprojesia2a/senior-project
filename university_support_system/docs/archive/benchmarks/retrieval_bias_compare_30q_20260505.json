@@ -1,0 +1,1659 @@
+{
+  "summary": {
+    "top1_changed": 2,
+    "top3_changed": 12,
+    "count": 30
+  },
+  "results": [
+    {
+      "query": "Önlisans öğrencisiyim ÇAP'a başvurabilir miyim?",
+      "department": "academic_programs",
+      "note": "CAP / onlisans",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 27041.4,
+      "no_bias_elapsed_ms": 2436.9,
+      "current": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8434,
+          "score_type": "reranker",
+          "reranker_score": 0.8434,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8287,
+          "score_type": "reranker",
+          "reranker_score": 0.8287,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.787,
+          "score_type": "reranker",
+          "reranker_score": 0.787,
+          "pre_rerank_score": 0.3333
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8434,
+          "score_type": "reranker",
+          "reranker_score": 0.8434,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8287,
+          "score_type": "reranker",
+          "reranker_score": 0.8287,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.787,
+          "score_type": "reranker",
+          "reranker_score": 0.787,
+          "pre_rerank_score": 0.3333
+        }
+      ]
+    },
+    {
+      "query": "Yaz okulunda sınıf kapasitesi kaç kişi olur?",
+      "department": "student_affairs",
+      "note": "yaz okulu kapasite",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 4962.5,
+      "no_bias_elapsed_ms": 2546.6,
+      "current": [
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "score": 0.486,
+          "score_type": "reranker",
+          "reranker_score": 0.486,
+          "pre_rerank_score": 0.2216
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.5221,
+          "score_type": "reranker",
+          "reranker_score": 0.5221,
+          "pre_rerank_score": 0.223
+        }
+      ]
+    },
+    {
+      "query": "Öğrenci kimlik kartım kayıp ne yapacağım?",
+      "department": "student_affairs",
+      "note": "kimlik karti",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2598.3,
+      "no_bias_elapsed_ms": 2602.3,
+      "current": [
+        {
+          "source": "kimlik_kartı_yönergesi.pdf",
+          "score": 0.6001,
+          "score_type": "reranker",
+          "reranker_score": 0.6001,
+          "pre_rerank_score": 0.3353
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "score": 0.4884,
+          "score_type": "reranker",
+          "reranker_score": 0.4884,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "kayıt_sildirme_formu_lisans_önlisans.pdf",
+          "score": 0.4859,
+          "score_type": "reranker",
+          "reranker_score": 0.4859,
+          "pre_rerank_score": 0.2903
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "kimlik_kartı_yönergesi.pdf",
+          "score": 0.6001,
+          "score_type": "reranker",
+          "reranker_score": 0.6001,
+          "pre_rerank_score": 0.3353
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "score": 0.4884,
+          "score_type": "reranker",
+          "reranker_score": 0.4884,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "kayıt_sildirme_formu_lisans_önlisans.pdf",
+          "score": 0.4859,
+          "score_type": "reranker",
+          "reranker_score": 0.4859,
+          "pre_rerank_score": 0.2903
+        }
+      ]
+    },
+    {
+      "query": "ÇAP başvurusu nasıl yapılır?",
+      "department": "academic_programs",
+      "note": "CAP basvuru",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2393.1,
+      "no_bias_elapsed_ms": 2398.2,
+      "current": [
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8638,
+          "score_type": "reranker",
+          "reranker_score": 0.8638,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8602,
+          "score_type": "reranker",
+          "reranker_score": 0.8602,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.853,
+          "score_type": "reranker",
+          "reranker_score": 0.853,
+          "pre_rerank_score": 0.3755
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8638,
+          "score_type": "reranker",
+          "reranker_score": 0.8638,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8602,
+          "score_type": "reranker",
+          "reranker_score": 0.8602,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.853,
+          "score_type": "reranker",
+          "reranker_score": 0.853,
+          "pre_rerank_score": 0.3755
+        }
+      ]
+    },
+    {
+      "query": "ÇAP not ortalaması kaç olmalı?",
+      "department": "academic_programs",
+      "note": "CAP not ortalamasi",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2418.7,
+      "no_bias_elapsed_ms": 2596.6,
+      "current": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8585,
+          "score_type": "reranker",
+          "reranker_score": 0.8585,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8572,
+          "score_type": "reranker",
+          "reranker_score": 0.8572,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8551,
+          "score_type": "reranker",
+          "reranker_score": 0.8551,
+          "pre_rerank_score": 0.25
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8585,
+          "score_type": "reranker",
+          "reranker_score": 0.8585,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8572,
+          "score_type": "reranker",
+          "reranker_score": 0.8572,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8551,
+          "score_type": "reranker",
+          "reranker_score": 0.8551,
+          "pre_rerank_score": 0.25
+        }
+      ]
+    },
+    {
+      "query": "Ders kaydı ne zaman başlıyor?",
+      "department": "student_affairs",
+      "note": "ders kaydi tarih",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2389.1,
+      "no_bias_elapsed_ms": 2399.4,
+      "current": [
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.7782,
+          "score_type": "reranker",
+          "reranker_score": 0.7782,
+          "pre_rerank_score": 0.5834
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.7657,
+          "score_type": "reranker",
+          "reranker_score": 0.7657,
+          "pre_rerank_score": 0.6468
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.757,
+          "score_type": "reranker",
+          "reranker_score": 0.757,
+          "pre_rerank_score": 0.6151
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.7782,
+          "score_type": "reranker",
+          "reranker_score": 0.7782,
+          "pre_rerank_score": 0.2834
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.7657,
+          "score_type": "reranker",
+          "reranker_score": 0.7657,
+          "pre_rerank_score": 0.3468
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.757,
+          "score_type": "reranker",
+          "reranker_score": 0.757,
+          "pre_rerank_score": 0.3151
+        }
+      ]
+    },
+    {
+      "query": "Devam zorunluluğu var mı?",
+      "department": "academic_programs",
+      "note": "devam",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2364.8,
+      "no_bias_elapsed_ms": 2602.0,
+      "current": [
+        {
+          "source": "sürekli_eğitim_merkezi_yönergesi.pdf",
+          "score": 0.6438,
+          "score_type": "reranker",
+          "reranker_score": 0.8584,
+          "pre_rerank_score": 0.2
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "score": 0.641,
+          "score_type": "reranker",
+          "reranker_score": 0.8547,
+          "pre_rerank_score": 0.2257
+        },
+        {
+          "source": "yonerge_yabanci_dil_egitim_ogretim.pdf",
+          "score": 0.6087,
+          "score_type": "reranker",
+          "reranker_score": 0.8116,
+          "pre_rerank_score": 0.3333
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "sürekli_eğitim_merkezi_yönergesi.pdf",
+          "score": 0.8584,
+          "score_type": "reranker",
+          "reranker_score": 0.8584,
+          "pre_rerank_score": 0.2
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "score": 0.8546,
+          "score_type": "reranker",
+          "reranker_score": 0.8546,
+          "pre_rerank_score": 0.2257
+        },
+        {
+          "source": "yonerge_yabanci_dil_egitim_ogretim.pdf",
+          "score": 0.8114,
+          "score_type": "reranker",
+          "reranker_score": 0.8114,
+          "pre_rerank_score": 0.3333
+        }
+      ]
+    },
+    {
+      "query": "Başarısız olduğum seçmeli ders yerine başka seçmeli ders alabilir miyim?",
+      "department": "student_affairs",
+      "note": "secmeli ders",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2237.2,
+      "no_bias_elapsed_ms": 2303.3,
+      "current": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.8664,
+          "score_type": "reranker",
+          "reranker_score": 0.8664,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "score": 0.8656,
+          "score_type": "reranker",
+          "reranker_score": 0.8656,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.7807,
+          "score_type": "reranker",
+          "reranker_score": 0.7807,
+          "pre_rerank_score": 0.2639
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.8664,
+          "score_type": "reranker",
+          "reranker_score": 0.8664,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "score": 0.8656,
+          "score_type": "reranker",
+          "reranker_score": 0.8656,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.7807,
+          "score_type": "reranker",
+          "reranker_score": 0.7807,
+          "pre_rerank_score": 0.2639
+        }
+      ]
+    },
+    {
+      "query": "Kayıt dondurma başvurusu nasıl yapılır?",
+      "department": "student_affairs",
+      "note": "kayit dondurma",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2538.1,
+      "no_bias_elapsed_ms": 2492.1,
+      "current": [
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.5381,
+          "score_type": "reranker",
+          "reranker_score": 0.7175,
+          "pre_rerank_score": 0.1641
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.5224,
+          "score_type": "reranker",
+          "reranker_score": 0.6966,
+          "pre_rerank_score": 0.2036
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "score": 0.484,
+          "score_type": "reranker",
+          "reranker_score": 0.6453,
+          "pre_rerank_score": 0.1472
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.7175,
+          "score_type": "reranker",
+          "reranker_score": 0.7175,
+          "pre_rerank_score": 0.1641
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.6966,
+          "score_type": "reranker",
+          "reranker_score": 0.6966,
+          "pre_rerank_score": 0.2036
+        },
+        {
+          "source": "ön_lisans_ve_lisans.pdf",
+          "score": 0.6453,
+          "score_type": "reranker",
+          "reranker_score": 0.6453,
+          "pre_rerank_score": 0.1472
+        }
+      ]
+    },
+    {
+      "query": "Not itirazı başvurusu nasıl yapılır?",
+      "department": "student_affairs",
+      "note": "not itirazi",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2287.9,
+      "no_bias_elapsed_ms": 2384.2,
+      "current": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.8534,
+          "score_type": "reranker",
+          "reranker_score": 0.8534,
+          "pre_rerank_score": 0.6333
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.7877,
+          "score_type": "reranker",
+          "reranker_score": 0.7877,
+          "pre_rerank_score": 0.5971
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.7791,
+          "score_type": "reranker",
+          "reranker_score": 0.7791,
+          "pre_rerank_score": 0.5374
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.8534,
+          "score_type": "reranker",
+          "reranker_score": 0.8534,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "yüzde_on_başarı_değerlendirme_yönergesi.pdf",
+          "score": 0.846,
+          "score_type": "reranker",
+          "reranker_score": 0.846,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.7877,
+          "score_type": "reranker",
+          "reranker_score": 0.7877,
+          "pre_rerank_score": 0.2971
+        }
+      ]
+    },
+    {
+      "query": "Mezuniyet için kaç AKTS gerekir?",
+      "department": "student_affairs",
+      "note": "mezuniyet akts",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2411.2,
+      "no_bias_elapsed_ms": 2408.4,
+      "current": [
+        {
+          "source": "önlisans_lisans_öğretimi_staj_yönergesi.pdf",
+          "score": 0.6236,
+          "score_type": "reranker",
+          "reranker_score": 0.8315,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.6002,
+          "score_type": "reranker",
+          "reranker_score": 0.8003,
+          "pre_rerank_score": 0.3451
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.5975,
+          "score_type": "reranker",
+          "reranker_score": 0.7967,
+          "pre_rerank_score": 0.3562
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "önlisans_lisans_öğretimi_staj_yönergesi.pdf",
+          "score": 0.8315,
+          "score_type": "reranker",
+          "reranker_score": 0.8315,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.8003,
+          "score_type": "reranker",
+          "reranker_score": 0.8003,
+          "pre_rerank_score": 0.3451
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.7967,
+          "score_type": "reranker",
+          "reranker_score": 0.7967,
+          "pre_rerank_score": 0.3562
+        }
+      ]
+    },
+    {
+      "query": "Burs başvurusu nereden yapılır?",
+      "department": "finance",
+      "note": "burs",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2577.9,
+      "no_bias_elapsed_ms": 2406.3,
+      "current": [
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "score": 0.8152,
+          "score_type": "reranker",
+          "reranker_score": 0.8152,
+          "pre_rerank_score": 0.64
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "score": 0.5727,
+          "score_type": "reranker",
+          "reranker_score": 0.7636,
+          "pre_rerank_score": 0.39
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "score": 0.4973,
+          "score_type": "reranker",
+          "reranker_score": 0.4973,
+          "pre_rerank_score": 0.3067
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "score": 0.8152,
+          "score_type": "reranker",
+          "reranker_score": 0.8152,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "score": 0.7636,
+          "score_type": "reranker",
+          "reranker_score": 0.7636,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "score": 0.4973,
+          "score_type": "reranker",
+          "reranker_score": 0.4973,
+          "pre_rerank_score": 0.1667
+        }
+      ]
+    },
+    {
+      "query": "Türk öğrenciler için diş hekimliği ücreti ne kadar?",
+      "department": "finance",
+      "note": "domestic fee",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2403.8,
+      "no_bias_elapsed_ms": 2384.5,
+      "current": [
+        {
+          "source": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf",
+          "score": 0.8245,
+          "score_type": "reranker",
+          "reranker_score": 0.8245,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.6925,
+          "score_type": "reranker",
+          "reranker_score": 0.6925,
+          "pre_rerank_score": 0.15
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "score": 0.5886,
+          "score_type": "reranker",
+          "reranker_score": 0.5886,
+          "pre_rerank_score": 0.1667
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf",
+          "score": 0.8245,
+          "score_type": "reranker",
+          "reranker_score": 0.8245,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.6925,
+          "score_type": "reranker",
+          "reranker_score": 0.6925,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.5186,
+          "score_type": "reranker",
+          "reranker_score": 0.5186,
+          "pre_rerank_score": 0.2063
+        }
+      ]
+    },
+    {
+      "query": "Uluslararası öğrenciler için tıp ücreti ne kadar?",
+      "department": "finance",
+      "note": "international fee",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2565.6,
+      "no_bias_elapsed_ms": 2388.4,
+      "current": [
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.5129,
+          "score_type": "reranker",
+          "reranker_score": 0.5129,
+          "pre_rerank_score": 0.72
+        },
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.502,
+          "score_type": "reranker",
+          "reranker_score": 0.502,
+          "pre_rerank_score": 0.42
+        },
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.4921,
+          "score_type": "reranker",
+          "reranker_score": 0.4921,
+          "pre_rerank_score": 0.5003
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.5129,
+          "score_type": "reranker",
+          "reranker_score": 0.5129,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf",
+          "score": 0.512,
+          "score_type": "reranker",
+          "reranker_score": 0.512,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.4921,
+          "score_type": "reranker",
+          "reranker_score": 0.4921,
+          "pre_rerank_score": 0.2803
+        }
+      ]
+    },
+    {
+      "query": "Erasmus başvurusu nasıl yapılır?",
+      "department": "academic_programs",
+      "note": "erasmus",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2382.5,
+      "no_bias_elapsed_ms": 2416.1,
+      "current": [
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.8478,
+          "score_type": "reranker",
+          "reranker_score": 0.8478,
+          "pre_rerank_score": 0.3549
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.814,
+          "score_type": "reranker",
+          "reranker_score": 0.814,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7949,
+          "score_type": "reranker",
+          "reranker_score": 0.7949,
+          "pre_rerank_score": 0.3566
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.8478,
+          "score_type": "reranker",
+          "reranker_score": 0.8478,
+          "pre_rerank_score": 0.3549
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.814,
+          "score_type": "reranker",
+          "reranker_score": 0.814,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7949,
+          "score_type": "reranker",
+          "reranker_score": 0.7949,
+          "pre_rerank_score": 0.3566
+        }
+      ]
+    },
+    {
+      "query": "BIL104 dersinin ön koşulu nedir?",
+      "department": "academic_programs",
+      "note": "ders on kosul",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2608.0,
+      "no_bias_elapsed_ms": 2409.0,
+      "current": [
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.5501,
+          "score_type": "reranker",
+          "reranker_score": 0.5501,
+          "pre_rerank_score": 0.1179
+        },
+        {
+          "source": "yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf",
+          "score": 0.4729,
+          "score_type": "reranker",
+          "reranker_score": 0.4729,
+          "pre_rerank_score": 0.1667
+        },
+        {
+          "source": "özel_öğrenci_yönergesi.pdf",
+          "score": 0.4695,
+          "score_type": "reranker",
+          "reranker_score": 0.4695,
+          "pre_rerank_score": 0.0816
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.5501,
+          "score_type": "reranker",
+          "reranker_score": 0.5501,
+          "pre_rerank_score": 0.1179
+        },
+        {
+          "source": "yonerge_tip_fakultesi_doktorluk_egitim_sinav.pdf",
+          "score": 0.4729,
+          "score_type": "reranker",
+          "reranker_score": 0.4729,
+          "pre_rerank_score": 0.1667
+        },
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.469,
+          "score_type": "reranker",
+          "reranker_score": 0.469,
+          "pre_rerank_score": 0.25
+        }
+      ]
+    },
+    {
+      "query": "Staj başvurusu için hangi belgeler gerekli?",
+      "department": "student_affairs",
+      "note": "staj belge",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2426.9,
+      "no_bias_elapsed_ms": 2407.9,
+      "current": [
+        {
+          "source": "staj_bilgilendirme_toplantısı_sunumu_2024_2025.pdf",
+          "score": 0.8628,
+          "score_type": "reranker",
+          "reranker_score": 0.8628,
+          "pre_rerank_score": 0.3875
+        },
+        {
+          "source": "endüstri_mühendisliği_bölümü_staj_ilkeleri_06_01_2022.pdf",
+          "score": 0.8602,
+          "score_type": "reranker",
+          "reranker_score": 0.8602,
+          "pre_rerank_score": 0.3467
+        },
+        {
+          "source": "staj_iş_akışı.pdf",
+          "score": 0.8389,
+          "score_type": "reranker",
+          "reranker_score": 0.8389,
+          "pre_rerank_score": 0.3645
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "staj_bilgilendirme_toplantısı_sunumu_2024_2025.pdf",
+          "score": 0.8628,
+          "score_type": "reranker",
+          "reranker_score": 0.8628,
+          "pre_rerank_score": 0.3875
+        },
+        {
+          "source": "endüstri_mühendisliği_bölümü_staj_ilkeleri_06_01_2022.pdf",
+          "score": 0.8602,
+          "score_type": "reranker",
+          "reranker_score": 0.8602,
+          "pre_rerank_score": 0.3467
+        },
+        {
+          "source": "staj_iş_akışı.pdf",
+          "score": 0.8389,
+          "score_type": "reranker",
+          "reranker_score": 0.8389,
+          "pre_rerank_score": 0.3645
+        }
+      ]
+    },
+    {
+      "query": "Disiplin soruşturmasında sınav hakkım etkilenir mi?",
+      "department": "student_affairs",
+      "note": "disiplin",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2563.5,
+      "no_bias_elapsed_ms": 2359.1,
+      "current": [
+        {
+          "source": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+          "score": 0.5606,
+          "score_type": "reranker",
+          "reranker_score": 0.5606,
+          "pre_rerank_score": 0.4965
+        },
+        {
+          "source": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+          "score": 0.4909,
+          "score_type": "reranker",
+          "reranker_score": 0.4909,
+          "pre_rerank_score": 0.4967
+        },
+        {
+          "source": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+          "score": 0.4698,
+          "score_type": "reranker",
+          "reranker_score": 0.4698,
+          "pre_rerank_score": 0.4986
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+          "score": 0.4909,
+          "score_type": "reranker",
+          "reranker_score": 0.4909,
+          "pre_rerank_score": 0.1967
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.4759,
+          "score_type": "reranker",
+          "reranker_score": 0.4759,
+          "pre_rerank_score": 0.2
+        },
+        {
+          "source": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+          "score": 0.4698,
+          "score_type": "reranker",
+          "reranker_score": 0.4698,
+          "pre_rerank_score": 0.1986
+        }
+      ]
+    },
+    {
+      "query": "Muafiyet dilekçesi nereye verilir?",
+      "department": "student_affairs",
+      "note": "muafiyet",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2456.3,
+      "no_bias_elapsed_ms": 2403.0,
+      "current": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.7401,
+          "score_type": "reranker",
+          "reranker_score": 0.7401,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "score": 0.7212,
+          "score_type": "reranker",
+          "reranker_score": 0.7212,
+          "pre_rerank_score": 0.4957
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.5835,
+          "score_type": "reranker",
+          "reranker_score": 0.5835,
+          "pre_rerank_score": 0.4361
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.7401,
+          "score_type": "reranker",
+          "reranker_score": 0.7401,
+          "pre_rerank_score": 0.2
+        },
+        {
+          "source": "ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf",
+          "score": 0.7212,
+          "score_type": "reranker",
+          "reranker_score": 0.7212,
+          "pre_rerank_score": 0.1957
+        },
+        {
+          "source": "yonerge_onlisans_lisans_staj.pdf",
+          "score": 0.6151,
+          "score_type": "reranker",
+          "reranker_score": 0.6151,
+          "pre_rerank_score": 0.1667
+        }
+      ]
+    },
+    {
+      "query": "Yatay geçiş şartları nelerdir?",
+      "department": "academic_programs",
+      "note": "yatay gecis",
+      "top1_changed": true,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2560.7,
+      "no_bias_elapsed_ms": 2353.2,
+      "current": [
+        {
+          "source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
+          "score": 0.8617,
+          "score_type": "reranker",
+          "reranker_score": 0.8617,
+          "pre_rerank_score": 0.3293
+        },
+        {
+          "source": "yonerge_uluslararasi_ogrenci_yatay_gecis.pdf",
+          "score": 0.8543,
+          "score_type": "reranker",
+          "reranker_score": 0.8543,
+          "pre_rerank_score": 0.3372
+        },
+        {
+          "source": "önlisans_ve_lisans_düzeyindeki_programlar_arasında_geçiş_yönergesi.pdf",
+          "score": 0.6451,
+          "score_type": "reranker",
+          "reranker_score": 0.8601,
+          "pre_rerank_score": 0.3113
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "lisansüstü_eğitim_ve_öğretim_yönetmeliği.pdf",
+          "score": 0.8653,
+          "score_type": "reranker",
+          "reranker_score": 0.8653,
+          "pre_rerank_score": 0.39
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "score": 0.8652,
+          "score_type": "reranker",
+          "reranker_score": 0.8652,
+          "pre_rerank_score": 0.4076
+        },
+        {
+          "source": "uzaktan_eğitim_tezsiz_yüksek_lisans_programı_yönergesi.pdf",
+          "score": 0.8641,
+          "score_type": "reranker",
+          "reranker_score": 0.8641,
+          "pre_rerank_score": 0.3835
+        }
+      ]
+    },
+    {
+      "query": "Kayit yenileme ucreti ne kadar ve ne zaman yapilir?",
+      "department": null,
+      "note": "core",
+      "top1_changed": true,
+      "top3_same_set": false,
+      "current_elapsed_ms": 4516.5,
+      "no_bias_elapsed_ms": 4618.5,
+      "current": [
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.5084,
+          "score_type": "reranker",
+          "reranker_score": 0.5084,
+          "pre_rerank_score": 0.4429
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.4916,
+          "score_type": "reranker",
+          "reranker_score": 0.4916,
+          "pre_rerank_score": 0.3714
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.4745,
+          "score_type": "reranker",
+          "reranker_score": 0.4745,
+          "pre_rerank_score": 0.5
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "2025_2026_yılı_uluslararası_öğrenci_öğrenim_ücretleri_2025_yılı_ilk_kayıt.pdf",
+          "score": 0.5652,
+          "score_type": "reranker",
+          "reranker_score": 0.5652,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.5084,
+          "score_type": "reranker",
+          "reranker_score": 0.5084,
+          "pre_rerank_score": 0.1429
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.4745,
+          "score_type": "reranker",
+          "reranker_score": 0.4745,
+          "pre_rerank_score": 0.2
+        }
+      ]
+    },
+    {
+      "query": "Ders kaydi ne zaman basliyor?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2344.8,
+      "no_bias_elapsed_ms": 2423.7,
+      "current": [
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.5365,
+          "score_type": "reranker",
+          "reranker_score": 0.5365,
+          "pre_rerank_score": 0.4488
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.5095,
+          "score_type": "reranker",
+          "reranker_score": 0.5095,
+          "pre_rerank_score": 0.4547
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.476,
+          "score_type": "reranker",
+          "reranker_score": 0.476,
+          "pre_rerank_score": 0.5
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.5365,
+          "score_type": "reranker",
+          "reranker_score": 0.5365,
+          "pre_rerank_score": 0.1488
+        },
+        {
+          "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+          "score": 0.5095,
+          "score_type": "reranker",
+          "reranker_score": 0.5095,
+          "pre_rerank_score": 0.1547
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.476,
+          "score_type": "reranker",
+          "reranker_score": 0.476,
+          "pre_rerank_score": 0.2
+        }
+      ]
+    },
+    {
+      "query": "BIL104 dersinin on kosulu nedir?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2373.4,
+      "no_bias_elapsed_ms": 2581.5,
+      "current": [
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "score": 0.4677,
+          "score_type": "reranker",
+          "reranker_score": 0.4677,
+          "pre_rerank_score": 0.1429
+        },
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "score": 0.4677,
+          "score_type": "reranker",
+          "reranker_score": 0.4677,
+          "pre_rerank_score": 0.125
+        },
+        {
+          "source": "yonetmelik_lisansustu_egitim_ogretim.pdf",
+          "score": 0.4676,
+          "score_type": "reranker",
+          "reranker_score": 0.4676,
+          "pre_rerank_score": 0.1167
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "score": 0.4677,
+          "score_type": "reranker",
+          "reranker_score": 0.4677,
+          "pre_rerank_score": 0.1429
+        },
+        {
+          "source": "lisans_pedagojik_formasyon_derslerine_ilişkin.pdf",
+          "score": 0.4677,
+          "score_type": "reranker",
+          "reranker_score": 0.4677,
+          "pre_rerank_score": 0.125
+        },
+        {
+          "source": "lisansüstü_eğitim_programlarında_uzmanlık_alan_dersi_yönergesi.pdf",
+          "score": 0.4677,
+          "score_type": "reranker",
+          "reranker_score": 0.4677,
+          "pre_rerank_score": 0.0833
+        }
+      ]
+    },
+    {
+      "query": "1. yariyil dersleri nelerdir?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2411.5,
+      "no_bias_elapsed_ms": 2586.3,
+      "current": [
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.4846,
+          "score_type": "reranker",
+          "reranker_score": 0.4846,
+          "pre_rerank_score": 0.1737
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "score": 0.4822,
+          "score_type": "reranker",
+          "reranker_score": 0.4822,
+          "pre_rerank_score": 0.1773
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "score": 0.4696,
+          "score_type": "reranker",
+          "reranker_score": 0.4696,
+          "pre_rerank_score": 0.175
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.4846,
+          "score_type": "reranker",
+          "reranker_score": 0.4846,
+          "pre_rerank_score": 0.1737
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "score": 0.4822,
+          "score_type": "reranker",
+          "reranker_score": 0.4822,
+          "pre_rerank_score": 0.1773
+        },
+        {
+          "source": "lisansüstü_eğitim_ve.pdf",
+          "score": 0.4696,
+          "score_type": "reranker",
+          "reranker_score": 0.4696,
+          "pre_rerank_score": 0.5
+        }
+      ]
+    },
+    {
+      "query": "Devam zorunlulugu var mi?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2332.6,
+      "no_bias_elapsed_ms": 2475.8,
+      "current": [
+        {
+          "source": "sürekli_eğitim_merkezi_yönergesi.pdf",
+          "score": 0.6419,
+          "score_type": "reranker",
+          "reranker_score": 0.8559,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "score": 0.6359,
+          "score_type": "reranker",
+          "reranker_score": 0.8478,
+          "pre_rerank_score": 0.2333
+        },
+        {
+          "source": "yonerge_yabanci_dil_egitim_ogretim.pdf",
+          "score": 0.604,
+          "score_type": "reranker",
+          "reranker_score": 0.8054,
+          "pre_rerank_score": 0.3333
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "sürekli_eğitim_merkezi_yönergesi.pdf",
+          "score": 0.8559,
+          "score_type": "reranker",
+          "reranker_score": 0.8559,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+          "score": 0.8476,
+          "score_type": "reranker",
+          "reranker_score": 0.8476,
+          "pre_rerank_score": 0.2333
+        },
+        {
+          "source": "yonerge_yabanci_dil_egitim_ogretim.pdf",
+          "score": 0.8054,
+          "score_type": "reranker",
+          "reranker_score": 0.8054,
+          "pre_rerank_score": 0.3333
+        }
+      ]
+    },
+    {
+      "query": "Erasmus programina nasil basvururum?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2376.2,
+      "no_bias_elapsed_ms": 2421.4,
+      "current": [
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7957,
+          "score_type": "reranker",
+          "reranker_score": 0.7957,
+          "pre_rerank_score": 0.2852
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7389,
+          "score_type": "reranker",
+          "reranker_score": 0.7389,
+          "pre_rerank_score": 0.2529
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7321,
+          "score_type": "reranker",
+          "reranker_score": 0.7321,
+          "pre_rerank_score": 0.5
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7957,
+          "score_type": "reranker",
+          "reranker_score": 0.7957,
+          "pre_rerank_score": 0.2852
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7389,
+          "score_type": "reranker",
+          "reranker_score": 0.7389,
+          "pre_rerank_score": 0.2529
+        },
+        {
+          "source": "avrupa_birliği_eğitim_ve_gençlik_programları_hayat_boyu_öğrenme_erasmus.pdf",
+          "score": 0.7321,
+          "score_type": "reranker",
+          "reranker_score": 0.7321,
+          "pre_rerank_score": 0.5
+        }
+      ]
+    },
+    {
+      "query": "Guncel duyurular nelerdir?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2390.5,
+      "no_bias_elapsed_ms": 2406.0,
+      "current": [
+        {
+          "source": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+          "score": 0.468,
+          "score_type": "reranker",
+          "reranker_score": 0.468,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "öğrenci_konukevi_uygulama_yönergesi.pdf",
+          "score": 0.4679,
+          "score_type": "reranker",
+          "reranker_score": 0.4679,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.4679,
+          "score_type": "reranker",
+          "reranker_score": 0.4679,
+          "pre_rerank_score": 0.1429
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "mühendislik_fakültesi_sınav_uygulama_kuralları.pdf",
+          "score": 0.468,
+          "score_type": "reranker",
+          "reranker_score": 0.468,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "öğrenci_konukevi_uygulama_yönergesi.pdf",
+          "score": 0.4679,
+          "score_type": "reranker",
+          "reranker_score": 0.4679,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.4679,
+          "score_type": "reranker",
+          "reranker_score": 0.4679,
+          "pre_rerank_score": 0.1429
+        }
+      ]
+    },
+    {
+      "query": "CAP basvurusu nasil yapilir?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 4650.7,
+      "no_bias_elapsed_ms": 4567.8,
+      "current": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.5269,
+          "score_type": "reranker",
+          "reranker_score": 0.5269,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.5064,
+          "score_type": "reranker",
+          "reranker_score": 0.5064,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.4786,
+          "score_type": "reranker",
+          "reranker_score": 0.4786,
+          "pre_rerank_score": 0.2
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.5269,
+          "score_type": "reranker",
+          "reranker_score": 0.5269,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.5064,
+          "score_type": "reranker",
+          "reranker_score": 0.5064,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+          "score": 0.5042,
+          "score_type": "reranker",
+          "reranker_score": 0.5042,
+          "pre_rerank_score": 0.5
+        }
+      ]
+    },
+    {
+      "query": "Harc borcum ne kadar?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2503.6,
+      "no_bias_elapsed_ms": 2445.9,
+      "current": [
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "score": 0.4675,
+          "score_type": "reranker",
+          "reranker_score": 0.4675,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "score": 0.4675,
+          "score_type": "reranker",
+          "reranker_score": 0.4675,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "öğrenci_yemek_bursu_yönergesi.pdf",
+          "score": 0.4675,
+          "score_type": "reranker",
+          "reranker_score": 0.4675,
+          "pre_rerank_score": 0.2
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "score": 0.4675,
+          "score_type": "reranker",
+          "reranker_score": 0.4675,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf",
+          "score": 0.4675,
+          "score_type": "reranker",
+          "reranker_score": 0.4675,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "kısmi_zamanlı_öğrenci_çalıştırma_yönergesi.pdf",
+          "score": 0.4675,
+          "score_type": "reranker",
+          "reranker_score": 0.4675,
+          "pre_rerank_score": 0.25
+        }
+      ]
+    },
+    {
+      "query": "Not ortalamam kac?",
+      "department": null,
+      "note": "core",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2400.7,
+      "no_bias_elapsed_ms": 2384.1,
+      "current": [
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "score": 0.5733,
+          "score_type": "reranker",
+          "reranker_score": 0.5733,
+          "pre_rerank_score": 0.1411
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "score": 0.5722,
+          "score_type": "reranker",
+          "reranker_score": 0.5722,
+          "pre_rerank_score": 0.1256
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.5276,
+          "score_type": "reranker",
+          "reranker_score": 0.5276,
+          "pre_rerank_score": 0.1429
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "2025_2026_bahar_yatay_geçiş_ilan_metni.pdf",
+          "score": 0.5733,
+          "score_type": "reranker",
+          "reranker_score": 0.5733,
+          "pre_rerank_score": 0.1411
+        },
+        {
+          "source": "2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf",
+          "score": 0.5722,
+          "score_type": "reranker",
+          "reranker_score": 0.5722,
+          "pre_rerank_score": 0.1256
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "score": 0.5276,
+          "score_type": "reranker",
+          "reranker_score": 0.5276,
+          "pre_rerank_score": 0.1429
+        }
+      ]
+    }
+  ]
+}

@@ -7,6 +7,8 @@ import pytest
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.llm.llm_service import LLMServiceError
 from src.routing.routing_policy import (
+    has_cap_markers,
+    has_horizontal_transfer_markers,
     looks_like_personal_data_query,
     looks_like_vague_application_timing_query,
 )
@@ -52,6 +54,12 @@ class TestDepartmentRouter:
     def test_vague_application_timing_detection_requires_context(self):
         assert looks_like_vague_application_timing_query("sey basvuru ne zaman")
         assert not looks_like_vague_application_timing_query("CAP basvurusu ne zaman?")
+
+    def test_negated_horizontal_transfer_correction_prefers_cap_marker(self):
+        query = "Yatay gecisi sormuyorum capi soruyorum sana"
+
+        assert has_cap_markers(query)
+        assert not has_horizontal_transfer_markers(query)
 
     @pytest.mark.asyncio
     async def test_route_personal_akts_progress_to_student_affairs(self):

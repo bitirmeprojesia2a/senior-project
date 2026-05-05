@@ -1,6 +1,7 @@
 """Main orchestrator query-policy tests."""
 
 from src.orchestrators.query_policy import (
+    looks_like_contact_query,
     looks_like_announcement_query,
     should_block_announcement_primary_flow,
     should_fetch_related_announcements,
@@ -42,3 +43,22 @@ def test_explicit_muafiyet_announcement_query_stays_announcement_lookup():
     assert not should_block_announcement_primary_flow(query)
     assert looks_like_announcement_query(query)
     assert should_fetch_related_announcements(query)
+
+
+def test_incidental_announcement_context_does_not_hide_procedure_intent():
+    query = "Duyurulara baktim ama CAP basvurusu nasil yapilir bulamadim, anlatir misin?"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)
+    assert not should_fetch_related_announcements(query)
+
+
+def test_direct_cap_announcement_lookup_stays_announcement():
+    query = "CAP basvuru duyurusu var mi?"
+
+    assert not should_block_announcement_primary_flow(query)
+    assert looks_like_announcement_query(query)
+
+
+def test_contact_query_tolerates_small_typo():
+    assert looks_like_contact_query("Ogrenci isleri iletiism bilgisi nedir?")

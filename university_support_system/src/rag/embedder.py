@@ -35,6 +35,7 @@ class Embedder:
         self.batch_size = batch_size or settings.embedding.batch_size
         self.device = device or settings.embedding.device
         self.resolved_device = self._resolve_device(self.device)
+        self.torch_dtype = self._resolve_torch_dtype(settings.embedding.torch_dtype)
         self._model: SentenceTransformer | None = None
 
         model_lower = self.model_name.lower()
@@ -49,6 +50,23 @@ class Embedder:
             return "cuda" if torch.cuda.is_available() else "cpu"
         return device
 
+    def _resolve_torch_dtype(self, dtype_name: str) -> torch.dtype | None:
+        """Model agirlik hassasiyetini cozumler; CPU icin FP32 varsayilir."""
+        if dtype_name == "auto":
+            return None
+        if self.resolved_device != "cuda" and dtype_name in {"float16", "bfloat16"}:
+            logger.warning(
+                "embedding_dtype_ignored_for_cpu",
+                requested_dtype=dtype_name,
+                resolved_device=self.resolved_device,
+            )
+            return None
+        if dtype_name == "float16":
+            return torch.float16
+        if dtype_name == "bfloat16":
+            return torch.bfloat16
+        return torch.float32
+
     @property
     def model(self) -> SentenceTransformer:
         """Model'i lazy olarak yukler."""
@@ -56,6 +74,7 @@ class Embedder:
             cache_key = (
                 self.model_name,
                 self.resolved_device,
+                str(self.torch_dtype),
                 settings.embedding.local_files_only,
             )
             cached_model = self._MODEL_CACHE.get(cache_key)
@@ -70,6 +89,7 @@ class Embedder:
                     dimension=self._model.get_sentence_embedding_dimension(),
                     is_e5=self._is_e5_model,
                     is_bge=self._is_bge_model,
+                    torch_dtype=str(self.torch_dtype),
                     local_files_only=settings.embedding.local_files_only,
                 )
                 return self._model
@@ -79,15 +99,20 @@ class Embedder:
                 model=self.model_name,
                 requested_device=self.device,
                 resolved_device=self.resolved_device,
+                torch_dtype=str(self.torch_dtype),
             )
             with profile_stage(
                 "rag.embedder.load_model",
                 model=self.model_name,
                 device=self.resolved_device,
             ):
+                model_kwargs = {}
+                if self.torch_dtype is not None:
+                    model_kwargs["torch_dtype"] = self.torch_dtype
                 self._model = SentenceTransformer(
                     self.model_name,
                     device=self.resolved_device,
+                    model_kwargs=model_kwargs or None,
                     local_files_only=settings.embedding.local_files_only,
                 )
                 self._validate_configured_dimension()
@@ -101,6 +126,7 @@ class Embedder:
                 dimension=self._model.get_sentence_embedding_dimension(),
                 is_e5=self._is_e5_model,
                 is_bge=self._is_bge_model,
+                torch_dtype=str(self.torch_dtype),
                 local_files_only=settings.embedding.local_files_only,
             )
         return self._model
@@ -134,6 +160,7 @@ class Embedder:
         self._model = None
         self.resolved_device = "cpu"
         self.device = "cpu"
+        self.torch_dtype = self._resolve_torch_dtype(settings.embedding.torch_dtype)
         self._config_dimension_validated = False
         return True
 

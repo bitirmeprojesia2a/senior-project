@@ -145,8 +145,8 @@ def check_answer_quality(answer: str) -> QualityCheckResult:
 
 
 REWRITE_ONLY_SYSTEM_SUFFIX = (
-    "\n\nEK KALITE KURALI: Cevabi ayni anlami koruyarak dogal Turkce yaz. "
-    "Yabanci kelime, bozuk token, uydurma ifade kullanma. "
-    "Kaynak disi bilgi ekleme. Onceki cevaptaki anlam ve bilgiyi koru ama "
-    "tum kelimeleri dogal Turkce ile ifade et."
+    "\n\nEK KAL\u0130TE KURALI: Cevab\u0131 ayn\u0131 anlam\u0131 koruyarak do\u011fal T\u00fcrk\u00e7e yaz. "
+    "Yabanc\u0131 kelime, bozuk token, uydurma ifade kullanma. "
+    "Kaynak d\u0131\u015f\u0131 bilgi ekleme. \u00d6nceki cevaptaki anlam ve bilgiyi koru ama "
+    "t\u00fcm kelimeleri do\u011fal T\u00fcrk\u00e7e ile ifade et."
 )

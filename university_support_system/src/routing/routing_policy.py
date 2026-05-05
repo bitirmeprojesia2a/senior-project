@@ -32,7 +32,19 @@ from src.routing.query_concepts import (
     extract_query_concepts,
 )
 
-CAP_OR_YAP_IN_QUERY = re.compile(r"\b(?:çap|cap|yandal|yan\s+dal)\b", re.IGNORECASE)
+CAP_OR_YAP_IN_QUERY = re.compile(
+    r"\b(?:çap|cap)(?:i|a|in|dan|ta|tan|lar|lari|larin)?\b|\b(?:yandal|yan\s+dal)\b",
+    re.IGNORECASE,
+)
+_ROUTING_NEGATION_WORDS: tuple[str, ...] = (
+    "sormuyorum",
+    "sormuyodum",
+    "sormadim",
+    "degil",
+    "istemiyorum",
+    "bahsetmiyorum",
+    "kastetmiyorum",
+)
 ROUTING_PAYMENT_MARKERS: tuple[str, ...] = (
     "ucret", "harc", "odeme", "taksit", "dekont",
     "katki payi", "borc", "borclu", "iade", "fazla ucret",
@@ -576,9 +588,31 @@ def has_pedagogical_formation_markers(normalized_text: str) -> bool:
 
 def has_horizontal_transfer_markers(normalized_text: str) -> bool:
     """Return whether query mentions horizontal transfer processes."""
+    if has_cap_markers(normalized_text) and _has_negated_marker(
+        normalized_text, ROUTING_HORIZONTAL_TRANSFER_MARKERS
+    ):
+        return False
     return extract_query_concepts(normalized_text).has(CONCEPT_HORIZONTAL_TRANSFER) or contains_any(
         normalized_text, ROUTING_HORIZONTAL_TRANSFER_MARKERS
     )
+
+
+def _has_negated_marker(normalized_text: str, markers: tuple[str, ...]) -> bool:
+    for marker in markers:
+        match = re.search(
+            rf"(?<!\w){re.escape(marker)}[a-z]*(?!\w)",
+            normalized_text,
+            re.IGNORECASE,
+        )
+        if not match:
+            continue
+        following = normalized_text[match.end() : match.end() + 48]
+        if any(
+            re.search(rf"(?<!\w){re.escape(word)}(?!\w)", following)
+            for word in _ROUTING_NEGATION_WORDS
+        ):
+            return True
+    return False
 
 
 def has_max_duration_markers(normalized_text: str) -> bool:

@@ -7,9 +7,9 @@ import re
 from src.agents.academic.curriculum_utils import infer_department_from_query
 from src.agents.finance.tuition_utils import extract_requested_unit
 from src.core.constants import Department, TaskType
+from src.core.contact_intent import looks_like_contact_intent
 from src.core.query_markers import (
     ACADEMIC_DEPARTMENT_CONTEXT_MARKERS,
-    CONTACT_QUERY_MARKERS,
     EVENT_QUERY_MARKERS,
     GLOBAL_SYNTHESIS_QUERY_MARKERS,
     RELATED_ANNOUNCEMENT_QUERY_MARKERS,
@@ -29,44 +29,44 @@ from src.routing.query_concepts import (
 )
 
 CLARIFICATION_MESSAGE = (
-    "Sorunuzun hangi alana ait oldugunu net olarak belirleyemedim. "
-    "Asagidaki seceneklerden birini belirterek tekrar sorabilirsiniz:\n"
-    "- Ogrenci Isleri (kayit, not, staj, mezuniyet)\n"
-    "- Akademik Programlar (mufredat, yonetmelik, Erasmus)\n"
-    "- Finans (harc, burs, odeme)"
+    "Sorunuzun hangi alana ait olduğunu net olarak belirleyemedim. "
+    "Aşağıdaki seçeneklerden birini belirterek tekrar sorabilirsiniz:\n"
+    "- Öğrenci İşleri (kayıt, not, staj, mezuniyet)\n"
+    "- Akademik Programlar (müfredat, yönetmelik, Erasmus)\n"
+    "- Finans (harç, burs, ödeme)"
 )
 
 ACADEMIC_DEPARTMENT_CLARIFICATION_MESSAGE = (
-    "Bu soruyu dogru cevaplayabilmem icin once bolum veya program bilgisini bilmem gerekiyor. "
-    "Ornegin soyle sorabilirsiniz:\n"
-    '- "Bilgisayar Muhendisligi icin 1. yariyil dersleri nelerdir?"\n'
-    '- "Kimya bolumu teknik secmeli dersleri hangileri?"\n'
-    "Kisisel ders/AKTS ilerlemesi ogrenmek istiyorsan OTP ile giris yapabilirsin; "
-    "boylece bolum bilgin oturumdan otomatik kullanilir."
+    "Bu soruyu doğru cevaplayabilmem için önce bölüm veya program bilgisini bilmem gerekiyor. "
+    "Örneğin şöyle sorabilirsiniz:\n"
+    '- "Bilgisayar Mühendisliği için 1. yarıyıl dersleri nelerdir?"\n'
+    '- "Kimya bölümü teknik seçmeli dersleri hangileri?"\n'
+    "Kişisel ders/AKTS ilerlemesi öğrenmek istiyorsan OTP ile giriş yapabilirsin; "
+    "böylece bölüm bilgin oturumdan otomatik kullanılır."
 )
 
 AUTH_CLARIFICATION_MESSAGE = (
-    "Kisisel sorunuza yanit verebilmem icin kimliginizi dogrulamam gerekiyor. "
-    "Dogrulamayi ogrenci e-posta adresinize gonderecegim tek kullanimlik kod ile tamamlayabilirsiniz."
+    "Kişisel sorunuza yanıt verebilmem için kimliğinizi doğrulamam gerekiyor. "
+    "Doğrulamayı öğrenci e-posta adresinize göndereceğim tek kullanımlık kod ile tamamlayabilirsiniz."
 )
 
 FEE_CONTEXT_CLARIFICATION_MESSAGE = (
-    "Ogrenim ucreti ogrenci turune ve birime gore degisiyor. "
-    "Dogru ucreti paylasabilmem icin Turk ogrenci misiniz, uluslararasi ogrenci misiniz? "
-    "Mumkunse fakulte veya bolum bilginizi de ekleyin."
+    "Öğrenim ücreti öğrenci türüne ve birime göre değişiyor. "
+    "Doğru ücreti paylaşabilmem için Türk öğrenci misiniz, uluslararası öğrenci misiniz? "
+    "Mümkünse fakülte veya bölüm bilginizi de ekleyin."
 )
 
 APPLICATION_TYPE_CLARIFICATION_MESSAGE = (
-    "Hangi basvuru turu icin tarih sordugunuzu belirtir misiniz? "
-    "Ornegin yatay gecis, CAP/YAP, Erasmus, staj, yaz okulu veya kayit basvurusu gibi yazabilirsiniz."
+    "Hangi başvuru türü için tarih sorduğunuzu yazar mısınız? "
+    "Örneğin yatay geçiş, ÇAP/YAP, Erasmus, staj, yaz okulu veya kayıt başvurusu gibi yazabilirsiniz."
 )
 
 PROGRAM_CONTEXT_CLARIFICATION_MESSAGE = (
-    "Bu soruyu dogru cevaplayabilmem icin fakulte, bolum veya program bilgisini belirtir misiniz?"
+    "Bu soruyu doğru cevaplayabilmem için fakülte, bölüm veya program bilgisini belirtir misiniz?"
 )
 
 STUDENT_TYPE_CLARIFICATION_MESSAGE = (
-    "Bu bilgi ogrenci turune gore degisiyor. Turk ogrenci misiniz, uluslararasi ogrenci misiniz?"
+    "Bu bilgi öğrenci türüne göre değişiyor. Türk öğrenci misiniz, uluslararası öğrenci misiniz?"
 )
 
 COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
@@ -189,6 +189,12 @@ _SUBJECT_SPECIFIC_ANNOUNCEMENT_MARKERS: tuple[str, ...] = (
 _ANNOUNCEMENT_FOLLOW_UP_MARKERS: tuple[str, ...] = (
     "detay",
     "detayi",
+    "ozet",
+    "ozeti",
+    "ozetle",
+    "özet",
+    "özeti",
+    "özetle",
     "link",
     "linki",
     "devami",
@@ -278,6 +284,33 @@ _EXPLICIT_ANNOUNCEMENT_ALLOW_MARKERS: tuple[str, ...] = (
     "nereden takip",
     "nereden ogren",
 )
+
+_INCIDENTAL_ANNOUNCEMENT_CONTEXT_MARKERS: tuple[str, ...] = (
+    "baktim ama",
+    "duyurulara baktim",
+    "duyuruya baktim",
+    "duyuruda bulamadim",
+    "duyurularda bulamadim",
+    "duyurular icinde bulamadim",
+    "bulamadim",
+    "goremedim",
+    "rastlamadim",
+    "yer almiyor",
+    "anlatir misin",
+    "anlatir misiniz",
+)
+
+
+def _looks_like_incidental_announcement_context(normalized_query: str) -> bool:
+    """Detect when "duyuru" is context, not the user's primary intent."""
+    if not contains_any_normalized(normalized_query, ("duyuru", "duyurular", "ilan", "haber")):
+        return False
+    if not contains_any_normalized(normalized_query, _INCIDENTAL_ANNOUNCEMENT_CONTEXT_MARKERS):
+        return False
+    return contains_any_normalized(
+        normalized_query,
+        _PROCEDURAL_ANNOUNCEMENT_BLOCK_MARKERS,
+    ) and contains_any_normalized(normalized_query, _PROCEDURAL_QUESTION_MARKERS)
 
 
 def augment_query_for_department(
@@ -394,6 +427,8 @@ def looks_like_announcement_query(query: str) -> bool:
     """Return whether the query primarily targets announcements."""
     normalized = normalize_text(query)
     concepts = extract_query_concepts(normalized)
+    if _looks_like_incidental_announcement_context(normalized):
+        return False
     if CAPABILITY_ANNOUNCEMENT in concepts.blocked_primary_capabilities:
         return False
     if concepts.has(CONCEPT_ANNOUNCEMENT):
@@ -424,6 +459,8 @@ def should_block_announcement_primary_flow(query: str) -> bool:
     """
     normalized = normalize_text(query)
     concepts = extract_query_concepts(normalized)
+    if _looks_like_incidental_announcement_context(normalized):
+        return True
     if CAPABILITY_ANNOUNCEMENT in concepts.explicit_capabilities:
         return False
     if CAPABILITY_ANNOUNCEMENT in concepts.blocked_primary_capabilities:
@@ -451,7 +488,7 @@ def looks_like_event_query(query: str) -> bool:
 
 def looks_like_contact_query(query: str) -> bool:
     """Return whether the query primarily asks for contact information."""
-    return contains_any_normalized(query, CONTACT_QUERY_MARKERS)
+    return looks_like_contact_intent(query)
 
 
 def should_fetch_related_announcements(query: str) -> bool:

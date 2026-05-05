@@ -22,10 +22,12 @@ from src.rag.retriever import (
     _extract_relevant_faq_block,
     _apply_source_relevance,
     _detect_query_topic,
+    _select_reranker_query,
     _plan_search_departments,
     _score_departments,
     turkish_bm25_preprocess,
 )
+from src.rag.search_planner import CAP_OFF_TOPIC_PENALTY
 
 
 class _FakeRedis:
@@ -175,6 +177,17 @@ class TestApplySourceRelevance:
         assert adjusted[0]["score"] == 0.9
         assert adjusted[1]["score"] == 0.8
 
+    def test_cift_ana_dal_underscore_source_not_penalized_for_cap(self):
+        results = [
+            self._make_result("cift_ana_dal_ikinci_lisans_ve_yan_dal_programi.pdf", 0.86),
+            self._make_result("yonerge_cift_anadal_yandal.pdf", 0.84),
+        ]
+        adjusted = _apply_source_relevance(results, "CAP not ortalamasi kac olmali?")
+
+        assert adjusted[0]["source"] == "cift_ana_dal_ikinci_lisans_ve_yan_dal_programi.pdf"
+        assert adjusted[0]["score"] == 0.86
+        assert adjusted[1]["score"] == 0.84
+
     def test_off_topic_penalized(self):
         results = [
             self._make_result("yonerge_cift_anadal_yandal.pdf", 0.9),
@@ -183,7 +196,19 @@ class TestApplySourceRelevance:
         adjusted = _apply_source_relevance(results, "çap başvurusu")
 
         assert adjusted[0]["score"] == 0.9
-        assert adjusted[1]["score"] == round(0.85 * OFF_TOPIC_PENALTY, 4)
+        assert adjusted[1]["score"] == round(0.85 * CAP_OFF_TOPIC_PENALTY, 4)
+
+    def test_source_relevance_penalty_can_be_disabled(self, monkeypatch):
+        monkeypatch.setattr(settings.rag, "source_relevance_penalty_enabled", False)
+        results = [
+            self._make_result("yonerge_cift_anadal_yandal.pdf", 0.9),
+            self._make_result("yonerge_yatay_gecis.pdf", 0.85),
+        ]
+
+        adjusted = _apply_source_relevance(results, "çap başvurusu")
+
+        assert adjusted[0]["score"] == 0.9
+        assert adjusted[1]["score"] == 0.85
 
     def test_resorted_after_penalty(self):
         results = [
@@ -203,6 +228,22 @@ class TestApplySourceRelevance:
 
         assert adjusted[0]["score"] == 0.9
         assert adjusted[1]["score"] == 0.7
+
+
+class TestRerankerSkipPolicy:
+    def _make_result(self, source: str, score: float) -> dict:
+        return {"source": source, "score": score, "content": "test"}
+
+    def test_skip_only_when_zero_or_one_candidate(self):
+        retriever = HybridRetriever(enable_query_expansion=False)
+        candidates = [
+            {"source": "a.pdf", "score": 0.9, "content": "a"},
+            {"source": "b.pdf", "score": 0.8, "content": "b"},
+        ]
+
+        assert retriever._should_skip_reranker("student_affairs_docs", "general", [], 5) is True
+        assert retriever._should_skip_reranker("student_affairs_docs", "general", candidates[:1], 5) is True
+        assert retriever._should_skip_reranker("student_affairs_docs", "general", candidates, 5) is False
 
     def test_empty_results(self):
         assert _apply_source_relevance([], "çap başvurusu") == []
@@ -224,6 +265,15 @@ class TestApplySourceRelevance:
 
         assert adjusted[0]["score"] == 0.9
         assert adjusted[1]["score"] == round(0.85 * OFF_TOPIC_PENALTY, 4)
+
+    def test_cap_reranker_query_uses_expanded_query_for_abbreviation_recall(self):
+        selected = _select_reranker_query(
+            "Önlisans öğrencisiyim çapa başvurabilir miyim?",
+            "Önlisans öğrencisiyim çapa başvurabilir miyim? çift ana dal ikinci lisans",
+        )
+
+        assert "çift ana dal" in selected
+        assert "ikinci lisans" in selected
 
 
 # ═══════════════════════════════════════════════════

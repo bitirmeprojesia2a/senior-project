@@ -35,7 +35,7 @@ def split_slack_message(
 
     cleaned = (text or "").strip()
     if not cleaned:
-        return ["Cevap uretilemedi. Lutfen sorunuzu biraz daha acik yazar misiniz?"]
+        return ["Cevap üretilemedi. Lütfen sorunuzu biraz daha açık yazar mısınız?"]
     if len(cleaned) <= max_chars:
         return [cleaned]
 

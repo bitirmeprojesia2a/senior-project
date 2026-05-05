@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import structlog
 
+from src.core.config import settings
 from src.core.constants import (
     ACADEMIC_SCHEDULE_QUERY_MARKERS,
     Department,
@@ -17,6 +18,7 @@ logger = structlog.get_logger()
 
 
 OFF_TOPIC_PENALTY = 0.75
+CAP_OFF_TOPIC_PENALTY = 0.55
 _NO_SIGNAL_PRIMARY_DEPARTMENTS = [Department.STUDENT_AFFAIRS]
 _NO_SIGNAL_FALLBACK_DEPARTMENTS = [Department.ACADEMIC_PROGRAMS, Department.FINANCE]
 _CAP_PRIMARY_TOPICS = {
@@ -31,10 +33,10 @@ def _turkish_lower(text: str) -> str:
 
 
 _TOPIC_SOURCE_PATTERNS: Dict[str, List[str]] = {
-    "çap": ["cift_anadal", "cift anadal", "cift ana dal", "cap"],
-    "çift anadal": ["cift_anadal", "cift anadal", "cift ana dal", "cap"],
-    "çift ana dal": ["cift_anadal", "cift anadal", "cift ana dal", "cap"],
-    "ikinci lisans": ["cift_anadal", "cift anadal", "cift ana dal", "cap"],
+    "çap": ["cift_anadal", "cift_ana_dal", "cift anadal", "cift ana dal", "cap"],
+    "çift anadal": ["cift_anadal", "cift_ana_dal", "cift anadal", "cift ana dal", "cap"],
+    "çift ana dal": ["cift_anadal", "cift_ana_dal", "cift anadal", "cift ana dal", "cap"],
+    "ikinci lisans": ["cift_anadal", "cift_ana_dal", "cift anadal", "cift ana dal", "cap"],
     "yan dal": ["cift_anadal", "yan dal", "yandal"],
     "yandal": ["cift_anadal", "yan dal", "yandal"],
     "ydp": ["cift_anadal", "yan dal", "yandal"],
@@ -621,6 +623,9 @@ def _apply_source_relevance(
     penalty: float = OFF_TOPIC_PENALTY,
 ) -> List[Dict[str, Any]]:
     """Apply a penalty to results whose source looks off-topic for the query."""
+    if not settings.rag.source_relevance_penalty_enabled:
+        return results
+
     normalized_query = normalize_text(query)
     if _looks_like_academic_calendar_date_query(normalized_query):
         adjusted = False
@@ -667,13 +672,18 @@ def _apply_source_relevance(
     expected = _TOPIC_SOURCE_PATTERNS.get(topic, [])
     if not expected:
         return results
+    effective_penalty = (
+        min(penalty, CAP_OFF_TOPIC_PENALTY)
+        if normalize_text(topic) in _CAP_PRIMARY_TOPICS
+        else penalty
+    )
 
     adjusted = False
     for result in results:
         source = normalize_text(result.get("source", ""))
         on_topic = any(pattern in source for pattern in expected)
         if not on_topic:
-            result["score"] = round(result["score"] * penalty, 4)
+            result["score"] = round(result["score"] * effective_penalty, 4)
             adjusted = True
 
     if adjusted:
@@ -725,6 +735,9 @@ def _apply_query_profile_source_bias(
     collection_name: str,
 ) -> List[Dict[str, Any]]:
     """Apply student-affairs procedure/profile source shaping before reranking."""
+    if not settings.rag.query_profile_source_bias_enabled:
+        return results
+
     profile = _detect_student_affairs_query_profile(query)
     if not profile:
         return results
@@ -787,6 +800,9 @@ def _apply_education_level_penalty(
     query: str,
 ) -> List[Dict[str, Any]]:
     """Penalize lisansustu sources when query is about lisans, and vice versa."""
+    if not settings.rag.education_level_penalty_enabled:
+        return results
+
     normalized_query = normalize_text(query)
     query_is_lisansustu = any(
         marker in normalized_query for marker in _LISANSUSTU_INDICATORS
@@ -830,6 +846,9 @@ def _apply_finance_source_penalty(
     collection_name: str,
 ) -> List[Dict[str, Any]]:
     """Push international-fee sources down for general finance fee queries."""
+    if not settings.rag.finance_source_penalty_enabled:
+        return results
+
     finance_collection = collection_name_for_department(Department.FINANCE)
     if collection_name != finance_collection and collection_name != "__multi__":
         return results
@@ -867,6 +886,9 @@ def _apply_student_affairs_faq_bias(
     collection_name: str,
 ) -> List[Dict[str, Any]]:
     """Boost Student Affairs FAQ-like sources for transcript/document/burs questions."""
+    if not settings.rag.student_affairs_faq_bias_enabled:
+        return results
+
     normalized_query = normalize_text(query)
     student_document_query = _looks_like_student_document_query(normalized_query)
     burs_query = "burs" in normalized_query

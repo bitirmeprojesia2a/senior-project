@@ -28,9 +28,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_STATE_QUERY_PREVIEW_MAX_CHARS = 180
+_STATE_QUERY_PREVIEW_MAX_CHARS = 280
 _TURN_QUERY_PREVIEW_MAX_CHARS = 240
-_TURN_ANSWER_PREVIEW_MAX_CHARS = 420
+_TURN_ANSWER_PREVIEW_MAX_CHARS = 560
+_TOPIC_TRANSITION_THRESHOLD = 0.68
 
 _COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
 _FOLLOW_UP_PREFIXES = (
@@ -196,6 +197,39 @@ def _content_tokens(text: str) -> set[str]:
 
 def _count_token_overlap(base_tokens: set[str], candidate_tokens: set[str]) -> int:
     return len(base_tokens & candidate_tokens)
+
+
+def _count_stem_overlap(base_tokens: set[str], candidate_tokens: set[str]) -> float:
+    """Approximate Turkish suffix overlap without introducing a stemmer."""
+    overlap = float(_count_token_overlap(base_tokens, candidate_tokens))
+    for base_token in base_tokens - candidate_tokens:
+        for candidate_token in candidate_tokens - base_tokens:
+            shorter = min(base_token, candidate_token, key=len)
+            longer = max(base_token, candidate_token, key=len)
+            if len(shorter) >= 4 and longer.startswith(shorter):
+                overlap += 0.5
+                break
+    return overlap
+
+
+def _topic_transition_score(query: str, state: "ConversationStateData") -> float:
+    """Return 0.0 for same-topic queries and 1.0 for likely topic changes."""
+    query_tokens = _content_tokens(query)
+    state_tokens = _content_tokens(
+        " ".join(
+            text
+            for text in (
+                state.active_topic,
+                state.last_user_query,
+                state.last_resolved_query,
+            )
+            if text
+        )
+    )
+    if not query_tokens or not state_tokens:
+        return 0.5
+    overlap = _count_stem_overlap(query_tokens, state_tokens)
+    return max(0.0, 1.0 - (overlap / max(len(query_tokens), len(state_tokens))))
 
 
 def _query_depends_on_context(query: str, *, context_texts: Sequence[str] = ()) -> bool:
@@ -553,6 +587,10 @@ _TOPIC_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Mevzuat ve Yonergeler", ("yonerge", "yonetmelik", "madde", "prosedur", "genelge")),
     ("Belgeler", ("ogrenci belgesi", "transkript belgesi", "diploma eki", "tecil", "askerlik belgesi")),
     ("Yaz Okulu", ("yaz okulu", "yaz donemi")),
+    ("Ders Tekrari ve Devam", ("ders tekrari", "tekrar dersi", "devam kosulu", "devam sarti")),
+    ("Ogrenci Kimligi", ("kimlik karti", "ogrenci karti", "ogrenci kimligi", "kimligimi kaybettim")),
+    ("Saglik ve Sigorta", ("saglik raporu", "sigorta", "is kazasi", "rapor aldim")),
+    ("Yurt ve Barinma", ("yurt", "barinma", "konaklama")),
     ("Devamsizlik", ("devamsizlik", "devam zorunlulugu", "yoklama")),
 )
 
@@ -572,6 +610,10 @@ _TOPIC_REWRITE_SEEDS: dict[str, str] = {
     "Mevzuat ve Yonergeler": "yonetmelik",
     "Belgeler": "belge",
     "Yaz Okulu": "yaz okulu",
+    "Ders Tekrari ve Devam": "ders tekrari",
+    "Ogrenci Kimligi": "ogrenci kimligi",
+    "Saglik ve Sigorta": "saglik ve sigorta",
+    "Yurt ve Barinma": "yurt ve barinma",
     "Devamsizlik": "devamsizlik",
 }
 
@@ -689,6 +731,33 @@ class ConversationContextService:
 
         heuristic = self._classify_follow_up(query=query, state=state)
         if not heuristic["is_follow_up"]:
+            if (
+                heuristic.get("needs_llm_decision")
+                and settings.conversation.rewrite_with_llm
+                and llm_service is not None
+            ):
+                llm_resolution = await self._rewrite_with_llm(
+                    query=query,
+                    state=state,
+                    llm_service=llm_service,
+                    llm_profile=llm_profile,
+                    student_department=student_department,
+                    student_faculty=student_faculty,
+                    student_type=student_type,
+                    allow_follow_up_downgrade=True,
+                )
+                if llm_resolution is not None:
+                    logger.info(
+                        "conversation_resolution context_id=%s ambiguous_llm_decision=%s "
+                        "original=%r effective=%r topic=%s",
+                        context_id,
+                        llm_resolution.is_follow_up,
+                        query,
+                        llm_resolution.effective_query,
+                        llm_resolution.active_topic,
+                    )
+                    return llm_resolution
+
             logger.info(
                 "conversation_resolution context_id=%s is_follow_up=false "
                 "topic=%s original=%r",
@@ -931,18 +1000,21 @@ class ConversationContextService:
         if any(marker in normalized_query for marker in _CONFUSION_OR_RESET_MARKERS):
             return {
                 "is_follow_up": False,
+                "needs_llm_decision": False,
                 "topic": state.active_topic,
             }
 
         if any(marker in normalized_query for marker in _INDEPENDENT_SHORT_QUERY_MARKERS):
             return {
                 "is_follow_up": False,
+                "needs_llm_decision": False,
                 "topic": self._infer_topic(query),
             }
 
         if _is_standalone_academic_calendar_query(query):
             return {
                 "is_follow_up": False,
+                "needs_llm_decision": False,
                 "topic": self._infer_topic(query),
             }
 
@@ -950,6 +1022,7 @@ class ConversationContextService:
         if len(query_tokens) <= 2 and any(t in _TURBO_WORDS for t in query_tokens):
             return {
                 "is_follow_up": False,
+                "needs_llm_decision": False,
                 "topic": state.active_topic,
             }
 
@@ -1042,22 +1115,97 @@ class ConversationContextService:
             ):
                 is_follow_up = False
 
-        if marker_only_follow_up and len(query_tokens) > 3:
+        if marker_only_follow_up:
             new_topic = self._infer_topic(query)
             if (
                 new_topic is not None
                 and state.active_topic is not None
                 and normalize_text(new_topic) != normalize_text(state.active_topic)
+                and _topic_transition_score(query, state) >= _TOPIC_TRANSITION_THRESHOLD
             ):
                 is_follow_up = False
 
+        needs_llm_decision = False
+        if not is_follow_up:
+            needs_llm_decision = self._should_ask_llm_for_ambiguous_follow_up(
+                query=query,
+                state=state,
+                query_tokens=query_tokens,
+                signal_based=signal_based,
+            )
+
         return {
             "is_follow_up": is_follow_up,
+            "needs_llm_decision": needs_llm_decision,
             "allow_llm_downgrade": (
-                short_context_follow_up or answer_fragment or has_weak_marker
+                short_context_follow_up
+                or answer_fragment
+                or has_weak_marker
+                or needs_llm_decision
             ),
             "topic": state.active_topic if is_follow_up else self._infer_topic(query),
         }
+
+    @staticmethod
+    def _should_ask_llm_for_ambiguous_follow_up(
+        *,
+        query: str,
+        state: ConversationStateData,
+        query_tokens: Sequence[str],
+        signal_based: bool,
+    ) -> bool:
+        """Return True when rules should defer a borderline context decision to LLM."""
+        if state.turn_count <= 0 or not state.active_topic:
+            return False
+        if not query_tokens:
+            return False
+
+        query_content_tokens = _content_tokens(query)
+        if not query_content_tokens:
+            return False
+
+        state_context = " ".join(
+            text
+            for text in (
+                state.active_topic,
+                state.last_user_query,
+                state.last_resolved_query,
+                state.last_assistant_answer,
+            )
+            if text
+        )
+        state_context_tokens = _content_tokens(state_context)
+        overlap = _count_stem_overlap(query_content_tokens, state_context_tokens)
+        transition_score = _topic_transition_score(query, state)
+
+        if signal_based and transition_score < 0.85:
+            return True
+        if len(query_tokens) <= 8 and transition_score < 0.75:
+            return True
+        if overlap >= 1.0 and len(query_tokens) <= 12:
+            return True
+        return False
+
+    async def _get_recent_turns(
+        self,
+        *,
+        context_id: str,
+        n: int = 3,
+    ) -> list[ConversationTurnData]:
+        """Fetch the last *n* persisted turns for richer LLM context."""
+        try:
+            async with self._session_provider() as session:
+                result = await session.execute(
+                    select(ConversationTurn)
+                    .where(ConversationTurn.context_id == context_id)
+                    .order_by(ConversationTurn.turn_index.desc())
+                    .limit(n)
+                )
+                rows = result.scalars().all()
+                return [self._to_turn_data(r) for r in reversed(rows)]
+        except Exception:
+            logger.debug("get_recent_turns_failed context_id=%s", context_id, exc_info=True)
+            return []
 
     async def _rewrite_with_llm(
         self,
@@ -1071,12 +1219,19 @@ class ConversationContextService:
         student_type: str | None,
         allow_follow_up_downgrade: bool,
     ) -> ConversationResolution | None:
+        max_recent_turns = max(0, int(settings.conversation.max_recent_turns))
+        recent_turns = (
+            await self._get_recent_turns(context_id=state.context_id, n=max_recent_turns)
+            if max_recent_turns
+            else []
+        )
         prompt = self._build_follow_up_prompt(
             query=query,
             state=state,
             student_department=student_department,
             student_faculty=student_faculty,
             student_type=student_type,
+            recent_turns=recent_turns,
         )
         try:
             raw = await asyncio.wait_for(
@@ -1144,7 +1299,7 @@ class ConversationContextService:
                 context_texts=context_texts,
             ):
                 logger.warning(
-                    "conversation_rewrite_missing_context original=%r rewritten=%r â†’ heuristic_fallback",
+                    "conversation_rewrite_missing_context original=%r rewritten=%r → heuristic_fallback",
                     query,
                     standalone_query,
                 )
@@ -1214,6 +1369,7 @@ class ConversationContextService:
         student_department: str | None,
         student_faculty: str | None,
         student_type: str | None,
+        recent_turns: list[ConversationTurnData] | None = None,
     ) -> str:
         payload = {
             "current_query": query,
@@ -1222,6 +1378,16 @@ class ConversationContextService:
                 "resolved_question": state.last_resolved_query,
                 "answer_summary": state.last_assistant_answer,
             },
+            "recent_turns": [
+                {
+                    "turn_index": t.turn_index,
+                    "user_question": t.user_query,
+                    "resolved_question": t.resolved_query,
+                    "answer_summary": t.answer_summary,
+                    "active_topic": t.active_topic,
+                }
+                for t in (recent_turns or [])
+            ],
             "conversation_state": {
                 "active_topic": state.active_topic,
                 "rolling_summary": state.rolling_summary,
@@ -1379,6 +1545,24 @@ class ConversationContextService:
             last_assistant_answer=row.last_assistant_answer,
             turn_count=row.turn_count,
             updated_at=row.updated_at,
+        )
+
+    @staticmethod
+    def _to_turn_data(row: ConversationTurn) -> ConversationTurnData:
+        return ConversationTurnData(
+            id=row.id,
+            context_id=row.context_id,
+            turn_index=row.turn_index,
+            user_query=row.user_query,
+            resolved_query=row.resolved_query,
+            assistant_answer=row.assistant_answer,
+            answer_summary=row.answer_summary,
+            active_topic=row.active_topic,
+            task_type=row.task_type,
+            is_follow_up=row.is_follow_up,
+            departments=list(row.departments or []),
+            source_refs=list(row.source_refs or []),
+            created_at=row.created_at,
         )
 
 

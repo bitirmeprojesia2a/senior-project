@@ -350,7 +350,7 @@ def build_structured_fee_answer(
         return None
 
     source = preferred.get("source", "bilinmiyor")
-    student_type_label = "Turk ogrenci" if requested_type == "domestic" else "uluslararasi ogrenci"
+    student_type_label = "Türk öğrenci" if requested_type == "domestic" else "uluslararası öğrenci"
     prefix = f"{db_context}\n\n" if db_context else ""
     normalized_query = normalize_finance_text(query_text)
     question_label = "Kayit yenileme ucreti" if "kayit yenileme" in normalized_query else "Ogrenim ucreti"
@@ -365,7 +365,7 @@ def build_catalog_fee_answer(query_text: str, catalog_entry: dict) -> str:
     """Build an answer from the structured tuition fee catalog."""
     normalized_query = normalize_finance_text(query_text)
     student_type_label = (
-        "Turk ogrenci" if catalog_entry["student_type"] == "domestic" else "uluslararasi ogrenci"
+        "Türk öğrenci" if catalog_entry["student_type"] == "domestic" else "uluslararası öğrenci"
     )
     question_label = "Kayit yenileme ucreti" if "kayit yenileme" in normalized_query else "Ogrenim ucreti"
     semester_amount = catalog_entry.get("semester_amount")
@@ -409,12 +409,12 @@ def build_honest_fee_fallback(
         return None
 
     source = preferred.get("source", "bilinmiyor")
-    student_type_label = "Turk ogrenci" if requested_type == "domestic" else "uluslararasi ogrenci"
+    student_type_label = "Türk öğrenci" if requested_type == "domestic" else "uluslararası öğrenci"
     prefix = f"{db_context}\n\n" if db_context else ""
     return (
-        f"{prefix}{student_type_label} / {display_unit_name(requested_unit)} icin "
-        "ilgili ucret tablosunda net ucret satirini guvenilir bicimde ayiklayamadim. "
-        "Bu birim icin dogrudan teyit edebildigim tutar su anda yok.\n\n"
+        f"{prefix}{student_type_label} / {display_unit_name(requested_unit)} için "
+        "ilgili ücret tablosunda net ücret satırını güvenilir biçimde ayıklayamadım. "
+        "Bu birim için doğrudan teyit edebildiğim tutar şu anda yok.\n\n"
         f"(Kaynak: {source})"
     )
 
@@ -423,7 +423,7 @@ def format_tuition_snapshot(snapshot: dict) -> str:
     """Format the authenticated student's tuition status snapshot."""
     tuition = snapshot.get("tuition")
     if tuition is None:
-        return f"{snapshot['student_name']} icin kayitli harc verisi bulunamadi."
+        return f"{snapshot['student_name']} için kayıtlı harç verisi bulunamadı."
 
     debt_amount = float(tuition["debt_amount"] or 0.0)
     paid_amount = float(tuition["paid_amount"] or 0.0)
@@ -432,13 +432,13 @@ def format_tuition_snapshot(snapshot: dict) -> str:
 
     if debt_amount > 0:
         return (
-            f"{snapshot['student_name']} icin {tuition['semester']} doneminde toplam "
-            f"{total_amount:.2f} TL harc kaydi var. Su ana kadar {paid_amount:.2f} TL odeme alinmis "
-            f"ve {debt_amount:.2f} TL borc gorunuyor. Son odeme tarihi: {due_date}."
+            f"{snapshot['student_name']} için {tuition['semester']} döneminde toplam "
+            f"{total_amount:.2f} TL harç kaydı var. Şu ana kadar {paid_amount:.2f} TL ödeme alınmış "
+            f"ve {debt_amount:.2f} TL borç görünüyor. Son ödeme tarihi: {due_date}."
         )
 
     return (
-        f"{snapshot['student_name']} icin {tuition['semester']} donemine ait "
-        f"{total_amount:.2f} TL tutarindaki harc kaydi odemeyle kapanmis gorunuyor. "
-        f"Son odeme tarihi: {due_date}."
+        f"{snapshot['student_name']} için {tuition['semester']} dönemine ait "
+        f"{total_amount:.2f} TL tutarındaki harç kaydı ödemeyle kapanmış görünüyor. "
+        f"Son ödeme tarihi: {due_date}."
     )

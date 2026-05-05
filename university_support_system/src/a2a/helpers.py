@@ -62,6 +62,8 @@ class A2AQueryPayload:
     force_llm_synthesis: bool = False
     query_complexity: str | None = None
     is_personal_query: bool = False
+    final_answer_owner: str | None = None
+    specialist_response_mode: str | None = None
     trace_id: str | None = None
     span_id: str | None = None
     parent_span_id: str | None = None
@@ -87,6 +89,8 @@ class A2AQueryPayload:
             "force_llm_synthesis": self.force_llm_synthesis,
             "query_complexity": self.query_complexity,
             "is_personal_query": self.is_personal_query,
+            "final_answer_owner": self.final_answer_owner,
+            "specialist_response_mode": self.specialist_response_mode,
             "trace_id": self.trace_id,
             "span_id": self.span_id,
             "parent_span_id": self.parent_span_id,

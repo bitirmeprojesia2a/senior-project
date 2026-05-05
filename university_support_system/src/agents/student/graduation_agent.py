@@ -64,8 +64,8 @@ class GraduationAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        "Kisisel sorunuza yanit verebilmem icin kimliginizi dogrulamam gerekiyor. "
-                        "Dogrulamayi ogrenci e-posta adresinize gonderecegim tek kullanimlik kod ile tamamlayabilirsiniz."
+                        "Kişisel sorunuza yanıt verebilmem için kimliğinizi doğrulamam gerekiyor. "
+                        "Doğrulamayı öğrenci e-posta adresinize göndereceğim tek kullanımlık kod ile tamamlayabilirsiniz."
                     ),
                     success=False,
                     error="authentication_required",
@@ -74,8 +74,8 @@ class GraduationAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        "Kisisel durumunuzu gosterebilmem icin oturumda ogrenci numarasi "
-                        "gerekiyor. Lutfen giris yapip tekrar deneyin."
+                        "Kişisel durumunuzu gösterebilmem için oturumda öğrenci numarası "
+                        "gerekiyor. Lütfen giriş yapıp tekrar deneyin."
                     ),
                     success=False,
                     error="student_id_required",
@@ -85,7 +85,7 @@ class GraduationAgent(BaseSpecialistAgent):
             if snapshot is None:
                 return DepartmentResponse(
                     department=self.department,
-                    answer="Ogrenci kaydi bulunamadi.",
+                    answer="Öğrenci kaydı bulunamadı.",
                     success=False,
                     error="student_not_found",
                 )

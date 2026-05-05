@@ -1,0 +1,284 @@
+{
+  "summary": {
+    "top1_changed": 2,
+    "top3_changed": 3,
+    "count": 5
+  },
+  "results": [
+    {
+      "query": "Önlisans öğrencisiyim ÇAP'a başvurabilir miyim?",
+      "department": "academic_programs",
+      "note": "CAP / onlisans",
+      "top1_changed": true,
+      "top3_same_set": false,
+      "current_elapsed_ms": 28707.0,
+      "no_bias_elapsed_ms": 2734.5,
+      "current": [
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8287,
+          "score_type": "reranker",
+          "reranker_score": 0.8287,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.6824,
+          "score_type": "reranker",
+          "reranker_score": 0.6824,
+          "pre_rerank_score": 0.3157
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.6774,
+          "score_type": "reranker",
+          "reranker_score": 0.6774,
+          "pre_rerank_score": 0.2761
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8434,
+          "score_type": "reranker",
+          "reranker_score": 0.8434,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8287,
+          "score_type": "reranker",
+          "reranker_score": 0.8287,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.787,
+          "score_type": "reranker",
+          "reranker_score": 0.787,
+          "pre_rerank_score": 0.3333
+        }
+      ]
+    },
+    {
+      "query": "Yaz okulunda sınıf kapasitesi kaç kişi olur?",
+      "department": "student_affairs",
+      "note": "yaz okulu kapasite",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 4787.5,
+      "no_bias_elapsed_ms": 2370.3,
+      "current": [
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "score": 0.486,
+          "score_type": "reranker",
+          "reranker_score": 0.486,
+          "pre_rerank_score": 0.2216
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "yaz_okulu_eğitim_öğretim.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_okulu_eğitim_öğretim_yönergesi.pdf",
+          "score": 0.8227,
+          "score_type": "reranker",
+          "reranker_score": 0.8227,
+          "pre_rerank_score": 0.299
+        },
+        {
+          "source": "yaz_dönemi_eğitim_öğretim_yönetmeliği.pdf",
+          "score": 0.5221,
+          "score_type": "reranker",
+          "reranker_score": 0.5221,
+          "pre_rerank_score": 0.223
+        }
+      ]
+    },
+    {
+      "query": "Öğrenci kimlik kartım kayıp ne yapacağım?",
+      "department": "student_affairs",
+      "note": "kimlik karti",
+      "top1_changed": false,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2596.5,
+      "no_bias_elapsed_ms": 2397.0,
+      "current": [
+        {
+          "source": "kimlik_kartı_yönergesi.pdf",
+          "score": 0.6001,
+          "score_type": "reranker",
+          "reranker_score": 0.6001,
+          "pre_rerank_score": 0.3353
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "score": 0.4884,
+          "score_type": "reranker",
+          "reranker_score": 0.4884,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "kayıt_sildirme_formu_lisans_önlisans.pdf",
+          "score": 0.4859,
+          "score_type": "reranker",
+          "reranker_score": 0.4859,
+          "pre_rerank_score": 0.2903
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "kimlik_kartı_yönergesi.pdf",
+          "score": 0.6001,
+          "score_type": "reranker",
+          "reranker_score": 0.6001,
+          "pre_rerank_score": 0.3353
+        },
+        {
+          "source": "uygulama_esaslari_diploma_mezuniyet_belgeler.pdf",
+          "score": 0.4884,
+          "score_type": "reranker",
+          "reranker_score": 0.4884,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "kayıt_sildirme_formu_lisans_önlisans.pdf",
+          "score": 0.4859,
+          "score_type": "reranker",
+          "reranker_score": 0.4859,
+          "pre_rerank_score": 0.2903
+        }
+      ]
+    },
+    {
+      "query": "ÇAP başvurusu nasıl yapılır?",
+      "department": "academic_programs",
+      "note": "CAP basvuru",
+      "top1_changed": false,
+      "top3_same_set": false,
+      "current_elapsed_ms": 2435.2,
+      "no_bias_elapsed_ms": 2367.0,
+      "current": [
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8638,
+          "score_type": "reranker",
+          "reranker_score": 0.8638,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.853,
+          "score_type": "reranker",
+          "reranker_score": 0.853,
+          "pre_rerank_score": 0.3755
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8071,
+          "score_type": "reranker",
+          "reranker_score": 0.8071,
+          "pre_rerank_score": 0.25
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8638,
+          "score_type": "reranker",
+          "reranker_score": 0.8638,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8602,
+          "score_type": "reranker",
+          "reranker_score": 0.8602,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.853,
+          "score_type": "reranker",
+          "reranker_score": 0.853,
+          "pre_rerank_score": 0.3755
+        }
+      ]
+    },
+    {
+      "query": "ÇAP not ortalaması kaç olmalı?",
+      "department": "academic_programs",
+      "note": "CAP not ortalamasi",
+      "top1_changed": true,
+      "top3_same_set": true,
+      "current_elapsed_ms": 2611.9,
+      "no_bias_elapsed_ms": 2397.9,
+      "current": [
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8551,
+          "score_type": "reranker",
+          "reranker_score": 0.8551,
+          "pre_rerank_score": 0.25
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.5474,
+          "score_type": "reranker",
+          "reranker_score": 0.5474,
+          "pre_rerank_score": 0.2006
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.4722,
+          "score_type": "reranker",
+          "reranker_score": 0.8585,
+          "pre_rerank_score": 0.5
+        }
+      ],
+      "no_bias": [
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8585,
+          "score_type": "reranker",
+          "reranker_score": 0.8585,
+          "pre_rerank_score": 0.5
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "score": 0.8572,
+          "score_type": "reranker",
+          "reranker_score": 0.8572,
+          "pre_rerank_score": 0.3333
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "score": 0.8551,
+          "score_type": "reranker",
+          "reranker_score": 0.8551,
+          "pre_rerank_score": 0.25
+        }
+      ]
+    }
+  ]
+}

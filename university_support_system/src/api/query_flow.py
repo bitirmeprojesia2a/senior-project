@@ -55,7 +55,7 @@ async def resolve_query_context(
         profile = await profile_service.upsert_profile(
             context_id=context_id,
             user_id=payload.user_id or resolved["slack_user_id"],
-            full_name=resolved["full_name"] or payload.full_name or "Ogrenci",
+            full_name=resolved["full_name"] or payload.full_name or "Öğrenci",
             student_number=resolved["student_number"],
             department=resolved["student_department"] or payload.student_department or "",
             faculty=resolved["student_faculty"] or payload.student_faculty or "",
@@ -154,6 +154,8 @@ def build_dispatch_metadata(
         "force_llm_synthesis": payload.force_llm_synthesis,
         "query_complexity": payload.query_complexity,
         "is_personal_query": payload.is_personal_query,
+        "final_answer_owner": payload.final_answer_owner,
+        "specialist_response_mode": payload.specialist_response_mode,
         "disable_specialist_llm": payload.disable_specialist_llm,
         "trace_id": payload.trace_id,
         "span_id": payload.span_id,

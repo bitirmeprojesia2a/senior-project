@@ -102,8 +102,8 @@ class CurriculumAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        "Kisisel sorunuza yanit verebilmem icin kimliginizi dogrulamam gerekiyor. "
-                        "Dogrulamayi ogrenci e-posta adresinize gonderecegim tek kullanimlik kod ile tamamlayabilirsiniz."
+                        "Kişisel sorunuza yanıt verebilmem için kimliğinizi doğrulamam gerekiyor. "
+                        "Doğrulamayı öğrenci e-posta adresinize göndereceğim tek kullanımlık kod ile tamamlayabilirsiniz."
                     ),
                     success=False,
                     error="authentication_required",
@@ -112,8 +112,8 @@ class CurriculumAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        "Kisisel ilerleme bilgilerin icin oturumda ogrenci numarasi gerekiyor. "
-                        "Lutfen giris yapip tekrar deneyin."
+                        "Kişisel ilerleme bilgilerin için oturumda öğrenci numarası gerekiyor. "
+                        "Lütfen giriş yapıp tekrar deneyin."
                     ),
                     success=False,
                     error="student_id_required",
@@ -147,9 +147,9 @@ class CurriculumAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        f"{effective_department} icin kayitli yapilandirilmis ders programi satiri bulunamadi. "
-                        "Ders programi bolum/fakulte duyurularinda PDF veya duyuru olarak yayinlanmis olabilir; "
-                        "bu durumda ilgili bolum duyurularini kontrol etmek gerekir."
+                        f"{effective_department} için kayıtlı yapılandırılmış ders programı satırı bulunamadı. "
+                        "Ders programı bölüm/fakülte duyurularında PDF veya duyuru olarak yayımlanmış olabilir; "
+                        "bu durumda ilgili bölüm duyurularını kontrol etmek gerekir."
                     ),
                     generation_mode="kural",
                     include_contact_suggestion=True,
@@ -165,8 +165,8 @@ class CurriculumAgent(BaseSpecialistAgent):
                 return DepartmentResponse(
                     department=self.department,
                     answer=(
-                        f"{code_match.group(0).upper().replace(' ', '')} dersi icin kayitli bir onkosul bilgisi bulunamadi. "
-                        "Ders kodu guncellenmis olabilir; ilgili bolum sekreterligi ile dogrulaman iyi olur."
+                        f"{code_match.group(0).upper().replace(' ', '')} dersi için kayıtlı bir önkoşul bilgisi bulunamadı. "
+                        "Ders kodu güncellenmiş olabilir; ilgili bölüm sekreterliği ile doğrulaman iyi olur."
                     ),
                     include_contact_suggestion=True,
                     success=True,
@@ -179,14 +179,14 @@ class CurriculumAgent(BaseSpecialistAgent):
                 return await self._build_course_list_response(
                     query_text,
                     courses,
-                    f"{curriculum_semester}. yariyil",
+                    f"{curriculum_semester}. yarıyıl",
                     student_department=effective_department,
                 )
             return DepartmentResponse(
                 department=self.department,
                 answer=(
-                    f"{effective_department} icin {curriculum_semester}. yariyilda kayitli ders bulunamadi. "
-                    "Mufredat verisini bolum sekreterligi ile dogrulaman iyi olur."
+                    f"{effective_department} için {curriculum_semester}. yarıyılda kayıtlı ders bulunamadı. "
+                    "Müfredat verisini bölüm sekreterliği ile doğrulaman iyi olur."
                 ),
                 include_contact_suggestion=True,
                 success=True,
@@ -254,9 +254,9 @@ class CurriculumAgent(BaseSpecialistAgent):
             if schedule_info:
                 answer += f"\nDerslik: {schedule_info}"
             else:
-                answer += "\nDerslik bilgisi ders programi verisinde bulunamadi."
+                answer += "\nDerslik bilgisi ders programı verisinde bulunamadı."
         else:
-            lines = ["Bu ders adi icin birden fazla kayit bulundu:"]
+            lines = ["Bu ders adı için birden fazla kayıt bulundu:"]
             for course in courses:
                 semester = course.get("curriculum_semester")
                 semester_text = self._semester_to_year_text(semester)
@@ -267,7 +267,7 @@ class CurriculumAgent(BaseSpecialistAgent):
                     course_name=course.get("course_name"),
                     semester=semester,
                 )
-                schedule_suffix = f" | Derslik: {schedule_info}" if schedule_info else " | Derslik bilgisi bulunamadi"
+                schedule_suffix = f" | Derslik: {schedule_info}" if schedule_info else " | Derslik bilgisi bulunamadı"
                 lines.append(
                     f"- {course['course_code']} {course['course_name']} | "
                     f"{course.get('department') or 'Program bilinmiyor'} | {semester_text}{schedule_suffix}"

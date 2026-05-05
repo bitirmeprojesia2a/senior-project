@@ -1,0 +1,58 @@
+# Rapora Eklenecek Teknik Deneme Notlari
+
+Tarih: 2026-05-03 / 2026-05-04
+
+Bu dosya, bitirme raporuna daha sonra eklenecek model, API ve RAG iyilestirme notlarini tek yerde toplar. Ayrintili NVIDIA API denemeleri icin `docs/NVIDIA_API_MODEL_DENEME_NOTLARI.md`, BGE skor dagilimi icin `docs/archive/benchmarks/bge_fp16_reranker_score_analysis.md` dosyalari kaynak alinabilir.
+
+## NVIDIA Hosted API Denemeleri
+
+NVIDIA hosted OpenAI-compatible API, projeye alternatif LLM saglayicisi olarak denenmistir. Amac, Groq tabanli mevcut yapinin hiz ve kalite dengesiyle karsilastirma yapmaktir.
+
+| Model | Gozlem | Sure | Karar |
+| --- | --- | ---: | --- |
+| `minimaxai/minimax-m2.7` | Slack/A2A akisinda cok yavas kaldi; specialist timeout sonrasi RAG fallback'e dusme gozlemlendi. | 90 sn+ ham cagri, Slack'te yaklasik 240 sn | Uygun degil |
+| `openai/gpt-oss-120b` | NVIDIA tarafinda en hizli cevap veren aday oldu. | Yaklasik 3 sn | Alternatif olarak not edildi |
+| `qwen/qwen3-next-80b-a3b-instruct` | Cevap verdi fakat gecikme daha yuksekti. | 11-25 sn | Ikinci aday |
+| `z-ai/glm-5.1` | Kisa testte cevap donmedi. | 45 sn+ | Uygun degil |
+| `moonshotai/kimi-k2.6` | Kisa testte cevap donmedi. | 45 sn+ | Uygun degil |
+
+Sonuc olarak Groq yapisi hiz ve cevap kalitesi acisindan daha uygun bulunmus, NVIDIA entegrasyonu geri alinmistir. NVIDIA tekrar degerlendirilecekse once ham latency testi, sonra Slack/A2A gercek akis testi yapilmalidir.
+
+## Reranker Model Denemeleri
+
+RAG tarafinda ilk kurulumda hiz kaygisi nedeniyle kucuk reranker tercih edilmisti. API tabanli LLM'e gecisle cevap uretim suresi rahatladigi icin daha kaliteli reranker adaylari denenmistir.
+
+| Model | Neden Denendi | Gozlem | Karar |
+| --- | --- | --- | --- |
+| `nreimers/mmarco-mMiniLMv2-L6-H384-v1` | Eski hizli baseline. Turkce dahil cok dilli MS MARCO turevi, CPU'da makul sure. | Hizliydi, fakat zor Turkce mevzuat/yonerge sorularinda belge secimi sinirli kalabiliyordu. | Geri donus baseline'i olarak korunmali |
+| `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` | L6'ya gore daha buyuk ve potansiyel olarak daha kaliteli cok dilli cross-encoder. | Hiz/kalite kazanci beklenen kadar belirgin olmadi; model adinin env'de kalmasi karisiklik yaratti. | Ana aday degil |
+| `seroe/bge-reranker-v2-m3-turkish-triplet` | Turkce odakli BGE turevi oldugu icin denendi. | Beklenen kalite farki belirginlesmedi; proje sorgularinda istikrarli ustunluk gorulmedi. | Ana aday degil |
+| `BAAI/bge-reranker-v2-m3` | Cok dilli, daha guclu BGE reranker; Turkce destekli ve kalite potansiyeli yuksek. | CUDA + fp16 ile hiz kabul edilebilir seviyeye indi. Skor dagilimi icin kalibrasyon analizi yapildi. | Aktif aday |
+
+## BGE Reranker Kalibrasyon Notu
+
+`BAAI/bge-reranker-v2-m3` icin 40 soru / 400 aday uzerinden skor dagilimi alinmistir.
+
+- Ham skor median: `0.0652`
+- Ham top-1 median: `0.6799`
+- Onerilen sigmoid formul: `sigmoid((score - 0.0652) / 0.5000)`
+- Onerilen direct-RAG esigi: `0.635`
+- Onerilen min-source esigi: `0.472`
+
+Mevcut yorum: BGE reranker icin fp16 performansi umut verici; ancak cevap kalitesindeki sorunlarin tamami reranker kaynakli degildir. Bazi durumlarda dogru belge ilk siralara gelse bile cevapta ilgili chunk/fact kullanilmamaktadir. Bu nedenle sonraki iyilestirme odagi sadece reranker degil, evidence selection, chunk genisletme ve final synthesis/judge akisi olmalidir.
+
+## Sonraki RAG Inceleme Basliklari
+
+- Reranker skip su an yalnizca aday sayisi `top_k` veya daha azsa devreye giriyor; agresif bir skip davranisi kalmamis gorunuyor.
+- Score penalty/boost sistemi BGE sonrasi tekrar olculmeli. Ozellikle `CAP_OFF_TOPIC_PENALTY` gibi sert cezalar dogru belgeyi asagi itebilir. Bunun icin davranisi degistirmeden asagidaki `.env` bayraklari eklendi:
+  - `RAG_SOURCE_RELEVANCE_PENALTY_ENABLED`
+  - `RAG_QUERY_PROFILE_SOURCE_BIAS_ENABLED`
+  - `RAG_EDUCATION_LEVEL_PENALTY_ENABLED`
+  - `RAG_FINANCE_SOURCE_PENALTY_ENABLED`
+  - `RAG_STUDENT_AFFAIRS_FAQ_BIAS_ENABLED`
+  Varsayilanlar `true`; benchmark sirasinda tek tek `false` yapilarak BGE reranker'in tek basina siralama kalitesi olculebilir.
+- 2026-05-04 kisa canli retrieval kiyasinda 6 temsilî sorgu denenmistir. CAP/onlisans ve yaz okulu kapasitesi sorgularinda acik/kapali sonuc ayni kalmistir. Ogrenci belgesi sorgusunda `student_affairs_faq_bias` acikken top-5 tamamen `sik_sorulan_sorular.txt` olarak kalmis, kapaliyken yatay gecis/kayit ilani belgeleri top-5'e girmistir. Sinav notuna itiraz sorgusunda profil bias acikken FAQ + yonetmelik dengesi daha iyi korunmus, kapaliyken FAQ tamamen top-5 disina dusmustur. Akademik takvim sorgusunda source relevance acikken takvim kaynaklari skorda net ayrismis, kapaliyken yine top-2'de kalmistir ama FAQ ile skor farki azalmistir. Bu kisa teste gore ceza/boost sistemini tamamen kaldirmak yerine bayrakli tutup kapsamli benchmark ile parca parca olcmek daha guvenlidir.
+- 2026-05-04 ikinci canli retrieval kiyasinda 25 temsilî sorgu ile tum ceza/boost bayraklari acik ve kapali olarak karsilastirilmistir. Normalize kaynak eslesmesiyle acik durumda top-1 isabet `21/25`, top-3/top-5 isabet `23/25`; kapali durumda top-1 isabet `19/25`, top-3/top-5 isabet `22/25` olmustur. Acik durumda `kayit sildirme`, `onlisans CAP` ve `harc odemesi` sorgularinda daha iyi siralama gorulmustur. Kapali durumda yalnizca `katki payi hangi durumda odenir?` sorgusunda top-1 daha iyi gorunmustur. Bu sonuc ceza/boost sistemini tamamen kaldirmak yerine bayrakli koruyup finans tarafindaki `harc odemesi` / `katki payi` ayrimini ayrica kalibre etmenin daha dogru oldugunu gosterir.
+- Test notu: Lokal script calistirmalarinda `HF_HOME`, `SENTENCE_TRANSFORMERS_HOME` ve `MODEL_CACHE_HOST_DIR` process ortaminda verilmezse reranker cache bulunamayabiliyor. Dogru benchmark icin cache env'leri acikca set edilmelidir.
+- Yaz okulu sinif kapasitesi, CAP/onlisans uygunlugu ve kimlik karti kaybi gibi gercek Slack testleri benchmark setine eklenmeli.
+- Belge bulunup cevapta bilgi kullanilmiyorsa sorun reranker degil, context/evidence secimi veya sentez prompt'u tarafindadir.

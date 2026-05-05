@@ -35,6 +35,7 @@ from src.rag.llm_query_expander import LLMQueryExpander
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.rag.search_planner import (
     OFF_TOPIC_PENALTY as _SHARED_OFF_TOPIC_PENALTY,
+    _CAP_PRIMARY_TOPICS as _SHARED_CAP_PRIMARY_TOPICS,
     _apply_education_level_penalty as _shared_apply_education_level_penalty,
     _apply_finance_source_penalty as _shared_apply_finance_source_penalty,
     _apply_query_profile_source_bias as _shared_apply_query_profile_source_bias,
@@ -126,6 +127,9 @@ def _select_reranker_query(query: str, expanded_query: str) -> str:
     """Prefer expanded query text for high-value student-affairs admin profiles."""
     profile = _detect_student_affairs_query_profile(query)
     if profile in {"grade_objection", "grade_entry", "grade_visibility", "withdrawal", "discipline", "muafiyet"}:
+        return _strip_augmentation_prefix(expanded_query)
+    topic = _shared_detect_query_topic(query)
+    if topic and normalize_text(topic) in _SHARED_CAP_PRIMARY_TOPICS:
         return _strip_augmentation_prefix(expanded_query)
     return _strip_augmentation_prefix(query)
 
@@ -594,7 +598,7 @@ class HybridRetriever:
             collection_name == collection_name_for_department(Department.ACADEMIC_PROGRAMS)
             and query_type == "general"
         ):
-            base_limit = max(base_limit, top_k + 4)
+            base_limit = max(base_limit, top_k + 1)
 
         profile = _detect_student_affairs_query_profile(query)
         if collection_name in {
@@ -612,11 +616,11 @@ class HybridRetriever:
             }:
                 # Keep extra recall for admin/procedure-heavy student-affairs flows,
                 # but avoid reranking very large pools that dominate dispatch latency.
-                base_limit = max(base_limit, top_k + 8, 16)
+                base_limit = max(base_limit, top_k + 1, 6)
             elif query_type == "procedural":
-                base_limit = max(base_limit, top_k + 6, 12)
+                base_limit = max(base_limit, top_k + 1, 6)
             elif profile == "international_registration":
-                base_limit = max(base_limit, top_k + 8, 14)
+                base_limit = max(base_limit, top_k + 1, 6)
 
         return max(top_k, base_limit)
 
@@ -627,8 +631,8 @@ class HybridRetriever:
         candidates: List[Dict[str, Any]],
         top_k: int,
     ) -> bool:
-        """Skip reranker only when there are not enough candidates to rerank."""
-        return len(candidates) <= top_k
+        """Skip reranker only when there are not enough candidates to compare."""
+        return len(candidates) <= 1
 
     def _rank_without_reranker(
         self,
