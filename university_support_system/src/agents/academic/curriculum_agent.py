@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from datetime import datetime
+import logging
 import re
 from typing import Any
 
@@ -46,6 +47,9 @@ from src.db.schedule_data import (
 )
 from src.db.schemas import DepartmentResponse
 from src.llm.prompt_templates import CURRICULUM_AGENT_SYSTEM_PROMPT
+
+
+logger = logging.getLogger(__name__)
 
 
 class CurriculumAgent(BaseSpecialistAgent):
@@ -119,13 +123,30 @@ class CurriculumAgent(BaseSpecialistAgent):
                     error="student_id_required",
                 )
 
+        if is_prerequisite_query(lowered):
+            prerequisite_response = await self._try_build_prerequisite_response(
+                query_text,
+                lowered,
+                effective_department=effective_department or None,
+            )
+            if prerequisite_response is not None:
+                return prerequisite_response
+
         if self._is_course_title_metadata_query(lowered):
             title_lookup_courses = await self._course_title_fetcher(
                 query_text,
                 effective_department or None,
             )
             if title_lookup_courses:
+                if self._is_course_akts_query(lowered):
+                    return self._build_course_akts_response(title_lookup_courses)
                 return await self._build_course_title_lookup_response(title_lookup_courses)
+            if effective_department and self._should_return_course_not_found(lowered):
+                return self._build_course_not_found_response(
+                    query_text=query_text,
+                    department=effective_department,
+                    query_type="course_title_lookup",
+                )
 
         if needs_department_context(lowered, query_text, effective_department):
             return DepartmentResponse(
@@ -152,22 +173,6 @@ class CurriculumAgent(BaseSpecialistAgent):
                         "bu durumda ilgili bölüm duyurularını kontrol etmek gerekir."
                     ),
                     generation_mode="kural",
-                    include_contact_suggestion=True,
-                    success=True,
-                )
-
-        if is_prerequisite_query(lowered):
-            code_match = COURSE_CODE_PATTERN.search(query_text)
-            if code_match:
-                prereq_data = await self._prerequisite_fetcher(code_match.group(0).upper().replace(" ", ""))
-                if prereq_data is not None:
-                    return await self._build_prerequisite_response(query_text, prereq_data)
-                return DepartmentResponse(
-                    department=self.department,
-                    answer=(
-                        f"{code_match.group(0).upper().replace(' ', '')} dersi için kayıtlı bir önkoşul bilgisi bulunamadı. "
-                        "Ders kodu güncellenmiş olabilir; ilgili bölüm sekreterliği ile doğrulaman iyi olur."
-                    ),
                     include_contact_suggestion=True,
                     success=True,
                 )
@@ -210,6 +215,8 @@ class CurriculumAgent(BaseSpecialistAgent):
 
     @staticmethod
     def _is_course_title_metadata_query(lowered: str) -> bool:
+        if any(marker in lowered for marker in ("ders programi", "haftalik program")):
+            return False
         return any(
             marker in lowered
             for marker in (
@@ -220,8 +227,161 @@ class CurriculumAgent(BaseSpecialistAgent):
                 "kacinci yariyil",
                 "hangi donem",
                 "kacinci donem",
+                "mufredatinda",
+                "mufredatta",
+                "dersi var mi",
+                "ders var mi",
+                "dersinin akts",
+                "dersi kac akts",
             )
         )
+
+    @staticmethod
+    def _is_course_akts_query(lowered: str) -> bool:
+        if "akts" not in lowered:
+            return False
+        if any(marker in lowered for marker in ("mezun", "tamamlam", "toplam", "ek akts", "fazla ders")):
+            return False
+        tokens = set(lowered.split())
+        return bool(tokens & {"ders", "dersi", "dersin", "dersinin"})
+
+    @staticmethod
+    def _should_return_course_not_found(lowered: str) -> bool:
+        if any(marker in lowered for marker in ("bu ders", "su ders", "o ders")):
+            return False
+        return any(
+            marker in lowered
+            for marker in (
+                "mufredatinda",
+                "mufredatta",
+                "dersi var mi",
+                "ders var mi",
+                "dersinin akts",
+                "dersi kac akts",
+            )
+        )
+
+    def _build_course_not_found_response(
+        self,
+        *,
+        query_text: str,
+        department: str,
+        query_type: str,
+    ) -> DepartmentResponse:
+        return DepartmentResponse(
+            department=self.department,
+            answer=(
+                f"{department} müfredat veritabanında soruda geçen ders için kayıt bulunamadı. "
+                "Ders adı farklı yazılmış olabilir; ders kodu ile sorarsanız daha kesin kontrol edebilirim."
+            ),
+            db_data={
+                "query": query_text,
+                "requested_department": department,
+                "courses": [],
+                "query_type": query_type,
+                "data_available": False,
+            },
+            generation_mode="vt",
+            success=True,
+        )
+
+    def _build_course_context_required_response(self) -> DepartmentResponse:
+        return DepartmentResponse(
+            department=self.department,
+            answer=(
+                "Ön koşul veya AKTS bilgisini kontrol edebilmem için ders adını ya da ders kodunu "
+                "bölüm/program bilgisiyle birlikte yazar mısınız?"
+            ),
+            generation_mode="kural",
+            success=True,
+        )
+
+    def _build_course_akts_response(self, courses: list[dict[str, Any]]) -> DepartmentResponse:
+        if len(courses) == 1:
+            course = courses[0]
+            akts = course.get("akts")
+            akts_text = f"{akts} AKTS" if akts not in (None, "") else "AKTS bilgisi kayıtlı değil"
+            answer = (
+                f"{course['course_code']} {course['course_name']} dersi "
+                f"{course.get('department') or 'ilgili program'} müfredatında {akts_text} olarak kayıtlı."
+            )
+        else:
+            lines = ["Bu ders adı için birden fazla kayıt bulundu:"]
+            for course in courses:
+                akts = course.get("akts")
+                akts_text = f"{akts} AKTS" if akts not in (None, "") else "AKTS bilgisi kayıtlı değil"
+                semester_text = self._semester_to_year_text(course.get("curriculum_semester"))
+                lines.append(
+                    f"- {course['course_code']} {course['course_name']} | "
+                    f"{course.get('department') or 'Program bilinmiyor'} | {semester_text} | {akts_text}"
+                )
+            answer = "\n".join(lines)
+
+        return DepartmentResponse(
+            department=self.department,
+            answer=answer,
+            db_data={"courses": courses, "query_type": "course_akts_lookup"},
+            generation_mode="vt",
+            success=True,
+        )
+
+    async def _try_build_prerequisite_response(
+        self,
+        query_text: str,
+        lowered: str,
+        *,
+        effective_department: str | None,
+    ) -> DepartmentResponse | None:
+        code_match = COURSE_CODE_PATTERN.search(query_text)
+        if code_match:
+            course_code = code_match.group(0).upper().replace(" ", "")
+            prereq_data = await self._prerequisite_fetcher(course_code)
+            if prereq_data is not None:
+                return await self._build_prerequisite_response(query_text, prereq_data)
+            return DepartmentResponse(
+                department=self.department,
+                answer=(
+                    f"{course_code} dersi için kayıtlı bir önkoşul bilgisi bulunamadı. "
+                    "Ders kodu güncellenmiş olabilir; ilgili bölüm sekreterliği ile doğrulaman iyi olur."
+                ),
+                include_contact_suggestion=True,
+                success=True,
+            )
+
+        title_lookup_courses = await self._course_title_fetcher(query_text, effective_department)
+        if len(title_lookup_courses) == 1:
+            course_code = str(title_lookup_courses[0].get("course_code") or "").strip()
+            if not course_code:
+                return self._build_course_context_required_response()
+            prereq_data = await self._prerequisite_fetcher(course_code)
+            if prereq_data is not None:
+                return await self._build_prerequisite_response(query_text, prereq_data)
+            return DepartmentResponse(
+                department=self.department,
+                answer=(
+                    f"{course_code} {title_lookup_courses[0].get('course_name') or ''} "
+                    "dersinin kayıtlı önkoşulu bulunmamaktadır."
+                ),
+                db_data={
+                    "course": title_lookup_courses[0],
+                    "query_type": "course_prerequisite_lookup",
+                    "prerequisites": [],
+                },
+                generation_mode="vt",
+                success=True,
+            )
+
+        if title_lookup_courses:
+            return await self._build_course_title_lookup_response(title_lookup_courses)
+
+        if effective_department and self._should_return_course_not_found(lowered):
+            return self._build_course_not_found_response(
+                query_text=query_text,
+                department=effective_department,
+                query_type="course_prerequisite_lookup",
+            )
+
+        return self._build_course_context_required_response()
 
     @staticmethod
     def _semester_to_year_text(semester: int | None) -> str:
@@ -490,6 +650,11 @@ class CurriculumAgent(BaseSpecialistAgent):
     @staticmethod
     def _extract_schedule_term_key(query_text: str) -> str | None:
         normalized = normalize_text(query_text)
+        semester_match = re.search(r"\b([1-8])\s*\.?\s*(?:yariyil|donem)\b", normalized)
+        if semester_match is not None:
+            semester = int(semester_match.group(1))
+            return "guz" if semester % 2 == 1 else "bahar"
+
         if any(
             marker in normalized
             for marker in (
@@ -505,8 +670,10 @@ class CurriculumAgent(BaseSpecialistAgent):
             marker in normalized
             for marker in (
                 "guz",
+                "ilk donem",
                 "1 donem",
                 "birinci donem",
+                "ilk yariyil",
                 "1 yariyil",
                 "birinci yariyil",
             )

@@ -10,6 +10,9 @@ from src.core.text_normalization import iter_alias_matches_longest_first, normal
 EXTRA_COURSE_LIST_KEYWORDS = (
     "dersleri neler",
     "dersleri nelerdir",
+    "dersler neler",
+    "dersleri hakkinda",
+    "dersleri hakkinda bilgi",
     "donem dersleri",
     "yariyil dersleri",
 )
@@ -91,9 +94,10 @@ PERSONAL_PROGRESS_MARKERS = (
     "kalan kredi",
 )
 SEMESTER_QUERY_PATTERN = re.compile(
-    r"\b([1-8])\s*\.?\s*(?:yariyil|yarıyıl|donem|dönem)\b",
+    r"\b([1-8])\s*\.?\s*(?:yariyil|yarıyıl|donem|dönem)(?:daki|deki|da|de)?\b",
     re.IGNORECASE,
 )
+CLASS_YEAR_QUERY_PATTERN = re.compile(r"\b([1-6])\s*\.?\s*sinif\b", re.IGNORECASE)
 SEMESTER_WORDS = {
     "birinci": 1,
     "ilk": 1,
@@ -105,6 +109,37 @@ SEMESTER_WORDS = {
     "yedinci": 7,
     "sekizinci": 8,
 }
+CLASS_YEAR_WORDS = {
+    "birinci": 1,
+    "ilk": 1,
+    "ikinci": 2,
+    "ucuncu": 3,
+    "dorduncu": 4,
+    "besinci": 5,
+    "altinci": 6,
+}
+FIRST_TERM_MARKERS = (
+    "ilk donem",
+    "birinci donem",
+    "1 donem",
+    "1. donem",
+    "ilk yariyil",
+    "birinci yariyil",
+    "1 yariyil",
+    "1. yariyil",
+    "guz donemi",
+    "guz yariyili",
+)
+SECOND_TERM_MARKERS = (
+    "ikinci donem",
+    "2 donem",
+    "2. donem",
+    "ikinci yariyil",
+    "2 yariyil",
+    "2. yariyil",
+    "bahar donemi",
+    "bahar yariyili",
+)
 ELECTIVE_GROUP_TYPES = {"secmeli_grup", "teknik_secmeli", "lab_secmeli", "sosyal_secmeli"}
 LANGUAGE_COURSE_CODE_PREFIXES = ("YD", "YDA", "YDF", "YDI")
 LANGUAGE_COURSE_NAME_MARKERS = (
@@ -411,6 +446,13 @@ def extract_schedule_groups(lowered: str) -> set[str]:
     for marker, aliases in SCHEDULE_GROUP_MARKERS.items():
         if marker in lowered:
             matches.update(aliases)
+    semester_match = SEMESTER_QUERY_PATTERN.search(lowered)
+    if semester_match is not None:
+        semester = int(semester_match.group(1))
+        class_year = (semester + 1) // 2
+        aliases = SCHEDULE_GROUP_MARKERS.get(f"{class_year}. sinif")
+        if aliases:
+            matches.update(aliases)
     return matches
 
 
@@ -439,6 +481,14 @@ def extract_curriculum_semester(query_text: str) -> int | None:
         return int(match.group(1))
 
     normalized = normalize_text(query_text)
+    match = SEMESTER_QUERY_PATTERN.search(normalized)
+    if match is not None:
+        return int(match.group(1))
+
+    class_semester = _extract_class_year_term_semester(normalized)
+    if class_semester is not None:
+        return class_semester
+
     semester_context_markers = ("donem", "yariyil")
     has_semester_context = any(marker in normalized for marker in semester_context_markers)
     has_course_list_context = is_course_list_query(normalized)
@@ -447,6 +497,40 @@ def extract_curriculum_semester(query_text: str) -> int | None:
     for marker, semester in SEMESTER_WORDS.items():
         if marker in normalized:
             return semester
+    return None
+
+
+def _extract_class_year_term_semester(normalized_query: str) -> int | None:
+    """Map expressions like '4. sinif ilk donem' to curriculum semester 7."""
+    year = _extract_class_year(normalized_query)
+    if year is None:
+        return None
+
+    term_index: int | None = None
+    if any(marker in normalized_query for marker in FIRST_TERM_MARKERS):
+        term_index = 1
+    elif any(marker in normalized_query for marker in SECOND_TERM_MARKERS):
+        term_index = 2
+
+    if term_index is None:
+        return None
+
+    semester = ((year - 1) * 2) + term_index
+    if 1 <= semester <= 12:
+        return semester
+    return None
+
+
+def _extract_class_year(normalized_query: str) -> int | None:
+    match = CLASS_YEAR_QUERY_PATTERN.search(normalized_query)
+    if match is not None:
+        return int(match.group(1))
+
+    if "sinif" not in normalized_query:
+        return None
+    for marker, year in CLASS_YEAR_WORDS.items():
+        if f"{marker} sinif" in normalized_query:
+            return year
     return None
 
 

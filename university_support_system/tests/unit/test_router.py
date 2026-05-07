@@ -1,5 +1,6 @@
 """Router unit testleri."""
 
+import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -8,7 +9,9 @@ from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, Tas
 from src.agents.finance.tuition_utils import is_personal_query as is_personal_tuition_query
 from src.llm.llm_service import LLMServiceError
 from src.routing.routing_policy import (
+    detect_task_type,
     has_cap_markers,
+    has_general_akts_markers,
     has_horizontal_transfer_markers,
     looks_like_personal_data_query,
     looks_like_vague_application_timing_query,
@@ -91,6 +94,64 @@ class TestDepartmentRouter:
 
         assert result.departments == [Department.STUDENT_AFFAIRS]
         assert result.task_type == TaskType.ACADEMIC_QUERY
+
+    @pytest.mark.asyncio
+    async def test_general_graduation_akts_overrides_llm_academic_programs(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "departments": ["academic_programs"],
+                    "confidence": 0.91,
+                    "complexity": "simple",
+                    "is_personal": False,
+                    "force_llm_synthesis": False,
+                    "query_type": "factual",
+                    "canonical_query": "Lisans programindan mezun olmak icin kac AKTS tamamlanmali?",
+                    "primary_intent": "factual",
+                    "target_capability": "none",
+                    "required_slots": [],
+                    "missing_slots": [],
+                    "reasoning": "llm akademik secti",
+                }
+            )
+        )
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route("Lisans programindan mezun olmak icin kac AKTS tamamlamaliyim?")
+
+        assert has_general_akts_markers("lisans programindan mezun olmak icin kac akts tamamlamaliyim")
+        assert result.departments == [Department.STUDENT_AFFAIRS]
+        assert result.strategy == RoutingStrategy.DIRECT
+        assert result.task_type == TaskType.ACADEMIC_QUERY
+
+    @pytest.mark.asyncio
+    async def test_general_graduation_akts_guardrail_keeps_explicit_cap_context(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "departments": ["academic_programs"],
+                    "confidence": 0.89,
+                    "complexity": "simple",
+                    "is_personal": False,
+                    "force_llm_synthesis": False,
+                    "query_type": "factual",
+                    "canonical_query": "CAP mezuniyeti icin kac AKTS tamamlanmali?",
+                    "primary_intent": "cap_yap",
+                    "target_capability": "none",
+                    "required_slots": [],
+                    "missing_slots": [],
+                    "reasoning": "cap akts baglami",
+                }
+            )
+        )
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route("CAP mezuniyeti icin kac AKTS tamamlanmali?")
+
+        assert has_general_akts_markers("cap mezuniyeti icin kac akts tamamlanmali")
+        assert result.departments == [Department.ACADEMIC_PROGRAMS]
 
     @pytest.mark.asyncio
     async def test_route_lost_identity_card_variants_to_student_affairs_with_guardrail(self):
@@ -445,6 +506,64 @@ class TestDepartmentRouter:
         assert result.departments == [Department.STUDENT_AFFAIRS, Department.FINANCE]
         assert result.strategy == RoutingStrategy.PARALLEL
         assert result.task_type == TaskType.TUITION_QUERY
+
+    @pytest.mark.asyncio
+    async def test_route_followup_hints_merge_missing_context_department(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock(
+            return_value=(
+                '{"departments":["student_affairs","finance"],'
+                '"confidence":0.81,'
+                '"query_type":"conditional",'
+                '"complexity":"process_chain",'
+                '"canonical_query":"CAP basvurusu icin harc borcum olsaydi basvurabilir miydim?",'
+                '"primary_intent":"cap_yap",'
+                '"target_capability":"none",'
+                '"required_slots":[],'
+                '"missing_slots":[],' 
+                '"reasoning":"cap harc kosulu"}'
+            )
+        )
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route(
+            "CAP basvurusu icin harc borcum olsaydi basvurabilir miydim?",
+            preferred_departments=[
+                Department.STUDENT_AFFAIRS,
+                Department.ACADEMIC_PROGRAMS,
+                Department.FINANCE,
+            ],
+        )
+
+        assert set(result.departments) == {
+            Department.STUDENT_AFFAIRS,
+            Department.FINANCE,
+            Department.ACADEMIC_PROGRAMS,
+        }
+        assert result.strategy == RoutingStrategy.PARALLEL
+        assert result.task_type == TaskType.PROCEDURE_QUERY
+
+    def test_detect_task_type_keeps_cap_fee_condition_as_procedure(self):
+        task_type = detect_task_type(
+            "CAP basvurusu icin harc borcum olsaydi basvurabilir miydim?",
+            [Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS, Department.FINANCE],
+        )
+
+        assert task_type == TaskType.PROCEDURE_QUERY
+
+    @pytest.mark.asyncio
+    async def test_route_payment_condition_without_amount_is_not_finance_slot_lookup(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock(side_effect=LLMServiceError("LLM unavailable"))
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route("Harc borcum olsaydi basvurabilir miydim?")
+
+        assert result.departments == [Department.STUDENT_AFFAIRS, Department.FINANCE]
+        assert result.strategy == RoutingStrategy.PARALLEL
+        assert result.task_type == TaskType.PAYMENT_QUERY
+        assert result.intent is not None
+        assert result.intent.is_personal is False
 
     @pytest.mark.asyncio
     async def test_route_registration_fee_timing_override_stays_student_affairs_and_finance(self):

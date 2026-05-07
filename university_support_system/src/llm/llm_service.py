@@ -23,6 +23,17 @@ logger = logging.getLogger(__name__)
 
 TOKEN_WARNING_LIMIT = 100000
 APPROX_CHARS_PER_TOKEN = 4
+LLM_ROLES = (
+    "default",
+    "routing",
+    "conversation",
+    "query_expansion",
+    "evidence_selection",
+    "final_refinement",
+    "specialist_synthesis",
+    "global_synthesis",
+    "judge",
+)
 
 
 def _should_retry_openai_error(exc: BaseException) -> bool:
@@ -59,13 +70,22 @@ class LLMService:
             return self._openai_client_for_provider(provider).is_available
         return False  # pragma: no cover
 
-    def _has_fallback(self) -> bool:
+    def _has_fallback(self, primary_provider: str | None = None) -> bool:
         """Return whether a distinct, usable fallback provider exists."""
+        active_primary = primary_provider or self.primary_provider
         if self.fallback_provider in {"", "none"}:
             return False
-        if self.fallback_provider == self.primary_provider:
+        if self.fallback_provider == active_primary:
             return False
         return self._is_provider_available(self.fallback_provider)
+
+    def _primary_provider_for_role(self, model_role: str) -> str:
+        """Resolve role-specific primary provider, falling back to the global primary."""
+        if model_role in LLM_ROLES and model_role != "default":
+            role_provider = getattr(settings.llm, f"{model_role}_provider", None)
+            if role_provider:
+                return role_provider
+        return self.primary_provider
 
     def _provider_display_name(self, provider: str) -> str:
         """Render a human-friendly provider label for logs/errors."""
@@ -247,12 +267,24 @@ class LLMService:
                     role="query_expansion",
                     provider=provider,
                 ),
+                "evidence_selection": settings.resolve_llm_model(
+                    role="evidence_selection",
+                    provider=provider,
+                ),
+                "final_refinement": settings.resolve_llm_model(
+                    role="final_refinement",
+                    provider=provider,
+                ),
                 "specialist_synthesis": settings.resolve_llm_model(
                     role="specialist_synthesis",
                     provider=provider,
                 ),
                 "global_synthesis": settings.resolve_llm_model(
                     role="global_synthesis",
+                    provider=provider,
+                ),
+                "judge": settings.resolve_llm_model(
+                    role="judge",
                     provider=provider,
                 ),
             }
@@ -264,8 +296,11 @@ class LLMService:
                 "routing",
                 "conversation",
                 "query_expansion",
+                "evidence_selection",
+                "final_refinement",
                 "specialist_synthesis",
                 "global_synthesis",
+                "judge",
             )
             return list(dict.fromkeys(str(model_map[key]) for key in keys if model_map.get(key)))
 
@@ -275,7 +310,11 @@ class LLMService:
         }
         needed_providers = {
             provider
-            for provider in {self.primary_provider, self.fallback_provider}
+            for provider in {
+                self.primary_provider,
+                self.fallback_provider,
+                *(self._primary_provider_for_role(role) for role in LLM_ROLES),
+            }
             if provider and provider != "none"
         }
 
@@ -310,7 +349,7 @@ class LLMService:
             }
 
         primary_health = _provider_health_payload(self.primary_provider)
-        fallback_available = self._has_fallback()
+        fallback_available = self._has_fallback(self.primary_provider)
         fallback_health = (
             _provider_health_payload(self.fallback_provider)
             if fallback_available
@@ -348,7 +387,7 @@ class LLMService:
         """
         with profile_stage("llm.generate", json_mode=json_mode):
             self._check_token_limit(prompt, system)
-            primary_provider = self.primary_provider
+            primary_provider = self._primary_provider_for_role(model_role)
             resolved_model = self._resolve_provider_model(
                 primary_provider,
                 model=model,
@@ -403,7 +442,7 @@ class LLMService:
                     str(primary_error),
                 )
 
-                if not self._has_fallback():
+                if not self._has_fallback(primary_provider):
                     logger.error(
                         "%s basarisiz oldu ve kullanilabilir fallback provider bulunamadi.",
                         self._provider_display_name(primary_provider),
@@ -490,7 +529,7 @@ class LLMService:
     ) -> AsyncGenerator[str, None]:
         """Streaming formatinda yanit uretir."""
         self._check_token_limit(prompt, system)
-        primary_provider = self.primary_provider
+        primary_provider = self._primary_provider_for_role(model_role)
         resolved_model = self._resolve_provider_model(
             primary_provider,
             model=model,
@@ -536,7 +575,7 @@ class LLMService:
                 str(primary_error),
             )
 
-            if not self._has_fallback():
+            if not self._has_fallback(primary_provider):
                 raise LLMServiceError(
                     f"Stream: {self._provider_display_name(primary_provider)} koptu ve yedek sistem bulunamadi. "
                     f"Detay: {str(primary_error)}"

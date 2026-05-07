@@ -40,6 +40,7 @@ from src.agents.student.agents import (
     StudentLifeAgent,
 )
 from src.core.constants import Department
+from src.core.text_normalization import normalize_text
 
 
 def test_answer_completeness_and_evidence_boost_normalize_turkish_text():
@@ -56,6 +57,29 @@ def test_answer_completeness_and_evidence_boost_normalize_turkish_text():
     boosted = BaseSpecialistAgent._apply_evidence_boost("Basvuru tarihi ne zaman?", results)
 
     assert boosted[0]["score"] > 0.10
+
+
+def test_graduation_akts_evidence_prefers_general_graduation_sources():
+    results = [
+        {
+            "content": "Pedagojik formasyon dersleri 40 AKTS olarak duzenlenir.",
+            "score": 0.50,
+        },
+        {
+            "content": (
+                "Universitemizden mezun olabilmek icin dort yillik ogretim programlari "
+                "240 AKTS, bes yillik programlar 300 AKTS, meslek yuksekokulu programlari 120 AKTS gerektirir."
+            ),
+            "score": 0.50,
+        },
+    ]
+
+    boosted = BaseSpecialistAgent._apply_evidence_boost(
+        "Lisans programindan mezun olmak icin kac AKTS tamamlamaliyim?",
+        results,
+    )
+
+    assert boosted[1]["score"] > boosted[0]["score"]
 
 
 # ──────────────────────────────────────────────────────────
@@ -1129,6 +1153,38 @@ class TestCurriculumAgent:
         curriculum_fetcher.assert_awaited_once_with(2, "Bilgisayar Muhendisligi")
 
     @pytest.mark.asyncio
+    async def test_locative_semester_course_list_uses_curriculum_lookup(self):
+        courses = [
+            {
+                "course_code": "BIL309",
+                "course_name": "Veritabani Yonetim Sistemleri",
+                "credits": 3,
+                "akts": 6,
+                "department": "Bilgisayar Muhendisligi",
+                "curriculum_semester": 5,
+                "course_type": "zorunlu",
+                "elective_group": None,
+            }
+        ]
+        curriculum_fetcher = AsyncMock(return_value=courses)
+        agent = CurriculumAgent(
+            curriculum_course_fetcher=curriculum_fetcher,
+            period_fetcher=AsyncMock(return_value=None),
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(
+            _task(
+                "Bilgisayar Muhendisligi bolumu 5. yariyildaki dersler neler?",
+                student_department="Bilgisayar Muhendisligi",
+            )
+        )
+
+        assert response.success is True
+        assert "BIL309" in response.answer
+        curriculum_fetcher.assert_awaited_once_with(5, "Bilgisayar Muhendisligi")
+
+    @pytest.mark.asyncio
     async def test_course_list_groups_foreign_language_options(self):
         courses = [
             {
@@ -1187,8 +1243,9 @@ class TestCurriculumAgent:
         )
 
         assert response.success is True
-        assert "2. yariyil doneminde kayitli 2 ders/grup bulundu" in response.answer
-        assert "Yabanci dil secenekleri" in response.answer
+        normalized_answer = normalize_text(response.answer)
+        assert "2. yariyil doneminde kayitli 2 ders/grup bulundu" in normalized_answer
+        assert "yabanci dil secenekleri" in normalized_answer
         assert "YDA102 Almanca II" in response.answer
         assert "\n- YDF102 Fransizca II" not in response.answer
 
@@ -1221,8 +1278,103 @@ class TestCurriculumAgent:
         assert response.success is True
         assert response.generation_mode == "vt"
         assert "BIL124" in response.answer
-        assert "2. yariyil" in response.answer
+        assert "2. yariyil" in normalize_text(response.answer)
         title_fetcher.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_course_title_lookup_answers_akts_question(self):
+        courses = [
+            {
+                "course_code": "BIL203",
+                "course_name": "Veri Yapilari",
+                "credits": 3,
+                "akts": 5,
+                "department": "Bilgisayar Muhendisligi",
+                "curriculum_semester": 3,
+                "course_type": "zorunlu",
+                "elective_group": None,
+            }
+        ]
+        title_fetcher = AsyncMock(return_value=courses)
+        agent = CurriculumAgent(
+            course_title_fetcher=title_fetcher,
+            prerequisite_fetcher=AsyncMock(return_value=None),
+            period_fetcher=AsyncMock(return_value=None),
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(
+            _task("Bilgisayar Muhendisligi bolumu Veri Yapilari dersi kac AKTS?")
+        )
+
+        assert response.success is True
+        assert response.generation_mode == "vt"
+        assert "BIL203" in response.answer
+        assert "5 AKTS" in response.answer
+        title_fetcher.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_prerequisite_query_resolves_course_title_before_rag(self):
+        course = {
+            "course_code": "BIL203",
+            "course_name": "Veri Yapilari",
+            "credits": 3,
+            "akts": 5,
+            "department": "Bilgisayar Muhendisligi",
+            "curriculum_semester": 3,
+            "course_type": "zorunlu",
+            "elective_group": None,
+        }
+        prereq_data = {
+            "course_code": "BIL203",
+            "course_name": "Veri Yapilari",
+            "credits": 3,
+            "akts": 5,
+            "prerequisites": [
+                {"course_code": "BIL104", "course_name": "Programlamaya Giris II", "group": 1}
+            ],
+            "prerequisite_groups": {
+                1: [{"course_code": "BIL104", "course_name": "Programlamaya Giris II", "group": 1}]
+            },
+            "redirected_from": None,
+        }
+        title_fetcher = AsyncMock(return_value=[course])
+        prerequisite_fetcher = AsyncMock(return_value=prereq_data)
+        agent = CurriculumAgent(
+            course_title_fetcher=title_fetcher,
+            prerequisite_fetcher=prerequisite_fetcher,
+            period_fetcher=AsyncMock(return_value=None),
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(
+            _task("Bilgisayar Muhendisligi bolumu Veri Yapilari dersinin onkosulu var mi?")
+        )
+
+        assert response.success is True
+        assert "BIL203" in response.answer
+        assert "BIL104" in response.answer
+        prerequisite_fetcher.assert_awaited_once_with("BIL203")
+
+    @pytest.mark.asyncio
+    async def test_course_existence_query_returns_structured_not_found(self):
+        kwargs = _agent_kwargs()
+        title_fetcher = AsyncMock(return_value=[])
+        agent = CurriculumAgent(
+            course_title_fetcher=title_fetcher,
+            prerequisite_fetcher=AsyncMock(return_value=None),
+            period_fetcher=AsyncMock(return_value=None),
+            **kwargs,
+        )
+
+        response = await agent.handle_task(
+            _task("Elektrik Elektronik Muhendisligi mufredatinda Veri Yapilari dersi var mi?")
+        )
+
+        assert response.success is True
+        assert response.generation_mode == "vt"
+        assert response.db_data["data_available"] is False
+        kwargs["llm_service"].generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_precise_schedule_query_prefers_structured_schedule_rows(self):
@@ -1273,7 +1425,7 @@ class TestCurriculumAgent:
 
         assert response.success is True
         assert response.generation_mode == "kural"
-        assert "kayitli yapilandirilmis ders programi satiri bulunamadi" in response.answer
+        assert "kayitli yapilandirilmis ders programi satiri bulunamadi" in normalize_text(response.answer)
         kwargs["llm_service"].generate.assert_not_awaited()
 
     @pytest.mark.asyncio

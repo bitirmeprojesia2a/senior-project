@@ -21,6 +21,7 @@ from src.db.connection import get_session
 from src.cache.conversation_cache import get_cached_state, set_cached_state
 from src.db.conversation_models import ConversationState, ConversationTurn
 from src.db.schemas import RAGSource
+from src.core.query_intent_guards import looks_like_fee_catalog_amount_query
 from src.llm.prompt_templates import CONVERSATION_FOLLOWUP_SYSTEM_PROMPT
 
 if TYPE_CHECKING:
@@ -248,12 +249,17 @@ _PROGRAM_SLOT_QUESTION_MARKERS = (
     "kac akts",
     "akts hakki",
     "dersleri nelerdir",
+    "dersleri hakkinda",
+    "dersler neler",
     "hangi sinifta",
     "hangi donemde",
 )
 _SHORT_SLOT_FOLLOW_UP_MARKERS = (
     "ders programi",
     "haftalik program",
+    "yariyil programi",
+    "donem programi",
+    "sinif programi",
     "mufredat",
     "ucret",
     "ucreti",
@@ -262,6 +268,12 @@ _SHORT_SLOT_FOLLOW_UP_MARKERS = (
     "kac",
 )
 _STUDENT_TYPE_FRAGMENT_REWRITES: tuple[tuple[str, str], ...] = (
+    ("turk ogrenciyim", "turk ogrenci"),
+    ("turk ogrenci", "turk ogrenci"),
+    ("uluslararasi ogrenciyim", "uluslararasi ogrenci"),
+    ("uluslararasi ogrenci", "uluslararasi ogrenci"),
+    ("yabanci ogrenciyim", "uluslararasi ogrenci"),
+    ("yabanci ogrenci", "uluslararasi ogrenci"),
     ("onlisans ogrencisiyim", "onlisans ogrencisi"),
     ("onlisans ogrenci", "onlisans ogrencisi"),
     ("lisans ogrencisiyim", "lisans ogrencisi"),
@@ -276,6 +288,12 @@ _STUDENT_TYPE_FRAGMENT_REWRITES: tuple[tuple[str, str], ...] = (
     ("dorduncu sinifim", "dorduncu sinif ogrencisi"),
     ("son sinifim", "son sinif ogrencisi"),
 )
+_FEE_STUDENT_TYPE_FRAGMENT_REWRITES: dict[str, str] = {
+    "turk": "Turk ogrenci",
+    "yerli": "Turk ogrenci",
+    "uluslararasi": "uluslararasi ogrenci",
+    "yabanci": "uluslararasi ogrenci",
+}
 _MIN_CONTENT_WORD_OVERLAP = 0.35
 _WORD_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 _INTENT_STOP_WORDS = {
@@ -303,6 +321,20 @@ _CONDITIONAL_FOLLOW_UP_MARKERS = (
     "diyelim ki",
     "varsayalim",
     "farz edelim",
+)
+_CORRECTION_FOLLOW_UP_MARKERS = (
+    "sordum",
+    "sormustum",
+    "soruyorum",
+    "demedim",
+    "degil",
+    "kastettim",
+    "bahsettim",
+)
+_SCHEDULE_CONTEXT_MARKERS = (
+    "ders programi",
+    "haftalik program",
+    "programi satirlari",
 )
 _ACTION_FOLLOW_UP_MARKERS = (
     "basvur",
@@ -355,6 +387,49 @@ _VALUE_REFERENCE_CONTEXT_TOKENS = {
     "sinif",
     "kapasite",
 }
+_TRANSIENT_FINANCE_FACET_MARKERS = (
+    "harc",
+    "borc",
+    "borcum",
+    "borcu",
+    "borclu",
+    "ucret",
+    "odeme",
+    "odemek",
+    "odenir",
+    "katki payi",
+    "taksit",
+    "dekont",
+)
+_PRIMARY_TOPIC_CARRY_MARKERS = (
+    "basvuru tarihi",
+    "basvuru tarihleri",
+    "basvuru ne zaman",
+    "basvuru zamani",
+    "basvuru sureci",
+    "tarihleri",
+    "tarihi",
+    "ne zaman",
+    "hangi tarihte",
+    "son gun",
+    "son tarih",
+    "belge",
+    "belgeler",
+    "kosul",
+    "kosullari",
+    "sart",
+    "sartlari",
+    "kontenjan",
+)
+_APPLICATION_TOPIC_NAMES = {
+    "CAP / Cift Anadal",
+    "Yandal",
+    "Erasmus ve Uluslararasi Surecler",
+    "Staj ve Uygulamali Egitim",
+    "Yatay ve Dikey Gecis",
+    "Yaz Okulu",
+    "Kayit Dondurma ve Silme",
+}
 
 
 def _normalized_tokens(text: str) -> list[str]:
@@ -363,6 +438,57 @@ def _normalized_tokens(text: str) -> list[str]:
 
 def _content_tokens(text: str) -> set[str]:
     return set(_normalized_tokens(text)) - _INTENT_STOP_WORDS
+
+
+def _query_requests_finance_facet(query: str) -> bool:
+    normalized_query = normalize_text(query)
+    return any(marker in normalized_query for marker in _TRANSIENT_FINANCE_FACET_MARKERS)
+
+
+def _is_application_topic(topic: str | None) -> bool:
+    if not topic:
+        return False
+    return topic in _APPLICATION_TOPIC_NAMES or "basvuru" in normalize_text(_topic_rewrite_seed(topic))
+
+
+def _query_requests_primary_topic_only(query: str, state: "ConversationStateData") -> bool:
+    if not _is_application_topic(state.active_topic):
+        return False
+    if _query_requests_finance_facet(query):
+        return False
+    normalized_query = normalize_text(query)
+    if any(marker in normalized_query for marker in _PRIMARY_TOPIC_CARRY_MARKERS):
+        return True
+    stripped_query = _strip_follow_up_prefixes(query)
+    stripped_tokens = _content_tokens(stripped_query)
+    return bool(stripped_tokens and stripped_tokens <= {"basvuru", "tarih", "tarihi", "tarihleri", "zaman"})
+
+
+def _rewrite_carries_unrequested_finance_facet(
+    *,
+    query: str,
+    rewritten: str,
+    state: "ConversationStateData",
+) -> bool:
+    return (
+        _query_requests_primary_topic_only(query, state)
+        and _query_requests_finance_facet(rewritten)
+        and not _query_requests_finance_facet(query)
+    )
+
+
+def _filter_transient_departments_for_query(
+    *,
+    query: str,
+    state: "ConversationStateData",
+    departments: Sequence[Department],
+) -> list[Department]:
+    parsed = list(dict.fromkeys(departments))
+    if not _query_requests_primary_topic_only(query, state):
+        return parsed
+    if not _is_application_topic(state.active_topic):
+        return parsed
+    return [department for department in parsed if department != Department.FINANCE]
 
 
 def _count_token_overlap(base_tokens: set[str], candidate_tokens: set[str]) -> int:
@@ -408,6 +534,44 @@ def _looks_like_conditional_action_follow_up(query: str) -> bool:
         any(marker in normalized_query for marker in _CONDITIONAL_FOLLOW_UP_MARKERS)
         and any(marker in normalized_query for marker in _ACTION_FOLLOW_UP_MARKERS)
     )
+
+
+def _looks_like_correction_follow_up(query: str) -> bool:
+    normalized_query = normalize_text(query)
+    return any(marker in normalized_query for marker in _CORRECTION_FOLLOW_UP_MARKERS)
+
+
+def _extract_schedule_term_correction(query: str) -> str | None:
+    normalized_query = normalize_text(query)
+    if any(marker in normalized_query for marker in ("guz", "ilk donem", "ilk yariyil")):
+        return "guz donemi"
+    if any(marker in normalized_query for marker in ("bahar", "ikinci donem", "ikinci yariyil")):
+        return "bahar donemi"
+    return None
+
+
+def _has_schedule_context(state: "ConversationStateData") -> bool:
+    context = normalize_text(
+        " ".join(
+            item
+            for item in (
+                state.active_topic,
+                state.last_user_query,
+                state.last_resolved_query,
+                state.last_assistant_answer,
+            )
+            if item
+        )
+    )
+    return any(marker in context for marker in _SCHEDULE_CONTEXT_MARKERS)
+
+
+def _append_schedule_term_to_query(query: str, term_text: str) -> str:
+    stripped = query.rstrip(" \t\r\n?.!,;:")
+    normalized = normalize_text(stripped)
+    if "guz" in normalized or "bahar" in normalized:
+        return stripped
+    return f"{stripped} {term_text}"
 
 
 def _looks_like_value_reference_follow_up(query: str) -> bool:
@@ -505,6 +669,38 @@ def _looks_like_program_slot_question(text: str) -> bool:
     return any(marker in normalized for marker in _PROGRAM_SLOT_QUESTION_MARKERS)
 
 
+def _last_answer_explicitly_requests_program_slot(answer: str | None) -> bool:
+    normalized = normalize_text(answer or "")
+    if not normalized:
+        return False
+    return (
+        "belirtir misiniz" in normalized
+        and any(
+            marker in normalized
+            for marker in (
+                "fakulte",
+                "bolum",
+                "program",
+                "birim",
+            )
+        )
+    ) or any(marker in normalized for marker in _PROGRAM_SLOT_QUESTION_MARKERS)
+
+
+def _last_answer_explicitly_requests_application_type(answer: str | None) -> bool:
+    normalized = normalize_text(answer or "")
+    return "hangi basvuru turu" in normalized
+
+
+def _infer_application_topic_fragment(query: str) -> str | None:
+    if len(_content_tokens(query)) > 3:
+        return None
+    topic = ConversationContextService._infer_topic(query)
+    if topic and _is_application_topic(topic):
+        return topic
+    return None
+
+
 def _rewrite_student_type_fragment(query: str) -> str:
     normalized_query = normalize_text(query)
     stripped = normalized_query.strip(" \t\r\n?.!,;:")
@@ -512,6 +708,41 @@ def _rewrite_student_type_fragment(query: str) -> str:
         if marker in stripped:
             return replacement
     return stripped
+
+
+def _rewrite_fee_student_type_fragment(query: str) -> str:
+    stripped = normalize_text(query).strip(" \t\r\n?.!,;:")
+    return _FEE_STUDENT_TYPE_FRAGMENT_REWRITES.get(stripped) or _rewrite_student_type_fragment(query)
+
+
+def _last_answer_explicitly_requests_fee_slot(answer: str | None) -> bool:
+    normalized = normalize_text(answer or "")
+    if not normalized:
+        return False
+    return (
+        "turk ogrenci misiniz" in normalized
+        and "uluslararasi ogrenci misiniz" in normalized
+        and (
+            "dogru ucreti" in normalized
+            or "ogrenci turune gore degisiyor" in normalized
+            or "ogrenim ucreti" in normalized
+        )
+    )
+
+
+def _expects_fee_student_type_fragment(state: "ConversationStateData") -> bool:
+    previous_query = (state.last_resolved_query or state.last_user_query or "").strip()
+    return (
+        _last_answer_explicitly_requests_fee_slot(state.last_assistant_answer)
+        or (
+            state.last_task_type == TaskType.TUITION_QUERY.value
+            and looks_like_fee_catalog_amount_query(previous_query)
+        )
+    )
+
+
+def _expects_participation_student_type_fragment(previous_context: str) -> bool:
+    return "katil" in previous_context or "kimler" in previous_context
 
 
 def _is_standalone_academic_calendar_query(query: str) -> bool:
@@ -694,6 +925,8 @@ def _build_heuristic_follow_up_query(query: str, *, topic: str | None) -> str:
 
     signatures = set(_extract_question_signatures(stripped_query))
 
+    if "basvuru" in stripped_query and "tarih" in stripped_query:
+        return f"{topic_seed} tarihleri ne zaman?"
     if original_query.startswith("bu durumda"):
         return f"{topic_seed} durumunda {stripped_query}"
     if original_query.startswith(("bunun icin", "onun icin", "bunlar icin")):
@@ -732,8 +965,21 @@ def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") 
         return previous_query
 
     program_name = _infer_program_fragment(query)
-    if program_name and _looks_like_program_slot_question(previous_query):
+    if program_name and (
+        _looks_like_program_slot_question(previous_query)
+        or _last_answer_explicitly_requests_program_slot(state.last_assistant_answer)
+    ):
         return f"{program_name} icin {previous_query.rstrip('?.!,;:')}?".strip()
+
+    application_topic = _infer_application_topic_fragment(query)
+    if application_topic and _last_answer_explicitly_requests_application_type(
+        state.last_assistant_answer
+    ):
+        topic_seed = _topic_rewrite_seed(application_topic)
+        previous_normalized = normalize_text(previous_query)
+        if any(marker in previous_normalized for marker in ("tarih", "takvim", "ne zaman")):
+            return f"{topic_seed} tarihleri ne zaman?"
+        return f"{topic_seed} icin {previous_query.rstrip('?.!,;:')}?".strip()
 
     if not _is_answer_fragment_follow_up(query):
         return None
@@ -749,19 +995,12 @@ def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") 
             if item
         )
     )
-    tuition_context = any(
-        marker in normalize_text(previous_query)
-        for marker in ("harc", "ucret", "ogrenim ucreti", "katki payi")
-    )
-    if tuition_context:
-        return f"{previous_query.rstrip('?.!,;:')} {query}".strip()
-    if "katil" in previous_context or "kimler" in previous_context:
-        fragment = _rewrite_student_type_fragment(query)
-        if fragment:
-            return f"{previous_query.rstrip('?.!,;:')} {fragment} icin".strip()
     fragment = _rewrite_student_type_fragment(query)
-    if fragment:
-        return f"{previous_query.rstrip('?.!,;:')} {fragment}".strip()
+    if fragment and _expects_fee_student_type_fragment(state):
+        fee_fragment = _rewrite_fee_student_type_fragment(query)
+        return f"{previous_query.rstrip('?.!,;:')} {fee_fragment}".strip()
+    if fragment and _expects_participation_student_type_fragment(previous_context):
+        return f"{previous_query.rstrip('?.!,;:')} {fragment} icin".strip()
     return None
 
 
@@ -887,6 +1126,23 @@ _TOPIC_REWRITE_SEEDS: dict[str, str] = {
 }
 
 
+_TOPIC_DEPARTMENT_HINTS: dict[str, tuple[Department, ...]] = {
+    "CAP / Cift Anadal": (Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS),
+    "Yandal": (Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS),
+    "Erasmus ve Uluslararasi Surecler": (Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS),
+    "Harc ve Ogrenim Ucretleri": (Department.FINANCE,),
+    "Burs ve Destekler": (Department.FINANCE,),
+    "Mufredat ve Ders Yapisi": (Department.ACADEMIC_PROGRAMS,),
+    "Ders Programi": (Department.ACADEMIC_PROGRAMS,),
+}
+
+
+def _departments_for_topic(topic: str | None) -> list[Department]:
+    if not topic:
+        return []
+    return list(_TOPIC_DEPARTMENT_HINTS.get(topic, ()))
+
+
 @dataclass(frozen=True)
 class ConversationTurnData:
     """Stored turn data used by follow-up resolution."""
@@ -998,26 +1254,51 @@ class ConversationContextService:
             )
             return self._direct_resolution(query)
 
+        correction_fallback = self._build_correction_resolution(query=query, state=state)
+
         deterministic_answer_fragment_query = _build_answer_fragment_query(
             query,
             state=state,
         )
         if deterministic_answer_fragment_query:
+            fragment_inferred_topic = self._infer_topic(deterministic_answer_fragment_query)
+            if _last_answer_explicitly_requests_application_type(state.last_assistant_answer):
+                fragment_topic = (
+                    fragment_inferred_topic
+                    or state.active_topic
+                    or self._infer_topic(state.last_resolved_query)
+                    or self._infer_topic(state.last_user_query)
+                )
+            else:
+                fragment_topic = (
+                    state.active_topic
+                    or self._infer_topic(state.last_resolved_query)
+                    or self._infer_topic(state.last_user_query)
+                    or fragment_inferred_topic
+                )
+            fragment_departments = list(
+                dict.fromkeys(
+                    [
+                        *self._parse_departments(state.last_departments),
+                        *_departments_for_topic(fragment_topic),
+                    ]
+                )
+            )
             logger.info(
                 "conversation_resolution context_id=%s is_follow_up=true "
                 "rewrite_method=answer_fragment original=%r effective=%r topic=%s",
                 context_id,
                 query,
                 deterministic_answer_fragment_query,
-                state.active_topic,
+                fragment_topic,
             )
             return ConversationResolution(
                 original_query=query,
                 effective_query=deterministic_answer_fragment_query,
                 is_follow_up=True,
                 used_context=deterministic_answer_fragment_query != query,
-                active_topic=state.active_topic,
-                department_hints=self._parse_departments(state.last_departments),
+                active_topic=fragment_topic,
+                department_hints=fragment_departments,
                 source_hints=list(state.last_source_refs),
                 task_type_hint=self._parse_task_type(state.last_task_type),
                 announcement_context=self._has_announcement_department_hint(state.last_departments),
@@ -1102,6 +1383,17 @@ class ConversationContextService:
             )
             return llm_resolution
 
+        if correction_fallback is not None:
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=true "
+                "rewrite_method=correction_fallback original=%r effective=%r topic=%s",
+                context_id,
+                query,
+                correction_fallback.effective_query,
+                correction_fallback.active_topic,
+            )
+            return correction_fallback
+
         effective_query = self._rewrite_with_heuristics(query=query, state=state)
         logger.info(
             "conversation_resolution context_id=%s is_follow_up=true "
@@ -1112,15 +1404,32 @@ class ConversationContextService:
             effective_query,
             state.active_topic,
         )
+        department_hints = list(
+            dict.fromkeys(
+                [
+                    *self._parse_departments(state.last_departments),
+                    *_departments_for_topic(state.active_topic),
+                ]
+            )
+        )
+        department_hints = _filter_transient_departments_for_query(
+            query=query,
+            state=state,
+            departments=department_hints,
+        )
         return ConversationResolution(
             original_query=query,
             effective_query=effective_query,
             is_follow_up=True,
             used_context=effective_query != query,
             active_topic=state.active_topic,
-            department_hints=self._parse_departments(state.last_departments),
+            department_hints=department_hints,
             source_hints=list(state.last_source_refs),
-            task_type_hint=self._parse_task_type(state.last_task_type),
+            task_type_hint=(
+                TaskType.PROCEDURE_QUERY
+                if _query_requests_primary_topic_only(query, state)
+                else self._parse_task_type(state.last_task_type)
+            ),
             announcement_context=self._has_announcement_department_hint(state.last_departments),
             rewrite_method=rewrite_method,
             standalone_query=effective_query if effective_query != query else None,
@@ -1249,6 +1558,95 @@ class ConversationContextService:
             standalone_query=query,
         )
 
+    def _build_correction_resolution(
+        self,
+        *,
+        query: str,
+        state: ConversationStateData,
+    ) -> ConversationResolution | None:
+        normalized_query = normalize_text(query)
+        if not any(marker in normalized_query for marker in _CORRECTION_FOLLOW_UP_MARKERS):
+            return None
+
+        schedule_term = _extract_schedule_term_correction(query)
+        if schedule_term and _has_schedule_context(state):
+            previous_question = (state.last_resolved_query or state.last_user_query or "").strip()
+            if previous_question:
+                effective_query = _append_schedule_term_to_query(previous_question, schedule_term)
+                return ConversationResolution(
+                    original_query=query,
+                    effective_query=effective_query,
+                    is_follow_up=True,
+                    used_context=True,
+                    active_topic=state.active_topic,
+                    department_hints=[Department.ACADEMIC_PROGRAMS],
+                    source_hints=list(state.last_source_refs),
+                    task_type_hint=TaskType.COURSE_QUERY,
+                    announcement_context=False,
+                    rewrite_method="correction",
+                    standalone_query=effective_query,
+                )
+
+        corrected_topic = self._infer_topic(query)
+        if not corrected_topic:
+            return None
+
+        previous_question = (state.last_user_query or state.last_resolved_query or "").strip()
+        if not previous_question:
+            return None
+
+        effective_query = self._rewrite_previous_question_for_corrected_topic(
+            previous_question=previous_question,
+            corrected_topic=corrected_topic,
+        )
+        if normalize_text(effective_query) == normalize_text(query):
+            return None
+
+        department_hints = _departments_for_topic(corrected_topic)
+        if not department_hints:
+            department_hints = self._parse_departments(state.last_departments)
+
+        return ConversationResolution(
+            original_query=query,
+            effective_query=effective_query,
+            is_follow_up=True,
+            used_context=True,
+            active_topic=corrected_topic,
+            department_hints=department_hints,
+            source_hints=[],
+            task_type_hint=TaskType.PROCEDURE_QUERY if _is_application_topic(corrected_topic) else None,
+            announcement_context=False,
+            rewrite_method="correction",
+            standalone_query=effective_query,
+        )
+
+    @staticmethod
+    def _rewrite_previous_question_for_corrected_topic(
+        *,
+        previous_question: str,
+        corrected_topic: str,
+    ) -> str:
+        topic_seed = _topic_rewrite_seed(corrected_topic)
+        normalized_previous = normalize_text(previous_question)
+        if not topic_seed:
+            return previous_question
+
+        if "basvuru" in normalized_previous and any(
+            marker in normalized_previous
+            for marker in ("tarih", "tarihleri", "ne zaman", "zaman", "son gun", "son tarih")
+        ):
+            return f"{topic_seed} tarihleri ne zaman?"
+        if "basvuru" in normalized_previous and any(
+            marker in normalized_previous
+            for marker in ("belge", "belgeler", "evrak")
+        ):
+            return f"{topic_seed} icin hangi belgeler gerekli?"
+        if any(marker in normalized_previous for marker in ("kosul", "kosullari", "sart", "sartlari")):
+            return f"{topic_seed} kosullari neler?"
+        if "ne zaman" in normalized_previous or "tarih" in normalized_previous:
+            return f"{topic_seed} ne zaman?"
+        return _build_heuristic_follow_up_query(previous_question, topic=corrected_topic)
+
     def _is_state_stale(self, state: ConversationStateData) -> bool:
         max_age = timedelta(minutes=settings.conversation.ttl_minutes)
         updated_at = state.updated_at
@@ -1312,6 +1710,39 @@ class ConversationContextService:
             }
 
         query_inferred_topic = self._infer_topic(query)
+        correction_follow_up = (
+            state.turn_count > 0
+            and query_inferred_topic is not None
+            and _looks_like_correction_follow_up(query)
+        )
+        if correction_follow_up:
+            return {
+                "is_follow_up": True,
+                "needs_llm_decision": True,
+                "allow_llm_downgrade": False,
+                "topic": query_inferred_topic,
+            }
+
+        starts_with_follow_up = self._starts_with_any(normalized_query, _FOLLOW_UP_PREFIXES)
+        pronoun_like = any(
+            token in _FOLLOW_UP_PRONOUNS
+            for token in query_tokens[:4]
+        )
+        if (
+            state.turn_count > 0
+            and state.active_topic is None
+            and query_inferred_topic is not None
+            and not short_slot_follow_up
+            and not starts_with_follow_up
+            and not pronoun_like
+            and not _build_answer_fragment_query(query, state=state)
+        ):
+            return {
+                "is_follow_up": False,
+                "needs_llm_decision": False,
+                "topic": query_inferred_topic,
+            }
+
         if (
             state.active_topic is not None
             and query_inferred_topic is not None
@@ -1332,8 +1763,6 @@ class ConversationContextService:
                 "topic": state.active_topic,
             }
 
-        starts_with_follow_up = self._starts_with_any(normalized_query, _FOLLOW_UP_PREFIXES)
-
         # Guclu marker'lar: her zaman follow-up sinyali
         has_strong_marker = any(
             marker in normalized_query
@@ -1351,15 +1780,12 @@ class ConversationContextService:
         )
 
         # Zamir kontrolu: ilk 4 token'da zamir/referans kelime var mi
-        pronoun_like = any(
-            token in _FOLLOW_UP_PRONOUNS
-            for token in query_tokens[:4]
-        )
         answer_fragment = (
             state.turn_count > 0
             and state.last_departments
-            and _is_answer_fragment_follow_up(query)
+            and _build_answer_fragment_query(query, state=state) is not None
         )
+        unresolved_answer_fragment = _is_answer_fragment_follow_up(query) and not answer_fragment
         conditional_action_follow_up = (
             state.turn_count > 0
             and state.active_topic is not None
@@ -1377,6 +1803,7 @@ class ConversationContextService:
         short_context_follow_up = (
             state.turn_count > 0
             and not signal_based
+            and not unresolved_answer_fragment
             and (1 < len(query_tokens) <= 4 or short_slot_follow_up)
         )
         if short_context_follow_up:
@@ -1581,12 +2008,42 @@ class ConversationContextService:
 
         standalone_query = str(payload.get("standalone_query") or query).strip() or query
         is_follow_up = bool(payload.get("is_follow_up", True))
+        operation = str(payload.get("operation") or "").strip().lower()
+        correction_like_query = (
+            _looks_like_correction_follow_up(query)
+            and self._infer_topic(query) is not None
+        )
+
+        if correction_like_query and operation != "correct_previous_question":
+            logger.warning(
+                "conversation_correction_operation_missing original=%r operation=%r rewritten=%r -> fallback",
+                query,
+                operation,
+                standalone_query,
+            )
+            return None
+
+        if operation == "correct_previous_question" and not is_follow_up:
+            logger.warning(
+                "conversation_correction_operation_not_followup original=%r rewritten=%r -> fallback",
+                query,
+                standalone_query,
+            )
+            return None
 
         if not is_follow_up and not allow_follow_up_downgrade:
             is_follow_up = True
             standalone_query = query
         elif not is_follow_up:
             standalone_query = query
+
+        if is_follow_up and operation == "correct_previous_question":
+            return self._build_llm_correction_resolution(
+                query=query,
+                state=state,
+                payload=payload,
+                standalone_query=standalone_query,
+            )
 
         if is_follow_up:
             context_texts = [
@@ -1610,6 +2067,29 @@ class ConversationContextService:
                     if text
                 )
             heuristic_query = self._rewrite_with_heuristics(query=query, state=state)
+            conditional_action_follow_up = _looks_like_conditional_action_follow_up(query)
+            if conditional_action_follow_up and state.active_topic:
+                topic_seed = _topic_rewrite_seed(state.active_topic)
+                if topic_seed and normalize_text(topic_seed) not in normalize_text(standalone_query):
+                    logger.warning(
+                        "conversation_rewrite_missing_conditional_topic original=%r rewritten=%r topic=%s -> heuristic_fallback",
+                        query,
+                        standalone_query,
+                        state.active_topic,
+                    )
+                    return None
+            if _rewrite_carries_unrequested_finance_facet(
+                query=query,
+                rewritten=standalone_query,
+                state=state,
+            ):
+                logger.warning(
+                    "conversation_rewrite_carried_transient_finance_facet original=%r rewritten=%r topic=%s -> heuristic_fallback",
+                    query,
+                    standalone_query,
+                    state.active_topic,
+                )
+                return None
             if not _rewrite_preserves_question_type(query, standalone_query):
                 logger.warning(
                     "conversation_rewrite_changed_question_type original=%r rewritten=%r -> heuristic_fallback",
@@ -1657,6 +2137,25 @@ class ConversationContextService:
 
         carry_over_departments = self._parse_departments(payload.get("carry_over_departments") or [])
         clarification_message = str(payload.get("clarification_message") or "").strip() or None
+        resolved_active_topic = str(payload.get("active_topic") or state.active_topic or "").strip() or None
+        previous_departments = self._parse_departments(state.last_departments)
+        if is_follow_up and _looks_like_conditional_action_follow_up(query) and state.active_topic:
+            resolved_active_topic = state.active_topic
+            carry_over_departments = list(
+                dict.fromkeys(
+                    [
+                        *previous_departments,
+                        *_departments_for_topic(state.active_topic),
+                        *carry_over_departments,
+                    ]
+                )
+            )
+        if is_follow_up:
+            carry_over_departments = _filter_transient_departments_for_query(
+                query=query,
+                state=state,
+                departments=(carry_over_departments or previous_departments),
+            )
         if payload.get("needs_clarification") and not _should_accept_llm_clarification(
             query=query,
             state=state,
@@ -1669,16 +2168,100 @@ class ConversationContextService:
             effective_query=standalone_query,
             is_follow_up=is_follow_up,
             used_context=standalone_query != query,
-            active_topic=str(payload.get("active_topic") or state.active_topic or "").strip() or None,
-            department_hints=(carry_over_departments or self._parse_departments(state.last_departments)) if is_follow_up else [],
+            active_topic=resolved_active_topic,
+            department_hints=carry_over_departments if is_follow_up else [],
             source_hints=list(state.last_source_refs) if is_follow_up else [],
-            task_type_hint=self._parse_task_type(state.last_task_type) if is_follow_up else None,
+            task_type_hint=(
+                (
+                    TaskType.PROCEDURE_QUERY
+                    if _query_requests_primary_topic_only(query, state)
+                    else self._parse_task_type(state.last_task_type)
+                )
+                if is_follow_up
+                else None
+            ),
             clarification_message=(
                 clarification_message if payload.get("needs_clarification") and clarification_message else None
             ),
             announcement_context=self._has_announcement_department_hint(state.last_departments) if is_follow_up else False,
             rewrite_method="llm",
             standalone_query=standalone_query if standalone_query != query else None,
+        )
+
+    def _build_llm_correction_resolution(
+        self,
+        *,
+        query: str,
+        state: ConversationStateData,
+        payload: dict,
+        standalone_query: str,
+    ) -> ConversationResolution | None:
+        corrected_topic = (
+            str(payload.get("active_topic") or "").strip()
+            or self._infer_topic(query)
+            or state.active_topic
+        )
+        if not corrected_topic:
+            return None
+
+        previous_question = (state.last_user_query or state.last_resolved_query or "").strip()
+        if not previous_question:
+            return None
+
+        normalized_query = normalize_text(query)
+        normalized_standalone = normalize_text(standalone_query)
+        if not standalone_query or normalized_standalone == normalized_query:
+            return None
+
+        topic_seed = _topic_rewrite_seed(corrected_topic)
+        topic_tokens = _content_tokens(corrected_topic) | _content_tokens(topic_seed)
+        standalone_tokens = _content_tokens(standalone_query)
+        if topic_tokens and _count_stem_overlap(topic_tokens, standalone_tokens) <= 0:
+            logger.warning(
+                "conversation_correction_missing_topic original=%r rewritten=%r topic=%s -> fallback",
+                query,
+                standalone_query,
+                corrected_topic,
+            )
+            return None
+
+        if not _rewrite_preserves_question_type(previous_question, standalone_query):
+            logger.warning(
+                "conversation_correction_changed_previous_question_type previous=%r rewritten=%r -> fallback",
+                previous_question,
+                standalone_query,
+            )
+            return None
+
+        carry_over_departments = self._parse_departments(payload.get("carry_over_departments") or [])
+        department_hints = list(
+            dict.fromkeys(
+                [
+                    *(carry_over_departments or []),
+                    *_departments_for_topic(corrected_topic),
+                ]
+            )
+        )
+        if not department_hints:
+            department_hints = self._parse_departments(state.last_departments)
+        department_hints = _filter_transient_departments_for_query(
+            query=standalone_query,
+            state=state,
+            departments=department_hints,
+        )
+
+        return ConversationResolution(
+            original_query=query,
+            effective_query=standalone_query,
+            is_follow_up=True,
+            used_context=True,
+            active_topic=corrected_topic,
+            department_hints=department_hints,
+            source_hints=[],
+            task_type_hint=TaskType.PROCEDURE_QUERY if _is_application_topic(corrected_topic) else None,
+            announcement_context=False,
+            rewrite_method="llm",
+            standalone_query=standalone_query,
         )
 
     @staticmethod
@@ -1762,9 +2345,13 @@ class ConversationContextService:
             },
             "output_schema": {
                 "is_follow_up": True,
+                "operation": "new_topic|follow_primary_topic|follow_last_facet|answer_fragment|correct_previous_question|clarify",
                 "standalone_query": "string",
                 "active_topic": "string|null",
                 "carry_over_departments": ["student_affairs"],
+                "base_turn_index": "integer|null",
+                "preserve_question_type": "date|amount|eligibility|procedure|document|location|definition|unknown|null",
+                "dropped_facets": ["finance"],
                 "needs_clarification": False,
                 "clarification_message": "string|null",
             },

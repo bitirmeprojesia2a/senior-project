@@ -6,6 +6,10 @@ import re
 
 from src.core.constants import Department, TaskType
 from src.core.query_markers import ACADEMIC_DEPARTMENT_CONTEXT_MARKERS
+from src.core.query_intent_guards import (
+    looks_like_fee_catalog_amount_query,
+    looks_like_payment_condition_or_eligibility_query,
+)
 from src.core.text_normalization import normalize_text
 from src.routing.query_concepts import (
     CONCEPT_ACADEMIC_CALENDAR,
@@ -748,9 +752,14 @@ def has_identity_card_markers(normalized_text: str) -> bool:
 
 def has_general_akts_markers(normalized_text: str) -> bool:
     """Return whether query asks for a program-level AKTS graduation rule."""
-    return ("akts" in normalized_text or "ects" in normalized_text) and contains_any(
+    has_credit_unit = "akts" in normalized_text or "ects" in normalized_text or "kredi" in normalized_text
+    if not has_credit_unit:
+        return False
+    if contains_any(normalized_text, ROUTING_GENERAL_AKTS_MARKERS):
+        return True
+    return "mezun" in normalized_text and contains_any(
         normalized_text,
-        ROUTING_GENERAL_AKTS_MARKERS,
+        ("kac", "toplam", "tamamlamali", "tamamlamaliyim", "tamamlanmali", "gerekir", "gerekli"),
     )
 
 
@@ -781,9 +790,20 @@ def detect_task_type(query: str, departments: list[Department]) -> TaskType | No
     """Infer a coarse task type from the query and routed departments."""
     normalized_query = normalize_routing_text(query)
 
+    if (
+        has_cap_markers(normalized_query)
+        and (
+            Department.STUDENT_AFFAIRS in departments
+            or Department.ACADEMIC_PROGRAMS in departments
+        )
+    ):
+        return TaskType.PROCEDURE_QUERY
+
     if Department.FINANCE in departments:
         if any(keyword in normalized_query for keyword in ("burs", "hibe", "scholarship")):
             return TaskType.SCHOLARSHIP_QUERY
+        if looks_like_payment_condition_or_eligibility_query(normalized_query) and not looks_like_fee_catalog_amount_query(normalized_query):
+            return TaskType.PAYMENT_QUERY
         if any(keyword in normalized_query for keyword in ("odeme", "harc", "dekont", "taksit", "ucret")):
             return TaskType.TUITION_QUERY
         return TaskType.PAYMENT_QUERY

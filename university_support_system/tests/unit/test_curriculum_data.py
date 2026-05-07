@@ -35,3 +35,12 @@ def test_title_tokens_keep_course_name_but_drop_question_words() -> None:
         "istatistige",
         "giris",
     }
+
+
+def test_title_tokens_drop_curriculum_metadata_words() -> None:
+    assert _title_tokens("Bilgisayar Muhendisligi bolumu Veri Yapilari dersinin onkosulu var mi?") == {
+        "bilgisayar",
+        "muhendisligi",
+        "veri",
+        "yapilari",
+    }

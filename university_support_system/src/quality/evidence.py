@@ -47,6 +47,21 @@ _SPECIFICITY_RE = re.compile(
     r"|kontenjan|ogrenci\s+sayisi|kisi|sube)\b",
 )
 _NUMERIC_RE = re.compile(r"(?:%|\b\d+(?:[,.]\d+)?\b)")
+_NUMERIC_RANGE_RE = re.compile(
+    r"\b\d+(?:[,.]\d+)?\s*"
+    r"(?:[-\u2013]\s*\d+(?:[,.]\d+)?"
+    r"|(?:ve\s+)?(?:uzeri|uzerinde|ustu|ustunde|alti|altinda)"
+    r"|(?:arasi|arasinda))\b",
+    re.IGNORECASE,
+)
+_RANGE_BLOCK_QUERY_TERMS: frozenset[str] = frozenset({
+    "akts", "ects", "gano", "gno", "kredi", "not", "ortalama",
+    "puan", "oran", "yuzde", "ucret", "tl", "tutar",
+})
+_RANGE_BLOCK_CONTENT_TERMS: frozenset[str] = frozenset({
+    "akts", "ects", "gano", "gno", "kredi", "not", "ortalama",
+    "puan", "oran", "yuzde", "ucret", "tl", "tutar", "ogrenci",
+})
 
 # Factual claim extraction patterns
 _PERCENTAGE_RE = re.compile(
@@ -89,6 +104,58 @@ KNOWN_SYSTEM_ENTITIES: frozenset[str] = frozenset({
     "ogrenci bilgi sistemi", "ogrenci bilgi yonetim sistemi",
     "e-devlet", "kyk", "turkiye burs",
 })
+
+
+def _query_needs_numeric_range_block(normalized_query: str) -> bool:
+    """Return true when the user is asking about a numeric bracket/table."""
+    if not any(term in normalized_query for term in _RANGE_BLOCK_QUERY_TERMS):
+        return False
+    return bool(
+        _NUMERIC_RE.search(normalized_query)
+        or "kac" in normalized_query
+        or "hangi" in normalized_query
+    )
+
+
+def _looks_like_numeric_range_part(part: str) -> bool:
+    normalized_part = normalize_text(part)
+    if not _NUMERIC_RANGE_RE.search(normalized_part):
+        return False
+    return any(term in normalized_part for term in _RANGE_BLOCK_CONTENT_TERMS)
+
+
+def _numeric_range_context_indices(parts: Sequence[str], selected_indices: set[int]) -> set[int]:
+    """Keep adjacent rows of a numeric range list together.
+
+    Range tables in PDFs are often split by line breaks. If only the first
+    matching line reaches the prompt, the LLM sees values such as 6/10/12/15
+    without the full bracket mapping. This helper preserves the local list as
+    one evidence unit without changing retrieval or routing.
+    """
+    range_indices = {
+        index
+        for index, part in enumerate(parts)
+        if _looks_like_numeric_range_part(part)
+    }
+    if len(range_indices) < 2:
+        return set()
+    if not selected_indices & range_indices:
+        return set()
+
+    expanded = set(range_indices)
+    for index in range_indices:
+        if index > 0:
+            previous = normalize_text(parts[index - 1])
+            if any(term in previous for term in _RANGE_BLOCK_CONTENT_TERMS):
+                expanded.add(index - 1)
+        if index + 1 < len(parts):
+            following = normalize_text(parts[index + 1])
+            if (
+                any(term in following for term in _RANGE_BLOCK_CONTENT_TERMS)
+                or _CONDITION_TAIL_RE.search(following)
+            ):
+                expanded.add(index + 1)
+    return expanded
 
 
 def _expand_query_terms_for_evidence(query_terms: set[str], normalized_query: str) -> set[str]:
@@ -360,6 +427,11 @@ def select_evidence_sentences(
             # Preceding short line is likely a heading
             if len(prev_normalized.split()) <= 8:
                 selected_indices.add(idx - 1)
+
+    if _query_needs_numeric_range_block(normalized_query):
+        selected_indices.update(
+            _numeric_range_context_indices(parts, selected_indices),
+        )
 
     # Respect max_sentences limit even with context additions
     ordered_indices = sorted(selected_indices)[:max_sentences + 2]

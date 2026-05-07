@@ -346,6 +346,7 @@ class MainOrchestrator:
                     canonical_from_routing = routing.intent.canonical_query or effective_query
                     is_rewritten = (
                         canonical_from_routing != effective_query
+                        and not conversation_resolution.used_context
                         and normalize_text(canonical_from_routing) != normalize_text(effective_query)
                         and rewrite_is_safe(effective_query, canonical_from_routing)
                     )
@@ -713,7 +714,7 @@ class MainOrchestrator:
                     task_type=routing.task_type,
                     student_department=student_department,
                 ):
-                    return self._build_clarification_response(
+                    clarification_response = self._build_clarification_response(
                         context_id=context_id,
                         start_time=start_time,
                         query_log_id=query_log_id,
@@ -723,6 +724,29 @@ class MainOrchestrator:
                         message=ACADEMIC_DEPARTMENT_CLARIFICATION_MESSAGE,
                         full_name=student_full_name,
                     )
+                    clarification_response = clarification_response.model_copy(
+                        update={
+                            "departments_involved": [
+                                department.value for department in routing.departments
+                            ],
+                            "generation_modes": ["kural"],
+                        },
+                        deep=True,
+                    )
+                    if self.conversation_service is not None:
+                        with profile_stage("main.conversation.record_academic_department_clarification"):
+                            await self._record_conversation_turn(
+                                context_id=context_id,
+                                original_query=query,
+                                resolved_query=effective_query,
+                                memory_answer=build_memory_answer(
+                                    answer=ACADEMIC_DEPARTMENT_CLARIFICATION_MESSAGE
+                                ),
+                                final_response=clarification_response,
+                                routing_task_type=routing.task_type,
+                                conversation_resolution=conversation_resolution,
+                            )
+                    return clarification_response
 
                 intent = routing.intent
                 selected_department_count = len(set(routing.departments or []))
@@ -785,7 +809,7 @@ class MainOrchestrator:
                     response.error == "department_context_required"
                     for response in department_responses
                 ):
-                    return self._build_clarification_response(
+                    clarification_response = self._build_clarification_response(
                         context_id=context_id,
                         start_time=start_time,
                         query_log_id=query_log_id,
@@ -795,6 +819,29 @@ class MainOrchestrator:
                         message=department_responses[0].answer,
                         full_name=student_full_name,
                     )
+                    clarification_response = clarification_response.model_copy(
+                        update={
+                            "departments_involved": [
+                                department.value for department in routing.departments
+                            ],
+                            "generation_modes": ["kural"],
+                        },
+                        deep=True,
+                    )
+                    if self.conversation_service is not None:
+                        with profile_stage("main.conversation.record_department_context_clarification"):
+                            await self._record_conversation_turn(
+                                context_id=context_id,
+                                original_query=query,
+                                resolved_query=effective_query,
+                                memory_answer=build_memory_answer(
+                                    answer=department_responses[0].answer
+                                ),
+                                final_response=clarification_response,
+                                routing_task_type=routing.task_type,
+                                conversation_resolution=conversation_resolution,
+                            )
+                    return clarification_response
 
                 responses: list[DepartmentResponse] = list(department_responses)
 

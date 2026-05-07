@@ -206,6 +206,29 @@ class TestLLMModelResolution:
             == "gemini-2.5-flash"
         )
 
+    def test_role_specific_provider_override_wins(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_GLOBAL_SYNTHESIS_PROVIDER", "google_ai")
+        monkeypatch.setenv("LLM_JUDGE_PROVIDER", "google_ai")
+        monkeypatch.setenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
+        monkeypatch.setenv("OPENAI_SECONDARY_MODEL", "llama-3.3-70b-versatile")
+        monkeypatch.setenv("GOOGLE_AI_MODEL", "gemini-3-flash-preview")
+        monkeypatch.setenv("GOOGLE_AI_GLOBAL_SYNTHESIS_MODEL", "gemini-3-flash-preview")
+
+        test_settings = Settings()
+
+        assert test_settings.resolve_llm_provider(role="routing") == "openai_compatible"
+        assert test_settings.resolve_llm_provider(role="global_synthesis") == "google_ai"
+        assert (
+            test_settings.resolve_llm_model(
+                role="global_synthesis",
+                provider=test_settings.resolve_llm_provider(role="global_synthesis"),
+            )
+            == "gemini-3-flash-preview"
+        )
+        assert test_settings.configured_llm_models()["global_synthesis_provider"] == "google_ai"
+
 
 class TestSlackSettings:
     """Slack config yardimcilari."""

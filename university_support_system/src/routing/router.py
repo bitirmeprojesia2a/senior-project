@@ -18,6 +18,7 @@ from src.core.constants import (
     TaskType,
     get_department_config,
 )
+from src.core.query_intent_guards import looks_like_payment_condition_or_eligibility_query
 from src.db.schemas import IntentAnalysis, RoutingResult
 from src.llm.prompt_templates import DEPARTMENT_ROUTING_SYSTEM_PROMPT, build_routing_user_prompt
 from src.routing.routing_policy import (
@@ -667,6 +668,26 @@ class DepartmentRouter:
                 authoritative=True,
             )
 
+        if looks_like_payment_condition_or_eligibility_query(lowered):
+            confidence = max(decision.confidence, 0.84)
+            intent = intent or IntentAnalysis(
+                complexity="process_chain",
+                is_personal=False,
+                force_llm_synthesis=True,
+                query_type="procedural",
+                reasoning="Odeme/borc bilgisi bir islem uygunlugu kosulu olarak soruluyor.",
+                primary_intent="payment_policy",
+            )
+            return _RuleRoutingDecision(
+                departments=[Department.STUDENT_AFFAIRS, Department.FINANCE],
+                confidence=confidence,
+                confidence_level=self._confidence_level(confidence),
+                strategy=RoutingStrategy.PARALLEL,
+                reasoning="Odeme/borc bir islem uygunlugu kosulu olarak soruluyor; ogrenci isleri ve finans birlikte gerekli.",
+                intent=intent.model_copy(update={"is_personal": False, "force_llm_synthesis": True}),
+                authoritative=True,
+            )
+
         if contains_any(lowered, ("katki payi", "borc", "borclu", "iade", "fazla ucret", "harc burosu")):
             confidence = max(decision.confidence, 0.84)
             return _RuleRoutingDecision(
@@ -693,7 +714,11 @@ class DepartmentRouter:
                 authoritative=True,
             )
 
-        if has_general_akts_markers(lowered):
+        if has_general_akts_markers(lowered) and not (
+            has_cap_markers(lowered)
+            or has_pedagogical_formation_markers(lowered)
+            or has_international_markers(lowered)
+        ):
             confidence = max(decision.confidence, 0.84)
             return _RuleRoutingDecision(
                 departments=[Department.STUDENT_AFFAIRS],
@@ -702,6 +727,7 @@ class DepartmentRouter:
                 strategy=RoutingStrategy.DIRECT,
                 reasoning="Program bazli mezuniyet AKTS sorusu; ogrenci isleri oncelikli ve structured veri kullanilmali.",
                 intent=intent,
+                authoritative=True,
             )
 
         if has_scholarship_markers(lowered):
@@ -904,11 +930,16 @@ class DepartmentRouter:
             overlap = [dept for dept in decision.departments if dept in preferred_departments]
             if overlap:
                 confidence = max(decision.confidence, 0.8)
+                departments = list(dict.fromkeys([*decision.departments, *preferred_departments]))
                 return _RuleRoutingDecision(
-                    departments=list(dict.fromkeys(decision.departments)),
+                    departments=departments,
                     confidence=confidence,
                     confidence_level=self._confidence_level(confidence),
-                    strategy=decision.strategy,
+                    strategy=(
+                        RoutingStrategy.PARALLEL
+                        if len(departments) > 1
+                        else decision.strategy
+                    ),
                     reasoning=(
                         decision.reasoning
                         + " Onceki konusma baglamindaki departman sinyali ile desteklendi."

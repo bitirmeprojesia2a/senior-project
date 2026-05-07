@@ -146,6 +146,29 @@ def test_heading_structure_preserved():
     assert "2.50" in selected, f"GNO not in selected: {selected}"
 
 
+def test_numeric_range_block_preserved_for_gano_akts_query():
+    content = (
+        "Ders kaydi esaslari\n"
+        "GANO'ya gore donemde AKTS kredileri toplami artirilabilir.\n"
+        "GANO'su 1,80-2,49 arasi olan ogrenciler icin 6 AKTS,\n"
+        "GANO'su 2,50-2,99 arasi olan ogrenciler icin 10 AKTS,\n"
+        "GANO'su 3,00-3,49 arasi olan ogrenciler icin 12 AKTS\n"
+        "ve GANO'su 3,50 ve uzerinde olan ogrenciler icin 15 AKTS artirilabilir.\n"
+        "Bu metinden sonra ilgisiz kampus tanitim bilgisi gelir.\n"
+    )
+    selected = select_evidence_sentences(
+        "3.20 ganom var kac ek akts hakkim var?",
+        content,
+        max_sentences=3,
+    )
+
+    assert "1,80-2,49" in selected, selected
+    assert "2,50-2,99" in selected, selected
+    assert "3,00-3,49" in selected, selected
+    assert "12 AKTS" in selected, selected
+    assert "15 AKTS" in selected, selected
+
+
 def test_fallback_to_first_sentences_when_nothing_scores_high():
     content = (
         "Alfa beta gama delta epsilon. "

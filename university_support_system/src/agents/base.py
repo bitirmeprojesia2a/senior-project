@@ -630,6 +630,10 @@ class BaseSpecialistAgent:
 
     _EVIDENCE_BOOST_PATTERNS: ClassVar[list[tuple[re.Pattern, tuple[str, ...], float]]] = [
         # (sorgu_paterni, evidence_sinyal_kelimeleri, boost)
+        (re.compile(r"\bmezun\w*.*\bakts\b|\bakts\b.*\bmezun\w*|\bmezuniyet\b.*\bkredi\b|\bkredi\b.*\bmezuniyet\b", re.I),
+         ("mezun olabilmek", "240 akts", "300 akts", "360 akts", "120 akts",
+          "dort yillik", "bes yillik", "alti yillik", "meslek yuksekokulu",
+          "on lisans", "lisans", "yonetmelik"), 0.12),
         (re.compile(r"\bne zaman\b|\bzamani\b|\btarihi\b", re.I),
          ("tarih", "sure", "hafta", "gun", "ay", "donem", "baslangic", "bitis", "deadline",
           "itibaren", "kadar", "once", "sonra", "icerisinde"), 0.05),
@@ -646,6 +650,9 @@ class BaseSpecialistAgent:
     # AKTS/GANO sorularinda ilgisiz kaynaklari demote et
     _EVIDENCE_DEMOTE_PATTERNS: ClassVar[list[tuple[re.Pattern, tuple[str, ...], float]]] = [
         # (sorgu_paterni, demote_sinyal_kelimeleri, penalty)
+        (re.compile(r"\bmezun\w*.*\bakts\b|\bakts\b.*\bmezun\w*|\bmezuniyet\b.*\bkredi\b|\bkredi\b.*\bmezuniyet\b", re.I),
+         ("pedagojik formasyon", "erasmus", "uluslararasi", "degisim", "ozel ogrenci",
+          "staj", "yatay gecis", "harc", "odeme", "ucret", "dekont"), -0.12),
         (re.compile(r"\bakts\b|\bakts hakki\b|\bkredi siniri\b|\bders yuku\b|\bgano.*akts\b|\bakts.*gano\b", re.I),
          ("erasmus", "uluslararasi", "staj", "yatay gecis", "mup", "sanayi",
           "bitirme", "harc", "odeme", "ucret", "dekont"), -0.10),

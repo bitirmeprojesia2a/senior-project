@@ -14,6 +14,7 @@ from src.core.query_markers import (
     GLOBAL_SYNTHESIS_QUERY_MARKERS,
     RELATED_ANNOUNCEMENT_QUERY_MARKERS,
 )
+from src.core.query_intent_guards import looks_like_fee_catalog_amount_query
 from src.core.text_normalization import contains_any_normalized, normalize_text
 from src.db.schemas import DepartmentResponse
 from src.db.schemas import IntentAnalysis
@@ -22,9 +23,12 @@ from src.routing.query_concepts import (
     CAPABILITY_ANNOUNCEMENT,
     CONCEPT_ACADEMIC_CALENDAR,
     CONCEPT_ANNOUNCEMENT,
+    CONCEPT_CAP,
     CONCEPT_COURSE_SCHEDULE,
     CONCEPT_EXEMPTION,
+    CONCEPT_GRADUATION,
     CONCEPT_HORIZONTAL_TRANSFER,
+    CONCEPT_REGISTRATION,
     extract_query_concepts,
 )
 
@@ -71,6 +75,48 @@ STUDENT_TYPE_CLARIFICATION_MESSAGE = (
 
 COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
 
+_STUDENT_TYPE_SENSITIVE_INTENTS = {
+    "tuition",
+    "fee",
+    "fees",
+    "finance_fee",
+    "learning_fee",
+    "tuition_fee",
+    "ogrenim_ucreti",
+}
+
+_STUDENT_TYPE_FEE_AMOUNT_MARKERS = (
+    "ucreti",
+    "ucret ne kadar",
+    "ucreti ne kadar",
+    "harc ucreti",
+    "harc ne kadar",
+    "ogrenim ucreti",
+    "katki payi",
+    "donemlik ucret",
+    "yillik ucret",
+    "tutar",
+    "kac tl",
+    "ne kadar",
+)
+
+_APPLICATION_TYPE_MARKERS = (
+    "cap",
+    "cift anadal",
+    "yandal",
+    "yan dal",
+    "erasmus",
+    "staj",
+    "yaz okulu",
+    "yatay gecis",
+    "dikey gecis",
+    "kayit dondurma",
+    "kayit sildirme",
+    "muafiyet",
+    "intibak",
+    "tek ders",
+)
+
 _GENERAL_RULE_BYPASS: tuple[str, ...] = (
     "devam zorunlulugu",
     "devamsizlik",
@@ -90,6 +136,21 @@ _GENERAL_RULE_BYPASS: tuple[str, ...] = (
     "kosul",
     "sart",
     "nasil",
+)
+
+_ACADEMIC_DEPARTMENT_CLARIFICATION_BYPASS_MARKERS: tuple[str, ...] = (
+    "basvur",
+    "basvuru",
+    "katilabilir",
+    "yapabilir",
+    "girebilir",
+    "alabilir",
+    "mezun",
+    "kosul",
+    "sart",
+    "tarih",
+    "takvim",
+    "surec",
 )
 
 _ANNOUNCEMENT_DIRECT_LOOKUP_MARKERS: tuple[str, ...] = (
@@ -375,6 +436,27 @@ def augment_query_for_department(
     return f"{student_type_prefix}{faculty_prefix}{query}".strip()
 
 
+def _student_type_slot_is_relevant(*, intent: IntentAnalysis, query: str | None) -> bool:
+    """Return true only when student type is needed to answer the current query."""
+    if not query:
+        return normalize_text(intent.primary_intent) in _STUDENT_TYPE_SENSITIVE_INTENTS
+
+    normalized_query = normalize_text(query)
+    primary_intent = normalize_text(intent.primary_intent)
+    target_capability = normalize_text(intent.target_capability)
+
+    if primary_intent not in _STUDENT_TYPE_SENSITIVE_INTENTS and target_capability not in _STUDENT_TYPE_SENSITIVE_INTENTS:
+        return False
+    return looks_like_fee_catalog_amount_query(normalized_query)
+
+
+def _application_type_slot_is_relevant(query: str | None) -> bool:
+    if not query:
+        return True
+    normalized_query = normalize_text(query)
+    return not any(marker in normalized_query for marker in _APPLICATION_TYPE_MARKERS)
+
+
 def build_missing_slot_clarification_message(
     *,
     intent: IntentAnalysis | None,
@@ -400,17 +482,30 @@ def build_missing_slot_clarification_message(
         missing_slots.discard("auth")
     if metadata.get("student_type"):
         missing_slots.discard("student_type")
+    elif "student_type" in missing_slots and not _student_type_slot_is_relevant(intent=intent, query=query):
+        missing_slots.discard("student_type")
+
+    fee_slots = {"student_type", "faculty_or_program", "department_or_program", "program"}
+    if (
+        query
+        and missing_slots.intersection(fee_slots)
+        and normalize_text(intent.primary_intent) in _STUDENT_TYPE_SENSITIVE_INTENTS
+        and not looks_like_fee_catalog_amount_query(query)
+    ):
+        missing_slots.difference_update(fee_slots)
+
     if metadata.get("student_faculty") or metadata.get("student_department") or inferred_program:
         missing_slots.discard("faculty_or_program")
         missing_slots.discard("department_or_program")
         missing_slots.discard("program")
+    if "application_type" in missing_slots and not _application_type_slot_is_relevant(query):
+        missing_slots.discard("application_type")
     if not missing_slots:
         return None
 
     if "auth" in missing_slots:
         return AUTH_CLARIFICATION_MESSAGE
 
-    fee_slots = {"student_type", "faculty_or_program", "department_or_program", "program"}
     if "student_type" in missing_slots and missing_slots.intersection(fee_slots - {"student_type"}):
         return FEE_CONTEXT_CLARIFICATION_MESSAGE
 
@@ -449,6 +544,21 @@ def requires_academic_department_clarification(
         return False
 
     if any(signal in lowered for signal in _GENERAL_RULE_BYPASS):
+        return False
+
+    concepts = extract_query_concepts(lowered)
+    if concepts.has_any(
+        (
+            CONCEPT_CAP,
+            CONCEPT_EXEMPTION,
+            CONCEPT_GRADUATION,
+            CONCEPT_HORIZONTAL_TRANSFER,
+            CONCEPT_REGISTRATION,
+        )
+    ):
+        return False
+
+    if contains_any_normalized(lowered, _ACADEMIC_DEPARTMENT_CLARIFICATION_BYPASS_MARKERS):
         return False
 
     return contains_any_normalized(lowered, ACADEMIC_DEPARTMENT_CONTEXT_MARKERS)

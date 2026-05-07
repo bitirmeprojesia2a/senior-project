@@ -69,6 +69,7 @@ def _compose_files(
     include_finance_specialists: bool,
     include_student_specialists: bool = False,
     include_academic_specialists: bool = False,
+    include_slack: bool = False,
     use_gpu: bool = False,
     gpu_scope: str = "targeted",
 ) -> list[str]:
@@ -95,6 +96,8 @@ def _compose_files(
             if gpu_scope == "all"
             else "docker-compose.a2a-app-gpu.yml"
         )
+    if include_slack:
+        files.append("docker-compose.slack.yml")
     return files
 
 
@@ -106,6 +109,8 @@ def _service_names(
     include_finance_specialists: bool,
     include_student_specialists: bool = False,
     include_academic_specialists: bool = False,
+    include_slack: bool = False,
+    slack_service: str = "slack-bot-a2a",
 ) -> list[str]:
     services = ["retrieval-service", "api", "agent-finance"]
     if include_finance_specialists:
@@ -135,6 +140,8 @@ def _service_names(
         services.append("agent-announcement")
     if include_event:
         services.append("agent-event")
+    if include_slack:
+        services.append(slack_service)
     return services
 
 
@@ -276,6 +283,50 @@ def _wait_for_health_targets(
         )
 
 
+def _slack_container_name(service_name: str) -> str:
+    return {
+        "slack-bot-a2a": "uni_slack_bot_a2a",
+        "slack-bot-inprocess": "uni_slack_bot_inprocess",
+    }.get(service_name, service_name)
+
+
+def _wait_for_container_running(
+    container_name: str,
+    *,
+    env: dict[str, str],
+    startup_timeout_seconds: float,
+    poll_interval_seconds: float,
+) -> None:
+    deadline = time.monotonic() + startup_timeout_seconds
+    last_status = ""
+    while time.monotonic() < deadline:
+        result = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                "-f",
+                "{{.State.Running}} {{.State.Status}}",
+                container_name,
+            ],
+            cwd=ROOT_DIR,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        last_status = result.stdout.strip() or result.stderr.strip()
+        if result.returncode == 0 and result.stdout.strip().startswith("true "):
+            print(f"Container OK: {container_name} is running")
+            return
+        time.sleep(poll_interval_seconds)
+
+    raise RuntimeError(
+        f"Slack container did not reach running state within "
+        f"{startup_timeout_seconds:.0f}s: {container_name} "
+        f"last_status={last_status or '-'}"
+    )
+
+
 def _select_legacy_image_refs(image_refs: Sequence[str]) -> list[str]:
     known = set(LEGACY_IMAGE_REFS)
     return [image_ref for image_ref in image_refs if image_ref in known]
@@ -369,9 +420,20 @@ def parse_args() -> argparse.Namespace:
         help="Include all available specialist agent services behind their department orchestrators.",
     )
     parser.add_argument(
+        "--no-slack",
+        action="store_true",
+        help="Do not recreate the Slack bot service as part of the rollout.",
+    )
+    parser.add_argument(
+        "--slack-service",
+        choices=("slack-bot-a2a", "slack-bot-inprocess"),
+        default="slack-bot-a2a",
+        help="Slack bot service to include in the rollout unless --no-slack is set.",
+    )
+    parser.add_argument(
         "--transport-protocol",
         choices=("rest", "jsonrpc"),
-        default="rest",
+        default="jsonrpc",
         help="HTTP wire protocol used by A2A transports.",
     )
     parser.add_argument(
@@ -483,6 +545,7 @@ def main() -> int:
     )
     include_student = args.include_student or include_student_specialists
     include_academic = args.include_academic or include_academic_specialists
+    include_slack = not args.no_slack
 
     if args.base_infra and (
         include_student
@@ -492,6 +555,7 @@ def main() -> int:
         or include_finance_specialists
         or include_student_specialists
         or include_academic_specialists
+        or include_slack
     ):
         print(
             "Extra overlays only support the existing-infra rollout path.",
@@ -508,6 +572,7 @@ def main() -> int:
         include_finance_specialists=include_finance_specialists,
         include_student_specialists=include_student_specialists,
         include_academic_specialists=include_academic_specialists,
+        include_slack=include_slack,
         use_gpu=args.gpu,
         gpu_scope=args.gpu_scope,
     )
@@ -519,6 +584,8 @@ def main() -> int:
         include_finance_specialists=include_finance_specialists,
         include_student_specialists=include_student_specialists,
         include_academic_specialists=include_academic_specialists,
+        include_slack=include_slack,
+        slack_service=args.slack_service,
     )
 
     env = os.environ.copy()
@@ -543,6 +610,9 @@ def main() -> int:
     print(f"- Build timestamp: {args.build_timestamp}")
     print(f"- Git SHA: {args.git_sha}")
     print(f"- Image ref: {args.image_ref}")
+    print(f"- Slack rollout: {include_slack}")
+    if include_slack:
+        print(f"- Slack service: {args.slack_service}")
     print(f"- Install build tools: {args.install_build_tools}")
     print(f"- GPU mode: {args.gpu}")
     if args.gpu:
@@ -572,6 +642,13 @@ def main() -> int:
             request_timeout_seconds=args.health_request_timeout_seconds,
             poll_interval_seconds=args.health_poll_interval_seconds,
         )
+        if include_slack:
+            _wait_for_container_running(
+                _slack_container_name(args.slack_service),
+                env=env,
+                startup_timeout_seconds=min(30.0, args.health_timeout_seconds),
+                poll_interval_seconds=args.health_poll_interval_seconds,
+            )
 
     legacy_refs = _report_legacy_images()
     if args.cleanup_legacy_images:

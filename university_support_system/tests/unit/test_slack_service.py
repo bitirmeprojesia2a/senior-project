@@ -59,6 +59,18 @@ def test_build_slack_context_id_uses_stable_dm_context():
     assert build_slack_context_id(second) == "slack:D1:U1"
 
 
+def test_build_slack_context_id_keeps_dm_thread_replies_in_user_context():
+    message = SlackIncomingMessage(
+        text="Başvuru tarihleri ne peki?",
+        user_id="U1",
+        channel_id="D1",
+        ts="101.1",
+        thread_ts="100.1",
+    )
+
+    assert build_slack_context_id(message) == "slack:D1:U1"
+
+
 @dataclass
 class _FakeAuthService:
     auth_context: AuthContext | None = None

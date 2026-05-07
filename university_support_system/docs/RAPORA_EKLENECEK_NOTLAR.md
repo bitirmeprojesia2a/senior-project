@@ -66,3 +66,21 @@ Mevcut yorum: BGE reranker icin fp16 performansi umut verici; ancak cevap kalite
 - Final synthesis katmani `answer_summary` ile `evidence/snippet` veya `extracted_facts` celistiginde somut sayi/kosul iceren evidence bilgisini esas alacak sekilde netlestirildi.
 - Judge risk tespiti dogal Turkce cevaplari da kapsayacak sekilde genisletildi: `bulunamadi/bulunamadı`, `harc/harç`, `katki payi/katkı payı`, `odeme/ödeme`, `yonerge/yönerge`, `yonetmelik/yönetmelik` formlari birlikte yakalanir.
 - Debug gorunurlugu bilincli olarak kapatilmadi; gelistirme/test asamasinda uretim modu ve kaynak ozeti takip edilmeye devam edecek.
+
+## Groq Llama 3.3 ve Gemini 3 Flash Karsilastirma Notu
+
+Tarih: 2026-05-05 / 2026-05-06
+
+Iki model ayni Slack senaryo zincirinde denenmistir: CAP basvuru uygunlugu, harc borcu varken basvuru, basvuru tarihi follow-up'i, CAP duzeltmesi, onlisans/lisans AKTS, program ozelinde AKTS, ders programi ve fizik ogretmenligi ucreti. Sureler `query_logs.response_time_ms` alanindan alinmistir. Gemini 3 Flash icin `3833-3843`, Groq icin `3844-3854` query log araliklari kullanilmistir.
+
+| Model / Provider | Ortalama Sure | Medyan | Min-Max | Kalite Gozlemi | Karar |
+| --- | ---: | ---: | ---: | --- | --- |
+| `gemini-3-flash-preview` / Google AI | 25.37 sn | 26.23 sn | 9.23-41.44 sn | Ilk CAP cevabi ve bazi sentezler daha akici; fizik ogretmenligi ucreti follow-up'inda dogru fakulteye ulasabildi. Ancak harc borcu turundan sonra baglam finans konusuna kaydi; "Basvuru tarihleri ne peki?" sorusunu ogrenim ucreti tarihleri gibi yorumladi. "capi sordum" duzeltmesinde kismen toparladi ama kaynak ve ifade kalitesi karisik kaldi. Bazi cevaplarda yabanci/bozuk token goruldu. | Kalite potansiyeli var ama canli Slack icin yavas. Kritik kalite profili veya batch testlerde aday olarak tutulabilir. |
+| `llama-3.3-70b-versatile` / Groq | 4.23 sn | 4.56 sn | 2.45-6.75 sn | Cok daha hizli. "capi sordum" duzeltmesinden sonra CAP basvuru tarihlerini Gemini 3'e gore daha net toparladi. Lisans AKTS cevabi daha kullanisliydi. Ancak ilk "Basvuru tarihleri ne peki?" sorusunda CAP baglamini kullanmak yerine clarification istedi; onlisans AKTS sorusunda onceki CAP tarih baglami sizdi; fizik ogretmenligi ucreti akisi bir testte onceki Bilgisayar Muhendisligi baglamiyla karisti. | Varsayilan canli kullanim icin daha uygun. Asil sorun modelden cok follow-up/routing state ve VT clarification baglam yonetimi oldugu icin optimizasyon Groq uzerinde devam etmeli. |
+
+Sonuc: Model degistirmek tek basina follow-up sorununu cozmemektedir. Gemini 3 bazi cevaplarda daha iyi metin kalitesi verse de 6 kata yakin daha yavas kalmistir. Canli Slack deneyimi icin Groq + Llama 3.3 daha dengeli gorunmektedir. Odak, model degisiminden once su mimari noktalarda kalmalidir:
+
+- Follow-up state'inde son cevap konusunu degil, kullanicinin duzeltme/ana niyet zincirini daha guvenli takip etmek.
+- Finance/tuition clarification akisini onceki "program/birim" ve "asli soru" ile baglamak; kisa "Turk" cevaplarini yalnizca aktif ucret slot'u varsa answer fragment saymak.
+- "Basvuru tarihleri ne peki?" gibi eksik sorularda son finans cevabina degil, daha onceki basvuru nesnesine donmeyi saglayan genel referans cozumleme katmani eklemek.
+- Final/judge katmaninda yabanci token ve bozuk Turkce temizligini daha siki yapmak; sadece model secimine birakmamak.

@@ -129,6 +129,28 @@ async def test_llm_generate_records_primary_provider_usage(llm_service):
 
 
 @pytest.mark.asyncio
+async def test_llm_generate_uses_role_specific_provider(llm_service, monkeypatch):
+    monkeypatch.setattr(settings.llm, "global_synthesis_provider", "google_ai")
+    monkeypatch.setattr(settings.google_ai, "global_synthesis_model", "gemini-3-flash-preview")
+    llm_service.google_ai._api_keys = ["google-test-key"]
+
+    with patch.object(llm_service.openai, "generate", new_callable=AsyncMock) as mock_openai, patch.object(
+        llm_service.google_ai, "generate", new_callable=AsyncMock
+    ) as mock_google:
+        mock_google.return_value = "Gemini final synthesis"
+
+        response = await llm_service.generate(
+            "Final cevap yaz",
+            model_role="global_synthesis",
+        )
+
+    assert response == "Gemini final synthesis"
+    mock_openai.assert_not_called()
+    mock_google.assert_called_once()
+    assert mock_google.await_args.kwargs["model"] == "gemini-3-flash-preview"
+
+
+@pytest.mark.asyncio
 async def test_llm_generate_records_fallback_provider_usage(llm_service):
     llm_service.google_ai._api_keys = ["google-test-key"]
     profiler = QueryProfiler(label="llm-fallback")

@@ -654,6 +654,107 @@ def test_schedule_group_formatter_does_not_truncate_rows():
     assert not any("satir daha" in line for line in lines)
 
 
+def test_schedule_term_extraction_maps_curriculum_semester_parity():
+    assert CurriculumAgent._extract_schedule_term_key("7. yariyil ders programi") == "guz"
+    assert CurriculumAgent._extract_schedule_term_key("8. yariyil ders programi") == "bahar"
+    assert CurriculumAgent._extract_schedule_term_key("4. sinif ilk donem ders programi") == "guz"
+
+
+def test_schedule_term_selection_uses_odd_semester_as_fall():
+    rows = [
+        {
+            "academic_year": "2025-2026",
+            "term": "bahar",
+            "course_name": "Bahar Dersi",
+        },
+        {
+            "academic_year": "2025-2026",
+            "term": "guz",
+            "course_name": "Guz Dersi",
+        },
+    ]
+
+    selected, term_context = CurriculumAgent._select_schedule_rows_for_term(
+        "Bilgisayar muhendisligi 7. yariyil dersleri neler?",
+        rows,
+    )
+
+    assert [row["course_name"] for row in selected] == ["Guz Dersi"]
+    assert term_context == "2025-2026 guz"
+
+
+@pytest.mark.asyncio
+async def test_main_records_department_context_required_clarification():
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[Department.ACADEMIC_PROGRAMS],
+            confidence=0.9,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.DIRECT,
+            reasoning="Akademik program sorusu",
+            task_type=TaskType.COURSE_QUERY,
+        )
+    )
+    clarification = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Fakulte, bolum veya program bilgisini belirtir misiniz?",
+        success=False,
+        error="department_context_required",
+    )
+
+    async def _handle_academic_task(task, *args, **kwargs):
+        return build_department_response_task(
+            clarification,
+            request_task=task,
+            emitter_id="academic_programs_orchestrator",
+            emitter_name="Academic Programs Orchestrator",
+        )
+
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(side_effect=_handle_academic_task),
+    )
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=705)
+    telemetry.finalize_query_log = AsyncMock()
+    conversation_service = AsyncMock()
+    conversation_service.resolve_query = AsyncMock(
+        return_value=ConversationResolution(
+            original_query="4. Sinif ilk donem dersleri hakkinda bilgi almak istiyorum",
+            effective_query="4. Sinif ilk donem dersleri hakkinda bilgi almak istiyorum",
+            is_follow_up=False,
+            used_context=False,
+            active_topic="Mufredat ve Ders Yapisi",
+            department_hints=[],
+            source_hints=[],
+        )
+    )
+    conversation_service.record_turn = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={Department.ACADEMIC_PROGRAMS: academic_orchestrator},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        conversation_service=conversation_service,
+    )
+
+    response = await orchestrator.handle_query(
+        "4. Sinif ilk donem dersleri hakkinda bilgi almak istiyorum",
+        context_id="ctx-dept-clarification-record",
+    )
+
+    assert "program bilgisini" in response.answer
+    conversation_service.record_turn.assert_awaited_once()
+    record_kwargs = conversation_service.record_turn.await_args.kwargs
+    assert record_kwargs["user_query"] == "4. Sinif ilk donem dersleri hakkinda bilgi almak istiyorum"
+    assert record_kwargs["resolved_query"] == "4. Sinif ilk donem dersleri hakkinda bilgi almak istiyorum"
+    assert record_kwargs["task_type"] == TaskType.COURSE_QUERY
+    assert record_kwargs["departments"] == [Department.ACADEMIC_PROGRAMS.value]
+
+
 def test_build_missing_slot_clarification_uses_llm_slot_metadata():
     intent = IntentAnalysis(
         primary_intent="tuition",
@@ -666,6 +767,87 @@ def test_build_missing_slot_clarification_uses_llm_slot_metadata():
     assert message is not None
     assert "Türk öğrenci" in message
     assert "uluslararası öğrenci" in message
+
+
+def test_build_missing_slot_clarification_ignores_student_type_for_cap_query():
+    intent = IntentAnalysis(
+        primary_intent="cap_yap",
+        required_slots=["student_type"],
+        missing_slots=["student_type"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={},
+        query="CAP'a basvurabilir miyim?",
+    )
+
+    assert message is None
+
+
+def test_build_missing_slot_clarification_keeps_student_type_for_fee_amount_query():
+    intent = IntentAnalysis(
+        primary_intent="tuition",
+        required_slots=["student_type"],
+        missing_slots=["student_type"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={},
+        query="Fizik ogretmenligi ucreti ne kadar?",
+    )
+
+    assert message is not None
+    assert "Türk öğrenci" in message
+
+
+def test_build_missing_slot_clarification_ignores_student_type_for_hypothetical_fee_condition():
+    intent = IntentAnalysis(
+        primary_intent="tuition",
+        required_slots=["student_type"],
+        missing_slots=["student_type"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={},
+        query="CAP basvurusu icin harc borcum olsaydi basvurabilir miydim?",
+    )
+
+    assert message is None
+
+
+def test_build_missing_slot_clarification_ignores_fee_program_slots_for_payment_condition():
+    intent = IntentAnalysis(
+        primary_intent="tuition",
+        required_slots=["student_type", "faculty_or_program"],
+        missing_slots=["student_type", "faculty_or_program"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={},
+        query="Harc borcum olsaydi basvurabilir miydim?",
+    )
+
+    assert message is None
+
+
+def test_build_missing_slot_clarification_ignores_application_type_when_query_names_cap():
+    intent = IntentAnalysis(
+        primary_intent="unknown",
+        required_slots=["application_type"],
+        missing_slots=["application_type"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={},
+        query="CAP basvurusu tarihleri ne zaman?",
+    )
+
+    assert message is None
 
 
 def test_build_missing_slot_clarification_ignores_session_filled_slots():
@@ -709,6 +891,23 @@ def test_build_missing_slot_clarification_uses_program_named_in_query():
     )
 
     assert message is None
+
+
+def test_academic_department_clarification_does_not_trigger_for_application_eligibility():
+    assert not requires_academic_department_clarification(
+        query="Capa basvurabilir miyim?",
+        departments=[Department.ACADEMIC_PROGRAMS],
+        task_type=None,
+        student_department=None,
+    )
+
+
+def test_main_records_academic_department_clarification_for_followup_slot_answer():
+    import inspect
+
+    source = inspect.getsource(MainOrchestrator.handle_query)
+    assert "record_academic_department_clarification" in source
+    assert "ACADEMIC_DEPARTMENT_CLARIFICATION_MESSAGE" in source
 
 
 def test_general_akts_rule_detector_handles_tamamlamali_wording():

@@ -33,6 +33,8 @@ SINIR KURALLARI (cok onemli):
 - Secmeli ders degistirme, basarisiz ders tekrari, devam zorunlulugu sorusu -> ["student_affairs", "academic_programs"]
 - Ek sure, azami sure asimi sorusu IDARI ISLEM iceriyorsa ("hakkim var mi", "ne yapmaliyim") -> student_affairs dahil et
 - Uzaktan egitim/ders degerlendirme sorusu -> ["student_affairs", "academic_programs"]
+- Mezuniyet icin toplam AKTS/kredi sorusu ("onlisans/lisans kac AKTS tamamlamali?", "mezun olmak icin kac kredi gerekir?") -> student_affairs
+  Kullanici acikca CAP, Erasmus, pedagojik formasyon veya ders muafiyeti sormuyorsa bu konulari departman gerekcesi yapma.
 
 Her sorgu icin asagidaki alanlari belirle:
 
@@ -108,6 +110,23 @@ KARAR HARITASI:
 - "notlarim kac", "GNO'm nedir", "harc borcum ne kadar" kisisel veridir.
 
 ORNEKLER:
+Soru: Lisans programindan mezun olmak icin kac AKTS tamamlamaliyim?
+JSON:
+{{
+  "departments": ["student_affairs"],
+  "confidence": 0.88,
+  "complexity": "simple",
+  "is_personal": false,
+  "force_llm_synthesis": false,
+  "query_type": "factual",
+  "canonical_query": "Lisans programindan mezun olmak icin kac AKTS tamamlanmali?",
+  "primary_intent": "factual",
+  "target_capability": "none",
+  "required_slots": [],
+  "missing_slots": [],
+  "reasoning": "mezuniyet akts ogrenci isleri"
+}}
+
 Soru: Final sinavlari ne zaman?
 JSON:
 {{
@@ -611,6 +630,20 @@ KARAR MANTIGI:
 4. recent_turns alaninda son 3 turun bilgisi varsa, baglami yakinlik sirasiyla kullan: once previous_turn.resolved_question, sonra previous_turn.user_question, sonra previous_turn.answer_summary, en son daha eski recent_turns/rolling_summary.
    Daha eski turlari yalnizca yeni soru acikca o eski konuya donuyorsa kullan. Yakin turla eski tur celisirse yakin turu tercih et.
 
+OPERATION SECIMI:
+- operation="new_topic": Yeni soru onceki baglama bagli degil.
+- operation="follow_primary_topic": Yeni soru onceki ana konuya bagli. Gecici alt-konu/facet tasima.
+- operation="follow_last_facet": Yeni soru acikca onceki alt-konuya bagli; ornegin kullanici yeniden ucret/borc/odeme soruyor.
+- operation="answer_fragment": "Turk ogrenciyim", "uluslararasi ogrenci" gibi onceki sorunun eksik cevabi. Bunu sadece onceki cevap acikca ogrenci turu/program gibi bir slot sorduysa kullan.
+- operation="correct_previous_question": Kullanici onceki cevabin yanlis konuya gittigini soyluyor veya "X'i sordum", "X degil Y" gibi duzeltme yapiyor.
+- operation="clarify": Baglamla bile tek anlamli standalone_query kurulamiyorsa.
+
+DUZELTME OPERASYONU:
+- "correct_previous_question" icin kullanicinin yeni mesajini tek basina cevaplama; onceki user_question/resolved_question soru tipini koru ve yalnizca konuyu duzelt.
+- Ornek: previous_turn.user_question="Basvuru tarihleri ne peki?", current_query="capi sordum" -> operation="correct_previous_question", standalone_query="CAP basvurusu tarihleri ne zaman?", active_topic="CAP / Cift Anadal".
+- Ornek: previous_turn.user_question="Ucreti ne kadar?", current_query="yaz okulunu sordum" -> standalone_query="Yaz okulu ucreti ne kadar?"
+- Duzeltme mesajinda gecen konu, onceki cevaptaki gecici ucret/borc/staj gibi facet'ten daha onceliklidir.
+
 STANDALONE_QUERY OLUSTURMA KURALLARI:
 - YALNIZCA eksik ozne/konu referansini tamamla. Ornek: onceki konu "CAP basvurusu" ve yeni soru "not ortalamasi kac olmali?" → "CAP basvurusu icin not ortalamasi kac olmali?"
 - Sorunun yapisini, fiilini veya soru tipini DEGISTIRME. "ne zaman" sorusu "nedir" olamaz, "var mi" sorusu "nasil" olamaz.
@@ -655,6 +688,7 @@ KONU DEGISIMI KURALI (COK ONEMLI):
   Ornek: previous_turn.resolved_question="Onlisans programindan mezun olmak icin kac AKTS tamamlanmali?" -> yeni: "Lisans icin kac?" -> standalone_query="Lisans programindan mezun olmak icin kac AKTS tamamlanmali?"
 - "Ders programi ne?", "ucreti ne kadar?", "mufredati ne?" gibi kisa slot sorularinda kullanici program/birim yazmadiysa onceki resolved_question'daki ACIK program/birim adini tasi. Profildeki bolum/fakulteyi, onceki resolved_question'daki acik programin ustune yazma.
   Ornek: previous_turn.resolved_question="Fizik ogretmenligi ucreti uluslararasi ogrenci icin ne kadar?" -> yeni: "Ders programi ne?" -> standalone_query="Fizik ogretmenligi ders programi ne?"
+- "Turk", "uluslararasi", "lisans" gibi kisa cevaplari otomatik baglama tasima. Onceki cevap gercekten "Turk ogrenci misiniz, uluslararasi ogrenci misiniz?" gibi bir slot sorusu degilse veya onceki soru dogrudan ucret tutari sormuyorsa answer_fragment secme.
 
 NEGATIF ORNEKLER:
 - onceki: "CAP basvurusu icin kosullar neler?" -> yeni: "Tek ders sinavina nasil basvurabilirim?" -> is_follow_up=false, standalone_query="Tek ders sinavina nasil basvurabilirim?"
@@ -671,6 +705,16 @@ JSON FORMAT KURALLARI:
   - student_affairs
   - academic_programs
   - finance
+- `operation` alani su degerlerden biri olmali:
+  - new_topic
+  - follow_primary_topic
+  - follow_last_facet
+  - answer_fragment
+  - correct_previous_question
+  - clarify
+- `base_turn_index` alanini kullanabiliyorsan standalone_query'nin dayandigi turn_index olarak ver; bilmiyorsan null.
+- `preserve_question_type` alanina korudugun soru tipini yaz: "date", "amount", "eligibility", "procedure", "document", "location", "definition", "unknown".
+- `dropped_facets` alanina standalone_query'ye bilerek tasimadigin gecici facet'leri yaz; ornek ["finance"].
 - `needs_clarification` true ise kisa bir `clarification_message` ver.
 - Yeni bilgi uydurma.
 """

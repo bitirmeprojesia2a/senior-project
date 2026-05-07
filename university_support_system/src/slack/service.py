@@ -79,7 +79,7 @@ def parse_slack_command(text: str | None) -> SlackCommand:
 def build_slack_context_id(message: SlackIncomingMessage) -> str:
     """Thread bazli konusma baglami uretir."""
 
-    if message.channel_id.startswith("D") and not message.thread_ts:
+    if message.channel_id.startswith("D"):
         return f"slack:{message.channel_id}:{message.user_id}"
     thread_key = message.thread_ts or message.ts or message.user_id
     return f"slack:{message.channel_id}:{thread_key}"

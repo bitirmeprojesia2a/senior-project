@@ -141,6 +141,14 @@ class LLMRuntimeSettings(BaseSettings):
     specialist_synthesis_model: Optional[str] = None
     global_synthesis_model: Optional[str] = None
     judge_model: Optional[str] = None
+    routing_provider: Optional[LLMProvider] = None
+    conversation_provider: Optional[LLMProvider] = None
+    query_expansion_provider: Optional[LLMProvider] = None
+    evidence_selection_provider: Optional[LLMProvider] = None
+    final_refinement_provider: Optional[LLMProvider] = None
+    specialist_synthesis_provider: Optional[LLMProvider] = None
+    global_synthesis_provider: Optional[LLMProvider] = None
+    judge_provider: Optional[LLMProvider] = None
     main_judge_enabled: bool = True
     query_normalization_enabled: bool = True
     query_normalization_timeout_seconds: int = 6
@@ -674,6 +682,21 @@ class Settings(BaseSettings):
             return secondary_model
         return primary_model
 
+    def resolve_llm_provider(self, *, role: LLMRole = "default") -> LLMProvider:
+        """Return the provider selected for a model role."""
+        role_providers: dict[LLMRole, Optional[LLMProvider]] = {
+            "routing": self.llm.routing_provider,
+            "conversation": self.llm.conversation_provider,
+            "query_expansion": self.llm.query_expansion_provider,
+            "evidence_selection": self.llm.evidence_selection_provider,
+            "final_refinement": self.llm.final_refinement_provider,
+            "specialist_synthesis": self.llm.specialist_synthesis_provider,
+            "global_synthesis": self.llm.global_synthesis_provider,
+            "judge": self.llm.judge_provider,
+            "default": None,
+        }
+        return role_providers.get(role) or self.llm.primary_provider
+
     def _resolve_legacy_role_model(self, role: LLMRole) -> Optional[str]:
         """Return old global LLM_* role override values."""
         role_overrides = {
@@ -734,20 +757,35 @@ class Settings(BaseSettings):
 
     def configured_llm_models(self) -> dict[str, str]:
         """Saglik ve debug ciktilari icin cozumlenmis model haritasini dondurur."""
+        def _role_model(role: LLMRole) -> str:
+            provider = self.resolve_llm_provider(role=role)
+            return self.resolve_llm_model(role=role, provider=provider)
+
+        def _role_provider(role: LLMRole) -> str:
+            return self.resolve_llm_provider(role=role)
+
         return {
             "provider": self.llm.primary_provider,
             "fallback_provider": self.llm.fallback_provider,
             "primary": self._resolve_provider_primary_model(self.llm.primary_provider),
             "secondary": self._resolve_provider_secondary_model(self.llm.primary_provider),
             "profile": self.normalize_llm_profile(self.llm.profile),
-            "routing": self.resolve_llm_model(role="routing"),
-            "conversation": self.resolve_llm_model(role="conversation"),
-            "query_expansion": self.resolve_llm_model(role="query_expansion"),
-            "evidence_selection": self.resolve_llm_model(role="evidence_selection"),
-            "final_refinement": self.resolve_llm_model(role="final_refinement"),
-            "specialist_synthesis": self.resolve_llm_model(role="specialist_synthesis"),
-            "global_synthesis": self.resolve_llm_model(role="global_synthesis"),
-            "judge": self.resolve_llm_model(role="judge"),
+            "routing": _role_model("routing"),
+            "routing_provider": _role_provider("routing"),
+            "conversation": _role_model("conversation"),
+            "conversation_provider": _role_provider("conversation"),
+            "query_expansion": _role_model("query_expansion"),
+            "query_expansion_provider": _role_provider("query_expansion"),
+            "evidence_selection": _role_model("evidence_selection"),
+            "evidence_selection_provider": _role_provider("evidence_selection"),
+            "final_refinement": _role_model("final_refinement"),
+            "final_refinement_provider": _role_provider("final_refinement"),
+            "specialist_synthesis": _role_model("specialist_synthesis"),
+            "specialist_synthesis_provider": _role_provider("specialist_synthesis"),
+            "global_synthesis": _role_model("global_synthesis"),
+            "global_synthesis_provider": _role_provider("global_synthesis"),
+            "judge": _role_model("judge"),
+            "judge_provider": _role_provider("judge"),
             "main_judge_enabled": str(self.llm.main_judge_enabled),
         }
 
