@@ -277,18 +277,21 @@ def check_known_policy_contradictions(
             or "derse hic almamis" in answer_normalized
             or "hic almamis olsaniz" in answer_normalized
             or "hic almadiginiz" in answer_normalized
+            or "hic almadan" in answer_normalized
+            or "hic almamissiniz" in answer_normalized
+            or "almamis olmaniz" in answer_normalized
             or "devam sartini yerine getiremeyen" in answer_normalized
             or "devam sartini yerine getiremediginiz" in answer_normalized
             or "devam sartini saglamayan" in answer_normalized
+            or "kayit yaptirmis olmaniz gerekmez" in answer_normalized
+            or "almamis olsaniz bile" in answer_normalized
+            or "almamis olsaniz da" in answer_normalized
         )
-        evidence_requires_attendance = (
-            "devam sartini yerine getirdigi" in evidence_text
-            or "devam sartini yerine getirdiginiz" in evidence_text
-            or "devam sartini sagladigi" in evidence_text
-            or "devam sartini sagladiginiz" in evidence_text
-            or "devam sartini yerine getiren" in evidence_text
-        )
-        if says_no_attendance_required and evidence_requires_attendance:
+        # Guard fires whenever the answer suggests no-attendance is OK for tek ders.
+        # Previously this was gated on evidence containing the correct rule,
+        # but the root problem is that weak evidence causes the LLM to hallucinate
+        # permissive answers. The guard must catch the dangerous claim regardless.
+        if says_no_attendance_required:
             issues.append(
                 {
                     "claim": "Tek ders sınavı devam şartını sağlamayan veya dersi hiç almamış öğrenciye açık gösterildi.",

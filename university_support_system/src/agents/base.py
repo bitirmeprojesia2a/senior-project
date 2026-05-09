@@ -764,6 +764,10 @@ class BaseSpecialistAgent:
         (re.compile(r"\bakts hakki\b|\bakts siniri\b|\bkredi hakki\b|\bkredi siniri\b|\bders yuku\b|\bgano.*akts\b|\bakts.*gano\b|\bdonemlik akts\b|\bkac akts alabilirim\b", re.I),
          ("ders kaydi", "akts hakki", "kredi siniri", "gno", "donem yuku", "azami",
           "yonetmelik", "yonerge", "kayit", "basvuru"), 0.08),
+        # Tek ders sinavi sorularinda devam sarti / almis olma kosulu kaynaklari oncelikli
+        (re.compile(r"\btek ders\b|\btek derse\b|\btek ders sinavi\b", re.I),
+         ("devam sarti", "devam sartini", "almis olmak", "almamis", "giremez",
+          "basar", "basarisiz", "mezuniyet", "yonetmelik", "tek ders sinavi"), 0.10),
     ]
 
     # AKTS/GANO sorularinda ilgisiz kaynaklari demote et
@@ -1429,6 +1433,7 @@ CEVAP YAZIM KURALLARI:
 - Kaynak soruyla kismen ilgiliyse yalnizca dogrudan ilgili bilgiyi ver; ilgisiz metni ve kaynak yorumunu cevaba tasima.
 - Cevap verdikten sonra ayrica "bilgi bulunamadi" gibi celisen bir not ekleme.
 - Cevabi yarim cumleyle bitirme; kaynakta ayrintili esik/tutar yoksa o parcayi acmadan tamamlanmis cumleyle dur.
+- OLUMSUZ KURAL ONCELIGI: Kaynakta "giremez", "alamaz", "yapilamaz", "kabul edilmez", "almamis olan ogrenciler giremez" gibi kisitlayici/yasaklayici bir ifade varsa ve kullanicinin sorusu "yapabilir miyim?", "girebilir miyim?" seklindeyse, cevabi dogrudan "Hayir" ile baslat ve kaynaktaki kisitlamayi aynen aktar. Kullanicinin beklentisine uyum saglamak icin olumsuz kurali olumluya cevirme. Kaynakta "giremez" diyorsa cevap "giremezsiniz" olmalidir.
 - COK PARCALI SORU: Kullanici birden fazla seyi soruyorsa (ornegin "ne zaman + kimler + nasil + ucret + gerekli belge + sartlar") cevabi alt basiklara bol. Her alt parca icin kaynakta bilgi varsa ver; kaynak sadece bir alt parcayi destekliyorsa diger parcalar icin "Bu konuda kaynaklarda net bilgi bulunamadi" de. Tarih sorulmus ama kaynakta tarih yoksa tarih UYDURMA; "akademik takvim/duyuru ile ilan edilir" gibi temkinli ifadelendirme kullan.
 """
         system = (self.definition.system_prompt or GENERAL_QA_SYSTEM_PROMPT) + answer_style_rules

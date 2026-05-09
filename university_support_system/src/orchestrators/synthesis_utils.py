@@ -272,7 +272,11 @@ def build_global_synthesis_prompt(
             "ÇOK PARÇALI SORU: Kullanıcı birden fazla şeyi soruyorsa cevabı kısa alt başlıklara böl. "
             "Her alt parça için kaynakta bilgi varsa ver; kaynak sadece bir alt parçayı destekliyorsa "
             "diğer parçalar için 'Bu konuda kaynaklarda net bilgi bulunamadı' de. "
-            "Tarih sorulmuş ama kaynakta tarih yoksa tarih uydurma; 'akademik takvim/duyuru ile ilan edilir' gibi temkinli ifade kullan."
+            "Tarih sorulmuş ama kaynakta tarih yoksa tarih uydurma; 'akademik takvim/duyuru ile ilan edilir' gibi temkinli ifade kullan. "
+            "OLUMSUZ KURAL ONCELIGI: evidence/snippet veya extracted_facts icinde 'giremez', 'alamaz', 'yapilamaz', "
+            "'kabul edilmez', 'almamis olan ogrenciler giremez' gibi kisitlayici ifade varsa ve kullanici sorusu "
+            "'yapabilir miyim?', 'girebilir miyim?' seklindeyse, cevabi dogrudan 'Hayir' ile baslat ve kaynaktaki "
+            "kisitlamayi aynen aktar. Olumsuz kurali olumluya cevirme."
         )
     else:
         synthesis_instruction = (
@@ -287,7 +291,11 @@ def build_global_synthesis_prompt(
             "ÇOK PARÇALI SORU: Kullanıcı birden fazla şeyi soruyorsa cevabı kısa alt başlıklara böl. "
             "Her alt parça için kaynakta bilgi varsa ver; kaynak sadece bir alt parçayı destekliyorsa "
             "diğer parçalar için 'Bu konuda kaynaklarda net bilgi bulunamadı' de. "
-            "Tarih sorulmuş ama kaynakta tarih yoksa tarih uydurma; 'akademik takvim/duyuru ile ilan edilir' gibi temkinli ifade kullan."
+            "Tarih sorulmuş ama kaynakta tarih yoksa tarih uydurma; 'akademik takvim/duyuru ile ilan edilir' gibi temkinli ifade kullan. "
+            "OLUMSUZ KURAL ONCELIGI: evidence/snippet veya extracted_facts icinde 'giremez', 'alamaz', 'yapilamaz', "
+            "'kabul edilmez', 'almamis olan ogrenciler giremez' gibi kisitlayici ifade varsa ve kullanici sorusu "
+            "'yapabilir miyim?', 'girebilir miyim?' seklindeyse, cevabi dogrudan 'Hayir' ile baslat ve kaynaktaki "
+            "kisitlamayi aynen aktar. Olumsuz kurali olumluya cevirme."
         )
 
     prompt = (

@@ -47,6 +47,11 @@ _SPECIFICITY_RE = re.compile(
     r"|kontenjan|ogrenci\s+sayisi|kisi|sube)\b",
 )
 _NUMERIC_RE = re.compile(r"(?:%|\b\d+(?:[,.]\d+)?\b)")
+_NEGATIVE_CONDITION_BONUS_RE = re.compile(
+    r"\b(?:giremez|alamaz|yapilamaz|yapilmaz|kabul edilmez|sayilmaz"
+    r"|verilmez|basvuramaz|giremezler|alinamaz|almamis"
+    r"|gerekmez|yapamaz|olamaz|bulunmaz|gecersiz sayilir)\b",
+)
 _NUMERIC_RANGE_RE = re.compile(
     r"\b\d+(?:[,.]\d+)?\s*"
     r"(?:[-\u2013]\s*\d+(?:[,.]\d+)?"
@@ -462,6 +467,8 @@ def select_evidence_sentences(
             specificity_bonus += 0.22
         if _NUMERIC_RE.search(part):
             specificity_bonus += 0.22
+        if _NEGATIVE_CONDITION_BONUS_RE.search(normalized_part):
+            specificity_bonus += 0.18
         if any(term in normalized_part for term in query_terms):
             specificity_bonus += 0.08
 

@@ -137,6 +137,11 @@ SYNONYM_MAP: Dict[str, List[str]] = {
     "yemek bursu": ["yemek kartı", "ücretsiz yemek"],
     "kısmi zamanlı": ["kısmi zamanlı çalışma", "yarı zamanlı çalışma"],
 
+    # Tek Ders Sınavı
+    "tek ders": ["tek ders sınavı", "tek ders sınavına başvuru", "devam şartı", "mezuniyet sınavı"],
+    "tek ders sınavı": ["tek ders", "mezuniyet için tek ders", "devam şartını yerine getirmiş", "başarısız olmuş"],
+    "tek derse girebilir miyim": ["tek ders sınavı koşulları", "devam şartı", "dersi almış olmak"],
+
     # Sınav
     "bütünleme": ["bütünleme sınavı", "telafi sınavı"],
     "final": ["dönem sonu sınavı", "final sınavı"],
