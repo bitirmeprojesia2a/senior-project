@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from dataclasses import dataclass
@@ -239,11 +240,13 @@ class BaseSpecialistAgent:
             llm_profile = meta.get("llm_profile")
             student_department = meta.get("student_department")
             intent_force_llm = bool(meta.get("force_llm_synthesis", False))
+            plan_context = self._build_plan_context_from_metadata(meta)
+            retrieval_query = str(meta.get("retrieval_query") or "").strip() or query_text
             with profile_stage("agent.retriever.search", agent_id=self.agent_id, department=self.department.value):
                 try:
                     results = retriever.search(
-                        query_text,
-                        top_k=self._search_top_k(query_text, meta),
+                        retrieval_query,
+                        top_k=self._search_top_k(retrieval_query, meta),
                         department=self.department,
                         source_hints=source_hints,
                         topic_hint=topic_hint,
@@ -259,8 +262,8 @@ class BaseSpecialistAgent:
                     )
                     retriever = self._build_shared_local_fallback_retriever()
                     results = retriever.search(
-                        query_text,
-                        top_k=self._search_top_k(query_text, meta),
+                        retrieval_query,
+                        top_k=self._search_top_k(retrieval_query, meta),
                         department=self.department,
                         source_hints=source_hints,
                         topic_hint=topic_hint,
@@ -281,6 +284,8 @@ class BaseSpecialistAgent:
                         )
                         local_retriever = self._build_shared_local_fallback_retriever()
                         results = local_retriever.enrich_results(results, department=self.department)
+            with profile_stage("agent.plan_evidence_bias", agent_id=self.agent_id, department=self.department.value):
+                results = self._apply_plan_evidence_source_bias(results, plan_context)
             with profile_stage("agent.filter_results", agent_id=self.agent_id, department=self.department.value):
                 results = self._filter_results_for_answer(query_text, results)
             with profile_stage("agent.generate_answer", agent_id=self.agent_id):
@@ -298,6 +303,7 @@ class BaseSpecialistAgent:
                         force_llm=intent_force_llm,
                         allow_llm=not disable_specialist_llm,
                         llm_profile=llm_profile,
+                        plan_context=plan_context,
                     )
             return self._build_department_response(
                 answer=answer,
@@ -307,6 +313,7 @@ class BaseSpecialistAgent:
                 include_contact_suggestion=True,
                 final_answer_owner=final_answer_owner,
                 specialist_response_mode=specialist_response_mode,
+                plan_context=plan_context,
             )
 
     def _agent_response_metadata(self) -> dict[str, str]:
@@ -338,6 +345,7 @@ class BaseSpecialistAgent:
         success: bool = True,
         final_answer_owner: str | None = None,
         specialist_response_mode: str | None = None,
+        plan_context: dict | None = None,
     ) -> DepartmentResponse:
         """RAG sonuc listesiyle birlikte standart departman cevabi kurar."""
         response_metadata = {}
@@ -349,7 +357,12 @@ class BaseSpecialistAgent:
                 generation_mode=generation_mode,
                 final_answer_owner=final_answer_owner,
                 specialist_response_mode=specialist_response_mode,
+                plan_context=plan_context,
             )
+        if plan_context:
+            response_metadata["plan_decision"] = plan_context.get("plan_decision")
+            response_metadata["answer_contract"] = plan_context.get("answer_contract")
+            response_metadata["evidence_contract"] = plan_context.get("evidence_contract")
         if final_answer_owner:
             response_metadata["final_answer_owner"] = final_answer_owner
         if specialist_response_mode:
@@ -420,6 +433,7 @@ class BaseSpecialistAgent:
         generation_mode: str | None,
         final_answer_owner: str | None = None,
         specialist_response_mode: str | None = None,
+        plan_context: dict | None = None,
     ) -> dict:
         """Build compact grounding material for final synthesis."""
         selected_sources: list[dict] = []
@@ -481,7 +495,7 @@ class BaseSpecialistAgent:
         if not facts and selected_sources:
             limits.append("Kaynaklarda sayi, tarih veya kosul biciminde ayiklanmis net olgu bulunmadi.")
 
-        return {
+        packet = {
             "version": 1,
             "department": self.department.value,
             "answer_role": "evidence_packet",
@@ -495,6 +509,44 @@ class BaseSpecialistAgent:
             "limits": limits,
             "selected_sources": selected_sources,
         }
+        if plan_context:
+            packet["plan_decision"] = plan_context.get("plan_decision")
+            packet["answer_contract"] = plan_context.get("answer_contract") or {}
+            packet["evidence_contract"] = plan_context.get("evidence_contract") or {}
+        return packet
+
+    @staticmethod
+    def _build_plan_context_from_metadata(meta: dict) -> dict:
+        """Extract plan/contract metadata supplied by the capability planner."""
+        planner_payload = meta.get("capability_planner")
+        action_payload = {}
+        if isinstance(planner_payload, dict) and isinstance(planner_payload.get("action"), dict):
+            action_payload = dict(planner_payload.get("action") or {})
+        plan_decision = meta.get("plan_decision")
+        if not isinstance(plan_decision, dict) and action_payload:
+            plan_decision = {
+                "intent": action_payload.get("intent"),
+                "capability": action_payload.get("capability"),
+                "params": action_payload.get("params") or {},
+                "missing_slots": action_payload.get("missing_params") or [],
+                "answer_contract": action_payload.get("answer_contract") or {},
+                "evidence_contract": action_payload.get("evidence_contract") or {},
+                "fallback_route": action_payload.get("fallback_route") or action_payload.get("fallback"),
+                "confidence": action_payload.get("confidence"),
+                "reasoning": action_payload.get("reasoning"),
+            }
+        answer_contract = meta.get("answer_contract")
+        if not isinstance(answer_contract, dict):
+            answer_contract = action_payload.get("answer_contract") or {}
+        evidence_contract = meta.get("evidence_contract")
+        if not isinstance(evidence_contract, dict):
+            evidence_contract = action_payload.get("evidence_contract") or {}
+        context = {
+            "plan_decision": plan_decision if isinstance(plan_decision, dict) else {},
+            "answer_contract": answer_contract if isinstance(answer_contract, dict) else {},
+            "evidence_contract": evidence_contract if isinstance(evidence_contract, dict) else {},
+        }
+        return {key: value for key, value in context.items() if value}
 
     @staticmethod
     def _build_source_metadata(item: dict) -> dict:
@@ -507,6 +559,73 @@ class BaseSpecialistAgent:
         if source_url and "source_url" not in metadata:
             metadata["source_url"] = source_url
         return metadata
+
+    @staticmethod
+    def _apply_plan_evidence_source_bias(
+        results: Sequence[dict],
+        plan_context: dict | None,
+    ) -> list[dict]:
+        """Apply planner-provided source preferences without affecting legacy flows."""
+        if not results or not plan_context:
+            return list(results)
+        evidence_contract = plan_context.get("evidence_contract")
+        if not isinstance(evidence_contract, dict):
+            return list(results)
+
+        preferred = BaseSpecialistAgent._normalized_contract_markers(
+            evidence_contract.get("preferred_sources")
+        )
+        avoid = BaseSpecialistAgent._normalized_contract_markers(
+            evidence_contract.get("avoid_sources")
+        )
+        if not preferred and not avoid:
+            return list(results)
+
+        adjusted: list[dict] = []
+        changed = False
+        for item in results:
+            candidate = dict(item)
+            metadata = candidate.get("metadata") or {}
+            source_text = " ".join(
+                normalize_text(str(value or ""))
+                for value in (
+                    candidate.get("source"),
+                    metadata.get("source"),
+                    metadata.get("file_name"),
+                    metadata.get("title"),
+                    metadata.get("relative_path"),
+                    metadata.get("source_url"),
+                    metadata.get("category"),
+                    metadata.get("subcategory"),
+                )
+            )
+            content_text = normalize_text(str(candidate.get("content") or "")[:900])
+            haystack = f"{source_text} {content_text}"
+            score = float(candidate.get("score", 0.0))
+            updated_score = score
+            if preferred and any(marker in haystack for marker in preferred):
+                updated_score += 0.22
+            if avoid and any(marker in haystack for marker in avoid):
+                updated_score *= 0.30
+            if updated_score != score:
+                candidate["score"] = round(updated_score, 6)
+                changed = True
+            adjusted.append(candidate)
+
+        if changed:
+            adjusted.sort(key=lambda item: float(item.get("score", 0.0)), reverse=True)
+        return adjusted
+
+    @staticmethod
+    def _normalized_contract_markers(value: object) -> tuple[str, ...]:
+        if not isinstance(value, (list, tuple, set)):
+            return ()
+        markers = []
+        for item in value:
+            normalized = normalize_text(str(item or ""))
+            if normalized:
+                markers.append(normalized)
+        return tuple(dict.fromkeys(markers))
 
     def _extract_query_from_task(self, task: Task) -> str:
         """Task icindeki ilk text part'tan sorgu cikarir."""
@@ -690,6 +809,7 @@ class BaseSpecialistAgent:
         force_llm: bool = False,
         allow_llm: bool = True,
         llm_profile: str | None = None,
+        plan_context: dict | None = None,
     ) -> tuple[str, str]:
         """Tek yanit uretim noktasi. Tum ajanlar bu metodu kullanmali."""
         # Evidence boost — soru tipine gore ilgili evidence oncelendirme
@@ -725,7 +845,12 @@ class BaseSpecialistAgent:
                     top_score,
                 )
 
-        if not allow_llm:
+        if not allow_llm or not settings.llm.specialist_synthesis_enabled:
+            if allow_llm and not settings.llm.specialist_synthesis_enabled:
+                logger.info(
+                    "specialist_llm_synthesis_disabled agent=%s",
+                    self.agent_id,
+                )
             with profile_stage("agent.source_only_answer", agent_id=self.agent_id):
                 return (
                     self._build_source_only_answer(query_text, results, db_context=db_context),
@@ -737,10 +862,9 @@ class BaseSpecialistAgent:
             results,
             db_context=db_context,
         )
-        # Normal RAG answers should be synthesized by the specialist LLM. The
-        # source-only/direct-RAG builders remain available as failure fallbacks
-        # and for explicitly non-LLM flows, but they should not short-circuit a
-        # healthy LLM because they tend to expose long raw chunks to the user.
+        # Legacy path: specialist LLM synthesis is kept behind
+        # LLM_SPECIALIST_SYNTHESIS_ENABLED. The main orchestrator owns normal
+        # final-answer synthesis; this path is only for explicit fallback modes.
 
         with profile_stage("agent.llm_synthesize", agent_id=self.agent_id):
             answer, gen_mode = await self._llm_synthesize(
@@ -749,6 +873,7 @@ class BaseSpecialistAgent:
                 db_context=db_context,
                 llm_profile=llm_profile,
                 force_llm=force_specialist_llm,
+                plan_context=plan_context,
             )
 
         # Claim guard — conservative check against evidence
@@ -896,6 +1021,7 @@ class BaseSpecialistAgent:
         intent_coverage,
         llm_profile: str | None,
         synthesis_timeout: float,
+        plan_context: dict | None = None,
     ) -> tuple[str, dict]:
         """Run the optional one-shot LLM judge and apply at most one repair.
 
@@ -914,10 +1040,20 @@ class BaseSpecialistAgent:
             "judge_action": "not_run",
             "retry_count": 0,
         }
+        has_plan_contract = bool(
+            (plan_context or {}).get("answer_contract")
+            or (plan_context or {}).get("evidence_contract")
+        )
+        if not has_plan_contract and not settings.llm.specialist_judge_enabled:
+            return answer, judge_meta
+
         judge_result = await run_judge(
             query=query_text,
             answer=answer,
             evidence_summary=evidence_summary,
+            plan_decision=(plan_context or {}).get("plan_decision"),
+            answer_contract=(plan_context or {}).get("answer_contract"),
+            evidence_contract=(plan_context or {}).get("evidence_contract"),
             llm_service=self.llm_service,
             llm_profile=llm_profile,
             has_foreign_suspicion=quality.needs_rewrite,
@@ -1079,6 +1215,7 @@ class BaseSpecialistAgent:
         db_context: str | None = None,
         llm_profile: str | None = None,
         force_llm: bool = False,
+        plan_context: dict | None = None,
     ) -> tuple[str, str]:
         """RAG kaynaklarini (ve varsa DB baglamini) LLM ile sentezler."""
         # LLM sentez esiginde threshold kontrolunu kaldirildi —
@@ -1264,6 +1401,11 @@ class BaseSpecialistAgent:
             safe_prompt += f"Veritabani Bilgisi:\n{db_context}\n\n"
         if context_chunks:
             safe_prompt += f"Belge Baglami:\n{chr(10).join(context_chunks)}\n\n"
+        if plan_context:
+            safe_prompt += (
+                "Plan ve cevap sozlesmesi JSON:\n"
+                f"{json.dumps(plan_context, ensure_ascii=False, default=str)[:1800]}\n\n"
+            )
         safe_prompt += (
             "Yukaridaki verilerden kullaniciya dogrudan cevap yaz. "
             "Belge basliklarini, kaynak etiketlerini, ic baglam ifadelerini "
@@ -1367,6 +1509,7 @@ CEVAP YAZIM KURALLARI:
                 intent_coverage=_intent_coverage,
                 llm_profile=llm_profile,
                 synthesis_timeout=synthesis_timeout,
+                plan_context=plan_context,
             )
             if judge_meta.get("judge_enabled"):
                 logger.info(

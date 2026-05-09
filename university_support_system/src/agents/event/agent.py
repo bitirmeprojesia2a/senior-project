@@ -35,6 +35,7 @@ class EventAgent(BaseSpecialistAgent):
         limit = int(metadata.get("limit", 5) or 5)
         events = await fetch_relevant_events(
             query_text,
+            department=self._resolve_department_filter(metadata),
             faculty=self._normalize_optional_text(metadata.get("faculty")),
             unit_name=self._normalize_optional_text(metadata.get("unit_name")),
             limit=limit,
@@ -51,3 +52,22 @@ class EventAgent(BaseSpecialistAgent):
     def _normalize_optional_text(value) -> str | None:
         text = str(value).strip() if value is not None else ""
         return text or None
+
+    def _resolve_department_filter(self, metadata: dict) -> str | list[str] | None:
+        department = self._normalize_optional_text(metadata.get("department"))
+        if department:
+            return department
+
+        departments = metadata.get("departments")
+        if isinstance(departments, (list, tuple)) and departments:
+            resolved = [
+                text
+                for text in (
+                    self._normalize_optional_text(item) for item in departments
+                )
+                if text is not None
+            ]
+            if resolved:
+                return resolved
+
+        return None

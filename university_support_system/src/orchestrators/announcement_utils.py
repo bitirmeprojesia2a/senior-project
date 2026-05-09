@@ -34,6 +34,7 @@ async def request_announcement_response(
     unit_name: str | None = None,
     conversation_source_refs: list[str] | None = None,
     allow_latest_fallback: bool = True,
+    limit: int | None = None,
     trace_metadata: dict | None = None,
 ):
     """Call the announcement agent and record telemetry for the exchange."""
@@ -51,6 +52,8 @@ async def request_announcement_response(
         parent_span_id=announcement_trace.get("parent_span_id"),
     )
     announcement_task.metadata["allow_latest_fallback"] = allow_latest_fallback
+    if limit is not None:
+        announcement_task.metadata["limit"] = limit
 
     agent_started = perf_counter()
     if settings.a2a.mode == "http":
@@ -69,6 +72,7 @@ async def request_announcement_response(
                 unit_name=unit_name,
                 conversation_source_refs=list(conversation_source_refs or []),
                 allow_latest_fallback=allow_latest_fallback,
+                limit=limit or 5,
                 trace_id=announcement_trace.get("trace_id"),
                 span_id=announcement_trace.get("span_id"),
                 parent_span_id=announcement_trace.get("parent_span_id"),
@@ -112,6 +116,7 @@ async def build_announcement_response(
     unit_name: str | None = None,
     conversation_source_refs: list[str] | None = None,
     allow_latest_fallback: bool = True,
+    limit: int | None = None,
     trace_metadata: dict | None = None,
 ):
     """Build a full user-facing response for announcement-only requests."""
@@ -127,6 +132,7 @@ async def build_announcement_response(
         unit_name=unit_name,
         conversation_source_refs=conversation_source_refs,
         allow_latest_fallback=allow_latest_fallback,
+        limit=limit,
         trace_metadata=trace_metadata,
     )
     response_time_ms = round((perf_counter() - start_time) * 1000, 2)

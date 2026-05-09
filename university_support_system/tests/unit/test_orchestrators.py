@@ -9,6 +9,7 @@ import pytest
 
 from src.a2a import A2AQueryPayload, build_department_response_task, build_query_task
 from src.cache import question_cache
+from src.capabilities.models import CapabilityAction
 from src.core.config import settings
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.core.messages import CONTACT_SUGGESTION
@@ -888,6 +889,22 @@ def test_build_missing_slot_clarification_uses_program_named_in_query():
         intent=intent,
         metadata={},
         query="Fizik ogretmenligi bolumu ogrencisiyim yaz okuluna katilabilir miyim?",
+    )
+
+    assert message is None
+
+
+def test_build_missing_slot_clarification_ignores_program_for_international_registration_docs():
+    intent = IntentAnalysis(
+        primary_intent="international_registration",
+        required_slots=["faculty_or_program"],
+        missing_slots=["faculty_or_program"],
+    )
+
+    message = build_missing_slot_clarification_message(
+        intent=intent,
+        metadata={},
+        query="Uluslararasi ogrenci olarak kayit icin hangi belgeler gerekir?",
     )
 
     assert message is None
@@ -2365,6 +2382,75 @@ async def test_main_orchestrator_does_not_question_cache_announcement_queries(mo
 
 
 @pytest.mark.asyncio
+async def test_announcement_gate_params_are_passed_to_existing_agent(monkeypatch):
+    monkeypatch.setattr(settings.capability_planner, "mode", "pilot")
+    monkeypatch.setattr(settings.capability_planner, "scope", "announcement")
+
+    async def _plan_capability_action(*args, **kwargs):
+        return CapabilityAction(
+            capability="announcement.search",
+            params={
+                "query": "Son duyurular neler?",
+                "unit_name": "Bilgisayar Muhendisligi",
+                "limit": 2,
+                "allow_latest_fallback": False,
+            },
+            confidence=0.95,
+            reasoning="duyuru aramasi",
+        )
+
+    monkeypatch.setattr(
+        main_module,
+        "plan_capability_action",
+        _plan_capability_action,
+    )
+
+    router = AsyncMock()
+    router.route = AsyncMock()
+    announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=706)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    async def _announcement_handle_task(task):
+        assert task.metadata["unit_name"] == "Bilgisayar Muhendisligi"
+        assert task.metadata["limit"] == 2
+        assert task.metadata["allow_latest_fallback"] is False
+        return build_department_response_task(
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Ilgili duyurular:\n1. Planli duyuru",
+                sources=[
+                    RAGSource(
+                        content="Planli duyuru icerigi",
+                        score=1.0,
+                        metadata={"record_type": "announcement"},
+                    )
+                ],
+            ),
+            request_task=task,
+            emitter_id=announcement_agent.agent_id,
+            emitter_name=announcement_agent.definition.name,
+        )
+
+    announcement_agent.handle_task = AsyncMock(side_effect=_announcement_handle_task)
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+    )
+
+    response = await orchestrator.handle_query("Son duyurular neler?", context_id="ctx-ann-gate")
+
+    assert "Planli duyuru" in response.answer
+    assert response.departments_involved == ["announcement"]
+    router.route.assert_not_awaited()
+    announcement_agent.handle_task.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_main_orchestrator_normalizes_short_announcement_before_routing(monkeypatch):
     monkeypatch.setattr(settings.llm, "query_normalization_enabled", True)
     router = AsyncMock()
@@ -2443,7 +2529,27 @@ async def test_main_orchestrator_short_circuits_event_queries(monkeypatch):
     monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
 
     router = AsyncMock()
-    router.route = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[],
+            confidence=0.94,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.CLARIFICATION,
+            reasoning="Routing LLM etkinlik capability'sini secti.",
+            task_type=TaskType.PROCEDURE_QUERY,
+            intent=IntentAnalysis(
+                complexity="simple",
+                is_personal=False,
+                force_llm_synthesis=False,
+                query_type="factual",
+                reasoning="etkinlik aramasi",
+                primary_intent="event",
+                target_capability="event",
+                required_slots=[],
+                missing_slots=[],
+            ),
+        )
+    )
     announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
     telemetry = AsyncMock()
     telemetry.create_query_log = AsyncMock(return_value=702)
@@ -2497,22 +2603,112 @@ async def test_main_orchestrator_short_circuits_event_queries(monkeypatch):
     assert "Mavi Salon" in response.answer
     assert response.departments_involved == ["event"]
     assert response.generation_modes == ["vt"]
-    assert router.route.await_count == 0
+    assert router.route.await_count == 1
     assert announcement_agent.handle_task.await_count == 0
     assert question_cache.size == 0
 
 
 @pytest.mark.asyncio
-async def test_main_orchestrator_explicit_event_query_skips_conversation_resolution(monkeypatch):
+async def test_event_gate_params_are_passed_to_existing_agent(monkeypatch):
+    monkeypatch.setattr(settings.capability_planner, "mode", "pilot")
+    monkeypatch.setattr(settings.capability_planner, "scope", "event")
+
+    async def _plan_capability_action(*args, **kwargs):
+        return CapabilityAction(
+            capability="event.search",
+            params={
+                "query": "Bu hafta seminer var mi?",
+                "unit_name": "Bilgisayar Muhendisligi",
+                "limit": 3,
+            },
+            confidence=0.95,
+            reasoning="etkinlik aramasi",
+        )
+
+    monkeypatch.setattr(
+        main_module,
+        "plan_capability_action",
+        _plan_capability_action,
+    )
+
     router = AsyncMock()
     router.route = AsyncMock()
+    event_agent = _FakeAgent("event", Department.STUDENT_AFFAIRS)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=707)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+
+    async def _event_handle_task(task):
+        assert task.metadata["unit_name"] == "Bilgisayar Muhendisligi"
+        assert task.metadata["limit"] == 3
+        return build_department_response_task(
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Buldugum ilgili etkinlikler:\n1. Planli seminer",
+                sources=[],
+                generation_mode="vt",
+            ),
+            request_task=task,
+            emitter_id=event_agent.agent_id,
+            emitter_name=event_agent.definition.name,
+        )
+
+    event_agent.handle_task = AsyncMock(side_effect=_event_handle_task)
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        event_agent=event_agent,
+        telemetry_service=telemetry,
+    )
+
+    response = await orchestrator.handle_query("Bu hafta seminer var mi?", context_id="ctx-event-gate")
+
+    assert "Planli seminer" in response.answer
+    assert response.departments_involved == ["event"]
+    router.route.assert_not_awaited()
+    event_agent.handle_task.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_main_orchestrator_explicit_event_query_uses_conversation_then_llm_route(monkeypatch):
+    router = AsyncMock()
+    router.route = AsyncMock(
+        return_value=RoutingResult(
+            departments=[],
+            confidence=0.94,
+            confidence_level=ConfidenceLevel.HIGH,
+            strategy=RoutingStrategy.CLARIFICATION,
+            reasoning="Routing LLM etkinlik capability'sini secti.",
+            task_type=TaskType.PROCEDURE_QUERY,
+            intent=IntentAnalysis(
+                complexity="simple",
+                is_personal=False,
+                force_llm_synthesis=False,
+                query_type="factual",
+                reasoning="etkinlik aramasi",
+                primary_intent="event",
+                target_capability="event",
+                required_slots=[],
+                missing_slots=[],
+            ),
+        )
+    )
     announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
     telemetry = AsyncMock()
     telemetry.create_query_log = AsyncMock(return_value=703)
     telemetry.finalize_query_log = AsyncMock()
     conversation_service = AsyncMock()
     conversation_service.resolve_query = AsyncMock(
-        side_effect=AssertionError("explicit event query should not wait for conversation LLM")
+        return_value=ConversationResolution(
+            original_query="Bu hafta seminer var mi?",
+            effective_query="Bu hafta seminer var mi?",
+            is_follow_up=False,
+            used_context=False,
+            active_topic=None,
+            department_hints=[],
+            source_hints=[],
+        )
     )
     conversation_service.record_turn = AsyncMock()
 
@@ -2538,8 +2734,8 @@ async def test_main_orchestrator_explicit_event_query_skips_conversation_resolut
     assert "Kaynak Özeti:" in response.answer
     assert "etkinlik araması" in response.answer
     assert response.departments_involved == ["event"]
-    router.route.assert_not_awaited()
-    conversation_service.resolve_query.assert_not_awaited()
+    router.route.assert_awaited_once()
+    conversation_service.resolve_query.assert_awaited_once()
     conversation_service.record_turn.assert_awaited_once()
 
 

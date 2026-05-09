@@ -70,6 +70,26 @@ def _turn(
     )
 
 
+def test_short_slot_follow_up_can_reuse_program_from_last_answer():
+    state = _state(
+        topic="Mufredat ve Ders Yapisi",
+        departments=[Department.ACADEMIC_PROGRAMS.value],
+        task_type=TaskType.COURSE_QUERY.value,
+        last_query="BIL203 kac AKTS?",
+        last_answer=(
+            "BIL203 Veri Yapilari dersi Bilgisayar Muhendisligi mufredatinda "
+            "2. sinif, 3. yariyil icinde gorunuyor."
+        ),
+    )
+
+    rewritten = ConversationContextService._rewrite_with_heuristics(
+        query="Peki 5. yariyildaki dersler neler?",
+        state=state,
+    )
+
+    assert rewritten == "Bilgisayar Muhendisligi 5. yariyildaki dersler neler"
+
+
 @pytest.mark.asyncio
 async def test_resolve_query_returns_original_when_no_state(monkeypatch):
     service = ConversationContextService()
@@ -139,6 +159,37 @@ async def test_strong_marker_topic_shift_is_not_forced_follow_up(monkeypatch):
     assert resolution.is_follow_up is False
     assert resolution.effective_query == "Staj zorunlu mu?"
     assert resolution.department_hints == []
+    fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_single_exam_question_does_not_inherit_summer_school_context(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yaz Okulu",
+                departments=[Department.STUDENT_AFFAIRS.value],
+                last_query="Yaz okulu uzerinden cozum var mi?",
+                last_answer="Yaz okulunda ders alabilme kosullari vardir.",
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(generate=AsyncMock())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Hic almadigim bir dersten tek derse girebilir miyim?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.effective_query == "Hic almadigim bir dersten tek derse girebilir miyim?"
+    assert resolution.active_topic in {"Sinav ve Degerlendirme", "Ders Tekrari ve Devam"}
+    assert resolution.active_topic != "Yaz Okulu"
     fake_llm.generate.assert_not_awaited()
 
 
@@ -819,6 +870,111 @@ async def test_application_type_fragment_after_date_clarification(monkeypatch):
     assert resolution.rewrite_method == "answer_fragment"
     assert resolution.effective_query == "cap basvurusu tarihleri ne zaman?"
     assert resolution.active_topic == "CAP / Cift Anadal"
+    fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_uses_last_course_reference_for_prerequisite_followup(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mufredat ve Ders Yapisi",
+                departments=[Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.COURSE_QUERY.value,
+                last_query="Bilgisayar Muhendisliginde var mi peki?",
+                last_answer=(
+                    "BIL203 Veri Yapilari dersi Bilgisayar Muhendisligi mufredatinda "
+                    "2. sinif, 3. yariyil icinde gorunuyor."
+                ),
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(generate=AsyncMock())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Onkosulu var mi?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "BIL203 dersinin onkosulu var mi?"
+    assert resolution.task_type_hint == TaskType.COURSE_QUERY
+    assert resolution.department_hints == [Department.ACADEMIC_PROGRAMS]
+    fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_uses_last_course_reference_for_akts_followup(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mufredat ve Ders Yapisi",
+                departments=[Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.COURSE_QUERY.value,
+                last_query="Onkosulu var mi?",
+                last_answer=(
+                    "BIL203 Veri Yapilari (3 kredi, 5 AKTS) dersinin onkosullari: "
+                    "BIL104 Programlamaya Giris II."
+                ),
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(generate=AsyncMock())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Kac AKTS peki?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.effective_query == "BIL203 dersi kac AKTS?"
+    assert resolution.task_type_hint == TaskType.COURSE_QUERY
+    fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_merges_course_code_after_course_slot_clarification(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mufredat ve Ders Yapisi",
+                departments=[Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.COURSE_QUERY.value,
+                last_query="Onkosulu var mi?",
+                last_answer=(
+                    "On kosul veya AKTS bilgisini kontrol edebilmem icin ders adini "
+                    "ya da ders kodunu bolum/program bilgisiyle birlikte yazar misiniz?"
+                ),
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(generate=AsyncMock())
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="BIL203 Veri Yapilari Bilgisayar Muhendisligi",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.rewrite_method == "answer_fragment"
+    assert resolution.effective_query == (
+        "BIL203 Veri Yapilari Bilgisayar Muhendisligi dersinin onkosulu var mi?"
+    )
     fake_llm.generate.assert_not_awaited()
 
 
@@ -1530,6 +1686,36 @@ async def test_resolve_query_carries_program_for_semester_program_followup(monke
     assert resolution.effective_query == "Bilgisayar Muhendisligi 8. yariyil programi ne"
     assert resolution.department_hints == [Department.ACADEMIC_PROGRAMS]
     fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_replaces_previous_program_for_program_change_followup(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mufredat ve Ders Yapisi",
+                departments=[Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.COURSE_QUERY.value,
+                last_query="Bilgisayar Muhendisligi 5. yariyildaki dersler neler?",
+                last_answer="5. yariyil doneminde kayitli dersler bulundu.",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Elektrik elektronik muhendisligi icin nasil?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.rewrite_method == "answer_fragment"
+    assert resolution.effective_query == "elektrik-elektronik muhendisligi 5. yariyildaki dersler neler?"
+    assert "bilgisayar" not in resolution.effective_query
+    assert resolution.department_hints == [Department.ACADEMIC_PROGRAMS]
 
 
 @pytest.mark.asyncio

@@ -169,6 +169,29 @@ def test_numeric_range_block_preserved_for_gano_akts_query():
     assert "15 AKTS" in selected, selected
 
 
+def test_list_block_preserved_for_procedural_conditions():
+    content = (
+        "Topluluklar hakkinda genel bilgi.\n"
+        "Toplulugun kapatilmasi Etkinlik Kurulu karari ile asagidaki durumlarda olur:\n"
+        "a) Yonetim Kurulunun belirtilen sure icinde olusturulamamasi.\n"
+        "b) Yönerge hükümlerine aykiri faaliyette bulunulmasi.\n"
+        "c) Bir egitim ogretim yili sonunda uye sayisinin mesleki topluluklarda 15, "
+        "sosyal topluluklarda 30 yeter sayisina ulasmamasi.\n"
+        "d) Ust uste iki egitim ogretim yili boyunca hicbir etkinlik yapilmamasi.\n"
+        "Kapatilan toplulugun tasinirlari SKSDB'ye devredilir.\n"
+    )
+    selected = select_evidence_sentences(
+        "Toplulugun kapatilmasi hangi durumda olur?",
+        content,
+        max_sentences=3,
+    )
+
+    assert "Yonetim Kurulunun" in selected, selected
+    assert "aykiri faaliyette" in selected, selected
+    assert "mesleki topluluklarda 15" in selected, selected
+    assert "hicbir etkinlik" in selected, selected
+
+
 def test_fallback_to_first_sentences_when_nothing_scores_high():
     content = (
         "Alfa beta gama delta epsilon. "
@@ -405,6 +428,44 @@ def test_build_evidence_context_chunks_uses_off_topic_as_fallback():
     )
     chunks = build_evidence_context_chunks([off_topic], "Test query")
     assert len(chunks) == 1, "Should use off-topic as fallback when no safe items"
+
+
+def test_build_evidence_context_chunks_keeps_leading_source_siblings():
+    def item(source: str, source_id: str, text: str, relevance: float) -> EvidenceItem:
+        return EvidenceItem(
+            source_name=source,
+            source_id=source_id,
+            department="student_affairs",
+            score=relevance,
+            score_type="reranker",
+            content_snippet=text,
+            selected_sentences=text,
+            matched_query_terms=["topluluk"],
+            relevance_score=relevance,
+            extracted_facts=[],
+            is_potentially_off_topic=False,
+        )
+
+    items = [
+        item("ogrenci_topluluklari_yonergesi.pdf", "c1", "Kapatma girisi.", 0.90),
+        item("guvenlik_yonergesi.pdf", "g1", "Baska kaynak.", 0.88),
+        item("ic_denetim_yonergesi.pdf", "d1", "Diger kaynak.", 0.86),
+        item("ogrenci_topluluklari_yonergesi.pdf", "c2", "Kapatma bentleri a ve b.", 0.60),
+        item("ogrenci_topluluklari_yonergesi.pdf", "c3", "Kapatma bentleri c ve d.", 0.58),
+    ]
+
+    chunks = build_evidence_context_chunks(
+        items,
+        "Toplulugun kapatilmasi hangi durumda olur?",
+        max_items=4,
+    )
+    chunk_text = "\n".join(chunks)
+
+    assert "Kapatma girisi" in chunk_text
+    assert "Kapatma bentleri a ve b" in chunk_text
+    assert "Kapatma bentleri c ve d" in chunk_text
+    assert "Baska kaynak" in chunk_text
+    assert "Diger kaynak" not in chunk_text
 
 
 # ---------------------------------------------------------------------------

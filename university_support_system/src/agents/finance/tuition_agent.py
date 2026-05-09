@@ -18,6 +18,7 @@ from src.agents.finance.tuition_utils import (
     format_currency_tr,
     format_tuition_snapshot,
     has_explicit_program_without_fee_unit,
+    is_explicit_fee_amount_query,
     infer_requested_student_type,
     is_personal_query,
     is_structured_fee_query,
@@ -29,6 +30,10 @@ from src.agents.finance.tuition_utils import (
     pick_preferred_result,
     source_type_mismatch_penalty,
 )
+from src.capabilities.academic_formatting import deterministic_answer_for_result
+from src.capabilities.executor import execute_capability_action
+from src.capabilities.models import CapabilityAction
+from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.db.finance_data import (
     fetch_student_tuition_snapshot,
@@ -120,6 +125,15 @@ class TuitionAgent(BaseSpecialistAgent):
                 db_data=snapshot,
                 success=True,
             )
+
+        capability_response = await self._try_handle_capability_plan(
+            query_text,
+            metadata,
+            student_type=student_type,
+            requested_unit=requested_unit,
+        )
+        if capability_response is not None:
+            return capability_response
 
         if needs_fee_context_clarification(query_text, student_type, requested_unit):
             return DepartmentResponse(
@@ -257,6 +271,72 @@ class TuitionAgent(BaseSpecialistAgent):
 
     def _extract_unit_fee_line(self, content: str, requested_unit: str) -> str | None:
         return extract_unit_fee_line(content, requested_unit)
+
+    async def _try_handle_capability_plan(
+        self,
+        query_text: str,
+        metadata: dict,
+        *,
+        student_type: str | None,
+        requested_unit: str | None,
+    ) -> DepartmentResponse | None:
+        planner_payload = metadata.get("capability_planner")
+        if not isinstance(planner_payload, dict) or not planner_payload.get("apply"):
+            return None
+        raw_action = planner_payload.get("action")
+        if not isinstance(raw_action, dict):
+            return None
+
+        try:
+            action = CapabilityAction.model_validate(raw_action)
+        except Exception:
+            return None
+        if action.capability != "finance.tuition_fee":
+            return None
+        if action.confidence < settings.capability_planner.confidence_threshold:
+            return None
+        if not is_explicit_fee_amount_query(query_text):
+            return None
+
+        params = dict(action.params)
+        params.setdefault("query", query_text)
+        if student_type:
+            params.setdefault("student_type", student_type)
+        if requested_unit:
+            params.setdefault("unit_name", requested_unit)
+        action = action.model_copy(update={"params": params})
+
+        result = await execute_capability_action(action)
+        if not result.success:
+            return None
+
+        answer = deterministic_answer_for_result(
+            query=query_text,
+            capability=result.capability,
+            records=result.records,
+            metadata=result.metadata,
+            message=result.message,
+        )
+        return DepartmentResponse(
+            department=self.department,
+            answer=answer,
+            db_data={
+                "capability": result.capability,
+                "params": result.params,
+                "records": result.records,
+                "metadata": result.metadata,
+                "message": result.message,
+            },
+            generation_mode="vt",
+            success=True,
+            metadata={
+                "capability_planner": {
+                    "mode": planner_payload.get("mode"),
+                    "capability": result.capability,
+                    "confidence": action.confidence,
+                }
+            },
+        )
 
     def _build_honest_fee_fallback(
         self,

@@ -620,6 +620,7 @@ class HttpA2ADepartmentTransport:
             "is_personal_query": bool(metadata.get("is_personal_query", False)),
             "final_answer_owner": metadata.get("final_answer_owner"),
             "specialist_response_mode": metadata.get("specialist_response_mode"),
+            "capability_planner": metadata.get("capability_planner"),
             "trace_id": metadata.get("trace_id"),
             "span_id": metadata.get("span_id"),
             "parent_span_id": metadata.get("parent_span_id"),

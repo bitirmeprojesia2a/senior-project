@@ -204,6 +204,26 @@ def test_identity_card_prompt_contains_guard():
     assert "dekont" in prompt_lower
 
 
+def test_student_life_prompt_distinguishes_community_closure_and_membership():
+    from src.llm.prompt_templates import STUDENT_LIFE_AGENT_SYSTEM_PROMPT
+
+    prompt_lower = STUDENT_LIFE_AGENT_SYSTEM_PROMPT.lower()
+
+    assert "topluluğun kapatılması" in prompt_lower
+    assert "üyeliğinin sonlandırılması" in prompt_lower
+    assert "akademik danışman" in prompt_lower
+
+
+def test_capability_planner_mentions_student_community_policy_lookup():
+    from src.capabilities.planner import PLANNER_SYSTEM_PROMPT
+
+    prompt_lower = PLANNER_SYSTEM_PROMPT.lower()
+
+    assert "ogrenci toplulugu" in prompt_lower
+    assert "student_community_closure" in prompt_lower
+    assert "student_community_advisor_requirement" in prompt_lower
+
+
 # ---------------------------------------------------------------------------
 # 6. Announcement length limit
 # ---------------------------------------------------------------------------

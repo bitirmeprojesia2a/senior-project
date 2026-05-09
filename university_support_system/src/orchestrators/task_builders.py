@@ -40,6 +40,7 @@ def build_department_request_task(
         is_personal_query=bool(metadata.get("is_personal_query", False)),
         final_answer_owner=metadata.get("final_answer_owner"),
         specialist_response_mode=metadata.get("specialist_response_mode"),
+        capability_planner=metadata.get("capability_planner"),
         trace_id=metadata.get("trace_id"),
         span_id=metadata.get("span_id"),
         parent_span_id=metadata.get("parent_span_id"),
@@ -55,6 +56,7 @@ def build_department_request_task(
         "is_personal_query",
         "final_answer_owner",
         "specialist_response_mode",
+        "capability_planner",
         "conversation_is_follow_up",
         "conversation_topic",
         "conversation_source_refs",
@@ -106,6 +108,7 @@ def build_event_request_task(
     query: str,
     context_id: str,
     routing_reason: str | None = None,
+    departments: list[str] | None = None,
     faculty: str | None = None,
     unit_name: str | None = None,
     limit: int | None = None,
@@ -123,6 +126,8 @@ def build_event_request_task(
             parent_span_id=parent_span_id,
         )
     )
+    if departments:
+        task.metadata["departments"] = departments
     if faculty:
         task.metadata["faculty"] = faculty
     if unit_name:

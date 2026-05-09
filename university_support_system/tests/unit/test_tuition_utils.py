@@ -6,6 +6,7 @@ from pathlib import Path
 from src.agents.finance.tuition_utils import (
     extract_requested_unit,
     has_explicit_program_without_fee_unit,
+    is_explicit_fee_amount_query,
     is_personal_query,
     is_structured_fee_query,
     needs_fee_context_clarification,
@@ -26,6 +27,17 @@ def test_is_personal_query_keeps_personal_amount_question_personal():
 
 def test_is_personal_query_treats_transfer_fee_policy_question_as_non_personal():
     assert is_personal_query("Yatay gecis yaparsam harc odemem gerekir mi?") is False
+
+
+def test_explicit_fee_amount_query_rejects_application_policy_context():
+    assert (
+        is_explicit_fee_amount_query("Harc borcum olsaydi CAP'a basvurabilir miydim?")
+        is False
+    )
+
+
+def test_explicit_fee_amount_query_accepts_program_fee_amount_context():
+    assert is_explicit_fee_amount_query("Fizik ogretmenligi ucreti ne kadar?") is True
 
 
 def test_extract_requested_unit_accepts_faculty_alias_without_suffix():

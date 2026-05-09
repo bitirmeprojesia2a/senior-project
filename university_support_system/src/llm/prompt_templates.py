@@ -30,7 +30,13 @@ SINIR KURALLARI (cok onemli):
   kayit yenileme, ek sure veya benzeri idari surecle birlesiyorsa finance'i eksik birakma
 - Azami sure + IDARI ISLEM sorusu -> ["academic_programs", "student_affairs"] (ucret varsa finance de ekle)
 - "Ne yapmam gerekir", "nasil degisir", "ne yapabilirim" seklindeki PROSEDUR sorusu, konusu yonetmelik kurali bile olsa -> student_affairs dahil et
-- Secmeli ders degistirme, basarisiz ders tekrari, devam zorunlulugu sorusu -> ["student_affairs", "academic_programs"]
+- Basarisiz ders, hic alinmamis ders, okulun uzamasi, yaz okuluyla telafi veya tek ders uygunlugu gibi
+  ogrencinin ne yapacagini sordugu uygulama/prosedur sorulari -> ["student_affairs"].
+  Soru acikca yonetmelik maddesi, devam zorunlulugu kuralinin metni veya akademik program kural yorumu istiyorsa
+  academic_programs eklenebilir.
+- Ogrenci toplulugu/kulup kurma, topluluk uyeligi, topluluk kapatilmasi, akademik danisman veya SKSDB
+  kapsamindaki ogrenci yasami sorulari -> ["student_affairs"].
+- Secmeli ders degistirme, basarisiz ders tekrari veya devam zorunlulugu sorusu acikca kural/politika soruyorsa -> ["student_affairs", "academic_programs"]
 - Ek sure, azami sure asimi sorusu IDARI ISLEM iceriyorsa ("hakkim var mi", "ne yapmaliyim") -> student_affairs dahil et
 - Uzaktan egitim/ders degerlendirme sorusu -> ["student_affairs", "academic_programs"]
 - Mezuniyet icin toplam AKTS/kredi sorusu ("onlisans/lisans kac AKTS tamamlamali?", "mezun olmak icin kac kredi gerekir?") -> student_affairs
@@ -232,11 +238,11 @@ JSON:
 Soru: Yaz okulu ne zaman ve kimler katilabilir
 JSON:
 {{
-  "departments": ["student_affairs", "academic_programs"],
+  "departments": ["student_affairs"],
   "confidence": 0.84,
-  "complexity": "simple",
+  "complexity": "complex",
   "is_personal": false,
-  "force_llm_synthesis": false,
+  "force_llm_synthesis": true,
   "query_type": "procedural",
   "canonical_query": "Yaz okulu ne zaman baslar ve hangi ogrenciler katilabilir?",
   "primary_intent": "yaz_okulu",
@@ -244,6 +250,23 @@ JSON:
   "required_slots": [],
   "missing_slots": [],
   "reasoning": "yaz okulu takvimi ve katilim kosullari"
+}}
+
+Soru: Matematik dersi yuzunden okulum uzuyor nasil cozum bulabilirim?
+JSON:
+{{
+  "departments": ["student_affairs"],
+  "confidence": 0.82,
+  "complexity": "complex",
+  "is_personal": false,
+  "force_llm_synthesis": true,
+  "query_type": "procedural",
+  "canonical_query": "Basarisiz olunan ders nedeniyle okulun uzamamasi icin hangi ogrenci isleri adimlari izlenebilir?",
+  "primary_intent": "procedure",
+  "target_capability": "none",
+  "required_slots": [],
+  "missing_slots": [],
+  "reasoning": "basarisiz ders telafi sureci"
 }}
 
 Soru: Guncel duyur
@@ -470,6 +493,8 @@ TEMEL KURALLAR:
 
 ÖĞRENCİ YAŞAMI-SPESİFİK KURALLAR:
 6. ÖĞRENCİ KİMLİK KARTI: Kayıp veya çalıntı durumunda başvuru formu ve kimlik ücreti dekontu gereklidir; "ücretsiz" veya "dekont gerekmez" deme. Sistem kaynaklı arızalarda (okunmuyor, manyetik sertifika bozuk vb.) ücretsiz değişim olabilir. Bu iki durumu karıştırma.
+7. ÖĞRENCİ TOPLULUKLARI: "Topluluğun kapatılması" ile "öğrencinin üyeliğinin sonlandırılması" farklı konulardır. Soru topluluğun kapatılmasını soruyorsa üyelikten çıkarma/mezuniyet/ilişik kesme nedenlerini kapatma nedeni gibi yazma.
+8. ÖĞRENCİ TOPLULUKLARI: "Danışman şart mı?" gibi takip sorularında bağlam topluluk kurma veya topluluk işleyişi ise üyelik şartlarını değil, akademik danışman atanması/önerilmesi ve topluluk işleyişindeki rolünü cevapla.
 """
 
 

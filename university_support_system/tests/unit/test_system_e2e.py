@@ -27,7 +27,7 @@ from src.core.constants import (
     RoutingStrategy,
     TaskType,
 )
-from src.db.schemas import DepartmentResponse, RoutingResult, UserQueryResponse
+from src.db.schemas import DepartmentResponse, IntentAnalysis, RoutingResult, UserQueryResponse
 from src.orchestrators.department import (
     DepartmentOrchestrator,
     build_academic_programs_orchestrator,
@@ -508,7 +508,7 @@ class TestDepartmentKeywordRouting:
 class TestAnnouncementIntegration:
 
     @pytest.mark.asyncio
-    async def test_announcement_fallback_when_no_department(self):
+    async def test_announcement_target_capability_when_no_department(self):
         orchestrator = _build_main_orchestrator(
             RoutingResult(
                 departments=[],
@@ -517,6 +517,17 @@ class TestAnnouncementIntegration:
                 strategy=RoutingStrategy.CLARIFICATION,
                 reasoning="Departman secilemedi",
                 task_type=None,
+                intent=IntentAnalysis(
+                    complexity="simple",
+                    is_personal=False,
+                    force_llm_synthesis=False,
+                    query_type="factual",
+                    reasoning="duyuru aramasi",
+                    primary_intent="announcement",
+                    target_capability="announcement",
+                    required_slots=[],
+                    missing_slots=[],
+                ),
             )
         )
 

@@ -13,7 +13,7 @@ from src.a2a import build_department_response_task
 from src.agents.announcement.agent import AnnouncementAgent
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.db.conversation_context import ConversationResolution
-from src.db.schemas import DepartmentResponse, RoutingResult
+from src.db.schemas import DepartmentResponse, IntentAnalysis, RoutingResult
 from src.db.support_models import Announcement, AnnouncementLink
 from src.orchestrators.main import MainOrchestrator
 
@@ -56,6 +56,17 @@ def _build_router_for_announcement_only() -> AsyncMock:
             strategy=RoutingStrategy.CLARIFICATION,
             reasoning="Duyuru sorgusu",
             task_type=TaskType.PROCEDURE_QUERY,
+            intent=IntentAnalysis(
+                complexity="simple",
+                is_personal=False,
+                force_llm_synthesis=False,
+                query_type="factual",
+                reasoning="Duyuru sorgusu",
+                primary_intent="announcement",
+                target_capability="announcement",
+                required_slots=[],
+                missing_slots=[],
+            ),
         )
     )
     return router
@@ -309,12 +320,23 @@ async def test_announcement_acceptance_related_announcement_keeps_attachment_lin
     router = AsyncMock()
     router.route = AsyncMock(
         return_value=RoutingResult(
-            departments=[Department.ACADEMIC_PROGRAMS],
+            departments=[],
             confidence=0.91,
             confidence_level=ConfidenceLevel.HIGH,
-            strategy=RoutingStrategy.DIRECT,
+            strategy=RoutingStrategy.CLARIFICATION,
             reasoning="Bolum duyuru destekli sorgu",
             task_type=TaskType.PROCEDURE_QUERY,
+            intent=IntentAnalysis(
+                complexity="simple",
+                is_personal=False,
+                force_llm_synthesis=False,
+                query_type="factual",
+                reasoning="Bolum duyuru destekli sorgu",
+                primary_intent="announcement",
+                target_capability="announcement",
+                required_slots=[],
+                missing_slots=[],
+            ),
         )
     )
     academic_orchestrator = _StaticDepartmentOrchestrator(
@@ -339,4 +361,4 @@ async def test_announcement_acceptance_related_announcement_keeps_attachment_lin
     assert "Bilgisayar Muhendisligi Ara Sinav Programi" in response.answer
     assert "Program PDF" in response.answer
     assert response.departments_involved == ["announcement"]
-    router.route.assert_not_awaited()
+    router.route.assert_awaited_once()

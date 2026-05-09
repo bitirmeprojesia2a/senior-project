@@ -22,6 +22,22 @@ def test_exam_program_query_stays_announcement_lookup():
     assert looks_like_announcement_query("Bahar donemi final sinavi programi")
 
 
+def test_single_exam_eligibility_does_not_become_announcement_primary():
+    query = "Hic almadigim bir dersten tek derse girebilir miyim?"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)
+    assert not should_fetch_related_announcements(query)
+
+
+def test_explicit_single_exam_announcement_query_stays_announcement_lookup():
+    query = "Bilgisayar muhendisligi tek ders sinavi duyurusu var mi?"
+
+    assert not should_block_announcement_primary_flow(query)
+    assert looks_like_announcement_query(query)
+    assert should_fetch_related_announcements(query)
+
+
 def test_procedural_muafiyet_application_does_not_become_announcement_primary():
     query = "Yatay gecisle geldim, muafiyet basvurusu ne zaman yapilir?"
 

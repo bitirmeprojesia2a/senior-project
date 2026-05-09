@@ -21,6 +21,10 @@ from src.agents.student.registration_utils import (
     should_reject_registration_source_only_result,
     should_force_registration_llm_synthesis,
 )
+from src.capabilities.academic_formatting import deterministic_answer_for_result
+from src.capabilities.executor import execute_capability_action
+from src.capabilities.models import CapabilityAction
+from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.db.registration_data import RegistrationPeriodInfo, fetch_preferred_registration_period
 from src.db.schemas import DepartmentResponse, RAGSource
@@ -54,6 +58,11 @@ class RegistrationAgent(BaseSpecialistAgent):
         query_text = str(metadata.get("query_text", "")).strip()
         if not query_text:
             query_text = self._extract_query_from_task(task)
+
+        capability_response = await self._try_handle_capability_plan(query_text, metadata)
+        if capability_response is not None:
+            return capability_response
+        task = self._prepare_policy_lookup_task(task, query_text, metadata)
 
         exam_calendar = build_general_exam_calendar_answer(query_text)
         if exam_calendar is not None:
@@ -124,6 +133,161 @@ class RegistrationAgent(BaseSpecialistAgent):
             )
 
         return await super().handle_department_task(task)
+
+    async def _try_handle_capability_plan(
+        self,
+        query_text: str,
+        metadata: dict,
+    ) -> DepartmentResponse | None:
+        planner_payload = metadata.get("capability_planner")
+        if not isinstance(planner_payload, dict) or not planner_payload.get("apply"):
+            return None
+
+        action_payload = planner_payload.get("action")
+        if not isinstance(action_payload, dict):
+            return None
+        try:
+            action = CapabilityAction.model_validate(action_payload)
+        except Exception:
+            return None
+
+        if action.is_none() or action.capability != "calendar.academic_date":
+            return None
+        if action.confidence < settings.capability_planner.confidence_threshold:
+            return None
+
+        result = await execute_capability_action(action)
+        if not result.success:
+            return None
+        if not result.records:
+            return None
+
+        answer = deterministic_answer_for_result(
+            query=query_text,
+            capability=result.capability,
+            records=result.records,
+            metadata=result.metadata,
+            message=result.message,
+        )
+        source = result.metadata.get("source")
+        sources = []
+        if source:
+            sources.append(
+                RAGSource(
+                    content=answer,
+                    score=1.0,
+                    metadata={
+                        "source": source,
+                        "record_type": "academic_calendar",
+                    },
+                )
+            )
+        return DepartmentResponse(
+            department=self.department,
+            answer=answer,
+            db_data={
+                "query": query_text,
+                "capability": result.capability,
+                "params": result.params,
+                "records": result.records,
+                "metadata": result.metadata,
+                "message": result.message,
+            },
+            generation_mode="vt",
+            sources=sources,
+            include_contact_suggestion=True,
+            success=True,
+            metadata={
+                "capability_planner": {
+                    "mode": planner_payload.get("mode"),
+                    "capability": result.capability,
+                    "confidence": action.confidence,
+                    "record_count": len(result.records),
+                    "message": result.message,
+                }
+            },
+        )
+
+    def _prepare_policy_lookup_task(
+        self,
+        task: Task,
+        query_text: str,
+        metadata: dict,
+    ) -> Task:
+        planner_payload = metadata.get("capability_planner")
+        if not isinstance(planner_payload, dict) or not planner_payload.get("apply"):
+            return task
+        action_payload = planner_payload.get("action")
+        if not isinstance(action_payload, dict):
+            return task
+        try:
+            action = CapabilityAction.model_validate(action_payload)
+        except Exception:
+            return task
+        if action.capability != "student_affairs.policy_lookup":
+            return task
+        if action.confidence < settings.capability_planner.confidence_threshold:
+            return task
+
+        params = dict(action.params or {})
+        answer_contract = dict(action.answer_contract or {})
+        evidence_contract = dict(action.evidence_contract or {})
+        if params.get("must_answer") and not answer_contract.get("must_answer"):
+            answer_contract["must_answer"] = params.get("must_answer")
+        if params.get("preferred_sources") and not evidence_contract.get("preferred_sources"):
+            evidence_contract["preferred_sources"] = params.get("preferred_sources")
+
+        preferred_sources = [
+            str(source).strip()
+            for source in (evidence_contract.get("preferred_sources") or [])
+            if str(source).strip()
+        ]
+        retrieval_parts = [
+            params.get("query") or query_text,
+            params.get("topic"),
+            params.get("question_type"),
+            *(answer_contract.get("must_answer") or []),
+            *preferred_sources,
+        ]
+        retrieval_query_parts: list[str] = []
+        seen_retrieval_parts: set[str] = set()
+        for part in retrieval_parts:
+            text = str(part or "").strip()
+            if not text:
+                continue
+            key = text.casefold()
+            if key in seen_retrieval_parts:
+                continue
+            seen_retrieval_parts.add(key)
+            retrieval_query_parts.append(text)
+
+        source_refs = list(metadata.get("conversation_source_refs") or [])
+        for source in preferred_sources:
+            if source not in source_refs:
+                source_refs.append(source)
+
+        updated_metadata = dict(metadata)
+        updated_metadata["force_llm_synthesis"] = True
+        if source_refs:
+            updated_metadata["conversation_source_refs"] = source_refs
+        updated_metadata["policy_lookup"] = {
+            "intent": action.intent,
+            "topic": params.get("topic"),
+            "question_type": params.get("question_type"),
+            "query": params.get("query") or query_text,
+        }
+        updated_metadata["retrieval_query"] = " ".join(retrieval_query_parts) or query_text
+        updated_metadata["plan_decision"] = action.to_plan_decision().model_dump()
+        if answer_contract:
+            updated_metadata["answer_contract"] = answer_contract
+        if evidence_contract:
+            updated_metadata["evidence_contract"] = evidence_contract
+
+        try:
+            return task.model_copy(update={"metadata": updated_metadata}, deep=True)
+        except AttributeError:
+            task.metadata = updated_metadata
+            return task
 
     @staticmethod
     def _is_timing_query(query_text: str) -> bool:

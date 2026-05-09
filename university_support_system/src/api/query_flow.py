@@ -156,6 +156,7 @@ def build_dispatch_metadata(
         "is_personal_query": payload.is_personal_query,
         "final_answer_owner": payload.final_answer_owner,
         "specialist_response_mode": payload.specialist_response_mode,
+        "capability_planner": getattr(payload, "capability_planner", None),
         "disable_specialist_llm": payload.disable_specialist_llm,
         "trace_id": payload.trace_id,
         "span_id": payload.span_id,

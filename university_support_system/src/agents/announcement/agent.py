@@ -116,15 +116,18 @@ class AnnouncementAgent(BaseSpecialistAgent):
             department=self._resolve_department_filter(metadata),
             faculty=self._normalize_optional_text(metadata.get("faculty")),
             unit_name=self._normalize_optional_text(metadata.get("unit_name")),
-            limit=8,
-            allow_latest_fallback=bool(metadata.get("allow_latest_fallback", True)),
+            limit=self._safe_int(metadata.get("limit"), default=8, minimum=1, maximum=10),
+            allow_latest_fallback=self._safe_bool(
+                metadata.get("allow_latest_fallback"),
+                default=True,
+            ),
         )
 
         has_more = len(announcements) > 5
         display_items = announcements[:5]
 
         if not announcements:
-            if bool(metadata.get("allow_latest_fallback", True)):
+            if self._safe_bool(metadata.get("allow_latest_fallback"), default=True):
                 answer = (
                     "Şu anda sistemde kayıtlı aktif duyuru bulunmuyor. "
                     "Duyuru verileri yüklendiğinde en güncel duyuruları doğrudan listeleyebilirim."
@@ -169,6 +172,25 @@ class AnnouncementAgent(BaseSpecialistAgent):
     def _normalize_optional_text(self, value) -> str | None:
         text = str(value).strip() if value is not None else ""
         return text or None
+
+    def _safe_int(self, value, *, default: int, minimum: int, maximum: int) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            parsed = default
+        return max(minimum, min(parsed, maximum))
+
+    def _safe_bool(self, value, *, default: bool) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        text = str(value).strip().lower()
+        if text in {"true", "1", "yes", "evet"}:
+            return True
+        if text in {"false", "0", "no", "hayir", "hayÄ±r"}:
+            return False
+        return default
 
     def _format_announcements(self, announcements: list[AnnouncementRecord], *, has_more: bool = False) -> str:
         lines = ["İlgili duyurular:"]

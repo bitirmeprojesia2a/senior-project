@@ -11,6 +11,8 @@ from uuid import uuid4
 from src.a2a.tracing import ensure_trace_metadata
 from src.agents.announcement import AnnouncementAgent
 from src.agents.event import EventAgent
+from src.capabilities.planner import plan_capability_action
+from src.capabilities.registry import CAPABILITY_REGISTRY
 from src.db.announcements import _detect_faculty_scope, _detect_unit_scope
 from src.cache import (
     build_question_cache_key,
@@ -21,10 +23,10 @@ from src.cache import (
 from src.core.config import settings
 from src.core.messages import CONTACT_SUGGESTION
 from src.core.profiling import get_current_profiler, profile_stage
-from src.core.constants import TaskType
+from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.core.text_normalization import normalize_text
 from src.db.conversation_context import ConversationContextService, ConversationResolution
-from src.db.schemas import DepartmentResponse, UserQueryResponse
+from src.db.schemas import DepartmentResponse, IntentAnalysis, RoutingResult, UserQueryResponse
 from src.db.telemetry import (
     TelemetryService,
     build_department_orchestrator_identity,
@@ -191,28 +193,50 @@ class MainOrchestrator:
                         full_name=student_full_name,
                     )
 
+                early_event_gate_decision: dict[str, object] | None = None
                 if looks_like_event_query(query):
-                    if profiler is not None:
-                        profiler.set_attribute(
-                            "question_cache",
-                            {
-                                "eligible": False,
-                                "status": "bypass",
-                                "reason": "event_query",
-                            },
-                        )
-                    return await self._handle_event_short_circuit(
+                    early_event_gate_decision = await self._evaluate_short_circuit_gate(
                         query=query,
-                        original_query=query,
-                        context_id=context_id,
-                        start_time=start_time,
-                        user_id=user_id,
-                        student_id=student_id,
-                        student_department=student_department,
-                        student_faculty=student_faculty,
-                        conversation_resolution=conversation_resolution,
-                        trace_metadata=trace,
+                        capability="event",
+                        llm_profile=llm_profile,
+                        heuristic_reason="Erken etkinlik sinyali.",
                     )
+                    if not bool(early_event_gate_decision["allow"]):
+                        if profiler is not None:
+                            profiler.set_attribute(
+                                "event_short_circuit",
+                                {
+                                    "eligible": True,
+                                    "status": "blocked_by_gate",
+                                    "gate": early_event_gate_decision,
+                                },
+                            )
+                    else:
+                        if profiler is not None:
+                            profiler.set_attribute(
+                                "question_cache",
+                                {
+                                    "eligible": False,
+                                    "status": "bypass",
+                                    "reason": "event_query",
+                                },
+                            )
+                        return await self._handle_event_short_circuit(
+                            query=query,
+                            original_query=query,
+                            context_id=context_id,
+                            start_time=start_time,
+                            user_id=user_id,
+                            student_id=student_id,
+                            student_department=student_department,
+                            student_faculty=student_faculty,
+                            conversation_resolution=conversation_resolution,
+                            routing_reason=str(early_event_gate_decision["routing_reason"]),
+                            capability_params=self._capability_params_from_gate(
+                                early_event_gate_decision
+                            ),
+                            trace_metadata=trace,
+                        )
 
                 skip_conversation_resolution = looks_like_personal_data_query(query)
                 if self.conversation_service is not None and not skip_conversation_resolution:
@@ -254,6 +278,66 @@ class MainOrchestrator:
 
                 effective_query = conversation_resolution.effective_query
                 query_normalization = unchanged_query(effective_query)
+
+                early_announcement_reason: str | None = None
+                early_announcement_gate_decision: dict[str, object] | None = None
+                if (
+                    looks_like_announcement_query(effective_query)
+                    and not should_block_announcement_primary_flow(effective_query)
+                    and not self._looks_like_incomplete_capability_fragment(effective_query)
+                ):
+                    early_announcement_gate_decision = await self._evaluate_short_circuit_gate(
+                        query=effective_query,
+                        capability="announcement",
+                        llm_profile=llm_profile,
+                        heuristic_reason="Erken duyuru sinyali.",
+                    )
+                    if bool(early_announcement_gate_decision["allow"]):
+                        early_announcement_reason = str(
+                            early_announcement_gate_decision["routing_reason"]
+                        )
+                    elif profiler is not None:
+                        profiler.set_attribute(
+                            "announcement_short_circuit",
+                            {
+                                "eligible": True,
+                                "status": "blocked_by_gate",
+                                "gate": early_announcement_gate_decision,
+                            },
+                        )
+                elif (
+                    conversation_resolution.is_follow_up
+                    and conversation_resolution.announcement_context
+                    and should_keep_announcement_follow_up(effective_query)
+                ):
+                    early_announcement_reason = "Duyuru follow-up baglami korundu."
+
+                if early_announcement_reason is not None:
+                    if profiler is not None:
+                        profiler.set_attribute(
+                            "question_cache",
+                            {
+                                "eligible": False,
+                                "status": "bypass",
+                                "reason": "announcement_query",
+                            },
+                        )
+                    return await self._handle_announcement_short_circuit(
+                        query=effective_query,
+                        original_query=query,
+                        context_id=context_id,
+                        start_time=start_time,
+                        user_id=user_id,
+                        student_id=student_id,
+                        student_department=student_department,
+                        student_faculty=student_faculty,
+                        conversation_resolution=conversation_resolution,
+                        routing_reasoning=early_announcement_reason,
+                        capability_params=self._capability_params_from_gate(
+                            early_announcement_gate_decision
+                        ),
+                        trace_metadata=trace,
+                    )
 
                 pre_route_cache_lookup = evaluate_question_cache_lookup(
                     query=effective_query,
@@ -326,9 +410,10 @@ class MainOrchestrator:
                                 )
                         return final_response
 
-                # Routing (normalization dahil)
-                # Routing LLM hem departman bilgilendirmesi hem canonical_query,
-                # primary_intent ve target_capability uretir; ayri normalization cagrisina gerek yok.
+                capability_planner_payload = None
+                # Routing (normalization dahil) her zaman ana karar katmani olarak kalir.
+                # Capability planner router'i atlamaz; yalnizca routing sonrasinda
+                # whitelisted capability metadata'si uretmek icin kullanilir.
                 with profile_stage("main.router.route"):
                     routing = await self.router.route(
                         effective_query,
@@ -365,7 +450,7 @@ class MainOrchestrator:
                         primary_intent=routing.intent.primary_intent or "unknown",
                         target_capability=routing.intent.target_capability or "none",
                         confidence=routing.confidence,
-                        reasoning=None,
+                        reasoning=routing.reasoning,
                     )
 
                 if profiler is not None:
@@ -471,14 +556,37 @@ class MainOrchestrator:
                         },
                     )
 
-                # Duyuru short-circuit
-                # Duyuru sorgulari router'a gitmeden dogrudan announcement-only akisa yonlendirilir.
-                # Ayrica onceki tur duyuru akisindan geldiginde (announcement_context=True)
-                # follow-up sorular da duyuru akisinda kalir.
-                if (
-                    query_normalization.target_capability == "event"
-                    or looks_like_event_query(effective_query)
-                ):
+                # Duyuru/etkinlik capability akisi.
+                # Marker sinyalleri tek basina karar vermez; LLM planner veya routing
+                # intent capability secmis olmalidir. Duyuru follow-up'lari ise mevcut
+                # kayitli duyuru baglami uzerinden ayrica korunur.
+                event_short_circuit_reason: str | None = None
+                event_short_circuit_params: dict[str, object] | None = None
+                if query_normalization.target_capability == "event":
+                    event_short_circuit_reason = (
+                        query_normalization.reasoning
+                        or "Routing LLM etkinlik capability'sini secti."
+                    )
+                elif looks_like_event_query(effective_query):
+                    if (
+                        early_event_gate_decision is not None
+                        and normalize_text(effective_query) == normalize_text(query)
+                    ):
+                        gate_decision = early_event_gate_decision
+                    else:
+                        gate_decision = await self._evaluate_short_circuit_gate(
+                            query=effective_query,
+                            capability="event",
+                            llm_profile=llm_profile,
+                            heuristic_reason="Routing sonrasi etkinlik sinyali.",
+                    )
+                    if bool(gate_decision["allow"]):
+                        event_short_circuit_reason = str(gate_decision["routing_reason"])
+                        event_short_circuit_params = self._capability_params_from_gate(
+                            gate_decision
+                        )
+
+                if event_short_circuit_reason is not None:
                     return await self._handle_event_short_circuit(
                         query=effective_query,
                         original_query=query,
@@ -489,27 +597,71 @@ class MainOrchestrator:
                         student_department=student_department,
                         student_faculty=student_faculty,
                         conversation_resolution=conversation_resolution,
+                        routing_reason=event_short_circuit_reason,
+                        capability_params=event_short_circuit_params,
                         trace_metadata=trace,
                     )
 
-                is_announcement_query = (
-                    (
-                        query_normalization.target_capability == "announcement"
-                        and not should_block_announcement_primary_flow(effective_query)
+                announcement_short_circuit_reason: str | None = None
+                announcement_short_circuit_params: dict[str, object] | None = None
+                if query_normalization.target_capability == "announcement":
+                    announcement_short_circuit_reason = (
+                        query_normalization.reasoning
+                        or "Routing LLM duyuru capability'sini secti."
                     )
-                    or looks_like_announcement_query(effective_query)
-                )
+                elif looks_like_announcement_query(effective_query):
+                    if early_announcement_gate_decision is not None:
+                        gate_decision = early_announcement_gate_decision
+                    else:
+                        gate_decision = await self._evaluate_short_circuit_gate(
+                            query=effective_query,
+                            capability="announcement",
+                            llm_profile=llm_profile,
+                            heuristic_reason="Duyuru keyword sinyali.",
+                    )
+                    if bool(gate_decision["allow"]):
+                        announcement_short_circuit_reason = str(
+                            gate_decision["routing_reason"]
+                        )
+                        announcement_short_circuit_params = self._capability_params_from_gate(
+                            gate_decision
+                        )
+
                 is_announcement_follow_up = (
                     conversation_resolution.is_follow_up
                     and conversation_resolution.announcement_context
                     and should_keep_announcement_follow_up(effective_query)
                 )
-                if is_announcement_query or is_announcement_follow_up:
+                if announcement_short_circuit_reason is not None or is_announcement_follow_up:
+                    if announcement_short_circuit_reason is None:
+                        announcement_short_circuit_reason = (
+                            "Duyuru follow-up baglami korundu."
+                        )
                     announcement_scope = self._resolve_announcement_scope(
                         query=effective_query,
                         conversation_resolution=conversation_resolution,
                         student_department=student_department,
                         student_faculty=student_faculty,
+                    )
+                    planner_faculty = self._capability_param_text(
+                        announcement_short_circuit_params,
+                        "faculty",
+                    )
+                    planner_unit_name = self._capability_param_text(
+                        announcement_short_circuit_params,
+                        "unit_name",
+                    )
+                    planner_limit = self._capability_param_int(
+                        announcement_short_circuit_params,
+                        "limit",
+                        default=None,
+                        minimum=1,
+                        maximum=10,
+                    )
+                    allow_latest_fallback = self._capability_param_bool(
+                        announcement_short_circuit_params,
+                        "allow_latest_fallback",
+                        default=should_allow_announcement_latest_fallback(effective_query),
                     )
                     with profile_stage("main.announcement_short_circuit"):
                         with profile_stage("main.telemetry.create_query_log"):
@@ -529,14 +681,13 @@ class MainOrchestrator:
                             context_id=context_id,
                             start_time=start_time,
                             query_log_id=query_log_id,
-                            routing_reasoning="Duyuru short-circuit: sorgu duyuru odakli, dogrudan duyuru akisina yonlendirildi.",
+                            routing_reasoning=announcement_short_circuit_reason,
                             task_type=None,
-                            faculty=announcement_scope["faculty"],
-                            unit_name=announcement_scope["unit_name"],
+                            faculty=planner_faculty or announcement_scope["faculty"],
+                            unit_name=planner_unit_name or announcement_scope["unit_name"],
                             conversation_source_refs=conversation_resolution.source_hints,
-                            allow_latest_fallback=should_allow_announcement_latest_fallback(
-                                effective_query
-                            ),
+                            allow_latest_fallback=allow_latest_fallback,
+                            limit=planner_limit,
                             trace_metadata=trace,
                         )
                     if self.conversation_service is not None:
@@ -590,6 +741,7 @@ class MainOrchestrator:
                         student_department=student_department,
                         student_faculty=student_faculty,
                         conversation_resolution=conversation_resolution,
+                        capability_params=None,
                         trace_metadata=trace,
                     )
                 with profile_stage("main.telemetry.create_query_log"):
@@ -612,7 +764,6 @@ class MainOrchestrator:
                 if (
                     routing.intent is not None
                     and routing.intent.target_capability == "announcement"
-                    and not should_block_announcement_primary_flow(effective_query)
                 ):
                     announcement_scope = self._resolve_announcement_scope(
                         query=effective_query,
@@ -787,6 +938,18 @@ class MainOrchestrator:
                     ),
                     **trace,
                 }
+                if capability_planner_payload is None:
+                    capability_planner_payload = await self._maybe_plan_capability(
+                        query=effective_query,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        student_department=student_department,
+                        student_faculty=student_faculty,
+                        student_type=student_type,
+                        llm_profile=llm_profile,
+                    )
+                if capability_planner_payload is not None:
+                    metadata["capability_planner"] = capability_planner_payload
 
                 with profile_stage("main.dispatch_departments"):
                     department_responses = await dispatch_to_departments(
@@ -1011,6 +1174,554 @@ class MainOrchestrator:
         except Exception as exc:
             logger.warning("conversation_turn_record_skipped reason=%s", type(exc).__name__)
 
+    def _routing_for_capability_owner(
+        self,
+        routing,
+        planner_payload: dict | None,
+    ):
+        """Route an applied capability to departments selected by the planner.
+
+        The department router remains the legacy fallback. This method does not
+        infer an owner from the registry; the planner's single JSON decision
+        must include departments when it wants to override legacy routing.
+        """
+        if not isinstance(planner_payload, dict) or not planner_payload.get("apply"):
+            return None
+        action = planner_payload.get("action")
+        if not isinstance(action, dict):
+            return None
+        capability = str(action.get("capability") or "").strip().lower()
+        if not capability or capability == "none":
+            return None
+        confidence = float(action.get("confidence") or 0.0)
+        if confidence < settings.capability_planner.confidence_threshold:
+            return None
+        missing_params = action.get("missing_params") or []
+        if missing_params:
+            return None
+
+        planner_departments: list[Department] = []
+        for department_value in action.get("departments") or []:
+            try:
+                department = Department(str(department_value).strip().lower())
+            except ValueError:
+                return None
+            if department not in planner_departments:
+                planner_departments.append(department)
+        if not planner_departments:
+            return None
+
+        current_departments = list(routing.departments or [])
+        if current_departments == planner_departments:
+            return None
+
+        reasoning = (
+            f"{routing.reasoning or ''} Capability planner selected "
+            f"{capability}; dispatching to planner-selected department(s): "
+            f"{', '.join(department.value for department in planner_departments)}."
+        ).strip()
+        return routing.model_copy(
+            update={
+                "departments": planner_departments,
+                "strategy": (
+                    RoutingStrategy.DIRECT
+                    if len(planner_departments) == 1
+                    else RoutingStrategy.PARALLEL
+                ),
+                "reasoning": reasoning,
+            },
+            deep=True,
+        )
+
+    async def _maybe_plan_capability_pre_route(
+        self,
+        *,
+        query: str,
+        conversation_resolution: ConversationResolution,
+        student_department: str | None,
+        student_faculty: str | None,
+        student_type: str | None,
+        llm_profile: str | None,
+    ) -> dict | None:
+        """Run the capability planner before department routing when safe.
+
+        This is the first controlled router+planner merge: if the planner
+        confidently selects a whitelisted capability with a Department owner,
+        the legacy router LLM can be skipped. Low-confidence, missing-slot,
+        non-Department, or invalid decisions fall back to normal routing.
+        """
+        planner_settings = settings.capability_planner
+        if (
+            not planner_settings.enabled
+            or not planner_settings.should_apply
+            or not planner_settings.pre_route_enabled
+        ):
+            return None
+        scope = planner_settings.scope_set
+        if not scope:
+            return None
+
+        context = {
+            "original_query": conversation_resolution.original_query,
+            "effective_query": conversation_resolution.effective_query,
+            "standalone_query": conversation_resolution.standalone_query,
+            "is_follow_up": conversation_resolution.is_follow_up,
+            "active_topic": conversation_resolution.active_topic,
+            "department_hints": [
+                getattr(department, "value", str(department))
+                for department in (conversation_resolution.department_hints or [])
+            ],
+            "task_type_hint": (
+                getattr(conversation_resolution.task_type_hint, "value", None)
+                or str(conversation_resolution.task_type_hint or "")
+            ),
+            "source_hints": list(conversation_resolution.source_hints or []),
+            "student_department": student_department,
+            "student_faculty": student_faculty,
+            "student_type": student_type,
+            "llm_profile": llm_profile,
+            "pre_route": True,
+        }
+        if conversation_resolution.frame is not None:
+            context["conversation_frame"] = conversation_resolution.frame.to_prompt_context()
+
+        with profile_stage("main.capability_planner.pre_route", mode=planner_settings.mode):
+            action = await plan_capability_action(
+                query=query,
+                departments=sorted(scope),
+                llm_service=self.llm_service,
+                context=context,
+                timeout_seconds=planner_settings.timeout_seconds,
+            )
+        if action is not None:
+            action = self._normalize_capability_action_params(action, query=query)
+
+        payload = {
+            "mode": planner_settings.mode,
+            "apply": planner_settings.should_apply,
+            "pre_route": True,
+            "action": action.model_dump() if action is not None else None,
+            "plan_decision": action.to_plan_decision().model_dump() if action is not None else None,
+            "departments": [],
+            "legacy_routing": None,
+        }
+        if action is not None:
+            logger.info(
+                "capability_planner_pre_route_decision mode=%s apply=%s capability=%s confidence=%.2f missing=%s fallback=%s",
+                planner_settings.mode,
+                planner_settings.should_apply,
+                action.capability,
+                action.confidence,
+                action.missing_params,
+                action.fallback,
+            )
+        else:
+            logger.info(
+                "capability_planner_pre_route_decision mode=%s apply=%s capability=none",
+                planner_settings.mode,
+                planner_settings.should_apply,
+            )
+        profiler = get_current_profiler()
+        if profiler is not None:
+            profiler.set_attribute("capability_planner_pre_route", payload)
+        return payload
+
+    @staticmethod
+    def _routing_from_capability_payload(planner_payload: dict | None) -> RoutingResult | None:
+        """Build routing from the LLM planner's departments field.
+
+        This intentionally does not derive departments from the capability
+        registry. The single planner call owns both decisions; the registry is
+        only used elsewhere to validate that the capability itself is known.
+        """
+        if not isinstance(planner_payload, dict) or not planner_payload.get("apply"):
+            return None
+        if not planner_payload.get("pre_route"):
+            return None
+        action = planner_payload.get("action")
+        if not isinstance(action, dict):
+            return None
+        capability = str(action.get("capability") or "").strip().lower()
+        if not capability or capability == "none":
+            return None
+        confidence = float(action.get("confidence") or 0.0)
+        threshold = max(
+            float(settings.capability_planner.confidence_threshold),
+            float(settings.capability_planner.pre_route_confidence_threshold),
+        )
+        if confidence < threshold:
+            return None
+        if action.get("missing_params") or action.get("fallback"):
+            return None
+
+        owner_departments: list[Department] = []
+        for department_value in action.get("departments") or []:
+            try:
+                department = Department(str(department_value).strip().lower())
+            except ValueError:
+                return None
+            if department not in owner_departments:
+                owner_departments.append(department)
+        if not owner_departments:
+            return None
+
+        target_capability = capability.split(".", 1)[0]
+        if target_capability not in {"announcement", "event"}:
+            target_capability = "none"
+
+        return RoutingResult(
+            departments=owner_departments,
+            confidence=confidence,
+            confidence_level=(
+                ConfidenceLevel.HIGH if confidence >= 0.7 else ConfidenceLevel.MEDIUM
+            ),
+            strategy=(
+                RoutingStrategy.DIRECT
+                if len(owner_departments) == 1
+                else RoutingStrategy.PARALLEL
+            ),
+            reasoning=(
+                f"Capability planner pre-route selected {capability}; "
+                "legacy router skipped for this confident whitelisted decision."
+            ),
+            task_type=None,
+            intent=IntentAnalysis(
+                complexity="simple",
+                is_personal=False,
+                force_llm_synthesis=False,
+                query_type="procedural"
+                if str(capability).endswith(".policy_lookup")
+                else "factual",
+                reasoning=str(action.get("reasoning") or ""),
+                canonical_query=None,
+                primary_intent=str(action.get("intent") or capability),
+                target_capability=target_capability,
+                required_slots=[],
+                missing_slots=[],
+            ),
+        )
+
+    async def _maybe_plan_capability(
+        self,
+        *,
+        query: str,
+        routing,
+        conversation_resolution: ConversationResolution,
+        student_department: str | None,
+        student_faculty: str | None,
+        student_type: str | None = None,
+        llm_profile: str | None = None,
+    ) -> dict | None:
+        planner_settings = settings.capability_planner
+        if not planner_settings.enabled:
+            return None
+
+        department_values = {
+            getattr(department, "value", str(department))
+            for department in (routing.departments or [])
+        }
+        scope = planner_settings.scope_set
+        if planner_settings.mode in {"on", "shadow"}:
+            # In global modes the planner should see every enabled capability
+            # family, including non-Department executors such as announcement
+            # and event search. Legacy routing remains available as fallback;
+            # this only expands the LLM planner's allowed whitelist.
+            scoped_department_values = set(scope)
+            if not scoped_department_values:
+                return None
+            planner_departments = sorted(scoped_department_values)
+        else:
+            scoped_department_values = department_values.intersection(scope)
+            if not scoped_department_values:
+                return None
+            planner_departments = [
+                department
+                for department in (routing.departments or [])
+                if getattr(department, "value", str(department)) in scoped_department_values
+            ]
+        if planner_settings.mode == "pilot" and (
+            len(department_values) != 1 or department_values != scoped_department_values
+        ):
+            logger.info(
+                "capability_planner_skipped mode=%s reason=pilot_requires_single_scoped_department departments=%s scope=%s",
+                planner_settings.mode,
+                sorted(department_values),
+                sorted(scope),
+            )
+            return {
+                "mode": planner_settings.mode,
+                "apply": False,
+                "action": None,
+                "plan_decision": None,
+                "skipped": "pilot_requires_single_scoped_department",
+                "departments": sorted(department_values),
+                "legacy_routing": {
+                    "departments": sorted(department_values),
+                    "reasoning": getattr(routing, "reasoning", None),
+                    "strategy": getattr(getattr(routing, "strategy", None), "value", None)
+                    or str(getattr(routing, "strategy", "") or ""),
+                },
+            }
+
+        context = {
+            "original_query": conversation_resolution.original_query,
+            "effective_query": conversation_resolution.effective_query,
+            "standalone_query": conversation_resolution.standalone_query,
+            "is_follow_up": conversation_resolution.is_follow_up,
+            "active_topic": conversation_resolution.active_topic,
+            "department_hints": [
+                getattr(department, "value", str(department))
+                for department in (conversation_resolution.department_hints or [])
+            ],
+            "task_type_hint": (
+                getattr(conversation_resolution.task_type_hint, "value", None)
+                or str(conversation_resolution.task_type_hint or "")
+            ),
+            "source_hints": list(conversation_resolution.source_hints or []),
+            "student_department": student_department,
+            "student_faculty": student_faculty,
+            "student_type": student_type,
+            "llm_profile": llm_profile,
+        }
+        if conversation_resolution.frame is not None:
+            context["conversation_frame"] = conversation_resolution.frame.to_prompt_context()
+        with profile_stage("main.capability_planner", mode=planner_settings.mode):
+            action = await plan_capability_action(
+                query=query,
+                departments=planner_departments,
+                llm_service=self.llm_service,
+                context=context,
+                timeout_seconds=planner_settings.timeout_seconds,
+            )
+        if action is not None:
+            action = self._normalize_capability_action_params(action, query=query)
+
+        payload = {
+            "mode": planner_settings.mode,
+            "apply": planner_settings.should_apply,
+            "action": action.model_dump() if action is not None else None,
+            "plan_decision": action.to_plan_decision().model_dump() if action is not None else None,
+            "departments": sorted(department_values),
+            "legacy_routing": {
+                "departments": sorted(department_values),
+                "reasoning": getattr(routing, "reasoning", None),
+                "strategy": getattr(getattr(routing, "strategy", None), "value", None)
+                or str(getattr(routing, "strategy", "") or ""),
+            },
+        }
+        if action is not None:
+            logger.info(
+                "capability_planner_decision mode=%s apply=%s capability=%s confidence=%.2f missing=%s fallback=%s departments=%s",
+                planner_settings.mode,
+                planner_settings.should_apply,
+                action.capability,
+                action.confidence,
+                action.missing_params,
+                action.fallback,
+                sorted(department_values),
+            )
+        else:
+            logger.info(
+                "capability_planner_decision mode=%s apply=%s capability=none departments=%s",
+                planner_settings.mode,
+                planner_settings.should_apply,
+                sorted(department_values),
+            )
+        profiler = get_current_profiler()
+        if profiler is not None:
+            profiler.set_attribute("capability_planner", payload)
+        return payload
+
+    @staticmethod
+    def _normalize_capability_action_params(action, *, query: str):
+        """Preserve the user wording when a capability needs semantic date matching.
+
+        The planner may express a calendar question as a broad label such as
+        "akademik takvim". The deterministic calendar helper matches concrete
+        row phrases ("derslerin bitimi", "final sinavlari", ...), so keep the
+        original query whenever it carries those row-level signals.
+        """
+        if action.capability != "calendar.academic_date":
+            return action
+
+        params = dict(action.params or {})
+        param_query = str(params.get("query") or "").strip()
+        normalized_query = normalize_text(query)
+        normalized_param_query = normalize_text(param_query)
+        calendar_row_markers = (
+            "derslerin bitimi",
+            "ders bitimi",
+            "ders bitis",
+            "son ders tarihi",
+            "derslerin baslamasi",
+            "ders baslangic",
+            "final",
+            "yariyil sonu",
+            "butunleme",
+            "ara sinav",
+            "not giris",
+        )
+        original_has_row_marker = any(
+            marker in normalized_query for marker in calendar_row_markers
+        )
+        if original_has_row_marker:
+            params["query"] = query
+            return action.model_copy(update={"params": params})
+        if not param_query:
+            params["query"] = query
+            return action.model_copy(update={"params": params})
+        return action
+
+    async def _evaluate_short_circuit_gate(
+        self,
+        *,
+        query: str,
+        capability: str,
+        llm_profile: str | None,
+        heuristic_reason: str,
+    ) -> dict[str, object]:
+        """Optionally gate heuristic event/announcement short-circuits with LLM reasoning.
+
+        Marker-based event/announcement short-circuits require LLM confirmation.
+        When the planner is disabled or out of scope, the heuristic path is
+        blocked so the normal routing LLM can make the primary decision. In
+        shadow mode the legacy short-circuit is still allowed for observation.
+        """
+        planner_settings = settings.capability_planner
+        capability_key = capability.strip().lower()
+        if not planner_settings.enabled or capability_key not in planner_settings.scope_set:
+            return {
+                "allow": False,
+                "confirmed": False,
+                "mode": planner_settings.mode,
+                "capability": capability_key,
+                "source": "llm_required_gate_disabled",
+                "routing_reason": heuristic_reason,
+                "reasoning": "short-circuit gate disabled; falling through to routing LLM",
+                "confidence": 0.0,
+                "target_capability": "none",
+                "params": {},
+            }
+
+        with profile_stage("main.short_circuit_gate", capability=capability_key):
+            action = await plan_capability_action(
+                query=query,
+                departments=[capability_key],
+                llm_service=self.llm_service,
+                context={
+                    "short_circuit_candidate": capability_key,
+                    "legacy_reason": heuristic_reason,
+                },
+                timeout_seconds=planner_settings.timeout_seconds,
+            )
+
+        expected_capability = f"{capability_key}.search"
+        confirmed = (
+            action is not None
+            and action.capability == expected_capability
+            and action.confidence >= planner_settings.confidence_threshold
+            and not action.missing_params
+        )
+        allow = confirmed or planner_settings.mode == "shadow"
+        routing_reason = (
+            action.reasoning
+            if confirmed and action is not None and action.reasoning
+            else heuristic_reason
+        )
+        payload: dict[str, object] = {
+            "allow": allow,
+            "confirmed": confirmed,
+            "mode": planner_settings.mode,
+            "capability": capability_key,
+            "source": "llm_gate",
+            "routing_reason": routing_reason,
+            "reasoning": action.reasoning if action is not None else None,
+            "confidence": action.confidence if action is not None else 0.0,
+            "target_capability": action.capability if action is not None else "none",
+            "params": action.params if action is not None else {},
+        }
+        logger.info(
+            "short_circuit_gate capability=%s mode=%s allow=%s confirmed=%s target=%s confidence=%.2f",
+            capability_key,
+            planner_settings.mode,
+            allow,
+            confirmed,
+            payload["target_capability"],
+            payload["confidence"],
+        )
+        profiler = get_current_profiler()
+        if profiler is not None:
+            profiler.set_attribute(f"{capability_key}_short_circuit_gate", payload)
+        return payload
+
+    @staticmethod
+    def _looks_like_incomplete_capability_fragment(query: str) -> bool:
+        """Let very short unfinished capability fragments go through LLM routing."""
+        normalized = normalize_text(query).strip(" \t\r\n?.!,;:")
+        tokens = normalized.split()
+        if len(tokens) > 2:
+            return False
+        incomplete_markers = {"duyur", "haber", "ilan", "etkinlik"}
+        return any(token in incomplete_markers for token in tokens)
+
+    @staticmethod
+    def _capability_params_from_gate(
+        gate_decision: dict[str, object] | None,
+    ) -> dict[str, object] | None:
+        if not isinstance(gate_decision, dict):
+            return None
+        params = gate_decision.get("params")
+        if not isinstance(params, dict) or not params:
+            return None
+        return dict(params)
+
+    @staticmethod
+    def _capability_param_text(
+        params: dict[str, object] | None,
+        name: str,
+    ) -> str | None:
+        if not isinstance(params, dict):
+            return None
+        value = params.get(name)
+        text = str(value).strip() if value is not None else ""
+        return text or None
+
+    @staticmethod
+    def _capability_param_int(
+        params: dict[str, object] | None,
+        name: str,
+        *,
+        default: int | None,
+        minimum: int,
+        maximum: int,
+    ) -> int | None:
+        if not isinstance(params, dict) or name not in params:
+            return default
+        try:
+            parsed = int(params.get(name))
+        except (TypeError, ValueError):
+            return default
+        return max(minimum, min(parsed, maximum))
+
+    @staticmethod
+    def _capability_param_bool(
+        params: dict[str, object] | None,
+        name: str,
+        *,
+        default: bool,
+    ) -> bool:
+        if not isinstance(params, dict) or name not in params:
+            return default
+        value = params.get(name)
+        if isinstance(value, bool):
+            return value
+        text = str(value).strip().lower()
+        if text in {"true", "1", "yes", "evet"}:
+            return True
+        if text in {"false", "0", "no", "hayir", "hayÄ±r"}:
+            return False
+        return default
+
     async def _record_department_transport_failures(
         self,
         *,
@@ -1061,6 +1772,8 @@ class MainOrchestrator:
         student_department: str | None,
         student_faculty: str | None,
         conversation_resolution: ConversationResolution,
+        routing_reason: str | None = None,
+        capability_params: dict[str, object] | None = None,
         trace_metadata: dict | None = None,
     ) -> UserQueryResponse:
         """Handle explicit event queries without waiting for generic routing."""
@@ -1068,6 +1781,15 @@ class MainOrchestrator:
             query=query,
             student_department=student_department,
             student_faculty=student_faculty,
+        )
+        planner_faculty = self._capability_param_text(capability_params, "faculty")
+        planner_unit_name = self._capability_param_text(capability_params, "unit_name")
+        planner_limit = self._capability_param_int(
+            capability_params,
+            "limit",
+            default=5,
+            minimum=1,
+            maximum=10,
         )
         with profile_stage("main.event_short_circuit"):
             with profile_stage("main.telemetry.create_query_log"):
@@ -1085,12 +1807,15 @@ class MainOrchestrator:
                 telemetry_service=self.telemetry_service,
                 query=query,
                 context_id=context_id,
-                routing_reason="Etkinlik short-circuit: sorgu dogrudan etkinlik ajanina yonlendirildi.",
+                routing_reason=(
+                    routing_reason
+                    or "Etkinlik short-circuit: sorgu dogrudan etkinlik ajanina yonlendirildi."
+                ),
                 query_log_id=query_log_id,
                 task_type=None,
-                faculty=event_scope["faculty"],
-                unit_name=event_scope["unit_name"],
-                limit=5,
+                faculty=planner_faculty or event_scope["faculty"],
+                unit_name=planner_unit_name or event_scope["unit_name"],
+                limit=planner_limit or 5,
                 trace_metadata=trace_metadata,
             )
             event_user_response = await build_event_response(
@@ -1128,6 +1853,7 @@ class MainOrchestrator:
         routing_reasoning: str,
         task_type: TaskType | None = None,
         query_log_id: int | None = None,
+        capability_params: dict[str, object] | None = None,
         trace_metadata: dict | None = None,
     ) -> UserQueryResponse:
         """Handle explicit announcement queries without generic routing."""
@@ -1136,6 +1862,20 @@ class MainOrchestrator:
             conversation_resolution=conversation_resolution,
             student_department=student_department,
             student_faculty=student_faculty,
+        )
+        planner_faculty = self._capability_param_text(capability_params, "faculty")
+        planner_unit_name = self._capability_param_text(capability_params, "unit_name")
+        planner_limit = self._capability_param_int(
+            capability_params,
+            "limit",
+            default=None,
+            minimum=1,
+            maximum=10,
+        )
+        allow_latest_fallback = self._capability_param_bool(
+            capability_params,
+            "allow_latest_fallback",
+            default=should_allow_announcement_latest_fallback(query),
         )
         with profile_stage("main.announcement_short_circuit"):
             if query_log_id is None:
@@ -1158,10 +1898,11 @@ class MainOrchestrator:
                 query_log_id=query_log_id,
                 routing_reasoning=routing_reasoning,
                 task_type=task_type,
-                faculty=announcement_scope["faculty"],
-                unit_name=announcement_scope["unit_name"],
+                faculty=planner_faculty or announcement_scope["faculty"],
+                unit_name=planner_unit_name or announcement_scope["unit_name"],
                 conversation_source_refs=conversation_resolution.source_hints,
-                allow_latest_fallback=should_allow_announcement_latest_fallback(query),
+                allow_latest_fallback=allow_latest_fallback,
+                limit=planner_limit,
                 trace_metadata=trace_metadata,
             )
         if self.conversation_service is not None:
@@ -1518,6 +2259,24 @@ class MainOrchestrator:
                 entry += f"\n  \u0130\u00e7erik: {s.content[:500]}"
                 evidence_parts.append(entry)
         evidence_summary = "\n\n".join(evidence_parts)[:2000]
+        plan_decision: dict | None = None
+        answer_contract: dict | None = None
+        evidence_contract: dict | None = None
+        for resp in responses:
+            metadata = resp.metadata or {}
+            packet = metadata.get("evidence_packet") if isinstance(metadata, dict) else None
+            candidates = [metadata, packet] if isinstance(packet, dict) else [metadata]
+            for candidate in candidates:
+                if not isinstance(candidate, dict):
+                    continue
+                if plan_decision is None and isinstance(candidate.get("plan_decision"), dict):
+                    plan_decision = candidate.get("plan_decision")
+                if answer_contract is None and isinstance(candidate.get("answer_contract"), dict):
+                    answer_contract = candidate.get("answer_contract")
+                if evidence_contract is None and isinstance(candidate.get("evidence_contract"), dict):
+                    evidence_contract = candidate.get("evidence_contract")
+            if plan_decision or answer_contract or evidence_contract:
+                break
 
         # Intent coverage check
         intent_coverage_is_low = False
@@ -1534,6 +2293,9 @@ class MainOrchestrator:
             query=query,
             answer=answer,
             evidence_summary=evidence_summary,
+            plan_decision=plan_decision,
+            answer_contract=answer_contract,
+            evidence_contract=evidence_contract,
             llm_service=self.llm_service,
             llm_profile=llm_profile,
             is_multi_department=is_multi_department,
@@ -1551,6 +2313,9 @@ class MainOrchestrator:
             "approved": judge_result.approved,
             "action": judge_result.action,
             "failure_reason": judge_result.failure_reason,
+            "plan_decision": plan_decision,
+            "answer_contract": answer_contract,
+            "evidence_contract": evidence_contract,
         }
         if _profiler is not None:
             _profiler.set_attribute("main_judge", judge_meta)

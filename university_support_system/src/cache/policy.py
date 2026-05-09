@@ -53,6 +53,8 @@ def evaluate_question_cache_lookup(
         return QuestionCacheDecision(False, "announcement_related_query")
     if looks_like_contact_query(query):
         return QuestionCacheDecision(False, "contact_query")
+    if settings.capability_planner.enabled:
+        return QuestionCacheDecision(False, "capability_planner_enabled")
     return QuestionCacheDecision(True, "eligible")
 
 

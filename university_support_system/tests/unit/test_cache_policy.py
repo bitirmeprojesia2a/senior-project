@@ -4,7 +4,7 @@ from src.cache.policy import (
     evaluate_question_cache_lookup,
     evaluate_question_cache_storage,
 )
-from src.core.config import settings
+from src.core.config import CapabilityPlannerSettings, settings
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.db.conversation_context import ConversationResolution
 from src.db.schemas import RAGSource, RoutingResult, UserQueryResponse
@@ -49,6 +49,7 @@ def _response(*, departments: list[str], generation_modes: list[str], sources=No
 def test_evaluate_question_cache_lookup_allows_simple_anonymous_query(monkeypatch):
     monkeypatch.setattr(settings.cache, "enabled", True)
     monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+    monkeypatch.setattr(settings, "capability_planner", CapabilityPlannerSettings(mode="off"))
 
     decision = evaluate_question_cache_lookup(
         query="Ders kaydi ne zaman basliyor?",
@@ -58,6 +59,23 @@ def test_evaluate_question_cache_lookup_allows_simple_anonymous_query(monkeypatc
 
     assert decision.allowed is True
     assert decision.reason == "eligible"
+
+
+def test_evaluate_question_cache_lookup_blocks_when_capability_planner_enabled(monkeypatch):
+    monkeypatch.setattr(settings.cache, "enabled", True)
+    monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+    monkeypatch.setattr(settings, "capability_planner", CapabilityPlannerSettings(mode="on"))
+
+    decision = evaluate_question_cache_lookup(
+        query="Bilgisayar muhendisligi icin bahar donemi son ders tarihi nedir?",
+        conversation_resolution=_resolution(
+            "Bilgisayar muhendisligi icin bahar donemi son ders tarihi nedir?"
+        ),
+        is_authenticated=False,
+    )
+
+    assert decision.allowed is False
+    assert decision.reason == "capability_planner_enabled"
 
 
 def test_evaluate_question_cache_lookup_blocks_request_disabled(monkeypatch):

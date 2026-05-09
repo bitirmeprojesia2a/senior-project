@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from src.db.curriculum_data import _should_include_course_for_department, _title_tokens
+from src.db.curriculum_data import (
+    _query_title_tokens,
+    _should_include_course_for_department,
+    _title_tokens,
+)
 
 
 def test_department_filter_excludes_other_department_elective_slots() -> None:
@@ -44,3 +48,10 @@ def test_title_tokens_drop_curriculum_metadata_words() -> None:
         "veri",
         "yapilari",
     }
+
+
+def test_query_title_tokens_drop_department_words() -> None:
+    assert _query_title_tokens(
+        "Elektrik Elektronik Muhendisligi mufredatinda Veri Yapilari dersi var mi?",
+        "Elektrik-Elektronik Muhendisligi",
+    ) == {"veri", "yapilari"}

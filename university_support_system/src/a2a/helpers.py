@@ -64,6 +64,7 @@ class A2AQueryPayload:
     is_personal_query: bool = False
     final_answer_owner: str | None = None
     specialist_response_mode: str | None = None
+    capability_planner: dict[str, Any] | None = None
     trace_id: str | None = None
     span_id: str | None = None
     parent_span_id: str | None = None
@@ -91,6 +92,7 @@ class A2AQueryPayload:
             "is_personal_query": self.is_personal_query,
             "final_answer_owner": self.final_answer_owner,
             "specialist_response_mode": self.specialist_response_mode,
+            "capability_planner": dict(self.capability_planner) if self.capability_planner else None,
             "trace_id": self.trace_id,
             "span_id": self.span_id,
             "parent_span_id": self.parent_span_id,

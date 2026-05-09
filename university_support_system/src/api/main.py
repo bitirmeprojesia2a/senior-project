@@ -714,7 +714,7 @@ def create_app() -> FastAPI:
             caller_id=x_a2a_caller_id,
             target_id=x_a2a_target_id,
             expected_target_id=MAIN_ORCHESTRATOR_SERVICE_ID,
-            request_body=payload.model_dump(mode="json"),
+            request_body=payload.model_dump(mode="json", exclude_unset=True),
             request_timestamp=x_a2a_timestamp,
             request_nonce=x_a2a_nonce,
             request_body_sha256=x_a2a_body_sha256,

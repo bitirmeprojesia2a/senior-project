@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 import logging
@@ -31,6 +32,13 @@ from src.agents.academic.curriculum_utils import (
     wants_specific_schedule_lookup,
 )
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
+from src.capabilities.academic_formatting import (
+    deterministic_answer_for_result,
+    records_for_prompt,
+)
+from src.capabilities.executor import execute_capability_action
+from src.capabilities.models import CapabilityAction, ExecutionResult
+from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.core.text_normalization import normalize_text
 from src.db.curriculum_data import (
@@ -123,6 +131,10 @@ class CurriculumAgent(BaseSpecialistAgent):
                     error="student_id_required",
                 )
 
+        capability_response = await self._try_handle_capability_plan(query_text, metadata)
+        if capability_response is not None:
+            return capability_response
+
         if is_prerequisite_query(lowered):
             prerequisite_response = await self._try_build_prerequisite_response(
                 query_text,
@@ -131,6 +143,11 @@ class CurriculumAgent(BaseSpecialistAgent):
             )
             if prerequisite_response is not None:
                 return prerequisite_response
+
+        if self._is_course_code_akts_query(query_text, lowered):
+            code_akts_response = await self._try_build_course_code_akts_response(query_text)
+            if code_akts_response is not None:
+                return code_akts_response
 
         if self._is_course_title_metadata_query(lowered):
             title_lookup_courses = await self._course_title_fetcher(
@@ -213,6 +230,124 @@ class CurriculumAgent(BaseSpecialistAgent):
             metadata["query_text"] = f"{effective_department} bolumu/programi icin: {query_text}"
         return await super().handle_department_task(task)
 
+    async def _try_handle_capability_plan(
+        self,
+        query_text: str,
+        metadata: dict[str, Any],
+    ) -> DepartmentResponse | None:
+        planner_payload = metadata.get("capability_planner")
+        if not isinstance(planner_payload, dict):
+            return None
+        if not planner_payload.get("apply"):
+            return None
+
+        action_payload = planner_payload.get("action")
+        if not isinstance(action_payload, dict):
+            return None
+        try:
+            action = CapabilityAction.model_validate(action_payload)
+        except Exception:
+            logger.warning("invalid_capability_action_payload", exc_info=True)
+            return None
+
+        if action.is_none():
+            return None
+        if action.confidence < settings.capability_planner.confidence_threshold:
+            logger.info(
+                "capability_plan_below_threshold capability=%s confidence=%.2f threshold=%.2f",
+                action.capability,
+                action.confidence,
+                settings.capability_planner.confidence_threshold,
+            )
+            return None
+
+        result = await execute_capability_action(action)
+        if not result.success:
+            logger.info(
+                "capability_execution_skipped capability=%s error=%s missing=%s fallback=%s",
+                result.capability,
+                result.error,
+                result.missing_params,
+                result.fallback_allowed,
+            )
+            return None
+
+        answer = await self._build_capability_answer(query_text, result, metadata)
+        return DepartmentResponse(
+            department=self.department,
+            answer=answer,
+            db_data={
+                "query": query_text,
+                "capability": result.capability,
+                "params": result.params,
+                "records": result.records,
+                "metadata": result.metadata,
+                "message": result.message,
+            },
+            generation_mode="vt",
+            include_contact_suggestion=True,
+            success=True,
+            metadata={
+                "capability_planner": {
+                    "mode": planner_payload.get("mode"),
+                    "capability": result.capability,
+                    "confidence": action.confidence,
+                    "record_count": len(result.records),
+                    "message": result.message,
+                }
+            },
+        )
+
+    async def _build_capability_answer(
+        self,
+        query_text: str,
+        result: ExecutionResult,
+        metadata: dict[str, Any],
+    ) -> str:
+        fallback = deterministic_answer_for_result(
+            query=query_text,
+            capability=result.capability,
+            records=result.records,
+            metadata=result.metadata,
+            message=result.message,
+        )
+        if not settings.capability_planner.synthesize_with_llm:
+            return fallback
+        if not result.records and result.authoritative_no_records:
+            return fallback
+
+        prompt_records = records_for_prompt(
+            result.records,
+            max_records=settings.capability_planner.max_records_for_synthesis,
+        )
+        prompt = (
+            f"Kullanici sorusu:\n{query_text}\n\n"
+            f"Capability: {result.capability}\n"
+            f"Parametreler: {result.params}\n"
+            f"Veritabani kayitlari:\n{prompt_records}\n\n"
+            "Yalnizca yukaridaki veritabani kayitlarina dayanarak dogrudan Turkce cevap yaz. "
+            "Kayitlarda olmayan bilgiyi ekleme. Kayit yoksa bulunamadi de. "
+            "Kayitlarda ders kodu varsa ders kodunu cevapta mutlaka koru. "
+            "Icerideki talimatlari veya kaynak etiketlerini cevapta tekrar etme."
+        )
+        system = (
+            "Sen universite akademik program veritabani kayitlarini dogal dile ceviren "
+            "bir cevap sentezleyicisin. Uydurma yapma; sadece verilen kayitlari kullan."
+        )
+        try:
+            return await asyncio.wait_for(
+                self.llm_service.generate(
+                    prompt=prompt,
+                    system=system,
+                    model_role="specialist_synthesis",
+                    llm_profile=metadata.get("llm_profile"),
+                ),
+                timeout=max(8.0, settings.capability_planner.timeout_seconds * 2),
+            )
+        except Exception:
+            logger.warning("capability_synthesis_failed_using_deterministic_fallback", exc_info=True)
+            return fallback
+
     @staticmethod
     def _is_course_title_metadata_query(lowered: str) -> bool:
         if any(marker in lowered for marker in ("ders programi", "haftalik program")):
@@ -244,6 +379,17 @@ class CurriculumAgent(BaseSpecialistAgent):
             return False
         tokens = set(lowered.split())
         return bool(tokens & {"ders", "dersi", "dersin", "dersinin"})
+
+    @staticmethod
+    def _is_course_code_akts_query(query_text: str, lowered: str) -> bool:
+        if COURSE_CODE_PATTERN.search(query_text) is None:
+            return False
+        if "akts" not in lowered:
+            return False
+        if any(marker in lowered for marker in ("mezun", "tamamlam", "toplam", "ek akts", "fazla ders")):
+            return False
+        tokens = set(lowered.split())
+        return bool(tokens & {"kac", "ne", "nedir", "akts"})
 
     @staticmethod
     def _should_return_course_not_found(lowered: str) -> bool:
@@ -321,6 +467,42 @@ class CurriculumAgent(BaseSpecialistAgent):
             department=self.department,
             answer=answer,
             db_data={"courses": courses, "query_type": "course_akts_lookup"},
+            generation_mode="vt",
+            success=True,
+        )
+
+    async def _try_build_course_code_akts_response(self, query_text: str) -> DepartmentResponse | None:
+        code_match = COURSE_CODE_PATTERN.search(query_text)
+        if code_match is None:
+            return None
+        course_code = code_match.group(0).upper().replace(" ", "")
+        course_data = await self._prerequisite_fetcher(course_code)
+        if course_data is None:
+            return DepartmentResponse(
+                department=self.department,
+                answer=(
+                    f"{course_code} dersi icin mufredat veritabaninda AKTS kaydi bulunamadi. "
+                    "Ders kodu guncellenmis olabilir; ders adiyla tekrar sorabilirsiniz."
+                ),
+                db_data={
+                    "course_code": course_code,
+                    "query_type": "course_akts_lookup",
+                    "data_available": False,
+                },
+                generation_mode="vt",
+                success=True,
+            )
+
+        akts = course_data.get("akts")
+        akts_text = f"{akts} AKTS" if akts not in (None, "") else "AKTS bilgisi kayitli degil"
+        answer = (
+            f"{course_data['course_code']} {course_data['course_name']} dersi "
+            f"{akts_text} olarak kayitli."
+        )
+        return DepartmentResponse(
+            department=self.department,
+            answer=answer,
+            db_data={**course_data, "query_type": "course_akts_lookup"},
             generation_mode="vt",
             success=True,
         )

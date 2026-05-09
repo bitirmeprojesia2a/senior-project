@@ -6,7 +6,7 @@ suspicion, low intent coverage).  Maximum 1 quality loop.
 
 Judge returns structured JSON with:
   approved, failure_reason, action, missing_intents,
-  unsupported_claims, bad_tokens, suggested_query
+  unsupported_claims, bad_tokens, suggested_query, retry_plan
 
 Actions: accept | rewrite_only | retrieve_again | ask_clarification
 """
@@ -35,6 +35,8 @@ DE\u011eERLEND\u0130RME KR\u0130TERLER\u0130:
 4. \u00c7ok departmanl\u0131 cevapta her departman\u0131n katk\u0131s\u0131 var m\u0131?
 5. Yabanc\u0131 kelime/bozuk token var m\u0131?
 6. \u00c7ok par\u00e7al\u0131 soruda t\u00fcm alt niyetler cevapland\u0131 m\u0131?
+7. Plan/cevap sozlesmesi verildiyse answer_contract.must_answer maddeleri cevapta kanitli sekilde karsilandi mi?
+8. Evidence contract verildiyse kaynaklar beklenen konu veya kaynak turuyle uyumlu mu?
 
 JSON FORMAT:
 {
@@ -44,7 +46,8 @@ JSON FORMAT:
   "missing_intents": ["time_date", "eligibility", ...],
   "unsupported_claims": ["string|null", ...],
   "bad_tokens": ["string|null", ...],
-  "suggested_query": "string|null"
+  "suggested_query": "string|null",
+  "retry_plan": {"capability":"string|null","query":"string|null","reason":"string|null"}|null
 }
 
 AKS\u0130YON KURALLARI:
@@ -117,22 +120,27 @@ class JudgeResult:
     unsupported_claims: list[str] = field(default_factory=list)
     bad_tokens: list[str] = field(default_factory=list)
     suggested_query: str | None = None
+    retry_plan: dict | None = None
 
 
 def _parse_judge_response(raw: str) -> JudgeResult:
     """Parse judge JSON response, with safe defaults."""
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        # Try to extract JSON from surrounding text
-        json_match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if json_match:
-            try:
-                payload = json.loads(json_match.group(0))
-            except json.JSONDecodeError:
+    if isinstance(raw, dict):
+        payload = raw
+    else:
+        raw_text = str(raw or "")
+        try:
+            payload = json.loads(raw_text)
+        except json.JSONDecodeError:
+            # Try to extract JSON from surrounding text.
+            json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+            if json_match:
+                try:
+                    payload = json.loads(json_match.group(0))
+                except json.JSONDecodeError:
+                    return JudgeResult(approved=True, action="accept")
+            else:
                 return JudgeResult(approved=True, action="accept")
-        else:
-            return JudgeResult(approved=True, action="accept")
 
     action = str(payload.get("action", "accept")).strip().lower()
     if action not in ("accept", "rewrite_only", "retrieve_again", "ask_clarification"):
@@ -146,6 +154,7 @@ def _parse_judge_response(raw: str) -> JudgeResult:
         unsupported_claims=list(payload.get("unsupported_claims") or []),
         bad_tokens=list(payload.get("bad_tokens") or []),
         suggested_query=str(payload.get("suggested_query") or "").strip() or None,
+        retry_plan=payload.get("retry_plan") if isinstance(payload.get("retry_plan"), dict) else None,
     )
 
 
@@ -154,6 +163,9 @@ async def run_judge(
     query: str,
     answer: str,
     evidence_summary: str,
+    plan_decision: dict | None = None,
+    answer_contract: dict | None = None,
+    evidence_contract: dict | None = None,
     llm_service,
     llm_profile: str | None = None,
     is_multi_department: bool = False,
@@ -165,7 +177,8 @@ async def run_judge(
 
     Only runs on risky answers. Maximum 1 quality loop is enforced by the caller.
     """
-    if not _is_risky_answer(
+    has_plan_contract = bool(answer_contract or evidence_contract)
+    if not has_plan_contract and not _is_risky_answer(
         answer,
         is_multi_department=is_multi_department,
         has_foreign_suspicion=has_foreign_suspicion,
@@ -177,6 +190,9 @@ async def run_judge(
         "query": query,
         "answer": answer[:800],
         "evidence_summary": evidence_summary[:600],
+        "plan_decision": plan_decision or {},
+        "answer_contract": answer_contract or {},
+        "evidence_contract": evidence_contract or {},
         "context": {
             "is_multi_department": is_multi_department,
             "has_foreign_suspicion": has_foreign_suspicion,

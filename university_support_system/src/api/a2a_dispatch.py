@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from hmac import compare_digest
+from typing import Any
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
@@ -44,6 +45,7 @@ class A2ADispatchRequest(BaseModel):
     is_personal_query: bool = Field(default=False, description="Kisisel veri sorgusu mu")
     final_answer_owner: str | None = Field(default=None, description="Nihai cevap yazimi sahibi")
     specialist_response_mode: str | None = Field(default=None, description="Uzman ajan cevap modu")
+    capability_planner: dict[str, Any] | None = Field(default=None, description="Capability planner payload")
     disable_specialist_llm: bool = Field(default=False, description="Uzman LLM sentezini devre disi birak")
     trace_id: str | None = Field(default=None, description="A2A izleme korelasyon kimligi")
     span_id: str | None = Field(default=None, description="A2A hop/span kimligi")
@@ -92,6 +94,7 @@ class SpecialistDispatchRequest(BaseModel):
     is_personal_query: bool = Field(default=False, description="Kisisel veri sorgusu mu")
     final_answer_owner: str | None = Field(default=None, description="Nihai cevap yazimi sahibi")
     specialist_response_mode: str | None = Field(default=None, description="Uzman ajan cevap modu")
+    capability_planner: dict[str, Any] | None = Field(default=None, description="Capability planner payload")
     disable_specialist_llm: bool = Field(default=False, description="Uzman LLM sentezini devre disi birak")
     trace_id: str | None = Field(default=None, description="A2A izleme korelasyon kimligi")
     span_id: str | None = Field(default=None, description="A2A hop/span kimligi")

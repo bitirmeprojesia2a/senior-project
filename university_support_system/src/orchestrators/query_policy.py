@@ -197,6 +197,15 @@ _EXAM_PROGRAM_LOOKUP_MARKERS: tuple[str, ...] = (
 )
 
 _ACADEMIC_CALENDAR_DATE_MARKERS: tuple[str, ...] = (
+    "derslerin baslamasi",
+    "derslerin bitimi",
+    "ders bitimi",
+    "ders bitis",
+    "ders bitis tarihi",
+    "son ders tarihi",
+    "derslerin sonu",
+    "dersler ne zaman basliyor",
+    "dersler ne zaman bitiyor",
     "final sinavlari",
     "final sinavlarinin",
     "butunleme sinavlari",
@@ -299,6 +308,10 @@ _PROCEDURAL_ANNOUNCEMENT_BLOCK_MARKERS: tuple[str, ...] = (
     "muafiyet",
     "muaf",
     "intibak",
+    "tek ders",
+    "tek ders sinavi",
+    "tek sinav",
+    "ek sinav",
     "ders saydir",
     "ders saydirma",
     "ders kaydi",
@@ -330,6 +343,9 @@ _PROCEDURAL_QUESTION_MARKERS: tuple[str, ...] = (
     "hangi belgeler",
     "kimler katilabilir",
     "katilabilir",
+    "girebilir",
+    "girebilir miyim",
+    "girilebilir",
 )
 
 _EXPLICIT_ANNOUNCEMENT_ALLOW_MARKERS: tuple[str, ...] = (
@@ -457,6 +473,21 @@ def _application_type_slot_is_relevant(query: str | None) -> bool:
     return not any(marker in normalized_query for marker in _APPLICATION_TYPE_MARKERS)
 
 
+def _looks_like_international_registration_policy_query(query: str | None) -> bool:
+    if not query:
+        return False
+    normalized_query = normalize_text(query)
+    has_international = any(
+        marker in normalized_query
+        for marker in ("uluslararasi", "uluslararası", "yabanci", "yabancı", "international")
+    )
+    has_registration = any(
+        marker in normalized_query
+        for marker in ("kayit", "kayıt", "basvuru", "başvuru", "belge", "evrak")
+    )
+    return has_international and has_registration
+
+
 def build_missing_slot_clarification_message(
     *,
     intent: IntentAnalysis | None,
@@ -493,6 +524,9 @@ def build_missing_slot_clarification_message(
         and not looks_like_fee_catalog_amount_query(query)
     ):
         missing_slots.difference_update(fee_slots)
+
+    if _looks_like_international_registration_policy_query(query):
+        missing_slots.difference_update({"faculty_or_program", "department_or_program", "program", "course_name"})
 
     if metadata.get("student_faculty") or metadata.get("student_department") or inferred_program:
         missing_slots.discard("faculty_or_program")

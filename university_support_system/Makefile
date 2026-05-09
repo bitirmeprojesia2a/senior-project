@@ -4,7 +4,7 @@
 # Kullanım: make <komut>
 # Yardım:   make help
 
-.PHONY: help setup install test lint format db-migrate db-downgrade seed docker-up docker-down clean
+.PHONY: help setup install test lint format db-migrate db-downgrade seed docker-up docker-down docker-logs docker-restart redis-flush slack-restart slack-refresh clean
 
 # ── Yardım ──────────────────────────────────────
 help: ## Kullanılabilir komutları listeler
@@ -23,6 +23,9 @@ help: ## Kullanılabilir komutları listeler
 	@echo   make seed         - Sentetik ogrenci verisi yukle
 	@echo   make docker-up    - Altyapi servislerini baslat
 	@echo   make docker-down  - Altyapi servislerini durdur
+	@echo   make redis-flush  - Redis secili DB cache kayitlarini temizle
+	@echo   make slack-restart - Slack A2A bot containerini yeniden baslat
+	@echo   make slack-refresh - Redis cache temizle ve Slack A2A botu restart et
 	@echo   make clean        - Gecici dosyalari temizle
 	@echo.
 
@@ -89,6 +92,15 @@ docker-logs: ## Docker loglarını göster
 
 docker-restart: ## Docker servisleri yeniden başlat
 	docker compose down && docker compose up -d
+
+redis-flush: ## Redis secili DB cache kayitlarini temizle
+	docker exec uni_redis redis-cli FLUSHDB
+
+slack-restart: ## Slack A2A bot containerini yeniden baslat
+	python -m scripts.slack_runtime restart --runtime a2a
+
+slack-refresh: redis-flush ## Redis cache temizle ve Slack A2A botu restart et
+	python -m scripts.slack_runtime restart --runtime a2a
 
 # ── Temizlik ────────────────────────────────────
 clean: ## Geçici dosyaları temizle

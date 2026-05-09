@@ -15,7 +15,9 @@ from src.agents.academic.regulation_utils import (
     wants_incoming_exchange_info,
 )
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
+from src.capabilities.models import CapabilityAction
 from src.core.constants import Department, TaskType
+from src.core.config import settings
 from src.core.text_normalization import normalize_text
 from src.db.schemas import DepartmentResponse
 from src.llm.prompt_templates import INTERNATIONAL_AGENT_SYSTEM_PROMPT
@@ -42,6 +44,7 @@ class InternationalAgent(BaseSpecialistAgent):
     async def handle_department_task(self, task: Task) -> DepartmentResponse:
         metadata = task.metadata or {}
         query_text = str(metadata.get("query_text", "")).strip()
+        task = self._prepare_policy_lookup_task(task, query_text, metadata)
 
         response = await super().handle_department_task(task)
 
@@ -57,6 +60,70 @@ class InternationalAgent(BaseSpecialistAgent):
             )
 
         return response
+
+    def _prepare_policy_lookup_task(
+        self,
+        task: Task,
+        query_text: str,
+        metadata: dict,
+    ) -> Task:
+        planner_payload = metadata.get("capability_planner")
+        if not isinstance(planner_payload, dict) or not planner_payload.get("apply"):
+            return task
+        action_payload = planner_payload.get("action")
+        if not isinstance(action_payload, dict):
+            return task
+        try:
+            action = CapabilityAction.model_validate(action_payload)
+        except Exception:
+            return task
+        if action.capability != "international.policy_lookup":
+            return task
+        if action.confidence < settings.capability_planner.confidence_threshold:
+            return task
+
+        params = dict(action.params or {})
+        answer_contract = dict(action.answer_contract or {})
+        evidence_contract = dict(action.evidence_contract or {})
+        if params.get("must_answer") and not answer_contract.get("must_answer"):
+            answer_contract["must_answer"] = params.get("must_answer")
+        if params.get("preferred_sources") and not evidence_contract.get("preferred_sources"):
+            evidence_contract["preferred_sources"] = params.get("preferred_sources")
+        if params.get("avoid_sources") and not evidence_contract.get("avoid_sources"):
+            evidence_contract["avoid_sources"] = params.get("avoid_sources")
+
+        preferred_sources = [
+            str(source).strip()
+            for source in (evidence_contract.get("preferred_sources") or [])
+            if str(source).strip()
+        ]
+        source_refs = list(metadata.get("conversation_source_refs") or [])
+        for source in preferred_sources:
+            if source not in source_refs:
+                source_refs.append(source)
+
+        updated_metadata = dict(metadata)
+        updated_metadata["force_llm_synthesis"] = True
+        if source_refs:
+            updated_metadata["conversation_source_refs"] = source_refs
+        updated_metadata["policy_lookup"] = {
+            "intent": action.intent,
+            "topic": params.get("topic"),
+            "question_type": params.get("question_type"),
+            "query": params.get("query") or query_text,
+        }
+        updated_metadata["retrieval_query"] = params.get("query") or query_text
+        updated_metadata["plan_decision"] = action.to_plan_decision().model_dump()
+        if answer_contract:
+            updated_metadata["answer_contract"] = answer_contract
+        if evidence_contract:
+            updated_metadata["evidence_contract"] = evidence_contract
+
+        try:
+            return task.model_copy(update={"metadata": updated_metadata}, deep=True)
+        except AttributeError:
+            task.metadata = updated_metadata
+            return task
 
     @staticmethod
     def _needs_finance_reference(query_text: str) -> bool:

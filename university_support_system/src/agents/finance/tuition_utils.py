@@ -65,6 +65,18 @@ FEE_AMOUNT_KEYWORDS = (
     "tutar",
     "toplam ucret",
 )
+EXPLICIT_FEE_AMOUNT_MARKERS = (
+    "ne kadar",
+    "kac tl",
+    "kac lira",
+    "tutar",
+    "ucret",
+    "ogrenim ucreti",
+    "katki payi",
+    "donem ucreti",
+    "yillik ucret",
+    "semester fee",
+)
 NON_TUITION_FEE_MARKERS = (
     "yemekhane",
     "yemek ucreti",
@@ -194,6 +206,26 @@ def is_structured_fee_query(query_text: str) -> bool:
     if any(signal in lowered for signal in _FEE_POLICY_SIGNALS):
         return False
     return any(keyword in lowered for keyword in STRUCTURED_FEE_QUERY_KEYWORDS)
+
+
+def is_explicit_fee_amount_query(query_text: str) -> bool:
+    """Return whether the query explicitly asks for a tuition fee amount."""
+    lowered = normalize_finance_text(query_text)
+    if any(signal in lowered for signal in NON_TUITION_FEE_MARKERS):
+        return False
+    if any(signal in lowered for signal in _HYPOTHETICAL_POLICY_OVERRIDE):
+        return False
+    if any(signal in lowered for signal in _FEE_POLICY_SIGNALS):
+        return False
+    if any(signal in lowered for signal in _FEE_PROCEDURAL_SIGNALS):
+        return False
+    if any(signal in lowered for signal in _PERSONAL_PROCEDURAL_OVERRIDE):
+        return False
+    if "borc" in lowered and not any(
+        marker in lowered for marker in ("ne kadar", "kac tl", "kac lira", "tutar")
+    ):
+        return False
+    return any(marker in lowered for marker in EXPLICIT_FEE_AMOUNT_MARKERS)
 
 
 def normalize_student_type(value: object) -> str | None:

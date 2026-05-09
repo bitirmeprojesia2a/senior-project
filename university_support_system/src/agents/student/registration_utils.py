@@ -343,6 +343,86 @@ _MUAFIYET_CONTENT_MARKERS: tuple[str, ...] = (
     "derslere devam",
 )
 
+_SINGLE_EXAM_QUERY_MARKERS: tuple[str, ...] = (
+    "tek ders",
+    "tek ders sinavi",
+    "tek derse",
+)
+
+_SINGLE_EXAM_CONTENT_MARKERS: tuple[str, ...] = (
+    "mufredatinizda tanimli butun dersleri almis",
+    "daha once devam sartini sagladiginiz tek ders",
+    "tek ders sinavina girebilirsiniz",
+    "butunleme sinavlarini takip eden",
+    "en az cc",
+)
+
+_SINGLE_EXAM_NEGATIVE_SOURCE_MARKERS: tuple[str, ...] = (
+    "dis hekimligi",
+    "doktorluk",
+    "tip fakultesi",
+    "uluslararasi ogrenci",
+    "pedagojik formasyon",
+)
+
+_SUMMER_SCHOOL_QUERY_MARKERS: tuple[str, ...] = (
+    "yaz okulu",
+    "yaz okuluna",
+    "yaz okulundan",
+    "yaz donemi",
+)
+
+_SUMMER_SCHOOL_CONTENT_MARKERS: tuple[str, ...] = (
+    "yaz okulunda derslere devam zorunludur",
+    "omu ve/veya diger universite",
+    "yaz okulunda ders alabilir",
+    "dersin acilabilmesi",
+    "en az 35 egitim",
+    "yaz okulu sonu sinavi",
+)
+
+_SUMMER_SCHOOL_NEGATIVE_SOURCE_MARKERS: tuple[str, ...] = (
+    "yabanci dil",
+    "pedagojik formasyon",
+    "egitim ogretim politikasi",
+)
+
+_COURSE_DELAY_QUERY_MARKERS: tuple[str, ...] = (
+    "okulum uzuyor",
+    "okul uzuyor",
+    "donem uzuyor",
+    "donemim uzuyor",
+    "ders yuzunden",
+    "dersimden kaldim",
+    "dersten kaldim",
+    "basarisiz oldugum",
+    "basarisiz oldum",
+    "hic almadigim",
+    "alt donem ders",
+    "eksik ders",
+)
+
+_COURSE_DELAY_CONTENT_MARKERS: tuple[str, ...] = (
+    "eksik ders alarak donem uzatmamak",
+    "mufredat durum kontrolu",
+    "transkriptinizle karsilastirmaniz",
+    "oncelikle basarisiz oldugunuz",
+    "hic almadigi alt donem",
+    "tum dersleri almak ve basarmak zorundadir",
+    "basarisiz oldugunuz ders/dersler",
+    "devam kosulu yerine getirilmis",
+)
+
+_COURSE_DELAY_NEGATIVE_SOURCE_MARKERS: tuple[str, ...] = (
+    "yks",
+    "taban puan",
+    "dis hekimligi",
+    "tip fakultesi",
+    "uzaktan egitim",
+    "pedagojik formasyon",
+    "uluslararasi ogrenci",
+)
+
 @dataclass(frozen=True)
 class RegistrationProfilePolicy:
     query_markers: tuple[str, ...]
@@ -382,6 +462,26 @@ _REGISTRATION_PROFILE_POLICIES: dict[str, RegistrationProfilePolicy] = {
     "muafiyet": RegistrationProfilePolicy(
         query_markers=_MUAFIYET_QUERY_MARKERS,
         content_markers=_MUAFIYET_CONTENT_MARKERS,
+        prefer_faq_sources=True,
+        preferred_top_k=12,
+    ),
+    "single_exam": RegistrationProfilePolicy(
+        query_markers=_SINGLE_EXAM_QUERY_MARKERS,
+        content_markers=_SINGLE_EXAM_CONTENT_MARKERS,
+        negative_source_markers=_SINGLE_EXAM_NEGATIVE_SOURCE_MARKERS,
+        prefer_faq_sources=True,
+        preferred_top_k=12,
+    ),
+    "summer_school": RegistrationProfilePolicy(
+        query_markers=_SUMMER_SCHOOL_QUERY_MARKERS,
+        content_markers=_SUMMER_SCHOOL_CONTENT_MARKERS,
+        negative_source_markers=_SUMMER_SCHOOL_NEGATIVE_SOURCE_MARKERS,
+        preferred_top_k=12,
+    ),
+    "course_delay": RegistrationProfilePolicy(
+        query_markers=_COURSE_DELAY_QUERY_MARKERS,
+        content_markers=_COURSE_DELAY_CONTENT_MARKERS,
+        negative_source_markers=_COURSE_DELAY_NEGATIVE_SOURCE_MARKERS,
         prefer_faq_sources=True,
         preferred_top_k=12,
     ),
@@ -532,13 +632,98 @@ def _extract_calendar_row(label: str) -> tuple[str, str] | None:
     return None
 
 
-def build_general_exam_calendar_answer(query_text: str) -> tuple[str, dict] | None:
-    """Return structured academic calendar dates for broad exam date queries."""
-    lowered = normalize_registration_text(query_text)
-    if "program" in lowered:
+_COURSE_START_CALENDAR_MARKERS: tuple[str, ...] = (
+    "derslerin baslamasi",
+    "dersler ne zaman basliyor",
+    "dersler ne zaman baslar",
+    "ders baslangic",
+    "derslerin baslangic",
+)
+_COURSE_END_CALENDAR_MARKERS: tuple[str, ...] = (
+    "derslerin bitimi",
+    "ders bitimi",
+    "ders bitis",
+    "ders bitis tarihi",
+    "son ders tarihi",
+    "derslerin sonu",
+    "dersler ne zaman bitiyor",
+    "dersler ne zaman biter",
+)
+
+
+def _requested_academic_calendar_term(lowered_query: str) -> str | None:
+    if "bahar" in lowered_query:
+        return "spring"
+    if "guz" in lowered_query:
+        return "fall"
+    return None
+
+
+def _format_academic_calendar_row_answer(
+    *,
+    row_label: str,
+    display_label: str,
+    lowered_query: str,
+) -> tuple[str, dict] | None:
+    row = _extract_calendar_row(row_label)
+    if row is None:
         return None
+    fall, spring = row
+    term = _requested_academic_calendar_term(lowered_query)
+    metadata = {
+        "source": str(_ACADEMIC_CALENDAR_PDF),
+        "label": row_label,
+        "fall": fall,
+        "spring": spring,
+    }
+    if term == "spring":
+        return (
+            f"Genel akademik takvime gore bahar doneminde {display_label} "
+            f"{spring} tarihidir.",
+            metadata,
+        )
+    if term == "fall":
+        return (
+            f"Genel akademik takvime gore guz doneminde {display_label} "
+            f"{fall} tarihidir.",
+            metadata,
+        )
+    return (
+        f"Genel akademik takvime gore {display_label} guz donemi icin {fall}, "
+        f"bahar donemi icin {spring} tarihidir.",
+        metadata,
+    )
+
+
+def _build_course_calendar_answer(lowered_query: str) -> tuple[str, dict] | None:
+    if any(marker in lowered_query for marker in _COURSE_END_CALENDAR_MARKERS):
+        return _format_academic_calendar_row_answer(
+            row_label="Derslerin Bitimi",
+            display_label="derslerin bitimi",
+            lowered_query=lowered_query,
+        )
+    if any(marker in lowered_query for marker in _COURSE_START_CALENDAR_MARKERS):
+        return _format_academic_calendar_row_answer(
+            row_label="Derslerin Baslamasi",
+            display_label="derslerin baslamasi",
+            lowered_query=lowered_query,
+        )
+    return None
+
+
+def build_general_exam_calendar_answer(query_text: str) -> tuple[str, dict] | None:
+    """Return structured academic calendar dates for broad calendar date queries."""
+    lowered = normalize_registration_text(query_text)
+
+    course_calendar_answer = _build_course_calendar_answer(lowered)
+    if course_calendar_answer is not None:
+        return course_calendar_answer
+
     wants_date = any(marker in lowered for marker in ("ne zaman", "tarih", "takvim"))
     if not wants_date:
+        return None
+
+    if "program" in lowered:
         return None
 
     if "final sinav" in lowered or "yariyil sonu sinav" in lowered or "donem sonu sinav" in lowered:
@@ -642,7 +827,8 @@ def should_force_registration_llm_synthesis(
     if not results:
         return False
     lowered = normalize_registration_text(query_text)
-    if detect_registration_query_profile(lowered) == "discipline":
+    profile = detect_registration_query_profile(lowered)
+    if profile in {"discipline", "summer_school", "single_exam", "course_delay"}:
         return True
     if is_course_registration_process_query(query_text):
         return True

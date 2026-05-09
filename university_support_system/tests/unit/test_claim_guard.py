@@ -45,3 +45,25 @@ def test_claim_guard_softens_tek_ders_attendance_contradiction():
     assert "dersi hiç almamış olan" not in result.cleaned_answer
     assert "devam şartını daha önce sağlamış" in result.cleaned_answer
     assert any(issue["type"] == "policy_contradiction" for issue in result.unsupported_claims)
+
+
+def test_claim_guard_catches_short_hic_almamis_tek_ders_answer():
+    answer = (
+        "Tek ders kaydi icin, bu derse kayit yaptirmis olmaniz gerekmez.\n"
+        "Derse hic almamis olsaniz da,\n"
+        "tek ders sinavina basvurabilirsiniz."
+    )
+    evidence = [
+        _evidence_item(
+            "Mufredatinizda tanimli butun dersleri almis fakat mezuniyetiniz icin "
+            "daha once devam sartini sagladiginiz tek dersinizin kalmis olmasi "
+            "durumunda o dersten tek ders sinavina girebilirsiniz."
+        )
+    ]
+
+    result = guard_answer(answer, evidence)
+
+    assert result.modifications_made >= 1
+    assert "hic almamis" not in result.cleaned_answer
+    assert "kayit yaptirmis olmaniz gerekmez" not in result.cleaned_answer
+    assert "devam şartını daha önce sağlamış" in result.cleaned_answer

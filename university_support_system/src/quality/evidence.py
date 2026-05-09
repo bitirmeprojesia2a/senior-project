@@ -98,6 +98,27 @@ _REFERENCE_WORDS = frozenset({
     "o", "onun", "onu",
 })
 
+_LIST_ITEM_RE = re.compile(
+    r"^\s*(?:[-*\u2022]\s+|\(?[a-z]\)|[a-z][\).]|\d+[\).])\s+",
+    re.IGNORECASE,
+)
+_LIST_INTRO_TERMS = (
+    "asagidaki",
+    "durumlarda",
+    "hallerde",
+    "sartlar",
+    "kosullar",
+    "belgeler",
+    "evrak",
+    "kurucu",
+    "kapatil",
+    "kapatma",
+    "danisman",
+    "basvuru",
+    "gerekli",
+    "gereken",
+)
+
 # Known system/portal names for entity grounding
 KNOWN_SYSTEM_ENTITIES: frozenset[str] = frozenset({
     "ubys", "obs", "ubys.omu.edu.tr",
@@ -155,6 +176,55 @@ def _numeric_range_context_indices(parts: Sequence[str], selected_indices: set[i
                 or _CONDITION_TAIL_RE.search(following)
             ):
                 expanded.add(index + 1)
+    return expanded
+
+
+def _looks_like_list_item(part: str) -> bool:
+    return bool(_LIST_ITEM_RE.match(part.strip()))
+
+
+def _looks_like_list_intro(part: str) -> bool:
+    normalized = normalize_text(part)
+    return any(term in normalized for term in _LIST_INTRO_TERMS)
+
+
+def _list_block_bounds(parts: Sequence[str], index: int) -> tuple[int, int]:
+    """Return the contiguous list block around ``index``.
+
+    PDF chunks often split legal/procedural articles into one line per bullet.
+    If evidence selection keeps only the single line that overlaps with the
+    query, the answer loses sibling conditions. Keeping the local list block
+    preserves the evidence unit while still avoiding whole-page context.
+    """
+    start = index
+    while start > 0 and _looks_like_list_item(parts[start - 1]):
+        start -= 1
+
+    end = index
+    while end + 1 < len(parts) and _looks_like_list_item(parts[end + 1]):
+        end += 1
+
+    if start > 0 and _looks_like_list_intro(parts[start - 1]):
+        start -= 1
+    return start, end
+
+
+def _list_context_indices(parts: Sequence[str], selected_indices: set[int]) -> set[int]:
+    """Keep sibling list items together for procedural/list questions."""
+    expanded: set[int] = set()
+    for index in selected_indices:
+        candidate_indices: list[int] = []
+        if _looks_like_list_item(parts[index]):
+            candidate_indices.append(index)
+        if index + 1 < len(parts) and _looks_like_list_item(parts[index + 1]):
+            if _looks_like_list_intro(parts[index]):
+                candidate_indices.append(index + 1)
+        if index > 0 and _looks_like_list_item(parts[index - 1]):
+            candidate_indices.append(index - 1)
+
+        for candidate in candidate_indices:
+            start, end = _list_block_bounds(parts, candidate)
+            expanded.update(range(start, end + 1))
     return expanded
 
 
@@ -432,9 +502,12 @@ def select_evidence_sentences(
         selected_indices.update(
             _numeric_range_context_indices(parts, selected_indices),
         )
+    list_context_indices = _list_context_indices(parts, selected_indices)
+    selected_indices.update(list_context_indices)
 
     # Respect max_sentences limit even with context additions
-    ordered_indices = sorted(selected_indices)[:max_sentences + 2]
+    context_allowance = 8 if list_context_indices else 2
+    ordered_indices = sorted(selected_indices)[:max_sentences + context_allowance]
     excerpt = " ".join(parts[i] for i in ordered_indices).strip()
     return excerpt or content
 
@@ -566,23 +639,27 @@ def build_evidence_context_chunks(
     # Prefer strong safe evidence. Low-confidence chunks are used only as a
     # fallback so the LLM does not anchor on weakly related FAQ/page fragments.
     if len(strong_safe_items) >= 2:
-        selected = strong_safe_items[:max_items]
+        selected = _pack_same_source_evidence(strong_safe_items, max_items=max_items)
     elif strong_safe_items:
-        selected = strong_safe_items + [
+        candidates = strong_safe_items + [
             item for item in safe_items if item.is_low_confidence
-        ][:max_items - len(strong_safe_items)]
-        if len(selected) < max_items:
-            selected += off_topic_items[:max_items - len(selected)]
+        ]
+        if len(candidates) < max_items:
+            candidates += off_topic_items
+        selected = _pack_same_source_evidence(candidates, max_items=max_items)
     # If enough safe evidence, use only safe items
     elif len(safe_items) >= 2:
-        selected = safe_items[:max_items]
+        selected = _pack_same_source_evidence(safe_items, max_items=max_items)
     elif safe_items:
         # Few safe items: supplement with off-topic as fallback
-        selected = safe_items + off_topic_items[:max_items - len(safe_items)]
+        selected = _pack_same_source_evidence(
+            safe_items + off_topic_items,
+            max_items=max_items,
+        )
     else:
         # All off-topic: use them but the caller should consider a
         # "kaynaklarda net bilgi yok" fallback
-        selected = off_topic_items[:max_items]
+        selected = _pack_same_source_evidence(off_topic_items, max_items=max_items)
 
     chunks: list[str] = []
     for index, item in enumerate(selected, start=1):
@@ -602,6 +679,50 @@ def build_evidence_context_chunks(
         chunks.append(f"{header}\n{body}{facts_section}")
 
     return chunks
+
+
+def _pack_same_source_evidence(
+    items: list[EvidenceItem],
+    *,
+    max_items: int,
+) -> list[EvidenceItem]:
+    """Keep nearby evidence from the leading source together.
+
+    Retrieval can find the right PDF but split the relevant article across
+    several chunks. Pure score ordering may then put unrelated but high-score
+    chunks between sibling chunks from the main source. This function gives the
+    leading source a local context budget while preserving at least one other
+    source when the prompt budget allows it.
+    """
+    if len(items) <= max_items:
+        return items[:max_items]
+    if max_items <= 1:
+        return items[:max_items]
+
+    anchor_key = normalize_text(items[0].source_name)
+    same_source = [item for item in items if normalize_text(item.source_name) == anchor_key]
+    if len(same_source) < 2:
+        return items[:max_items]
+
+    other_sources = [item for item in items if normalize_text(item.source_name) != anchor_key]
+    reserve_other_source = bool(other_sources and max_items >= 4)
+    same_source_budget = max_items - 1 if reserve_other_source else max_items
+
+    packed = same_source[:same_source_budget]
+    if reserve_other_source:
+        packed.append(other_sources[0])
+
+    if len(packed) < max_items:
+        seen_ids = {item.source_id for item in packed}
+        for item in items:
+            if item.source_id in seen_ids:
+                continue
+            packed.append(item)
+            seen_ids.add(item.source_id)
+            if len(packed) >= max_items:
+                break
+
+    return packed[:max_items]
 
 
 def all_evidence_off_topic(evidence_items: list[EvidenceItem]) -> bool:

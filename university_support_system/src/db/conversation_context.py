@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Callable, Sequence
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.capabilities.conversation_frame import ConversationFrame
 from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.core.text_normalization import normalize_text
@@ -254,6 +255,14 @@ _PROGRAM_SLOT_QUESTION_MARKERS = (
     "hangi sinifta",
     "hangi donemde",
 )
+_COURSE_SLOT_REQUEST_MARKERS = (
+    "ders adini ya da ders kodunu",
+    "ders adi ya da ders kodu",
+    "ders kodunu",
+    "ders adini",
+    "on kosul veya akts",
+    "onkosul veya akts",
+)
 _SHORT_SLOT_FOLLOW_UP_MARKERS = (
     "ders programi",
     "haftalik program",
@@ -430,6 +439,13 @@ _APPLICATION_TOPIC_NAMES = {
     "Yaz Okulu",
     "Kayit Dondurma ve Silme",
 }
+
+
+@dataclass(frozen=True)
+class _CourseReference:
+    code: str
+    title: str | None = None
+    department: str | None = None
 
 
 def _normalized_tokens(text: str) -> list[str]:
@@ -645,10 +661,29 @@ def _infer_program_fragment(query: str) -> str | None:
     return infer_department_from_query(query)
 
 
+def _replace_program_fragment_in_query(previous_query: str, new_program: str) -> str | None:
+    previous_program = _infer_program_fragment(previous_query)
+    if not previous_program:
+        return None
+
+    normalized_previous = normalize_text(previous_query).strip()
+    normalized_old_program = normalize_text(previous_program).strip()
+    normalized_new_program = normalize_text(new_program).strip()
+    if not normalized_previous or not normalized_old_program or not normalized_new_program:
+        return None
+    if normalized_old_program == normalized_new_program:
+        return previous_query.rstrip(" \t\r\n?.!,;:") + "?"
+    if normalized_old_program not in normalized_previous:
+        return None
+
+    replaced = normalized_previous.replace(normalized_old_program, normalized_new_program, 1)
+    return replaced.rstrip(" \t\r\n?.!,;:") + "?"
+
+
 def _has_explicit_program_context(state: "ConversationStateData") -> bool:
     return any(
         _infer_program_fragment(text) is not None
-        for text in (state.last_resolved_query, state.last_user_query)
+        for text in (state.last_resolved_query, state.last_user_query, state.last_assistant_answer)
         if text
     )
 
@@ -690,6 +725,151 @@ def _last_answer_explicitly_requests_program_slot(answer: str | None) -> bool:
 def _last_answer_explicitly_requests_application_type(answer: str | None) -> bool:
     normalized = normalize_text(answer or "")
     return "hangi basvuru turu" in normalized
+
+
+def _last_answer_explicitly_requests_course_slot(answer: str | None) -> bool:
+    normalized = normalize_text(answer or "")
+    return any(marker in normalized for marker in _COURSE_SLOT_REQUEST_MARKERS)
+
+
+def _looks_like_prerequisite_property_query(query: str) -> bool:
+    normalized = normalize_text(query)
+    return "onkosul" in normalized or "on kosul" in normalized
+
+
+def _looks_like_course_akts_property_query(query: str) -> bool:
+    tokens = set(_normalized_tokens(query))
+    normalized = normalize_text(query)
+    return "akts" in tokens and (
+        "kac" in tokens
+        or "ne" in tokens
+        or "nedir" in tokens
+        or normalized.endswith("akts")
+    )
+
+
+def _looks_like_course_semester_property_query(query: str) -> bool:
+    normalized = normalize_text(query)
+    return any(
+        marker in normalized
+        for marker in (
+            "hangi yariyil",
+            "kacinci yariyil",
+            "hangi donem",
+            "kacinci donem",
+            "hangi sinif",
+            "kacinci sinif",
+        )
+    )
+
+
+def _looks_like_course_property_query(query: str) -> bool:
+    return (
+        _looks_like_prerequisite_property_query(query)
+        or _looks_like_course_akts_property_query(query)
+        or _looks_like_course_semester_property_query(query)
+    )
+
+
+def _extract_course_reference(text: str | None) -> _CourseReference | None:
+    if not text:
+        return None
+    match = _COURSE_CODE_PATTERN.search(text)
+    if match is None:
+        return None
+
+    code = match.group(0).upper().replace(" ", "")
+    after_code = text[match.end(): match.end() + 100]
+    title_text = re.split(
+        r"\s+(?:dersi|dersinin|dersinde|dersine)\b|[()\n\r|.,;:]",
+        after_code,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0].strip(" \t-")
+    title_tokens = [
+        token
+        for token in re.findall(r"[A-Za-z0-9Ã‡ÄÄ°Ã–ÅÃœÃ§ÄŸÄ±iÃ¶ÅŸÃ¼]+", title_text)
+        if normalize_text(token) not in {
+            "ders",
+            "dersi",
+            "dersinin",
+            "onkosul",
+            "onkosulu",
+            "akts",
+            "kredi",
+            "var",
+            "mi",
+            "ne",
+            "kac",
+        }
+    ]
+    title = " ".join(title_tokens[:6]).strip() or None
+    department = _infer_program_fragment(text)
+    return _CourseReference(code=code, title=title, department=department)
+
+
+def _extract_recent_course_reference(state: "ConversationStateData") -> _CourseReference | None:
+    for text in (
+        state.last_assistant_answer,
+        state.last_resolved_query,
+        state.last_user_query,
+        state.rolling_summary,
+    ):
+        reference = _extract_course_reference(text)
+        if reference is not None:
+            return reference
+    return None
+
+
+def _build_query_for_course_property(query: str, reference: _CourseReference) -> str | None:
+    if _looks_like_prerequisite_property_query(query):
+        return f"{reference.code} dersinin onkosulu var mi?"
+    if _looks_like_course_akts_property_query(query):
+        return f"{reference.code} dersi kac AKTS?"
+    if _looks_like_course_semester_property_query(query):
+        return f"{reference.code} dersi hangi yariyilda?"
+    return None
+
+
+def _build_course_reference_query(query: str, *, state: "ConversationStateData") -> str | None:
+    if not _looks_like_course_property_query(query):
+        return None
+    reference = _extract_recent_course_reference(state)
+    if reference is None:
+        return None
+    return _build_query_for_course_property(query, reference)
+
+
+def _build_course_slot_fragment_query(query: str, *, state: "ConversationStateData") -> str | None:
+    if not _last_answer_explicitly_requests_course_slot(state.last_assistant_answer):
+        return None
+    if _extract_course_reference(query) is None:
+        return None
+
+    previous_query = (state.last_resolved_query or state.last_user_query or "").strip()
+    if not previous_query:
+        return None
+
+    stripped_query = query.rstrip(" \t\r\n?.!,;:")
+    if _looks_like_prerequisite_property_query(previous_query):
+        return f"{stripped_query} dersinin onkosulu var mi?"
+    if _looks_like_course_akts_property_query(previous_query):
+        return f"{stripped_query} dersi kac AKTS?"
+    if _looks_like_course_semester_property_query(previous_query):
+        return f"{stripped_query} dersi hangi yariyilda?"
+    return None
+
+
+def _course_reference_departments(state: "ConversationStateData") -> list[Department]:
+    departments = list(
+        dict.fromkeys(
+            [
+                *ConversationContextService._parse_departments(state.last_departments),
+                Department.ACADEMIC_PROGRAMS,
+            ]
+        )
+    )
+    return departments
 
 
 def _infer_application_topic_fragment(query: str) -> str | None:
@@ -969,6 +1149,9 @@ def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") 
         _looks_like_program_slot_question(previous_query)
         or _last_answer_explicitly_requests_program_slot(state.last_assistant_answer)
     ):
+        replaced_query = _replace_program_fragment_in_query(previous_query, program_name)
+        if replaced_query:
+            return replaced_query
         return f"{program_name} icin {previous_query.rstrip('?.!,;:')}?".strip()
 
     application_topic = _infer_application_topic_fragment(query)
@@ -1089,13 +1272,27 @@ _TOPIC_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Kayit Dondurma ve Silme", ("kayit dondurma", "donem dondurma", "kayit sildirme", "ilisik kesme")),
     ("Mezuniyet ve Akademik Durum", ("mezuniyet", "gno", "transkript", "diploma", "not ortalamasi", "azami sure")),
     ("Staj ve Uygulamali Egitim", ("staj", "mup", "sanayi uygulamasi", "bitirme projesi", "zorunlu staj", "mesleki uygulama")),
-    ("Sinav ve Degerlendirme", ("sinav", "butunleme", "final", "vize", "mazeret", "bagil degerlendirme", "harf notu")),
+    ("Sinav ve Degerlendirme", ("tek ders", "tek ders sinav", "sinav", "butunleme", "final", "vize", "mazeret", "bagil degerlendirme", "harf notu")),
     ("Yatay ve Dikey Gecis", ("yatay gecis", "dikey gecis", "kurum ici", "kurumlar arasi")),
     ("Mufredat ve Ders Yapisi", ("mufredat", "onkosul", "ders programi", "akts", "secmeli", "zorunlu ders")),
     ("Mevzuat ve Yonergeler", ("yonerge", "yonetmelik", "madde", "prosedur", "genelge")),
     ("Belgeler", ("ogrenci belgesi", "transkript belgesi", "diploma eki", "tecil", "askerlik belgesi")),
     ("Yaz Okulu", ("yaz okulu", "yaz donemi")),
-    ("Ders Tekrari ve Devam", ("ders tekrari", "tekrar dersi", "devam kosulu", "devam sarti")),
+    (
+        "Ders Tekrari ve Devam",
+        (
+            "ders tekrari",
+            "tekrar dersi",
+            "devam kosulu",
+            "devam sarti",
+            "okulum uzuyor",
+            "okul uzuyor",
+            "dersimden kaldim",
+            "basarisiz oldugum",
+            "hic almadigim",
+            "alt donem ders",
+        ),
+    ),
     ("Ogrenci Kimligi", ("kimlik karti", "ogrenci karti", "ogrenci kimligi", "kimligimi kaybettim")),
     ("Saglik ve Sigorta", ("saglik raporu", "sigorta", "is kazasi", "rapor aldim")),
     ("Yurt ve Barinma", ("yurt", "barinma", "konaklama")),
@@ -1197,6 +1394,28 @@ class ConversationResolution:
     announcement_context: bool = False
     rewrite_method: str = "none"  # none | heuristic | llm | answer_fragment
     standalone_query: str | None = None  # explicit standalone form for telemetry
+    frame: ConversationFrame | None = None
+
+    def __post_init__(self) -> None:
+        if self.frame is not None:
+            return
+        object.__setattr__(
+            self,
+            "frame",
+            ConversationFrame.from_resolution_parts(
+                original_query=self.original_query,
+                effective_query=self.effective_query,
+                standalone_query=self.standalone_query,
+                is_follow_up=self.is_follow_up,
+                used_context=self.used_context,
+                active_topic=self.active_topic,
+                department_hints=self.department_hints,
+                source_hints=self.source_hints,
+                task_type_hint=self.task_type_hint,
+                announcement_context=self.announcement_context,
+                rewrite_method=self.rewrite_method,
+            ),
+        )
 
 
 class ConversationContextService:
@@ -1255,6 +1474,56 @@ class ConversationContextService:
             return self._direct_resolution(query)
 
         correction_fallback = self._build_correction_resolution(query=query, state=state)
+
+        course_slot_fragment_query = _build_course_slot_fragment_query(query, state=state)
+        if course_slot_fragment_query:
+            topic = state.active_topic or "Mufredat ve Ders Yapisi"
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=true "
+                "rewrite_method=course_slot_fragment original=%r effective=%r topic=%s",
+                context_id,
+                query,
+                course_slot_fragment_query,
+                topic,
+            )
+            return ConversationResolution(
+                original_query=query,
+                effective_query=course_slot_fragment_query,
+                is_follow_up=True,
+                used_context=True,
+                active_topic=topic,
+                department_hints=_course_reference_departments(state),
+                source_hints=list(state.last_source_refs),
+                task_type_hint=TaskType.COURSE_QUERY,
+                announcement_context=False,
+                rewrite_method="answer_fragment",
+                standalone_query=course_slot_fragment_query,
+            )
+
+        course_reference_query = _build_course_reference_query(query, state=state)
+        if course_reference_query:
+            topic = state.active_topic or "Mufredat ve Ders Yapisi"
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=true "
+                "rewrite_method=course_reference original=%r effective=%r topic=%s",
+                context_id,
+                query,
+                course_reference_query,
+                topic,
+            )
+            return ConversationResolution(
+                original_query=query,
+                effective_query=course_reference_query,
+                is_follow_up=True,
+                used_context=True,
+                active_topic=topic,
+                department_hints=_course_reference_departments(state),
+                source_hints=list(state.last_source_refs),
+                task_type_hint=TaskType.COURSE_QUERY,
+                announcement_context=False,
+                rewrite_method="heuristic",
+                standalone_query=course_reference_query,
+            )
 
         deterministic_answer_fragment_query = _build_answer_fragment_query(
             query,
@@ -2270,18 +2539,29 @@ class ConversationContextService:
         query: str,
         state: ConversationStateData,
     ) -> str:
+        previous_program = next(
+            (
+                program
+                for program in (
+                    _infer_program_fragment(state.last_resolved_query or ""),
+                    _infer_program_fragment(state.last_user_query or ""),
+                    _infer_program_fragment(state.last_assistant_answer or ""),
+                )
+                if program
+            ),
+            None,
+        )
+        normalized_query = normalize_text(query)
+        if (
+            previous_program
+            and "yariyil" in normalized_query
+            and any(marker in normalized_query for marker in ("ders", "mufredat", "program"))
+        ):
+            stripped_query = _strip_follow_up_prefixes(query)
+            if stripped_query:
+                return f"{previous_program} {stripped_query}".strip()
+
         if _looks_like_short_slot_follow_up(query, state):
-            previous_program = next(
-                (
-                    program
-                    for program in (
-                        _infer_program_fragment(state.last_resolved_query or ""),
-                        _infer_program_fragment(state.last_user_query or ""),
-                    )
-                    if program
-                ),
-                None,
-            )
             if previous_program:
                 stripped_query = _strip_follow_up_prefixes(query)
                 if stripped_query:

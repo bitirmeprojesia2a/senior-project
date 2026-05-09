@@ -96,7 +96,7 @@ class TestDepartmentRouter:
         assert result.task_type == TaskType.ACADEMIC_QUERY
 
     @pytest.mark.asyncio
-    async def test_general_graduation_akts_overrides_llm_academic_programs(self):
+    async def test_general_graduation_akts_accepts_llm_primary_decision(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
             return_value=json.dumps(
@@ -121,9 +121,9 @@ class TestDepartmentRouter:
         result = await router.route("Lisans programindan mezun olmak icin kac AKTS tamamlamaliyim?")
 
         assert has_general_akts_markers("lisans programindan mezun olmak icin kac akts tamamlamaliyim")
-        assert result.departments == [Department.STUDENT_AFFAIRS]
+        assert result.departments == [Department.ACADEMIC_PROGRAMS]
         assert result.strategy == RoutingStrategy.DIRECT
-        assert result.task_type == TaskType.ACADEMIC_QUERY
+        assert result.task_type == TaskType.COURSE_QUERY
 
     @pytest.mark.asyncio
     async def test_general_graduation_akts_guardrail_keeps_explicit_cap_context(self):
@@ -201,14 +201,23 @@ class TestDepartmentRouter:
         assert result.task_type == TaskType.PROCEDURE_QUERY
 
     @pytest.mark.asyncio
-    async def test_route_single_exam_procedure_overrides_llm_academic_guess(self):
+    async def test_route_single_exam_procedure_uses_rule_fallback_when_llm_unavailable(self):
         llm_service = AsyncMock()
-        llm_service.generate = AsyncMock(
-            return_value='{"departments":["academic_programs"],"confidence":0.75,"reasoning":"generic exam rule"}'
-        )
+        llm_service.generate = AsyncMock(side_effect=LLMServiceError("LLM unavailable"))
         router = DepartmentRouter(llm_service=llm_service)
 
         result = await router.route("Tek ders sinavlari nedir?")
+
+        assert result.departments == [Department.STUDENT_AFFAIRS]
+        assert result.strategy == RoutingStrategy.DIRECT
+
+    @pytest.mark.asyncio
+    async def test_route_single_exam_eligibility_uses_rule_fallback_when_llm_unavailable(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock(side_effect=LLMServiceError("LLM unavailable"))
+        router = DepartmentRouter(llm_service=llm_service)
+
+        result = await router.route("Hic almadigim bir dersten tek derse girebilir miyim?")
 
         assert result.departments == [Department.STUDENT_AFFAIRS]
         assert result.strategy == RoutingStrategy.DIRECT
@@ -407,7 +416,7 @@ class TestDepartmentRouter:
     async def test_route_exam_date_query_to_student_affairs_calendar(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["academic_programs"],"confidence":0.82,"reasoning":"guess"}'
+            return_value='{"departments":["student_affairs"],"confidence":0.82,"reasoning":"academic calendar"}'
         )
         router = DepartmentRouter(llm_service=llm_service)
 
@@ -418,9 +427,36 @@ class TestDepartmentRouter:
         assert result.strategy == RoutingStrategy.DIRECT
 
     @pytest.mark.asyncio
+    async def test_route_course_end_date_query_to_student_affairs_calendar(self):
+        llm_service = AsyncMock()
+        llm_service.generate = AsyncMock(
+            return_value='{"departments":["student_affairs"],"confidence":0.88,"reasoning":"academic calendar"}'
+        )
+        router = DepartmentRouter(llm_service=llm_service)
+
+        for query in (
+            "Bilgisayar muhendisligi icin bahar donemi derslerin bitimi ne zaman?",
+            "Bilgisayar muhendisligi icin bahar donemi son ders tarihi nedir?",
+        ):
+            result = await router.route(query)
+
+            assert result.departments == [Department.STUDENT_AFFAIRS]
+            assert result.task_type == TaskType.REGISTRATION_QUERY
+            assert result.strategy == RoutingStrategy.DIRECT
+
+    @pytest.mark.asyncio
     async def test_route_vague_application_timing_to_clarification(self):
         llm_service = AsyncMock()
-        llm_service.generate = AsyncMock()
+        llm_service.generate = AsyncMock(
+            return_value=(
+                '{"departments":[],"confidence":0.35,'
+                '"primary_intent":"unknown",'
+                '"target_capability":"none",'
+                '"required_slots":["application_type"],'
+                '"missing_slots":["application_type"],'
+                '"reasoning":"basvuru turu belirsiz"}'
+            )
+        )
         router = DepartmentRouter(llm_service=llm_service)
 
         result = await router.route("sey basvuru ne zaman")
@@ -430,19 +466,12 @@ class TestDepartmentRouter:
         assert result.confidence_level == ConfidenceLevel.LOW
         assert result.intent is not None
         assert result.intent.missing_slots == ["application_type"]
-        llm_service.generate.assert_not_awaited()
+        llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_route_horizontal_transfer_muafiyet_to_student_affairs_not_announcement(self):
+    async def test_route_horizontal_transfer_muafiyet_uses_rule_fallback_when_llm_unavailable(self):
         llm_service = AsyncMock()
-        llm_service.generate = AsyncMock(
-            return_value=(
-                '{"departments":[],"confidence":0.82,'
-                '"primary_intent":"announcement",'
-                '"target_capability":"announcement",'
-                '"reasoning":"guess"}'
-            )
-        )
+        llm_service.generate = AsyncMock(side_effect=LLMServiceError("LLM unavailable"))
         router = DepartmentRouter(llm_service=llm_service)
 
         result = await router.route("Yatay gecisle geldim, muafiyet basvurusu ne zaman yapilir?")
@@ -453,24 +482,16 @@ class TestDepartmentRouter:
         llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_route_complaint_overrides_llm_announcement_to_student_affairs(self):
+    async def test_route_complaint_uses_rule_fallback_when_llm_unavailable(self):
         llm_service = AsyncMock()
-        llm_service.generate = AsyncMock(
-            return_value=(
-                '{"departments":[],"confidence":0.82,'
-                '"primary_intent":"announcement",'
-                '"target_capability":"announcement",'
-                '"reasoning":"guess"}'
-            )
-        )
+        llm_service.generate = AsyncMock(side_effect=LLMServiceError("LLM unavailable"))
         router = DepartmentRouter(llm_service=llm_service)
 
         result = await router.route("Hocami sikayet etmek istiyorum nasil yapabilirim?")
 
         assert result.departments == [Department.STUDENT_AFFAIRS]
         assert result.strategy == RoutingStrategy.DIRECT
-        assert result.intent is not None
-        assert result.intent.target_capability == "none"
+        assert result.intent is None or result.intent.target_capability in (None, "none")
         llm_service.generate.assert_awaited_once()
 
     def test_registration_prompt_preserves_general_exam_calendar_intent(self):
@@ -491,6 +512,9 @@ class TestDepartmentRouter:
         assert "required_slots" in prompt
         assert "missing_slots" in prompt
         assert "student_type" in prompt
+        assert "yaz okulu ne zaman ve kimler katilabilir" in prompt
+        assert '"departments": ["student_affairs"]' in prompt
+        assert "matematik dersi yuzunden okulum uzuyor" in prompt
 
     @pytest.mark.asyncio
     async def test_route_freeze_and_fee_burden_query_to_student_affairs_and_finance(self):
@@ -566,15 +590,15 @@ class TestDepartmentRouter:
         assert result.intent.is_personal is False
 
     @pytest.mark.asyncio
-    async def test_route_registration_fee_timing_override_stays_student_affairs_and_finance(self):
+    async def test_route_registration_fee_timing_uses_llm_primary_departments(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
             return_value=(
-                '{"departments":["finance","academic_programs"],'
+                '{"departments":["student_affairs","finance"],'
                 '"confidence":0.82,'
                 '"query_type":"procedural",'
                 '"complexity":"process_chain",'
-                '"reasoning":"guess"}'
+                '"reasoning":"kayit ve odeme birlikte"}'
             )
         )
         router = DepartmentRouter(llm_service=llm_service)
@@ -582,7 +606,6 @@ class TestDepartmentRouter:
         result = await router.route("Kayit yenileme ucreti ne kadar ve ne zaman yapilir?")
 
         assert result.departments == [Department.STUDENT_AFFAIRS, Department.FINANCE]
-        assert Department.ACADEMIC_PROGRAMS not in result.departments
         assert result.strategy == RoutingStrategy.PARALLEL
         llm_service.generate.assert_awaited_once()
 
@@ -591,11 +614,11 @@ class TestDepartmentRouter:
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
             return_value=(
-                '{"departments":["finance","student_affairs"],'
+                '{"departments":["finance"],'
                 '"confidence":0.79,'
                 '"query_type":"procedural",'
                 '"complexity":"process_chain",'
-                '"reasoning":"guess"}'
+                '"reasoning":"burs finans alaninda"}'
             )
         )
         router = DepartmentRouter(llm_service=llm_service)
@@ -611,11 +634,11 @@ class TestDepartmentRouter:
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
             return_value=(
-                '{"departments":["finance"],'
+                '{"departments":["academic_programs","finance"],'
                 '"confidence":0.72,'
                 '"query_type":"procedural",'
                 '"complexity":"simple",'
-                '"reasoning":"guess"}'
+                '"reasoning":"erasmus hibe ve burs"}'
             )
         )
         router = DepartmentRouter(llm_service=llm_service)
@@ -628,10 +651,15 @@ class TestDepartmentRouter:
         llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_route_personal_finance_query_skips_llm_and_marks_personal(self):
+    async def test_route_personal_finance_query_uses_llm_and_marks_personal(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["finance"],"confidence":0.9,"reasoning":"guess"}'
+            return_value=(
+                '{"departments":["finance"],"confidence":0.9,'
+                '"is_personal":true,'
+                '"primary_intent":"tuition_balance",'
+                '"reasoning":"kisisel harc borcu"}'
+            )
         )
         router = DepartmentRouter(llm_service=llm_service)
 
@@ -641,12 +669,21 @@ class TestDepartmentRouter:
         assert result.task_type == TaskType.TUITION_QUERY
         assert result.intent is not None
         assert result.intent.is_personal is True
-        llm_service.generate.assert_not_awaited()
+        llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_route_graduation_payment_personal_query_to_student_affairs_and_finance(self):
         llm_service = AsyncMock()
-        llm_service.generate = AsyncMock()
+        llm_service.generate = AsyncMock(
+            return_value=(
+                '{"departments":["student_affairs","finance"],'
+                '"confidence":0.86,'
+                '"is_personal":true,'
+                '"force_llm_synthesis":true,'
+                '"query_type":"factual",'
+                '"reasoning":"kisisel mezuniyet borcu"}'
+            )
+        )
         router = DepartmentRouter(llm_service=llm_service)
 
         result = await router.route("Mezuniyet harc borcu kaldi mi?")
@@ -656,13 +693,13 @@ class TestDepartmentRouter:
         assert result.task_type == TaskType.TUITION_QUERY
         assert result.intent is not None
         assert result.intent.is_personal is True
-        llm_service.generate.assert_not_awaited()
+        llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_route_registration_process_query_stays_student_affairs_with_guardrail(self):
+    async def test_route_registration_process_query_uses_llm_student_affairs(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["academic_programs"],"confidence":0.71,"reasoning":"guess"}'
+            return_value='{"departments":["student_affairs"],"confidence":0.71,"reasoning":"kayit sureci"}'
         )
         router = DepartmentRouter(llm_service=llm_service)
 
@@ -673,10 +710,10 @@ class TestDepartmentRouter:
         llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_route_internship_procedure_stays_student_affairs_with_guardrail(self):
+    async def test_route_internship_procedure_uses_llm_student_affairs(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["academic_programs"],"confidence":0.82,"reasoning":"guess"}'
+            return_value='{"departments":["student_affairs"],"confidence":0.82,"reasoning":"staj sureci"}'
         )
         router = DepartmentRouter(llm_service=llm_service)
 
@@ -688,10 +725,10 @@ class TestDepartmentRouter:
         llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_route_course_code_query_uses_academic_context_guardrail(self):
+    async def test_route_course_code_query_uses_llm_academic_context(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["student_affairs"],"confidence":0.61,"reasoning":"guess"}'
+            return_value='{"departments":["academic_programs"],"confidence":0.81,"reasoning":"ders kodu"}'
         )
         router = DepartmentRouter(llm_service=llm_service)
 
@@ -702,10 +739,10 @@ class TestDepartmentRouter:
         llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_route_payment_query_stays_finance_with_guardrail(self):
+    async def test_route_payment_query_uses_llm_finance(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["academic_programs"],"confidence":0.61,"reasoning":"guess"}'
+            return_value='{"departments":["finance"],"confidence":0.81,"reasoning":"harc odeme"}'
         )
         router = DepartmentRouter(llm_service=llm_service)
 
@@ -756,7 +793,7 @@ class TestDepartmentRouter:
     async def test_route_exam_discipline_process_to_student_affairs(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["academic_programs","student_affairs"],"confidence":0.85,"reasoning":"sinav sureci"}'
+            return_value='{"departments":["student_affairs"],"confidence":0.85,"reasoning":"disiplin sureci"}'
         )
         router = DepartmentRouter(llm_service=llm_service)
 
@@ -768,7 +805,7 @@ class TestDepartmentRouter:
     async def test_route_exam_grade_objection_admin_flow_to_student_affairs(self):
         llm_service = AsyncMock()
         llm_service.generate = AsyncMock(
-            return_value='{"departments":["academic_programs"],"confidence":0.82,"reasoning":"guess"}'
+            return_value='{"departments":["student_affairs"],"confidence":0.82,"reasoning":"not itirazi idari surec"}'
         )
         router = DepartmentRouter(llm_service=llm_service)
 

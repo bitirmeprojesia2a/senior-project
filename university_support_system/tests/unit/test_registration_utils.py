@@ -1,6 +1,7 @@
 """Registration utility tests."""
 
 from src.agents.student.registration_utils import (
+    build_general_exam_calendar_answer,
     detect_registration_query_profile,
     filter_registration_answer_results,
     is_course_registration_process_query,
@@ -12,6 +13,43 @@ from src.agents.student.registration_utils import (
     should_force_registration_llm_synthesis,
     should_reject_registration_source_only_result,
 )
+from src.core.text_normalization import normalize_text
+
+
+def test_build_general_calendar_answer_handles_course_end_date_for_spring_term():
+    result = build_general_exam_calendar_answer(
+        "Bilgisayar muhendisligi icin bahar donemi derslerin bitimi ne zaman?"
+    )
+
+    assert result is not None
+    answer, metadata = result
+    normalized_answer = normalize_text(answer)
+    assert "bahar doneminde derslerin bitimi 22 mayis 2026" in normalized_answer
+    assert metadata["label"] == "Derslerin Bitimi"
+    assert normalize_text(metadata["spring"]) == "22 mayis 2026"
+
+
+def test_build_general_calendar_answer_handles_course_start_date_for_fall_term():
+    result = build_general_exam_calendar_answer("Guz donemi derslerin baslamasi ne zaman?")
+
+    assert result is not None
+    answer, metadata = result
+    normalized_answer = normalize_text(answer)
+    assert "guz doneminde derslerin baslamasi 22 eylul 2025" in normalized_answer
+    assert metadata["label"] == "Derslerin Baslamasi"
+    assert normalize_text(metadata["fall"]) == "22 eylul 2025"
+
+
+def test_build_general_calendar_answer_handles_course_end_confirmation():
+    result = build_general_exam_calendar_answer(
+        "Lisans programlarinda derslerin bitimi 22 Mayis 2026 mi?"
+    )
+
+    assert result is not None
+    answer, metadata = result
+    normalized_answer = normalize_text(answer)
+    assert "bahar donemi icin 22 mayis 2026" in normalized_answer
+    assert metadata["label"] == "Derslerin Bitimi"
 
 
 def test_pick_preferred_registration_result_prefers_expected_cap_topic_over_conflicting_staj():
@@ -455,6 +493,60 @@ def test_detect_registration_query_profile_for_new_admin_workflows():
         detect_registration_query_profile("sinavda kopya cekilirse disiplin sureci nasil isler")
         == "discipline"
     )
+    assert (
+        detect_registration_query_profile(
+            "Matematik dersi yuzunden okulum uzuyor nasil cozum bulabilirim?"
+        )
+        == "course_delay"
+    )
+
+
+def test_filter_registration_answer_results_prefers_faq_for_course_delay_advice():
+    results = [
+        {
+            "source": "yks_taban_puan_tablosu.pdf",
+            "content": "YKS taban puanlari ve kontenjanlar listelenir.",
+            "score": 0.91,
+            "metadata": {},
+        },
+        {
+            "source": "sik_sorulan_sorular.txt",
+            "content": (
+                "Eksik ders alarak donem uzatmamak icin her donem basinda "
+                "mufredat durum kontrolu yapilmalidir. Oncelikle basarisiz "
+                "oldugunuz ve hic almadigi alt donem dersleri alinmalidir."
+            ),
+            "score": 0.62,
+            "metadata": {},
+        },
+    ]
+
+    filtered = filter_registration_answer_results(
+        "Matematik dersi yuzunden okulum uzuyor nasil cozum bulabilirim?",
+        results,
+    )
+
+    assert [item["source"] for item in filtered] == ["sik_sorulan_sorular.txt"]
+
+
+def test_should_force_registration_llm_synthesis_for_focused_profiles():
+    sample_results = [
+        {
+            "source": "sik_sorulan_sorular.txt",
+            "content": "Yaz okulunda derslere devam zorunludur.",
+            "score": 0.7,
+            "metadata": {},
+        }
+    ]
+
+    assert should_force_registration_llm_synthesis(
+        "Yaz okulu uzerinden cozum var mi?",
+        sample_results,
+    ) is True
+    assert should_force_registration_llm_synthesis(
+        "Hic almadigim bir dersten tek derse girebilir miyim?",
+        sample_results,
+    ) is True
 
 
 def test_rank_registration_results_prefers_faq_for_grade_objection():

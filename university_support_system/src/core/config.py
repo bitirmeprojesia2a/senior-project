@@ -23,6 +23,7 @@ LLMRole = Literal[
     "global_synthesis",
     "judge",
 ]
+CapabilityPlannerMode = Literal["off", "shadow", "pilot", "on"]
 
 
 class PostgresSettings(BaseSettings):
@@ -150,6 +151,8 @@ class LLMRuntimeSettings(BaseSettings):
     global_synthesis_provider: Optional[LLMProvider] = None
     judge_provider: Optional[LLMProvider] = None
     main_judge_enabled: bool = True
+    specialist_synthesis_enabled: bool = False
+    specialist_judge_enabled: bool = False
     query_normalization_enabled: bool = True
     query_normalization_timeout_seconds: int = 6
     specialist_synthesis_timeout_seconds: int = 120
@@ -218,7 +221,7 @@ class RAGSettings(BaseSettings):
     llm_query_expansion_enabled: bool = False
     llm_query_expansion_timeout_seconds: int = 8
     llm_query_expansion_max_chars: int = 420
-    llm_evidence_selection_enabled: bool = True
+    llm_evidence_selection_enabled: bool = False
     llm_evidence_selection_timeout_seconds: int = 10
     llm_evidence_selection_min_candidates: int = 4
     llm_evidence_selection_max_candidates: int = 10
@@ -589,6 +592,42 @@ class AgentServiceSettings(BaseSettings):
     public_url: str = "http://localhost:8101"
 
 
+class CapabilityPlannerSettings(BaseSettings):
+    """Feature-flagged capability planner rollout settings."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="CAPABILITY_PLANNER_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    mode: CapabilityPlannerMode = "on"
+    scope: str = "academic_programs,student_affairs,finance,announcement,event"
+    timeout_seconds: float = Field(default=4.0, ge=0.5, le=30.0)
+    confidence_threshold: float = Field(default=0.45, ge=0.0, le=1.0)
+    pre_route_enabled: bool = False
+    pre_route_confidence_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    max_records_for_synthesis: int = Field(default=40, ge=1, le=200)
+    synthesize_with_llm: bool = True
+
+    @property
+    def enabled(self) -> bool:
+        return self.mode != "off"
+
+    @property
+    def should_apply(self) -> bool:
+        return self.mode in {"pilot", "on"}
+
+    @property
+    def scope_set(self) -> set[str]:
+        return {
+            item.strip().lower()
+            for item in self.scope.split(",")
+            if item.strip()
+        }
+
+
 class Settings(BaseSettings):
     """Uygulama ayarlarinin kok nesnesi."""
 
@@ -616,6 +655,9 @@ class Settings(BaseSettings):
     cache: CacheSettings = Field(default_factory=CacheSettings)
     a2a: A2ASettings = Field(default_factory=A2ASettings)
     agent: AgentServiceSettings = Field(default_factory=AgentServiceSettings)
+    capability_planner: CapabilityPlannerSettings = Field(
+        default_factory=CapabilityPlannerSettings
+    )
 
     base_dir: Path = Path(__file__).parent.parent.parent
     data_dir: Path = base_dir / "data"
@@ -782,6 +824,7 @@ class Settings(BaseSettings):
             "final_refinement_provider": _role_provider("final_refinement"),
             "specialist_synthesis": _role_model("specialist_synthesis"),
             "specialist_synthesis_provider": _role_provider("specialist_synthesis"),
+            "specialist_synthesis_enabled": str(self.llm.specialist_synthesis_enabled),
             "global_synthesis": _role_model("global_synthesis"),
             "global_synthesis_provider": _role_provider("global_synthesis"),
             "judge": _role_model("judge"),

@@ -274,12 +274,18 @@ def check_known_policy_contradictions(
     if "tek ders" in answer_normalized:
         says_no_attendance_required = (
             "dersi hic almamis" in answer_normalized
+            or "derse hic almamis" in answer_normalized
+            or "hic almamis olsaniz" in answer_normalized
+            or "hic almadiginiz" in answer_normalized
             or "devam sartini yerine getiremeyen" in answer_normalized
+            or "devam sartini yerine getiremediginiz" in answer_normalized
             or "devam sartini saglamayan" in answer_normalized
         )
         evidence_requires_attendance = (
             "devam sartini yerine getirdigi" in evidence_text
+            or "devam sartini yerine getirdiginiz" in evidence_text
             or "devam sartini sagladigi" in evidence_text
+            or "devam sartini sagladiginiz" in evidence_text
             or "devam sartini yerine getiren" in evidence_text
         )
         if says_no_attendance_required and evidence_requires_attendance:
@@ -291,6 +297,49 @@ def check_known_policy_contradictions(
                 }
             )
     return issues
+
+
+def _correct_single_exam_attendance_claim(answer: str) -> str:
+    """Replace unsafe tek-ders eligibility wording with the source-bound rule."""
+    safe_sentence = (
+        "Tek ders sınavı için kaynakta, müfredattaki tüm dersleri almış olmak "
+        "ve kalan tek ders için devam şartını daha önce sağlamış olmak koşulu "
+        "vurgulanır."
+    )
+    lines = answer.splitlines()
+    corrected_lines: list[str] = []
+    removed_unsafe_line = False
+    drop_following_allowance = False
+    for line in lines:
+        normalized = normalize_text(line)
+        unsafe_line = (
+            "hic alm" in normalized
+            or "devam sartini yerine getirem" in normalized
+            or "devam sartini saglamayan" in normalized
+            or "kayit yaptirmis olmaniz gerekmez" in normalized
+        )
+        if unsafe_line:
+            removed_unsafe_line = True
+            drop_following_allowance = True
+            continue
+        if drop_following_allowance and any(
+            marker in normalized for marker in ("girebilir", "basvurabilir")
+        ):
+            removed_unsafe_line = True
+            drop_following_allowance = False
+            continue
+        if normalized.strip() and not normalized.lstrip().startswith("•"):
+            drop_following_allowance = False
+        corrected_lines.append(line)
+
+    if not removed_unsafe_line:
+        return answer
+    remaining = "\n".join(line for line in corrected_lines if line.strip()).strip()
+    if not remaining:
+        return safe_sentence
+    if safe_sentence in remaining:
+        return remaining
+    return f"{safe_sentence}\n\n{remaining}"
 
 
 # ---------------------------------------------------------------------------
@@ -380,6 +429,8 @@ def guard_answer(
     # 4. Known policy contradictions: remove the contradicted phrase, keep a cautious source-bound sentence.
     for issue in policy_issues:
         if "tek ders" in normalize_text(issue["claim"]):
+            before_policy_cleanup = cleaned
+            cleaned = _correct_single_exam_attendance_claim(cleaned)
             cleaned = re.sub(
                 r"(?i)Bu sınavlara,?\s*dersi hiç almamış olan veya devam şartını yerine getiremeyen öğrenciler girebilir\.\s*",
                 (
@@ -392,7 +443,8 @@ def guard_answer(
                 "devam şartını daha önce sağlamış öğrenciler başvurabilir",
                 cleaned,
             )
-            modifications += 1
+            if cleaned != before_policy_cleanup:
+                modifications += 1
 
     # 5. Numeric issues: otherwise ONLY logged, not modified.
 

@@ -106,13 +106,26 @@ def _normalize_text(value: str | None) -> str:
 
 
 def _title_tokens(value: str | None) -> set[str]:
-    normalized = _normalize_text(value)
+    normalized = _normalize_text(value).replace("-", " ")
     return {
         token.strip(" \t\r\n?.!,;:()[]{}\"'")
         for token in normalized.split()
         if len(token.strip(" \t\r\n?.!,;:()[]{}\"'")) >= 3
         and token.strip(" \t\r\n?.!,;:()[]{}\"'") not in _COURSE_TITLE_STOPWORDS
     }
+
+
+def _query_title_tokens(query_text: str, department: str | None = None) -> set[str]:
+    query_tokens = _title_tokens(query_text)
+    if not query_tokens or not department:
+        return query_tokens
+
+    department_tokens = _title_tokens(department)
+    if not department_tokens:
+        return query_tokens
+
+    title_only_tokens = query_tokens - department_tokens
+    return title_only_tokens or query_tokens
 
 
 def _should_include_course_for_department(
@@ -313,12 +326,11 @@ async def fetch_courses_by_title(
     limit: int = 5,
 ) -> list[dict[str, Any]]:
     """Find catalog courses whose title is explicitly mentioned in a query."""
-    query_tokens = _title_tokens(query_text)
-    if not query_tokens:
-        return []
-
     async with get_session() as session:
         normalized_department = _normalize_text(department)
+        query_tokens = _query_title_tokens(query_text, normalized_department)
+        if not query_tokens:
+            return []
         try:
             courses = (await session.execute(select(Course))).scalars().all()
             payload = [_course_to_dict(course) for course in courses]

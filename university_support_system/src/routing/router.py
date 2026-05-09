@@ -55,7 +55,6 @@ from src.routing.routing_policy import (
     looks_like_personal_credit_progress_query,
     looks_like_vague_application_timing_query,
     normalize_routing_text,
-    should_skip_llm_for_academic_context_query as should_skip_llm_for_academic_context_query_by_policy,
 )
 from src.routing.query_concepts import (
     CAPABILITY_ANNOUNCEMENT,
@@ -141,8 +140,8 @@ class DepartmentRouter:
         """Route a query, optionally using prior conversation hints.
 
         LLM routing is primary; rule-based routing is computed for fallback
-        and used only when the LLM call fails or times out. Personal data
-        queries remain deterministic (no LLM needed).
+        and used only when the LLM call fails, times out, or returns an unusable
+        low-confidence decision.
         """
         # Rule-based decision always computed — used as LLM fallback
         rule_decision = self._apply_routing_overrides(
@@ -156,15 +155,8 @@ class DepartmentRouter:
             preferred_departments=preferred_departments or [],
         )
 
-        # Personal data queries are deterministic — skip LLM entirely
-        if self._should_skip_llm_for_personal_query(query, rule_decision):
-            personal_decision = self._boost_rule_decision_for_personal(rule_decision)
-            return self._to_result(
-                query,
-                personal_decision,
-                task_type=preferred_task_type or self._detect_task_type(query, personal_decision.departments),
-            )
-
+        # Only low-information chatter skips LLM; semantic queries fall through
+        # to the LLM-first path even when the rule fallback has a strong guess.
         if self._should_skip_llm_when_no_department_signal(query, rule_decision):
             return self._to_result(
                 query,
@@ -172,18 +164,24 @@ class DepartmentRouter:
                 task_type=preferred_task_type or self._detect_task_type(query, rule_decision.departments),
             )
 
-        # LLM routing is primary — always call unless personal query
+        # LLM routing is primary.
         try:
-            llm_decision = self._apply_routing_overrides(
+            llm_decision = await self._analyze_intent_with_llm(
                 query,
-                await self._analyze_intent_with_llm(query, fallback=rule_decision, llm_profile=llm_profile),
-                llm_primary=True,
+                fallback=rule_decision,
+                llm_profile=llm_profile,
             )
             llm_decision = self._apply_conversation_hints(
                 query=query,
                 decision=llm_decision,
                 preferred_departments=preferred_departments or [],
             )
+            if self._should_fallback_from_llm_decision(llm_decision, rule_decision):
+                return self._to_result(
+                    query,
+                    rule_decision,
+                    task_type=preferred_task_type or self._detect_task_type(query, rule_decision.departments),
+                )
             return self._to_result(
                 query,
                 llm_decision,
@@ -196,6 +194,25 @@ class DepartmentRouter:
                 rule_decision,
                 task_type=preferred_task_type or self._detect_task_type(query, rule_decision.departments),
             )
+
+    def _should_fallback_from_llm_decision(
+        self,
+        llm_decision: _RuleRoutingDecision,
+        rule_decision: _RuleRoutingDecision,
+    ) -> bool:
+        if llm_decision.intent is not None and llm_decision.intent.missing_slots:
+            return False
+        if (
+            llm_decision.intent is not None
+            and llm_decision.intent.target_capability in {"announcement", "event"}
+        ):
+            return (
+                bool(rule_decision.departments)
+                and llm_decision.confidence < self.low_confidence_threshold
+            )
+        if llm_decision.departments:
+            return llm_decision.confidence < self.low_confidence_threshold
+        return bool(rule_decision.departments)
 
     @staticmethod
     def _is_complex_query(query: str) -> bool:
@@ -257,8 +274,6 @@ class DepartmentRouter:
         """Skip LLM only for low-information chatter, not semantic no-keyword queries."""
         if decision.strategy != RoutingStrategy.CLARIFICATION or decision.departments:
             return False
-        if decision.authoritative:
-            return True
         normalized = normalize_routing_text(query).strip(" \t\r\n?.!,;:")
         tokens = normalized.split()
         if len(tokens) <= 1:
@@ -274,24 +289,6 @@ class DepartmentRouter:
         if len(tokens) <= 5 and any(marker in normalized for marker in low_information_markers):
             return True
         return False
-
-    def _should_skip_llm_for_personal_query(
-        self,
-        query: str,
-        decision: _RuleRoutingDecision,
-    ) -> bool:
-        if decision.strategy == RoutingStrategy.CLARIFICATION and not decision.departments:
-            return False
-        if not decision.departments:
-            return False
-        return self._looks_like_personal_data_query(query)
-
-    @staticmethod
-    def _should_skip_llm_for_academic_context_query(
-        query: str,
-        decision: _RuleRoutingDecision,
-    ) -> bool:
-        return should_skip_llm_for_academic_context_query_by_policy(query, decision.departments)
 
     def _apply_routing_overrides(
         self,
@@ -894,28 +891,6 @@ class DepartmentRouter:
                 )
 
         return decision
-
-    def _boost_rule_decision_for_personal(self, decision: _RuleRoutingDecision) -> _RuleRoutingDecision:
-        confidence = max(decision.confidence, 0.78)
-        intent = decision.intent or IntentAnalysis(
-            complexity="simple",
-            is_personal=True,
-            force_llm_synthesis=False,
-            query_type="factual",
-            reasoning="Kisisel veri sinyali kural tabanli olarak belirlendi.",
-        )
-        return _RuleRoutingDecision(
-            departments=list(decision.departments),
-            confidence=confidence,
-            confidence_level=self._confidence_level(confidence),
-            strategy=decision.strategy,
-            reasoning=(
-                "Kisisel veri sinyali; kural tabanli yonlendirme kullanildi "
-                "(LLM yonlendirmesi atlandi)."
-            ),
-            intent=intent.model_copy(update={"is_personal": True}),
-            authoritative=True,
-        )
 
     def _apply_conversation_hints(
         self,

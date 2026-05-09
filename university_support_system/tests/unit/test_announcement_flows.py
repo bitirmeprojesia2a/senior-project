@@ -12,7 +12,7 @@ from src.agents.announcement.agent import AnnouncementAgent
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.db.announcements import AnnouncementLinkRecord, AnnouncementRecord
 from src.db.conversation_context import ConversationResolution
-from src.db.schemas import DepartmentResponse, RoutingResult
+from src.db.schemas import DepartmentResponse, IntentAnalysis, RoutingResult
 from src.orchestrators.main import MainOrchestrator
 
 
@@ -40,6 +40,28 @@ def _build_announcement_record(
     )
 
 
+def _announcement_routing_result(reasoning: str = "Routing LLM duyuru capability'sini secti.") -> RoutingResult:
+    return RoutingResult(
+        departments=[],
+        confidence=0.92,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.CLARIFICATION,
+        reasoning=reasoning,
+        task_type=TaskType.PROCEDURE_QUERY,
+        intent=IntentAnalysis(
+            complexity="simple",
+            is_personal=False,
+            force_llm_synthesis=False,
+            query_type="factual",
+            reasoning=reasoning,
+            primary_intent="announcement",
+            target_capability="announcement",
+            required_slots=[],
+            missing_slots=[],
+        ),
+    )
+
+
 class _StaticDepartmentOrchestrator:
     def __init__(self, department: Department, answer: str):
         response = DepartmentResponse(
@@ -63,16 +85,7 @@ class _StaticDepartmentOrchestrator:
 @pytest.mark.asyncio
 async def test_main_orchestrator_returns_direct_announcement_response_with_attachment_links():
     router = AsyncMock()
-    router.route = AsyncMock(
-        return_value=RoutingResult(
-            departments=[],
-            confidence=0.92,
-            confidence_level=ConfidenceLevel.HIGH,
-            strategy=RoutingStrategy.CLARIFICATION,
-            reasoning="Duyuru sorgusu",
-            task_type=TaskType.PROCEDURE_QUERY,
-        )
-    )
+    router.route = AsyncMock(return_value=_announcement_routing_result("Duyuru sorgusu"))
     fetcher = AsyncMock(
         return_value=[
             _build_announcement_record(
@@ -112,7 +125,7 @@ async def test_main_orchestrator_returns_direct_announcement_response_with_attac
     assert response.generation_modes == ["vt"]
     assert "Ara Sinav Programi Duyurusu" in response.answer
     assert "Detay: https://omu.edu.tr/duyuru/ara-sinav" in response.answer
-    assert "Ek baglanti: Program PDF - https://omu.edu.tr/dosyalar/ara-sinav-programi.pdf" in response.answer
+    assert response.sources[0].metadata["links"][0]["url"] == "https://omu.edu.tr/dosyalar/ara-sinav-programi.pdf"
     fetcher.assert_awaited_once_with(
         "Güncel duyurular nelerdir?",
         department=None,
@@ -121,23 +134,14 @@ async def test_main_orchestrator_returns_direct_announcement_response_with_attac
         limit=8,
         allow_latest_fallback=True,
     )
-    router.route.assert_not_awaited()
+    router.route.assert_awaited_once()
     telemetry.create_query_log.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_main_orchestrator_records_follow_up_state_for_announcement_only_queries():
     router = AsyncMock()
-    router.route = AsyncMock(
-        return_value=RoutingResult(
-            departments=[],
-            confidence=0.88,
-            confidence_level=ConfidenceLevel.HIGH,
-            strategy=RoutingStrategy.CLARIFICATION,
-            reasoning="Duyuru follow-up sorgusu",
-            task_type=TaskType.PROCEDURE_QUERY,
-        )
-    )
+    router.route = AsyncMock(return_value=_announcement_routing_result("Duyuru follow-up sorgusu"))
     fetcher = AsyncMock(
         return_value=[
             _build_announcement_record(
@@ -200,7 +204,7 @@ async def test_main_orchestrator_records_follow_up_state_for_announcement_only_q
 @pytest.mark.asyncio
 async def test_main_orchestrator_derives_announcement_topic_from_source_metadata():
     router = AsyncMock()
-    router.route = AsyncMock()
+    router.route = AsyncMock(return_value=_announcement_routing_result())
     fetcher = AsyncMock(
         return_value=[
             _build_announcement_record(
@@ -251,7 +255,7 @@ async def test_main_orchestrator_derives_announcement_topic_from_source_metadata
 @pytest.mark.asyncio
 async def test_main_orchestrator_uses_announcement_context_for_markerless_follow_up():
     router = AsyncMock()
-    router.route = AsyncMock()
+    router.route = AsyncMock(return_value=_announcement_routing_result())
     fetcher = AsyncMock(
         return_value=[
             _build_announcement_record(
@@ -314,21 +318,14 @@ async def test_main_orchestrator_uses_announcement_context_for_markerless_follow
         limit=8,
         allow_latest_fallback=False,
     )
-    router.route.assert_not_awaited()
+    router.route.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_main_orchestrator_appends_related_announcement_links_to_specialist_answer():
     router = AsyncMock()
     router.route = AsyncMock(
-        return_value=RoutingResult(
-            departments=[Department.ACADEMIC_PROGRAMS],
-            confidence=0.9,
-            confidence_level=ConfidenceLevel.HIGH,
-            strategy=RoutingStrategy.DIRECT,
-            reasoning="Akademik duyuru destekli sorgu",
-            task_type=TaskType.PROCEDURE_QUERY,
-        )
+        return_value=_announcement_routing_result("Akademik duyuru destekli sorgu")
     )
     academic_orchestrator = _StaticDepartmentOrchestrator(
         Department.ACADEMIC_PROGRAMS,
@@ -372,8 +369,8 @@ async def test_main_orchestrator_appends_related_announcement_links_to_specialis
         context_id="ctx-ann-flow-3",
     )
 
-    assert "Ilgili duyurular" in response.answer
+    assert "Bilgisayar Muhendisligi Ara Sinav Programi" in response.answer
     assert "Program PDF" in response.answer
     assert response.departments_involved == ["announcement"]
     assert any(source.metadata.get("record_type") == "announcement" for source in response.sources)
-    router.route.assert_not_awaited()
+    router.route.assert_awaited_once()

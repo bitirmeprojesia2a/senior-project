@@ -179,6 +179,26 @@ _VERY_LONG_SOURCE_CONTENT = (
 class TestLLMFirstSynthesisMechanism:
     """RAG skoru yeterliyse son cevap LLM tarafindan sentezlenmeli."""
 
+    @pytest.fixture(autouse=True)
+    def _enable_legacy_specialist_synthesis(self, monkeypatch):
+        monkeypatch.setattr(base_module.settings.llm, "specialist_synthesis_enabled", True)
+
+    @pytest.mark.asyncio
+    async def test_specialist_synthesis_disabled_by_default_returns_source_only(self, monkeypatch):
+        monkeypatch.setattr(base_module.settings.llm, "specialist_synthesis_enabled", False)
+        kwargs = _agent_kwargs()
+        kwargs["retriever_factory"] = _mock_retriever_factory(
+            content=_HIGH_SCORE_LONG_CONTENT, score=0.85,
+        )
+        llm = kwargs["llm_service"]
+
+        agent = StudentLifeAgent(**kwargs)
+        response = await agent.handle_task(_task("Kayit nasil yapilir?"))
+
+        assert response.success is True
+        assert "Kayit sureci hakkinda detayli bilgi" in response.answer
+        llm.generate.assert_not_awaited()
+
     @pytest.mark.asyncio
     async def test_remote_retrieval_local_fallback_is_shared(self, monkeypatch):
         class _FailingRemoteRetriever:
@@ -788,7 +808,8 @@ class TestRegistrationAgent:
         llm.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_registration_process_after_payment_skips_period_lookup_and_uses_llm_when_forced(self):
+    async def test_registration_process_after_payment_skips_period_lookup_and_uses_llm_when_forced(self, monkeypatch):
+        monkeypatch.setattr(base_module.settings.llm, "specialist_synthesis_enabled", True)
         fetcher = AsyncMock(return_value=None)
         kwargs = _agent_kwargs()
         llm = kwargs["llm_service"]
@@ -977,6 +998,43 @@ class TestStudentLifeAgent:
 
         assert response.success is True
         assert response.department == Department.STUDENT_AFFAIRS
+
+    def test_student_community_query_prefers_community_sources(self):
+        agent = StudentLifeAgent(**_agent_kwargs())
+        results = [
+            {
+                "source": "guvenlik_hizmetlerinin_yurutulmesine_dair_yonerge.pdf",
+                "content": "Guvenlik hizmetleri ve kapatilacak bulgular hakkinda idari bilgi.",
+                "score": 0.91,
+                "metadata": {"file_name": "guvenlik_hizmetlerinin_yurutulmesine_dair_yonerge.pdf"},
+            },
+            {
+                "source": "ogrenci_topluluklari_yonergesi.pdf",
+                "content": (
+                    "Ogrenci topluluklari Etkinlik Kurulu karari ile kapatilabilir. "
+                    "Mesleki topluluk ve sosyal topluluk yeter sayilari dikkate alinir."
+                ),
+                "score": 0.42,
+                "metadata": {"file_name": "ogrenci_topluluklari_yonergesi.pdf"},
+            },
+        ]
+
+        filtered = agent._filter_results_for_answer(
+            "Toplulugun kapatilmasi hangi durumda olur?",
+            results,
+        )
+
+        assert filtered == [results[1]]
+
+    def test_student_community_query_requests_wider_retrieval(self):
+        agent = StudentLifeAgent(**_agent_kwargs())
+
+        top_k = agent._search_top_k(
+            "Toplulugun kapatilmasi hangi durumda olur?",
+            {},
+        )
+
+        assert top_k == 12
 
     @pytest.mark.asyncio
     async def test_lost_identity_card_variants_use_llm_synthesis_with_policy_sources(self):
@@ -1312,6 +1370,32 @@ class TestCurriculumAgent:
         assert "BIL203" in response.answer
         assert "5 AKTS" in response.answer
         title_fetcher.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_course_code_lookup_answers_akts_question(self):
+        course_data = {
+            "course_code": "BIL203",
+            "course_name": "Veri Yapilari",
+            "credits": 3,
+            "akts": 5,
+            "prerequisites": [],
+            "prerequisite_groups": {},
+            "redirected_from": None,
+        }
+        prerequisite_fetcher = AsyncMock(return_value=course_data)
+        agent = CurriculumAgent(
+            prerequisite_fetcher=prerequisite_fetcher,
+            period_fetcher=AsyncMock(return_value=None),
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(_task("BIL203 dersi kac AKTS?"))
+
+        assert response.success is True
+        assert response.generation_mode == "vt"
+        assert "BIL203" in response.answer
+        assert "5 AKTS" in response.answer
+        prerequisite_fetcher.assert_awaited_once_with("BIL203")
 
     @pytest.mark.asyncio
     async def test_prerequisite_query_resolves_course_title_before_rag(self):
