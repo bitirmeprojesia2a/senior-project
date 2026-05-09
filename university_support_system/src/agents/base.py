@@ -22,6 +22,7 @@ from src.core.config import settings
 from src.core.contact_intent import looks_like_contact_intent
 from src.core.profiling import profile_stage
 from src.core.text_normalization import normalize_text
+from src.rag.multi_query_expander import expand_query as _expand_multi_queries
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.quality.evidence import (
     build_evidence_context_chunks,
@@ -242,11 +243,12 @@ class BaseSpecialistAgent:
             intent_force_llm = bool(meta.get("force_llm_synthesis", False))
             plan_context = self._build_plan_context_from_metadata(meta)
             retrieval_query = str(meta.get("retrieval_query") or "").strip() or query_text
+            search_top_k = self._search_top_k(retrieval_query, meta)
             with profile_stage("agent.retriever.search", agent_id=self.agent_id, department=self.department.value):
                 try:
                     results = retriever.search(
                         retrieval_query,
-                        top_k=self._search_top_k(retrieval_query, meta),
+                        top_k=search_top_k,
                         department=self.department,
                         source_hints=source_hints,
                         topic_hint=topic_hint,
@@ -263,12 +265,24 @@ class BaseSpecialistAgent:
                     retriever = self._build_shared_local_fallback_retriever()
                     results = retriever.search(
                         retrieval_query,
-                        top_k=self._search_top_k(retrieval_query, meta),
+                        top_k=search_top_k,
                         department=self.department,
                         source_hints=source_hints,
                         topic_hint=topic_hint,
                         student_department=student_department,
                     )
+            # ── Multi-Query Expansion: search variant queries and merge ──
+            with profile_stage("agent.multi_query_expansion", agent_id=self.agent_id):
+                results = self._apply_multi_query_expansion(
+                    retrieval_query,
+                    results,
+                    retriever=retriever,
+                    top_k=search_top_k,
+                    department=self.department,
+                    source_hints=source_hints,
+                    topic_hint=topic_hint,
+                    student_department=student_department,
+                )
             enrich_results = getattr(type(retriever), "enrich_results", None)
             if callable(enrich_results) and self._should_enrich_results(query_text, results):
                 with profile_stage("agent.retriever.enrich_results", agent_id=self.agent_id, department=self.department.value):
@@ -803,6 +817,79 @@ class BaseSpecialistAgent:
                     r["score"] = max(0.0, float(r.get("score", 0.0)) + penalty)
             break
         return results
+
+    def _apply_multi_query_expansion(
+        self,
+        query: str,
+        results: list[dict],
+        *,
+        retriever: HybridRetriever,
+        top_k: int | None,
+        department: Department | str | None,
+        source_hints: list[str] | None = None,
+        topic_hint: str | None = None,
+        student_department: str | None = None,
+    ) -> list[dict]:
+        """Search variant queries from MQE and merge into primary results.
+
+        Each variant query is searched independently. Results are merged
+        with deduplication (by content prefix) and re-sorted by score.
+        The primary query results always take priority.
+        """
+        expanded = _expand_multi_queries(query)
+        if not expanded.variants:
+            return results
+
+        seen_prefixes: set[str] = set()
+        for item in results:
+            prefix = normalize_text(str(item.get("content") or ""))[:120]
+            seen_prefixes.add(prefix)
+
+        merged_new: list[dict] = []
+        for variant in expanded.variants:
+            try:
+                variant_results = retriever.search(
+                    variant,
+                    top_k=max(3, (top_k or 5) // 2),
+                    department=department,
+                    source_hints=source_hints,
+                    topic_hint=topic_hint,
+                    student_department=student_department,
+                )
+            except Exception:
+                logger.debug(
+                    "multi_query_variant_search_failed variant=%s",
+                    variant,
+                    exc_info=True,
+                )
+                continue
+
+            for item in variant_results:
+                prefix = normalize_text(str(item.get("content") or ""))[:120]
+                if prefix in seen_prefixes:
+                    continue
+                seen_prefixes.add(prefix)
+                # Mark the item as coming from MQE for diagnostics
+                item_meta = dict(item.get("metadata") or {})
+                item_meta["mqe_variant"] = variant
+                item["metadata"] = item_meta
+                merged_new.append(item)
+
+        if not merged_new:
+            return results
+
+        combined = list(results) + merged_new
+        combined.sort(key=lambda item: float(item.get("score", 0.0)), reverse=True)
+        # Cap to reasonable size
+        max_results = max(len(results), (top_k or 5) + 4)
+        logger.info(
+            "multi_query_merge primary=%d added=%d total=%d profile=%s",
+            len(results),
+            len(merged_new),
+            len(combined[:max_results]),
+            expanded.profile,
+        )
+        return combined[:max_results]
 
     async def _generate_answer(
         self,

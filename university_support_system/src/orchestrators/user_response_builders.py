@@ -136,6 +136,8 @@ def build_final_user_response(
     response_time_ms: float,
     student_full_name: str | None,
     used_global_synthesis: bool = False,
+    routing_strategy: str | None = None,
+    agents_involved: list[str] | None = None,
 ) -> UserQueryResponse:
     surface_responses = list(department_responses or responses)
     if department_responses:
@@ -151,6 +153,8 @@ def build_final_user_response(
             cleaned_answer,
             responses,
             used_global_synthesis=used_global_synthesis,
+            routing_strategy=routing_strategy,
+            agents_involved=agents_involved,
         )
         cleaned_answer = append_source_summary(cleaned_answer, responses)
     personalized_answer = personalize_answer(cleaned_answer, student_full_name)
@@ -169,6 +173,8 @@ def build_final_user_response(
         sources=sources,
         response_time_ms=response_time_ms,
         query_id=context_id,
+        agents_involved=agents_involved or [],
+        routing_strategy=routing_strategy,
         diagnostics=_build_query_diagnostics(responses=diagnostic_responses),
     )
 

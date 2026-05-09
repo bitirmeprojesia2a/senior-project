@@ -400,6 +400,10 @@ _COURSE_DELAY_QUERY_MARKERS: tuple[str, ...] = (
     "hic almadigim",
     "alt donem ders",
     "eksik ders",
+    "mezun olamiyorum",
+    "uzatma",
+    "nasil cozebilirim",
+    "ne yapabilirim",
 )
 
 _COURSE_DELAY_CONTENT_MARKERS: tuple[str, ...] = (
@@ -411,6 +415,17 @@ _COURSE_DELAY_CONTENT_MARKERS: tuple[str, ...] = (
     "tum dersleri almak ve basarmak zorundadir",
     "basarisiz oldugunuz ders/dersler",
     "devam kosulu yerine getirilmis",
+    # Solution-oriented markers
+    "tek ders sinavi",
+    "yaz okulu",
+    "butunleme sinavi",
+    "butunleme hakki",
+    "ek sinav",
+    "azami ogrenim suresi",
+    "azami sure",
+    "ek sure",
+    "donem uzatma",
+    "mezuniyet sinavi",
 )
 
 _COURSE_DELAY_NEGATIVE_SOURCE_MARKERS: tuple[str, ...] = (
@@ -421,6 +436,11 @@ _COURSE_DELAY_NEGATIVE_SOURCE_MARKERS: tuple[str, ...] = (
     "uzaktan egitim",
     "pedagojik formasyon",
     "uluslararasi ogrenci",
+    # Prerequisite content is not a solution source
+    "on_kosul",
+    "prerequisite",
+    "on kosullu ders",
+    "on kosul",
 )
 
 @dataclass(frozen=True)
@@ -638,6 +658,8 @@ _COURSE_START_CALENDAR_MARKERS: tuple[str, ...] = (
     "dersler ne zaman baslar",
     "ders baslangic",
     "derslerin baslangic",
+    "donem baslangic",
+    "yariyil baslangic",
 )
 _COURSE_END_CALENDAR_MARKERS: tuple[str, ...] = (
     "derslerin bitimi",
@@ -645,9 +667,13 @@ _COURSE_END_CALENDAR_MARKERS: tuple[str, ...] = (
     "ders bitis",
     "ders bitis tarihi",
     "son ders tarihi",
+    "son ders gunu",
     "derslerin sonu",
     "dersler ne zaman bitiyor",
     "dersler ne zaman biter",
+    "ders sonu",
+    "donem sonu",
+    "yariyil sonu",
 )
 
 
@@ -723,7 +749,16 @@ def build_general_exam_calendar_answer(query_text: str) -> tuple[str, dict] | No
     if not wants_date:
         return None
 
-    if "program" in lowered:
+    # "program" icerse bile takvim sinyali guclu ise devam et
+    # (ornegin: "bilgisayar muhendisligi bahar doneminde final sinav tarihi")
+    if "program" in lowered and not any(
+        marker in lowered
+        for marker in (
+            "final sinav", "yariyil sonu sinav", "donem sonu sinav",
+            "butunleme sinav", "ara sinav", "akademik takvim",
+            "sinav takvim", "sinav tarih",
+        )
+    ):
         return None
 
     if "final sinav" in lowered or "yariyil sonu sinav" in lowered or "donem sonu sinav" in lowered:

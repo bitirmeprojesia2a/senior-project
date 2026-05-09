@@ -753,6 +753,8 @@ def append_generation_summary(
     responses: list[DepartmentResponse],
     *,
     used_global_synthesis: bool = False,
+    routing_strategy: str | None = None,
+    agents_involved: list[str] | None = None,
 ) -> str:
     """Cevabin sonuna hangi veri yollarinin kullanildigini ekler."""
     if not answer.strip() or "Uretim Turu:" in answer or "Üretim Türü:" in answer:
@@ -766,6 +768,14 @@ def append_generation_summary(
     )
     if not lines:
         return answer
+        
+    # Append agent pipeline tracking
+    if routing_strategy:
+        lines.append(f"- Routing: {routing_strategy}")
+    if agents_involved:
+        agents_str = " -> ".join(agents_involved)
+        lines.append(f"- Pipeline: {agents_str}")
+
     return f"{answer.rstrip()}\n\nÜretim Türü:\n{chr(10).join(lines)}"
 
 

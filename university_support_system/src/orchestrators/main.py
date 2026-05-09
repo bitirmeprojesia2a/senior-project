@@ -1086,6 +1086,15 @@ class MainOrchestrator:
                     )
 
                 memory_answer = build_memory_answer(answer=answer)
+                
+                agents_involved = []
+                for r in filtered_responses:
+                    agent_name = r.metadata.get("agent_id") or r.department.value
+                    if agent_name not in agents_involved:
+                        agents_involved.append(agent_name)
+                if used_global_synthesis and "orchestrator" not in agents_involved:
+                    agents_involved.append("orchestrator")
+
                 final_response = self._build_user_query_response(
                     answer=answer,
                     responses=filtered_responses,
@@ -1094,6 +1103,8 @@ class MainOrchestrator:
                     start_time=start_time,
                     student_full_name=student_full_name,
                     used_global_synthesis=used_global_synthesis,
+                    routing_strategy=routing.strategy.value if routing else None,
+                    agents_involved=agents_involved,
                 )
                 with profile_stage("main.telemetry.finalize_success"):
                     await self.telemetry_service.finalize_query_log(
@@ -2066,6 +2077,8 @@ class MainOrchestrator:
         start_time: float,
         student_full_name: str | None,
         used_global_synthesis: bool = False,
+        routing_strategy: str | None = None,
+        agents_involved: list[str] | None = None,
     ) -> UserQueryResponse:
         """Build the final user-facing response payload."""
         response_time_ms = round((perf_counter() - start_time) * 1000, 2)
@@ -2077,6 +2090,8 @@ class MainOrchestrator:
             response_time_ms=response_time_ms,
             student_full_name=student_full_name,
             used_global_synthesis=used_global_synthesis,
+            routing_strategy=routing_strategy,
+            agents_involved=agents_involved,
         )
 
     def _schedule_query_log_finalization(

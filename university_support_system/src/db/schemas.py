@@ -135,6 +135,14 @@ class UserQueryResponse(BaseModel):
     sources: list[RAGSource] = Field(default_factory=list)
     response_time_ms: float
     query_id: str
+    agents_involved: list[str] = Field(
+        default_factory=list,
+        description="Calisan ajanlarin kimlikleri (sirali)",
+    )
+    routing_strategy: Optional[str] = Field(
+        None,
+        description="Yonlendirme stratejisi: PARALLEL, DIRECT, vb.",
+    )
     diagnostics: QueryDiagnostics | None = None
 
 
