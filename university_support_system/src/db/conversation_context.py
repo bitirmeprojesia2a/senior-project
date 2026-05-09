@@ -7,7 +7,7 @@ import json
 import logging
 import re
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Callable, Sequence
 
@@ -136,6 +136,9 @@ _TURBO_WORDS = {
     "evet", "hayir", "tamam", "tesekkurler", "ok", "sagol",
     "baska", "anladim", "tamamdir", "sagolun", "tesekkur",
     "iyi", "guzel", "oldu", "peki",
+    "sagolasin", "sagolasiniz", "eyvallah", "rica",
+    "ricaderim", "ederim", "tesekkurler", "tesekkurederim",
+    "sagolun", "sagolasin", "tesekur", "tşk",
 }
 _CONFUSION_OR_RESET_MARKERS = (
     "isler karisti",
@@ -238,6 +241,22 @@ _EXACT_FOLLOW_UP_ANSWER_MARKERS = {
     "onlisans",
     "doktora",
 }
+_DOMESTIC_STATE_MARKERS = ("turk ogrenci", "yerli ogrenci", "turk ogrenciyim", "yerli ogrenciyim")
+_INTERNATIONAL_STATE_MARKERS = ("uluslararasi ogrenci", "yabanci ogrenci", "uluslararasi ogrenciyim", "yabanci ogrenciyim")
+
+
+def _infer_student_type_from_state(state: ConversationStateData) -> str | None:
+    """Infer student type from conversation state (previous user/assistant turns)."""
+    combined = normalize_text(
+        f"{state.last_user_query or ''} {state.last_assistant_answer or ''}"
+    )
+    if any(marker in combined for marker in _INTERNATIONAL_STATE_MARKERS):
+        return "international"
+    if any(marker in combined for marker in _DOMESTIC_STATE_MARKERS):
+        return "domestic"
+    return None
+
+
 _PROGRAM_SLOT_QUESTION_MARKERS = (
     "bolum veya program",
     "fakulte bolum veya program",
@@ -1390,6 +1409,7 @@ class ConversationResolution:
     department_hints: list[Department]
     source_hints: list[str]
     task_type_hint: TaskType | None = None
+    student_type_hint: str | None = None
     clarification_message: str | None = None
     announcement_context: bool = False
     rewrite_method: str = "none"  # none | heuristic | llm | answer_fragment
@@ -1699,6 +1719,7 @@ class ConversationContextService:
                 if _query_requests_primary_topic_only(query, state)
                 else self._parse_task_type(state.last_task_type)
             ),
+            student_type_hint=_infer_student_type_from_state(state),
             announcement_context=self._has_announcement_department_hint(state.last_departments),
             rewrite_method=rewrite_method,
             standalone_query=effective_query if effective_query != query else None,

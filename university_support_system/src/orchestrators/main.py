@@ -64,6 +64,7 @@ from src.orchestrators.query_normalization import (
 from src.orchestrators.response_utils import compose_department_answers
 from src.orchestrators.response_utils import filter_low_confidence_responses
 from src.orchestrators.synthesis_utils import (
+    _clean_source_name,
     build_evidence_packet_fallback_answer,
     build_global_synthesis_prompt,
     responses_need_contact_suggestion,
@@ -278,6 +279,10 @@ class MainOrchestrator:
 
                 effective_query = conversation_resolution.effective_query
                 query_normalization = unchanged_query(effective_query)
+
+                # Follow-up'ta student_type belli değilse, konuşma bağlamından çıkar
+                if student_type is None and conversation_resolution.student_type_hint:
+                    student_type = conversation_resolution.student_type_hint
 
                 early_announcement_reason: str | None = None
                 early_announcement_gate_decision: dict[str, object] | None = None
@@ -2157,7 +2162,7 @@ class MainOrchestrator:
                 raw_results = [
                     {
                         "content": s.content,
-                        "source": s.metadata.get("source", s.metadata.get("filename", "")),
+                        "source": _clean_source_name(s.metadata.get("source", s.metadata.get("filename", ""))),
                         "score": s.score,
                         "metadata": s.metadata or {},
                     }
@@ -2268,7 +2273,7 @@ class MainOrchestrator:
             if not resp.sources:
                 continue
             for s in resp.sources[:3]:
-                source_name = s.metadata.get("source", s.metadata.get("filename", ""))
+                source_name = _clean_source_name(s.metadata.get("source", s.metadata.get("filename", "")))
                 score_str = f"skor={s.score:.2f}" if s.score else ""
                 entry = f"[{resp.department.value}/{source_name}] {score_str}"
                 entry += f"\n  \u0130\u00e7erik: {s.content[:500]}"

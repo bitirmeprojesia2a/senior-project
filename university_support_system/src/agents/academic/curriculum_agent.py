@@ -22,6 +22,7 @@ from src.agents.academic.curriculum_utils import (
     has_department_specific_content,
     infer_department_from_query,
     is_course_list_query,
+    is_department_existence_query,
     is_generic_schedule_listing_query,
     is_personal_progress_query,
     is_prerequisite_query,
@@ -46,6 +47,7 @@ from src.db.curriculum_data import (
     fetch_courses_by_title,
     fetch_courses_by_curriculum_semester,
     fetch_courses_by_semester,
+    fetch_department_exists,
 )
 from src.db.registration_data import fetch_active_registration_period
 from src.db.schedule_data import (
@@ -129,6 +131,22 @@ class CurriculumAgent(BaseSpecialistAgent):
                     ),
                     success=False,
                     error="student_id_required",
+                )
+
+        # "X bölümü var mı?" kalıbı — VT'de bölüm araması yap
+        if is_department_existence_query(lowered) and effective_department:
+            dept_exists = await fetch_department_exists(effective_department)
+            if not dept_exists:
+                return DepartmentResponse(
+                    department=self.department,
+                    answer=(
+                        f"Üniversitede '{effective_department}' adında bir bölüm/program "
+                        "kayıtlı bulunmamaktadır. Bölüm adını farklı biçimde yazmış olabilirsiniz; "
+                        "ilgili fakülte veya öğrenci işleri biriminden teyit edebilirsiniz."
+                    ),
+                    include_contact_suggestion=True,
+                    generation_mode="kural",
+                    success=True,
                 )
 
         capability_response = await self._try_handle_capability_plan(query_text, metadata)
@@ -520,6 +538,25 @@ class CurriculumAgent(BaseSpecialistAgent):
             prereq_data = await self._prerequisite_fetcher(course_code)
             if prereq_data is not None:
                 return await self._build_prerequisite_response(query_text, prereq_data)
+            # VT'de bulunamadı — benzer ders kodu öner
+            similar_courses = await self._course_title_fetcher(
+                course_code, effective_department, limit=3,
+            )
+            if similar_courses:
+                suggestions = ", ".join(
+                    f"{c.get('course_code')} {c.get('course_name')}"
+                    for c in similar_courses[:3]
+                )
+                return DepartmentResponse(
+                    department=self.department,
+                    answer=(
+                        f"{course_code} dersi müfredat veritabanında bulunamadı. "
+                        f"Buna yakın dersler: {suggestions}. "
+                        "Ders kodu güncellenmiş olabilir; ilgili bölüm sekreterliği ile doğrulaman iyi olur."
+                    ),
+                    include_contact_suggestion=True,
+                    success=True,
+                )
             return DepartmentResponse(
                 department=self.department,
                 answer=(

@@ -173,11 +173,17 @@ def is_personal_query(query_text: str) -> bool:
         if any(signal in lowered for signal in _OWNERSHIP_POLICY_OVERRIDE):
             return False
         return True
+    # Ownership yoksa ama PERSONAL_KEYWORDS varsa (ör: "borc", "odeme"),
+    # politika/prosedür override'ları da kontrol et.
+    # "Harç borcunun ne zaman ödenmesi gerekiyor" → kural sorusu, kişisel değil
     if any(signal in lowered for signal in _PERSONAL_PROCEDURAL_OVERRIDE):
         return False
     if any(signal in lowered for signal in _PERSONAL_POLICY_OVERRIDE):
         return False
-    return True
+    # Ownership yoksa ve override da yoksa: genel bir borç/ödeme kelimesi
+    # kural sorusu olabilir ("borcu olan öğrenci ders kaydı yapabilir mi?")
+    # İyelik eki yoksa kişisel veri talebi değildir.
+    return False
 
 
 _FEE_POLICY_SIGNALS = (

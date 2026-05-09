@@ -59,6 +59,28 @@ _DOCUMENT_RE = re.compile(
     r"(?:formu|belgesi|dilekcesi|dilekce|tutanagi)\b",
 )
 
+# Foreign language word detection — German/English words that should not appear in Turkish answers
+_FOREIGN_WORD_RE = re.compile(
+    r"\b(?:"
+    # German suffixes/words commonly hallucinated by multilingual LLMs
+    r"unterschiedli|ch|lichkeit|keit|heit|ung|lichkeit|"
+    r"necessary|therefore|however|furthermore|according|"
+    r"must|should|shall|required|"
+    r"odemujete|vyapabilir|yapabilirsinizdir)\b",
+    re.IGNORECASE,
+)
+
+# Common German/English fragments hallucinated into Turkish text
+_FOREIGN_FRAGMENT_REPLACEMENTS = {
+    "unterschiedli": "farklı",
+    "necessary": "gerekli",
+    "therefore": "bu nedenle",
+    "however": "ancak",
+    "furthermore": "ayrıca",
+    "according": "buna göre",
+    "odemujete": "ödemeniz",
+}
+
 _OFFICE_RE = re.compile(
     r"\b[A-Z\u00c0-\u024f][a-z\u00c0-\u024f]+(?:\s+[A-Za-z\u00c0-\u024f]+){0,4}\s+"
     r"(?:Burosu|B\u00fcrosu|Ofisi|Dairesi|Baskanligi|Ba\u015fkanl\u0131\u011f\u0131|Mudurlugu|M\u00fcd\u00fcrl\u00fc\u011f\u00fc)\b",
@@ -346,6 +368,27 @@ def _correct_single_exam_attendance_claim(answer: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Foreign language detection
+# ---------------------------------------------------------------------------
+
+def check_foreign_language(answer: str) -> list[dict]:
+    """Detect foreign language fragments hallucinated into Turkish answers."""
+    issues: list[dict] = []
+    for match in _FOREIGN_WORD_RE.finditer(answer):
+        fragment = match.group(0)
+        # Skip very short matches that could be Turkish (e.g. "ch" in Turkish text)
+        if len(fragment) <= 2:
+            continue
+        replacement = _FOREIGN_FRAGMENT_REPLACEMENTS.get(fragment.lower())
+        issues.append({
+            "claim": fragment,
+            "type": "foreign_language",
+            "grounded": False,
+            "replacement": replacement,
+        })
+    return issues
+
+
 # Main guard entry point
 # ---------------------------------------------------------------------------
 
@@ -373,8 +416,9 @@ def guard_answer(
     definitive_issues = check_definitive_claims(answer, evidence_items)
     arithmetic_issues = check_arithmetic_consistency(answer)
     policy_issues = check_known_policy_contradictions(answer, evidence_items)
+    foreign_language_issues = check_foreign_language(answer)
 
-    all_issues = numeric_issues + entity_issues + definitive_issues + arithmetic_issues + policy_issues
+    all_issues = numeric_issues + entity_issues + definitive_issues + arithmetic_issues + policy_issues + foreign_language_issues
 
     if not all_issues:
         return GuardResult(
@@ -449,7 +493,18 @@ def guard_answer(
             if cleaned != before_policy_cleanup:
                 modifications += 1
 
-    # 5. Numeric issues: otherwise ONLY logged, not modified.
+    # 5. Foreign language fragments: replace known hallucinated words
+    for issue in foreign_language_issues:
+        fragment = issue["claim"]
+        replacement = issue.get("replacement")
+        if replacement and fragment in cleaned:
+            cleaned = cleaned.replace(fragment, replacement)
+            modifications += 1
+        elif fragment in cleaned:
+            cleaned = cleaned.replace(fragment, "")
+            modifications += 1
+
+    # 6. Numeric issues: otherwise ONLY logged, not modified.
 
     # Add verification note ONLY if we actually modified something
     if modifications > 0:
@@ -471,6 +526,7 @@ def guard_answer(
             "definitive_issues": len(definitive_issues),
             "arithmetic_issues": len(arithmetic_issues),
             "policy_issues": len(policy_issues),
+            "foreign_language_issues": len(foreign_language_issues),
             "modifications_made": modifications,
             "unsupported_claims": all_issues,
         },

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from src.db.schemas import DepartmentResponse
 from src.orchestrators.response_utils import (
@@ -17,6 +18,19 @@ from src.quality.evidence import (
     extract_factual_claims,
     select_evidence_sentences,
 )
+
+_INTERNAL_PATH_PREFIXES = ("/app/data/", "/app/", "data/raw/", "data/")
+
+
+def _clean_source_name(source_name: str) -> str:
+    """Strip internal container/deployment paths from source names."""
+    for prefix in _INTERNAL_PATH_PREFIXES:
+        if source_name.startswith(prefix):
+            source_name = source_name[len(prefix):]
+    # Sadece dosya adını tut (uzun alt-dizin yollarını temizle)
+    if "/" in source_name and not source_name.startswith("http"):
+        source_name = os.path.basename(source_name)
+    return source_name
 
 
 def responses_need_contact_suggestion(responses: list[DepartmentResponse]) -> bool:
@@ -63,6 +77,8 @@ def _build_response_context_payload(response: DepartmentResponse, *, query: str)
             or source.metadata.get("file_name")
             or f"Kaynak {index}"
         )
+        # Dosya yolunu temizle — sadece dosya adını göster
+        source_name = _clean_source_name(str(source_name))
         snippet = _extract_global_evidence_snippet(query, source.content)
         evidence_items.append(
             {

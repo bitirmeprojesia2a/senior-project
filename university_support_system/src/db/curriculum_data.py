@@ -551,3 +551,20 @@ async def fetch_program_akts_summary(department: str) -> dict[str, Any] | None:
         "excluded_course_types": sorted(_PROGRAM_TOTAL_EXCLUDED_TYPES),
         "counted_course_count": len(counted_courses),
     }
+
+
+async def fetch_department_exists(department: str) -> bool:
+    """Veritabaninda bu adda bir bolum/program kaydi olup olmadigini doner."""
+    normalized_department = _normalize_text(department)
+    if not normalized_department:
+        return False
+    async with get_session() as session:
+        try:
+            stmt = select(Course.department).distinct()
+            departments = (await session.execute(stmt)).scalars().all()
+            return any(
+                _normalize_text(d) == normalized_department
+                for d in departments
+            )
+        except (ProgrammingError, DBAPIError):
+            return False

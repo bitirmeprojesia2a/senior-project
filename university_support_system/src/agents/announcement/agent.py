@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime, timedelta
 from typing import Awaitable, Callable
 
 from a2a.types import Task
@@ -208,6 +209,9 @@ class AnnouncementAgent(BaseSpecialistAgent):
             published = ""
             if item.published_at is not None:
                 published = f" ({item.published_at.date().isoformat()})"
+                stale_cutoff = datetime.now(UTC) - timedelta(days=180)
+                if item.published_at < stale_cutoff:
+                    published += " ⚠ eski duyuru"
 
             lines.append(f"{index}. {item.title}{published}")
             lines.append(f"   {summary}")

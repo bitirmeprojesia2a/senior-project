@@ -432,6 +432,24 @@ def is_generic_schedule_listing_query(lowered: str) -> bool:
     )
 
 
+_DEPARTMENT_EXISTENCE_MARKERS = (
+    "bolumu var mi",
+    "bolum var mi",
+    "bolumu var",
+    "bolum var",
+    "programi var mi",
+    "program var mi",
+    "bolumu mevcut",
+    "bolum mevcut",
+    "programi mevcut",
+)
+
+
+def is_department_existence_query(lowered: str) -> bool:
+    """Return whether the query asks whether a department/program exists."""
+    return any(marker in lowered for marker in _DEPARTMENT_EXISTENCE_MARKERS)
+
+
 def extract_schedule_day(lowered: str) -> str | None:
     """Extract an explicit weekday marker from the query."""
     for marker, canonical in SCHEDULE_DAY_MARKERS.items():
