@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import time
 from typing import Any, ClassVar, Literal, Protocol
 
@@ -138,18 +139,17 @@ class HttpA2ASpecialistTransport:
             )
 
         wire_payload = self._wire_payload(agent=agent, task=task)
-        headers = build_a2a_auth_headers(
-            internal_api_key=self.internal_api_key,
-            caller_id=department_service_id(agent.department),
-            target_id=specialist_service_id(agent.agent_id),
-            body=wire_payload,
-            signature_secret=self._request_signature_secret(),
-        )
-
         last_exc: Exception | None = None
         total_attempts = self.retry_count + 1
         for attempt in range(1, total_attempts + 1):
             try:
+                headers = build_a2a_auth_headers(
+                    internal_api_key=self.internal_api_key,
+                    caller_id=department_service_id(agent.department),
+                    target_id=specialist_service_id(agent.agent_id),
+                    body=wire_payload,
+                    signature_secret=self._request_signature_secret(),
+                )
                 async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                     response = await client.post(
                         self._dispatch_url(endpoint),
@@ -173,7 +173,7 @@ class HttpA2ASpecialistTransport:
                         agent=agent,
                         endpoint=endpoint,
                         attempt=attempt,
-                        reason="timeout",
+                        reason=type(exc).__name__,
                         error=exc,
                     )
                     continue
@@ -331,6 +331,8 @@ class HttpA2ASpecialistTransport:
         error: Exception,
     ) -> None:
         delay = self.retry_backoff_seconds * attempt
+        if delay > 0:
+            delay *= random.uniform(0.8, 1.2)
         logger.info(
             "a2a_specialist_dispatch_retry agent_id=%s endpoint=%s attempt=%s next_delay_s=%.2f reason=%s error=%s",
             agent.agent_id,
@@ -416,6 +418,17 @@ class HttpA2ASpecialistTransport:
             force_llm_synthesis=bool(meta.get("force_llm_synthesis", False)),
             query_complexity=meta.get("query_complexity"),
             is_personal_query=bool(meta.get("is_personal_query", False)),
+            final_answer_owner=meta.get("final_answer_owner"),
+            specialist_response_mode=meta.get("specialist_response_mode"),
+            capability_planner=meta.get("capability_planner"),
+            source_owner=meta.get("source_owner"),
+            policy_facet=meta.get("policy_facet"),
+            decision_contract=meta.get("decision_contract"),
+            resolved_decision=meta.get("resolved_decision"),
+            branch_dispatch_gate=meta.get("branch_dispatch_gate"),
+            specialist_selection=meta.get("specialist_selection"),
+            branch_role=meta.get("branch_role"),
+            retrieval_execution_policy=meta.get("retrieval_execution_policy"),
             disable_specialist_llm=bool(meta.get("disable_specialist_llm", False)),
             trace_id=meta.get("trace_id"),
             span_id=meta.get("span_id"),

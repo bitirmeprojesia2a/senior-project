@@ -215,7 +215,7 @@ EXTRA_DEPARTMENT_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     (
         "Fizik Egitimi",
-        ("fizik egitimi", "fizik ogretmenligi"),
+        ("fizik egitimi", "fizik ogretmenligi", "fizik ogretimi"),
     ),
     (
         "Ilkogretim Matematik Egitimi",

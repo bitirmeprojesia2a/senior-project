@@ -9,6 +9,7 @@ from src.orchestrators.response_utils import (
     compose_department_answers,
     filter_low_confidence_responses,
 )
+from src.quality.answer_filter import check_answer_quality, quality_issue_blocks_answer
 
 
 def test_clean_final_answer_removes_foreign_headings_and_english_lines():
@@ -26,6 +27,46 @@ def test_clean_final_answer_removes_foreign_headings_and_english_lines():
     assert "registration is canceled" not in cleaned
     assert "å…³äº" not in cleaned
     assert "Staj defterini teslim etme suresi" in cleaned
+
+
+def test_quality_filter_flags_foreign_bad_tokens_after_repair():
+    result = check_answer_quality("Detayli bilgi icin duyurulari takip etmeniz necessaire.")
+
+    assert result.needs_rewrite is True
+    assert "necessaire" in [token.lower() for token in result.bad_tokens]
+
+
+def test_quality_filter_flags_mixed_necessary_suffix():
+    result = check_answer_quality("Bu kosullari saglamaniz necessarytir.")
+
+    assert result.needs_rewrite is True
+    assert "necessarytir" in [token.lower() for token in result.bad_tokens]
+
+
+def test_quality_filter_flags_portuguese_following_leak():
+    result = check_answer_quality("Basvuru sureci seguintek sekilde isler.")
+
+    assert result.needs_rewrite is True
+    assert "seguintek" in [token.lower() for token in result.bad_tokens]
+    assert quality_issue_blocks_answer(result) is True
+
+
+def test_quality_filter_flags_portuguese_following_with_turkish_suffix():
+    result = check_answer_quality("Yaz okulu katilimcilari icin gerekli sartlar siguientesintilar.")
+
+    assert result.needs_rewrite is True
+    assert "siguientesintilar" in [token.lower() for token in result.bad_tokens]
+    assert quality_issue_blocks_answer(result) is True
+
+
+def test_quality_filter_does_not_block_minor_language_issue():
+    result = check_answer_quality(
+        "Basvuru sureci specifically ve additionally duyurularda aciklanir."
+    )
+
+    assert result.needs_rewrite is True
+    assert result.has_suspicious_english is True
+    assert quality_issue_blocks_answer(result) is False
 
 
 def test_append_generation_summary_shows_global_llm_synthesis():
@@ -110,6 +151,22 @@ def test_clean_final_answer_replaces_additional_foreign_leaks():
     assert "lütfen" in cleaned.lower()
 
 
+def test_clean_final_answer_replaces_portuguese_following_leak():
+    cleaned = clean_final_answer("Basvuru sureci seguintek sekilde isler.")
+
+    assert "seguintek" not in cleaned.lower()
+    assert "şu şekilde" in cleaned.lower()
+
+
+def test_clean_final_answer_naturalizes_level_akts_rule_text():
+    cleaned = clean_final_answer(
+        "Normal dort yillik lisans programindan mezun olmak icin toplam 240 AKTS tamamlanmalidir."
+    )
+
+    assert "dört yıllık" in cleaned
+    assert "tamamlanmalıdır" in cleaned
+
+
 def test_clean_final_answer_replaces_mixed_spanish_leaks():
     answer = "Not cizelgesi ve dilekce ile basvuru yapmaniz da necessario podria."
 
@@ -129,6 +186,32 @@ def test_clean_final_answer_replaces_recent_foreign_and_broken_tokens():
     assert " ztr " not in f" {cleaned} "
     assert "bilgi" in cleaned.lower()
     assert "zayi edilen" in cleaned.lower()
+
+
+def test_clean_final_answer_replaces_slack_observed_bad_tokens():
+    answer = "Ogrenci isleri departamento gore benötilen sartlar ve condiğini saglamalisiniz. Bu durum znajabilir."
+
+    cleaned = clean_final_answer(answer)
+
+    assert "departamento" not in cleaned
+    assert "benötilen" not in cleaned
+    assert "condi" not in cleaned
+    assert "znajabilir" not in cleaned
+
+
+def test_clean_final_answer_removes_contact_footer_before_metadata():
+    answer = (
+        "BIL203 dersinin on kosulu BIL104 dersidir.\n\n"
+        "---\n"
+        "Daha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz "
+        "ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\n"
+        "Üretim Türü:\n- VT"
+    )
+
+    cleaned = clean_final_answer(answer)
+
+    assert "Daha iyi yardımcı" not in cleaned
+    assert "BIL203 dersinin on kosulu" in cleaned
 
 
 def test_clean_final_answer_removes_benchmark_and_prompt_like_prefixes():
@@ -220,6 +303,32 @@ def test_filter_low_confidence_responses_drops_announcement_when_strong_answer_e
     filtered = filter_low_confidence_responses([strong_answer, announcement])
 
     assert filtered == [strong_answer]
+
+
+def test_filter_low_confidence_responses_keeps_exact_tuition_owner_only():
+    finance = DepartmentResponse(
+        department=Department.FINANCE,
+        answer="Yillik ucret: 1.759,00 TL. Donemlik ucret: 879,50 TL.",
+        db_data={"annual_amount": 1759.0, "semester_amount": 879.5},
+        generation_mode="vt",
+        metadata={"source_owner": "tuition_fee_catalog"},
+    )
+    academic = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Uzaktan egitim yonergesinde baska bilgiler vardir.",
+        sources=[
+            RAGSource(
+                content="alakasiz akademik kaynak",
+                score=0.91,
+                metadata={"score_type": "reranker"},
+            )
+        ],
+        generation_mode="rag",
+    )
+
+    filtered = filter_low_confidence_responses([finance, academic])
+
+    assert filtered == [finance]
 
 
 def test_compose_department_answers_prefers_announcement_when_other_answer_is_no_info():

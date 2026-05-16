@@ -1,0 +1,864 @@
+{
+  "run_id": "20260514_160211",
+  "created_at": "2026-05-14T16:05:01",
+  "trace_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\tmp\\shadow_decision_trace_golden_20260514_160211.jsonl",
+  "report_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\docs\\archive\\benchmarks\\shadow_decision_trace_golden_20260514_160211.md",
+  "a2a_mode": "http",
+  "llm_provider": {
+    "primary": "openai_compatible",
+    "fallback": "none"
+  },
+  "capability_planner": {
+    "mode": "on",
+    "scope": "academic_programs,student_affairs,finance,announcement,event"
+  },
+  "llm_profile": "balanced",
+  "question_cache": "bypass",
+  "answer_preview_chars": 1200,
+  "warmup_summary": {
+    "mode": "retrieval",
+    "elapsed_ms": 88471.0,
+    "retrieval": {
+      "enabled": true,
+      "status": "ok",
+      "collections": [
+        "student_affairs_docs",
+        "academic_programs_docs"
+      ],
+      "include_reranker": true,
+      "elapsed_ms": 88470.9
+    },
+    "llm": {
+      "enabled": false,
+      "status": "skipped"
+    }
+  },
+  "provider_retry": {
+    "count": 1,
+    "backoff_seconds": 12.0
+  },
+  "provider_error_stats": {
+    "total": 0,
+    "by_provider": {},
+    "by_reason": {},
+    "retryable": 0
+  },
+  "final_attempt_provider_error_stats": {
+    "total": 0,
+    "by_provider": {},
+    "by_reason": {},
+    "retryable": 0
+  },
+  "retry_history_provider_error_stats": {
+    "total": 0,
+    "by_provider": {},
+    "by_reason": {},
+    "retryable": 0
+  },
+  "llm_key_distribution": {
+    "by_provider": {
+      "groq": {
+        "calls": 5,
+        "key_count": 53,
+        "by_fingerprint": {
+          "cc9074971faa": 1,
+          "f1a0600529c4": 1,
+          "fe4490aa7a6a": 1,
+          "c93303cbec45": 1,
+          "5e2c5c185255": 1
+        }
+      }
+    },
+    "provider_org_fingerprints": {},
+    "missing_fingerprint_calls": 0
+  },
+  "timeout_stats": {
+    "capability_planner_timeout_suspected": 0,
+    "routing_timeout_suspected": 0,
+    "first_case_latency_ms": 74329.94
+  },
+  "answer_validation_stats": {
+    "total": 1,
+    "pass": 1,
+    "check": 0,
+    "fail": 0,
+    "requires_judge": 0,
+    "enforceable_by_contract": 1,
+    "by_reason": {
+      "required_values_preserved": 1
+    }
+  },
+  "answer_value_conflict_stats": {
+    "total": 1,
+    "pass": 0,
+    "check": 0,
+    "skipped": 1,
+    "by_reason": {
+      "not_applicable": 1
+    }
+  },
+  "results": [
+    {
+      "id": "GT04",
+      "family": "student_affairs_policy",
+      "query": "Yatay gecisle gelen ogrenci muafiyet basvurusunu ne zaman yapmali?",
+      "context_id": "shadow-golden-20260514_160211-GT04",
+      "expected_owner": "student_affairs_policy",
+      "expected_capability": "student_affairs.policy_lookup",
+      "expected_primary_department": "student_affairs",
+      "expected_primary_specialist": "registration_agent",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "llm",
+        "kural",
+        "rag"
+      ],
+      "source_count": 4,
+      "elapsed_ms": 74492.3,
+      "response_time_ms": 74329.94,
+      "answer_preview": "Benchmark, Yatay geçiş ile gelen öğrencilerin muafiyet başvuru süreci, daha önce öğrenim gördükleri yüksek öğretim kurumlarından veya pedagojik formasyon eğitimi sertifika programından alıp başarılı oldukları derslerden muaf olmak için, kayıt yaptırdıkları öğretim yılının en geç 3. haftasının sonuna kadar Pedagojik Formasyon Birimine başvuruları gerekmektedir. \n\n• Muafiyet için başvuru zamanı, akademik takvimde belirtilen tarihlerde yapılır.\n• Zorunlu hazırlık sınıfından muafiyet için bir akademik yılda güz dönemi başında ve sonunda olmak üzere toplam 2 defa yeterlik sınavı yapılır.\nMuaf olunan dersler için öğrencilere ücret iadesi yapılmaz.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Ogrenci Isleri: Kural\n- Akademik Programlar: RAG\n- Routing: parallel\n- Pipeline: student_affairs -> academic_programs -> orchestrator\n\nKaynak Özeti:\n- Veritabani kaydi: ogrenci isleri\n- Belge: mezunlar_için_pedagojik_formasyon_eğitimi.pdf\n- Belge: yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf\n- Belge: diş_hekimliği_fakültesı_lisans_eğitim_öğretim_yönergesi.pdf\n- Belge: yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+      "error": null,
+      "note": "Policy RAG + sure/slot sinyali.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": "student_affairs.policy_lookup",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_selected_specialists": [
+        "student_affairs",
+        "regulation_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "academic_programs",
+          "selected_agent_id": "regulation_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+          "signals": {
+            "capability": "student_affairs.policy_lookup",
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy"
+          },
+          "registry": {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+            "topic": "academic_policy_support",
+            "allowed_specialists": [
+              "regulation_agent"
+            ],
+            "matched_markers": [],
+            "conflict_markers": [],
+            "fallback_agent_id": "regulation_agent"
+          },
+          "task_type": {
+            "agent_id": "regulation_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": null,
+            "reason": null,
+            "matches_selected": null,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "international_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "academic_programs:regulation_agent/contract",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": false,
+        "original_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_departments": [],
+        "owner_routing_policy": {
+          "source_owner": "student_affairs_policy",
+          "capability": "student_affairs.policy_lookup",
+          "primary_department": "student_affairs",
+          "support_departments": [
+            "academic_programs",
+            "finance"
+          ],
+          "reason": "student_affairs_policy_primary"
+        },
+        "router_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_primary_department": "student_affairs",
+        "support_departments": [
+          "academic_programs",
+          "finance"
+        ],
+        "capability": "student_affairs.policy_lookup",
+        "source_owner": "student_affairs_policy",
+        "reason": "student_affairs_policy_contract_gate",
+        "task_type_overrides": {
+          "academic_programs": "procedure_query"
+        },
+        "kept_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "pruned_departments": []
+      },
+      "trace_branch_gate_summary": "observed: kept=student_affairs, academic_programs; pruned=-; reason=student_affairs_policy_contract_gate",
+      "trace_response_filter": {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": "student_affairs_policy",
+        "primary_department": "student_affairs",
+        "original_count": 2,
+        "kept_count": 2,
+        "dropped_count": 0,
+        "kept": [
+          {
+            "department": "student_affairs",
+            "agent_id": null,
+            "source_count": 0,
+            "success": false,
+            "error": "a2a_transport_timeout",
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": true,
+            "has_source_owner_evidence": false
+          },
+          {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "source_count": 4,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": false,
+            "has_source_owner_evidence": true
+          }
+        ],
+        "dropped": []
+      },
+      "trace_response_filter_summary": "kept=2; dropped=0 (-); primary=student_affairs",
+      "trace_response_time_ms": 74329.94,
+      "judge_result": {
+        "approved": false,
+        "action": "rewrite_only",
+        "failure_reason": "Cevapta bazı değerlerde eksiklik veya uyumsuzluk mevcut.",
+        "plan_decision": {
+          "intent": "muafiyet_basvuru_sureci",
+          "capability": "student_affairs.policy_lookup",
+          "params": {
+            "query": "Yatay gecis ile gelen ogrencilerin muafiyet basvuru sureci nasil isliyor ve ne zaman yapiliyor?",
+            "topic": "yatay gecis",
+            "question_type": "practical_guidance",
+            "must_answer": [
+              "muafiyet basvuru sureci",
+              "basvuru zamani",
+              "gerekli belgeler"
+            ]
+          },
+          "missing_slots": [],
+          "answer_contract": {
+            "must_answer": [
+              "muafiyet basvuru sureci",
+              "basvuru zamani",
+              "gerekli belgeler"
+            ]
+          },
+          "evidence_contract": {
+            "preferred_sources": [
+              "yatay gecis yonergesi",
+              "muafiyet basvuru formu",
+              "ogrenci isleri mudurlugu"
+            ]
+          },
+          "fallback_route": null,
+          "confidence": 0.85,
+          "reasoning": null
+        },
+        "answer_contract": {
+          "must_answer": [
+            "muafiyet basvuru sureci",
+            "basvuru zamani",
+            "gerekli belgeler"
+          ]
+        },
+        "evidence_contract": {
+          "preferred_sources": [
+            "yatay gecis yonergesi",
+            "muafiyet basvuru formu",
+            "ogrenci isleri mudurlugu"
+          ]
+        },
+        "triggered_by_validator": false,
+        "answer_validation": {
+          "status": "check",
+          "risk_level": "medium",
+          "reason": "answer_missing_required_evidence_values",
+          "requires_judge": true,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 15,
+          "required_claims": [
+            {
+              "claim": "MADDE 10 – (1) Muafiyet ve intibak talebinde bulunan öğrenci, daha önce aldığı ve başarılı olduğu derslerden muaf olmak için, kayıt yaptırdığı öğretim yılının en geç 3. (2) Yatay Geçiş İnceleme ve İntibak Komisyonu, öğrencinin muafiyet istediği ders/bloklar ile ilgili incelemeyi yaparak, daha önce alınıp başarılı olunan ve muafiyet talep edilen tüm ders/bloklar ve klinik uygulamalar için intibakın",
+              "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+              "required_values": [
+                "3"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": "match",
+              "policy_target_program": "exemption_adjustment",
+              "policy_matched_programs": [
+                "exemption_adjustment",
+                "horizontal_transfer"
+              ],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "MADDE 5 – (1) Zorunlu hazırlık sınıfından muafiyet için akademik takvimde belirtilen tarihlerde, bir akademik yılda güz dönemi başında ve sonunda olmak üzere toplam 2 defa yeterlik sınavı yapılır. (4) Zorunlu hazırlık sınıfları için bu sınav aynı zamanda düzey belirleme sınavı olarak da değerlendirilebilir.",
+              "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+              "required_values": [
+                "2"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": "match",
+              "policy_target_program": "exemption_adjustment",
+              "policy_matched_programs": [
+                "exemption_adjustment"
+              ],
+              "arbitration_score": 0
+            }
+          ],
+          "missing_values": [
+            "3"
+          ],
+          "conflicting_values": [],
+          "answer_values": [
+            "2"
+          ],
+          "value_arbitration": {
+            "primary_values": [
+              "3",
+              "2"
+            ],
+            "related_values": [],
+            "secondary_values": [
+              "22.12",
+              "2023",
+              "12"
+            ],
+            "conflicting_values": []
+          }
+        },
+        "repair": {
+          "accepted": true,
+          "outcome": "accepted_improved",
+          "rejection_reason": "repair_improved",
+          "pre_repair_validation": {
+            "status": "check",
+            "risk_level": "medium",
+            "reason": "answer_missing_required_evidence_values",
+            "requires_judge": true,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 15,
+            "required_claims": [
+              {
+                "claim": "MADDE 10 – (1) Muafiyet ve intibak talebinde bulunan öğrenci, daha önce aldığı ve başarılı olduğu derslerden muaf olmak için, kayıt yaptırdığı öğretim yılının en geç 3. (2) Yatay Geçiş İnceleme ve İntibak Komisyonu, öğrencinin muafiyet istediği ders/bloklar ile ilgili incelemeyi yaparak, daha önce alınıp başarılı olunan ve muafiyet talep edilen tüm ders/bloklar ve klinik uygulamalar için intibakın",
+                "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+                "required_values": [
+                  "3"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": "match",
+                "policy_target_program": "exemption_adjustment",
+                "policy_matched_programs": [
+                  "exemption_adjustment",
+                  "horizontal_transfer"
+                ],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "MADDE 5 – (1) Zorunlu hazırlık sınıfından muafiyet için akademik takvimde belirtilen tarihlerde, bir akademik yılda güz dönemi başında ve sonunda olmak üzere toplam 2 defa yeterlik sınavı yapılır. (4) Zorunlu hazırlık sınıfları için bu sınav aynı zamanda düzey belirleme sınavı olarak da değerlendirilebilir.",
+                "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+                "required_values": [
+                  "2"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": "match",
+                "policy_target_program": "exemption_adjustment",
+                "policy_matched_programs": [
+                  "exemption_adjustment"
+                ],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [
+              "3"
+            ],
+            "conflicting_values": [],
+            "answer_values": [
+              "2"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "3",
+                "2"
+              ],
+              "related_values": [],
+              "secondary_values": [
+                "22.12",
+                "2023",
+                "12"
+              ],
+              "conflicting_values": []
+            }
+          },
+          "post_repair_validation": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "required_values_preserved",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 15,
+            "required_claims": [
+              {
+                "claim": "MADDE 10 – (1) Muafiyet ve intibak talebinde bulunan öğrenci, daha önce aldığı ve başarılı olduğu derslerden muaf olmak için, kayıt yaptırdığı öğretim yılının en geç 3. (2) Yatay Geçiş İnceleme ve İntibak Komisyonu, öğrencinin muafiyet istediği ders/bloklar ile ilgili incelemeyi yaparak, daha önce alınıp başarılı olunan ve muafiyet talep edilen tüm ders/bloklar ve klinik uygulamalar için intibakın",
+                "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+                "required_values": [
+                  "3"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": "match",
+                "policy_target_program": "exemption_adjustment",
+                "policy_matched_programs": [
+                  "exemption_adjustment",
+                  "horizontal_transfer"
+                ],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "MADDE 5 – (1) Zorunlu hazırlık sınıfından muafiyet için akademik takvimde belirtilen tarihlerde, bir akademik yılda güz dönemi başında ve sonunda olmak üzere toplam 2 defa yeterlik sınavı yapılır. (4) Zorunlu hazırlık sınıfları için bu sınav aynı zamanda düzey belirleme sınavı olarak da değerlendirilebilir.",
+                "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+                "required_values": [
+                  "2"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": "match",
+                "policy_target_program": "exemption_adjustment",
+                "policy_matched_programs": [
+                  "exemption_adjustment"
+                ],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [
+              "3",
+              "2"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "3",
+                "2"
+              ],
+              "related_values": [],
+              "secondary_values": [
+                "22.12",
+                "2023",
+                "12"
+              ],
+              "conflicting_values": []
+            }
+          },
+          "pre_repair_coverage": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "application_process",
+            "reason": "answer_contains_process_markers",
+            "positive_markers": [
+              "basvur",
+              "basvuru",
+              "form",
+              "tarih",
+              "takvim"
+            ],
+            "drift_markers": []
+          },
+          "post_repair_coverage": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "application_process",
+            "reason": "answer_contains_process_markers",
+            "positive_markers": [
+              "basvur",
+              "basvuru",
+              "form",
+              "tarih",
+              "takvim"
+            ],
+            "drift_markers": []
+          },
+          "pre_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          },
+          "post_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          }
+        }
+      },
+      "judge_repair_summary": "repair:accepted_improved:repair_improved",
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "required_values_preserved",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": true,
+        "evidence_claim_count": 15,
+        "required_claims": [
+          {
+            "claim": "MADDE 10 – (1) Muafiyet ve intibak talebinde bulunan öğrenci, daha önce aldığı ve başarılı olduğu derslerden muaf olmak için, kayıt yaptırdığı öğretim yılının en geç 3. (2) Yatay Geçiş İnceleme ve İntibak Komisyonu, öğrencinin muafiyet istediği ders/bloklar ile ilgili incelemeyi yaparak, daha önce alınıp başarılı olunan ve muafiyet talep edilen tüm ders/bloklar ve klinik uygulamalar için intibakın",
+            "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+            "required_values": [
+              "3"
+            ],
+            "reason": "date_or_time_value",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": "match",
+            "policy_target_program": "exemption_adjustment",
+            "policy_matched_programs": [
+              "exemption_adjustment",
+              "horizontal_transfer"
+            ],
+            "arbitration_score": 0
+          },
+          {
+            "claim": "MADDE 5 – (1) Zorunlu hazırlık sınıfından muafiyet için akademik takvimde belirtilen tarihlerde, bir akademik yılda güz dönemi başında ve sonunda olmak üzere toplam 2 defa yeterlik sınavı yapılır. (4) Zorunlu hazırlık sınıfları için bu sınav aynı zamanda düzey belirleme sınavı olarak da değerlendirilebilir.",
+            "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+            "required_values": [
+              "2"
+            ],
+            "reason": "date_or_time_value",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": "match",
+            "policy_target_program": "exemption_adjustment",
+            "policy_matched_programs": [
+              "exemption_adjustment"
+            ],
+            "arbitration_score": 0
+          }
+        ],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": [
+          "3",
+          "2"
+        ],
+        "value_arbitration": {
+          "primary_values": [
+            "3",
+            "2"
+          ],
+          "related_values": [],
+          "secondary_values": [
+            "22.12",
+            "2023",
+            "12"
+          ],
+          "conflicting_values": []
+        },
+        "pre_judge": {
+          "status": "check",
+          "risk_level": "medium",
+          "reason": "answer_missing_required_evidence_values",
+          "requires_judge": true,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 15,
+          "required_claims": [
+            {
+              "claim": "MADDE 10 – (1) Muafiyet ve intibak talebinde bulunan öğrenci, daha önce aldığı ve başarılı olduğu derslerden muaf olmak için, kayıt yaptırdığı öğretim yılının en geç 3. (2) Yatay Geçiş İnceleme ve İntibak Komisyonu, öğrencinin muafiyet istediği ders/bloklar ile ilgili incelemeyi yaparak, daha önce alınıp başarılı olunan ve muafiyet talep edilen tüm ders/bloklar ve klinik uygulamalar için intibakın",
+              "source": "yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf",
+              "required_values": [
+                "3"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": "match",
+              "policy_target_program": "exemption_adjustment",
+              "policy_matched_programs": [
+                "exemption_adjustment",
+                "horizontal_transfer"
+              ],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "MADDE 5 – (1) Zorunlu hazırlık sınıfından muafiyet için akademik takvimde belirtilen tarihlerde, bir akademik yılda güz dönemi başında ve sonunda olmak üzere toplam 2 defa yeterlik sınavı yapılır. (4) Zorunlu hazırlık sınıfları için bu sınav aynı zamanda düzey belirleme sınavı olarak da değerlendirilebilir.",
+              "source": "yabancı_dil_eğitim_öğretimi_yönergesi.pdf",
+              "required_values": [
+                "2"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": "match",
+              "policy_target_program": "exemption_adjustment",
+              "policy_matched_programs": [
+                "exemption_adjustment"
+              ],
+              "arbitration_score": 0
+            }
+          ],
+          "missing_values": [
+            "3"
+          ],
+          "conflicting_values": [],
+          "answer_values": [
+            "2"
+          ],
+          "value_arbitration": {
+            "primary_values": [
+              "3",
+              "2"
+            ],
+            "related_values": [],
+            "secondary_values": [
+              "22.12",
+              "2023",
+              "12"
+            ],
+            "conflicting_values": []
+          }
+        },
+        "judge_escalated": true,
+        "repair_accepted": true,
+        "repair_outcome": "accepted_improved"
+      },
+      "answer_validation_summary": "shadow/pass:required_values_preserved",
+      "answer_coverage": {
+        "mode": "shadow",
+        "status": "pass",
+        "expected_facet": "application_process",
+        "reason": "answer_contains_process_markers",
+        "positive_markers": [
+          "basvur",
+          "basvuru",
+          "form",
+          "tarih",
+          "takvim"
+        ],
+        "drift_markers": [],
+        "pre_judge": {
+          "mode": "shadow",
+          "status": "pass",
+          "expected_facet": "application_process",
+          "reason": "answer_contains_process_markers",
+          "positive_markers": [
+            "basvur",
+            "basvuru",
+            "form",
+            "tarih",
+            "takvim"
+          ],
+          "drift_markers": []
+        },
+        "repair_outcome": "accepted_improved"
+      },
+      "answer_coverage_summary": "shadow/pass:application_process:answer_contains_process_markers",
+      "answer_value_conflict": {
+        "mode": "shadow",
+        "status": "skipped",
+        "reason": "not_applicable",
+        "aspect": null,
+        "primary_answer_value": null,
+        "competing_values": [],
+        "value_roles": [],
+        "pre_judge": {
+          "mode": "shadow",
+          "status": "skipped",
+          "reason": "not_applicable",
+          "aspect": null,
+          "primary_answer_value": null,
+          "competing_values": [],
+          "value_roles": []
+        },
+        "repair_outcome": "accepted_improved"
+      },
+      "answer_value_conflict_summary": "shadow/skipped:not_applicable; primary=-; competing=-",
+      "answer_quality": {
+        "mode": "shadow",
+        "status": "pass",
+        "reason": "clean",
+        "issues": [],
+        "bad_tokens": [],
+        "foreign_token_shadow": false,
+        "encoding_noise_shadow": false,
+        "boilerplate_shadow": false
+      },
+      "answer_quality_summary": "shadow/pass:clean; tokens=-",
+      "llm_call_count": 5,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement",
+        "judge",
+        "global_synthesis"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "prompt_chars": 111,
+          "system_chars": 16983,
+          "estimated_input_tokens": 4273,
+          "api_key_fingerprint": "cc9074971faa",
+          "api_key_index": 0,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "prompt_chars": 4971,
+          "system_chars": 7226,
+          "estimated_input_tokens": 3049,
+          "api_key_fingerprint": "f1a0600529c4",
+          "api_key_index": 1,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "prompt_chars": 22246,
+          "system_chars": 1604,
+          "estimated_input_tokens": 5962,
+          "api_key_fingerprint": "fe4490aa7a6a",
+          "api_key_index": 2,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "prompt_chars": 5195,
+          "system_chars": 1513,
+          "estimated_input_tokens": 1677,
+          "api_key_fingerprint": "c93303cbec45",
+          "api_key_index": 3,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "prompt_chars": 4007,
+          "system_chars": 1604,
+          "estimated_input_tokens": 1402,
+          "api_key_fingerprint": "5e2c5c185255",
+          "api_key_index": 4,
+          "api_key_count": 53
+        }
+      ],
+      "timeout_signals": {
+        "capability_planner_ms": 2304.945,
+        "capability_planner_timeout_suspected": false,
+        "routing_ms": 1771.038,
+        "routing_timeout_suspected": false,
+        "conversation_ms": 370.497,
+        "final_synthesis_ms": 2250.731
+      },
+      "trace_recorded": true,
+      "attempt": 1,
+      "provider_retry_attempts": [
+        {
+          "attempt": 1,
+          "context_id": "shadow-golden-20260514_160211-GT04",
+          "status": "CHECK",
+          "retryable_provider_error": false,
+          "provider_errors": []
+        }
+      ],
+      "provider_retry_count": 0,
+      "provider_retryable_error_seen": false,
+      "provider_warning_summary": "-",
+      "structural_issues": [
+        "primary_specialist expected=registration_agent actual=student_affairs, regulation_agent"
+      ],
+      "structural_summary": "primary_specialist expected=registration_agent actual=student_affairs, regulation_agent",
+      "status": "CHECK"
+    }
+  ]
+}

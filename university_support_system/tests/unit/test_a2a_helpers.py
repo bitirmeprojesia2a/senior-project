@@ -90,6 +90,111 @@ def test_agent_response_to_department_response_preserves_transport_diagnostics()
     assert "ignored_internal_key" not in mapped.metadata
 
 
+def test_agent_response_to_department_response_preserves_architectural_trace_metadata():
+    response = AgentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="CAP icin en az 3,00 gerekir.",
+        metadata={
+            "source_owner": {"primary": "student_affairs_policy"},
+            "decision_contract": {
+                "schema": "omu.decision_contract.v1",
+                "contract": {"source_owner": {"primary": "student_affairs_policy"}},
+            },
+            "resolved_decision": {
+                "schema": "omu.resolved_decision.v1",
+                "source_owner": "student_affairs_policy",
+                "contract": {"id": "cap_eligibility"},
+            },
+            "branch_dispatch_gate": {"restored_primary_department": "student_affairs"},
+            "specialist_selection": {"selected_agent_id": "registration_agent"},
+            "capability_planner": {"action": {"capability": "student_affairs.policy_lookup"}},
+            "final_answer_owner": "main_orchestrator",
+            "specialist_response_mode": "evidence_packet",
+            "evidence_packet": {
+                "value_arbitration": {
+                    "answer_threshold": ["3,00"],
+                    "secondary_program_threshold": ["2,00"],
+                }
+            },
+            "answer_validation": {"status": "pass"},
+            "answer_coverage": {"status": "pass"},
+            "answer_value_conflict": {"status": "pass", "primary_value": "3,00"},
+            "llm_usage": [{"role": "routing", "key_fingerprint": "fp-test"}],
+            "internal_scratchpad": "drop-me",
+        },
+    )
+
+    mapped = agent_response_to_department_response(response)
+
+    assert mapped is not None
+    assert mapped.metadata["source_owner"]["primary"] == "student_affairs_policy"
+    assert mapped.metadata["decision_contract"]["contract"]["source_owner"]["primary"] == "student_affairs_policy"
+    assert mapped.metadata["resolved_decision"]["source_owner"] == "student_affairs_policy"
+    assert mapped.metadata["branch_dispatch_gate"]["restored_primary_department"] == "student_affairs"
+    assert mapped.metadata["specialist_selection"]["selected_agent_id"] == "registration_agent"
+    assert mapped.metadata["evidence_packet"]["value_arbitration"]["answer_threshold"] == ["3,00"]
+    assert mapped.metadata["answer_value_conflict"]["primary_value"] == "3,00"
+    assert mapped.metadata["llm_usage"][0]["role"] == "routing"
+    assert "internal_scratchpad" not in mapped.metadata
+
+
+def test_agent_response_task_roundtrip_preserves_evidence_contract_metadata():
+    request_task = build_query_task(
+        A2AQueryPayload(
+            query_text="Peki not ortalamasi kac olmali?",
+            context_id="ctx-a2a-parity",
+            source_owner={"primary": "student_affairs_policy"},
+            decision_contract={"contract": {"source_owner": {"primary": "student_affairs_policy"}}},
+            resolved_decision={"schema": "omu.resolved_decision.v1", "source_owner": "student_affairs_policy"},
+            branch_dispatch_gate={"kept_departments": ["student_affairs", "academic_programs"]},
+            specialist_selection={"selected_agent_id": "registration_agent"},
+        )
+    )
+    response = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="CAP icin ana dal not ortalamasi 4,00 uzerinden en az 3,00 olmalidir.",
+        sources=[],
+        metadata={
+            "evidence_packet": {
+                "source_owner": "student_affairs_policy",
+                "specialist": "registration_agent",
+                "value_arbitration": {
+                    "answer_threshold": ["3,00"],
+                    "scale_value": ["4,00"],
+                    "related_condition": ["%20"],
+                },
+            },
+            "answer_validation": {"status": "pass"},
+            "answer_value_conflict": {"status": "pass", "primary_value": "3,00"},
+        },
+    )
+
+    response_task = build_agent_response_task(
+        response,
+        request_task=request_task,
+        emitter_id="registration_agent",
+        emitter_name="Registration Agent",
+        metadata={
+            "agent_role": "specialist_agent",
+            "source_owner": {"primary": "student_affairs_policy"},
+            "decision_contract": {"contract": {"source_owner": {"primary": "student_affairs_policy"}}},
+            "resolved_decision": {"schema": "omu.resolved_decision.v1", "source_owner": "student_affairs_policy"},
+            "branch_dispatch_gate": {"restored_primary_department": "student_affairs"},
+            "specialist_selection": {"selected_agent_id": "registration_agent"},
+        },
+    )
+
+    extracted = extract_department_response(response_task)
+
+    assert extracted is not None
+    assert extracted.metadata["source_owner"]["primary"] == "student_affairs_policy"
+    assert extracted.metadata["resolved_decision"]["source_owner"] == "student_affairs_policy"
+    assert extracted.metadata["specialist_selection"]["selected_agent_id"] == "registration_agent"
+    assert extracted.metadata["evidence_packet"]["value_arbitration"]["answer_threshold"] == ["3,00"]
+    assert extracted.metadata["answer_validation"]["status"] == "pass"
+    assert extracted.metadata["answer_value_conflict"]["primary_value"] == "3,00"
+
+
 def test_build_text_message_creates_user_message():
     message = build_text_message("Merhaba", context_id="ctx-1", role=Role.user)
 
@@ -124,6 +229,25 @@ def test_build_query_task_sets_metadata_and_state():
     assert task.metadata["state_transitions"][0]["message_id"] == task.status.message.messageId
     assert task.status.message.metadata["trace_id"] == task.metadata["trace_id"]
     assert task.status.message.metadata["span_id"] == task.metadata["span_id"]
+
+
+def test_build_query_task_preserves_retrieval_execution_metadata():
+    payload = A2AQueryPayload(
+        query_text="Muafiyet basvurusu ne zaman yapilir?",
+        context_id="ctx-retrieval-policy",
+        branch_role="primary",
+        retrieval_execution_policy={
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "primary",
+            "reranker_candidate_limit": 8,
+        },
+    )
+
+    task = build_query_task(payload)
+
+    assert task.metadata["branch_role"] == "primary"
+    assert task.metadata["retrieval_execution_policy"]["branch_role"] == "primary"
+    assert task.metadata["retrieval_execution_policy"]["reranker_candidate_limit"] == 8
 
 
 def test_build_agent_card_creates_skillful_card():
@@ -279,6 +403,22 @@ def test_http_transport_payload_keeps_a2a_metadata_without_session_secret():
             "session_token": "secret-session-token",
             "force_llm_synthesis": True,
             "is_personal_query": False,
+            "source_owner": {
+                "schema": "omu.source_owner.v1",
+                "primary": "student_affairs_policy",
+                "reasoning": "task_type",
+            },
+            "decision_contract": {
+                "schema": "omu.decision_contract.v1",
+                "mode": "read_only",
+                "contract": {
+                    "source_owner": {"primary": "student_affairs_policy"},
+                },
+            },
+            "branch_dispatch_gate": {
+                "schema": "omu.branch_dispatch_gate.v1",
+                "restored_primary_department": "student_affairs",
+            },
             "trace_id": "trace-http-1",
             "span_id": "span-http-1",
             "parent_span_id": "span-main-1",
@@ -290,6 +430,10 @@ def test_http_transport_payload_keeps_a2a_metadata_without_session_secret():
     assert payload["task_type"] == "registration_query"
     assert payload["student_id"] == 42
     assert payload["force_llm_synthesis"] is True
+    assert payload["source_owner"]["primary"] == "student_affairs_policy"
+    assert payload["decision_contract"]["mode"] == "read_only"
+    assert payload["decision_contract"]["contract"]["source_owner"]["primary"] == "student_affairs_policy"
+    assert payload["branch_dispatch_gate"]["restored_primary_department"] == "student_affairs"
     assert payload["trace_id"] == "trace-http-1"
     assert payload["span_id"] == "span-http-1"
     assert payload["parent_span_id"] == "span-main-1"
@@ -308,6 +452,34 @@ def test_specialist_transport_payload_keeps_specialist_metadata():
             student_faculty="Muhendislik Fakultesi",
             student_type="Turk",
             is_authenticated=True,
+            final_answer_owner="main_orchestrator",
+            specialist_response_mode="evidence_packet",
+            capability_planner={
+                "mode": "on",
+                "apply": True,
+                "action": {"capability": "finance.tuition_fee"},
+            },
+            source_owner={
+                "schema": "omu.source_owner.v1",
+                "primary": "tuition_fee_catalog",
+                "reasoning": "capability_planner",
+            },
+            decision_contract={
+                "schema": "omu.decision_contract.v1",
+                "mode": "read_only",
+                "contract": {
+                    "capabilities": {"selected": "finance.tuition_fee"},
+                    "source_owner": {"primary": "tuition_fee_catalog"},
+                },
+            },
+            branch_dispatch_gate={
+                "schema": "omu.branch_dispatch_gate.v1",
+                "restored_primary_department": "finance",
+            },
+            specialist_selection={
+                "selected_agent_id": "tuition_agent",
+                "reason": "registry",
+            },
             trace_id="trace-specialist-1",
             span_id="span-specialist-1",
             parent_span_id="span-department-1",
@@ -327,6 +499,13 @@ def test_specialist_transport_payload_keeps_specialist_metadata():
     assert payload["student_id"] == 42
     assert payload["student_faculty"] == "Muhendislik Fakultesi"
     assert payload["is_authenticated"] is True
+    assert payload["final_answer_owner"] == "main_orchestrator"
+    assert payload["specialist_response_mode"] == "evidence_packet"
+    assert payload["capability_planner"]["action"]["capability"] == "finance.tuition_fee"
+    assert payload["source_owner"]["primary"] == "tuition_fee_catalog"
+    assert payload["decision_contract"]["contract"]["capabilities"]["selected"] == "finance.tuition_fee"
+    assert payload["branch_dispatch_gate"]["restored_primary_department"] == "finance"
+    assert payload["specialist_selection"]["selected_agent_id"] == "tuition_agent"
     assert payload["trace_id"] == "trace-specialist-1"
     assert payload["span_id"] == "span-specialist-1"
     assert payload["parent_span_id"] == "span-department-1"
@@ -979,24 +1158,13 @@ async def test_specialist_http_transport_returns_failed_response_on_remote_error
 
 
 @pytest.mark.asyncio
-async def test_specialist_http_transport_retries_timeout_and_succeeds(monkeypatch):
+async def test_specialist_http_transport_retries_read_timeout(monkeypatch):
     from src.a2a import extract_department_response
     import src.a2a.specialist_transport as specialist_transport_module
     from src.core.config import settings
 
-    expected = DepartmentResponse(
-        department=Department.FINANCE,
-        answer="Retry sonrasi uzman cevabi",
-        sources=[],
-    )
     attempts = {"count": 0}
-
-    class _FakeResponse:
-        def raise_for_status(self):
-            return None
-
-        def json(self):
-            return expected.model_dump(mode="json")
+    header_nonces: list[str] = []
 
     class _FakeAsyncClient:
         def __init__(self, *, timeout):
@@ -1010,20 +1178,30 @@ async def test_specialist_http_transport_retries_timeout_and_succeeds(monkeypatc
 
         async def post(self, url, *, json, headers):
             attempts["count"] += 1
-            if attempts["count"] == 1:
-                raise specialist_transport_module.httpx.ReadTimeout("timed out")
-            return _FakeResponse()
+            header_nonces.append(headers["X-A2A-Nonce"])
+            raise specialist_transport_module.httpx.ReadTimeout("timed out")
+
+    auth_calls = {"count": 0}
+
+    def _fake_auth_headers(**kwargs):
+        auth_calls["count"] += 1
+        return {"X-A2A-Nonce": f"nonce-{auth_calls['count']}"}
 
     monkeypatch.setattr(
         settings.a2a,
         "specialist_endpoints",
         "tuition_agent=http://agent-finance-tuition:8110",
     )
+    monkeypatch.setattr(
+        specialist_transport_module,
+        "build_a2a_auth_headers",
+        _fake_auth_headers,
+    )
     monkeypatch.setattr(specialist_transport_module.httpx, "AsyncClient", _FakeAsyncClient)
     task = build_query_task(
         A2AQueryPayload(
             query_text="Harc ucreti ne kadar?",
-            context_id="ctx-specialist-retry-success",
+            context_id="ctx-specialist-timeout",
             task_type="tuition_query",
         )
     )
@@ -1039,9 +1217,11 @@ async def test_specialist_http_transport_retries_timeout_and_succeeds(monkeypatc
     extracted = extract_department_response(response_task)
 
     assert extracted is not None
-    assert extracted.success is True
-    assert extracted.answer == "Retry sonrasi uzman cevabi"
+    assert extracted.success is False
+    assert extracted.error == "a2a_specialist_transport_timeout"
+    assert extracted.metadata["attempt"] == 2
     assert attempts["count"] == 2
+    assert header_nonces == ["nonce-1", "nonce-2"]
 
 
 @pytest.mark.asyncio
@@ -1414,29 +1594,17 @@ async def test_http_transport_returns_timeout_response_on_http_timeout(monkeypat
     assert extracted is not None
     assert extracted.success is False
     assert extracted.error == "a2a_transport_timeout"
-    assert "zamaninda yanit veremedi" in extracted.answer
     assert extracted.db_data == {"transport_error": "timed out"}
 
 
 @pytest.mark.asyncio
-async def test_http_transport_retries_timeout_and_succeeds(monkeypatch):
+async def test_http_transport_retries_read_timeout(monkeypatch):
     from src.a2a import extract_department_response
     import src.a2a.transport as transport_module
     from src.core.config import settings
 
-    expected = DepartmentResponse(
-        department=Department.FINANCE,
-        answer="Retry sonrasi finans cevabi",
-        sources=[],
-    )
     attempts = {"count": 0}
-
-    class _FakeResponse:
-        def raise_for_status(self):
-            return None
-
-        def json(self):
-            return expected.model_dump(mode="json")
+    header_nonces: list[str] = []
 
     class _FakeAsyncClient:
         def __init__(self, *, timeout):
@@ -1450,11 +1618,17 @@ async def test_http_transport_retries_timeout_and_succeeds(monkeypatch):
 
         async def post(self, url, *, json, headers):
             attempts["count"] += 1
-            if attempts["count"] == 1:
-                raise transport_module.httpx.ReadTimeout("timed out")
-            return _FakeResponse()
+            header_nonces.append(headers["X-A2A-Nonce"])
+            raise transport_module.httpx.ReadTimeout("timed out")
+
+    auth_calls = {"count": 0}
+
+    def _fake_auth_headers(**kwargs):
+        auth_calls["count"] += 1
+        return {"X-A2A-Nonce": f"nonce-{auth_calls['count']}"}
 
     monkeypatch.setattr(settings.a2a, "finance_url", "http://agent-finance:8103")
+    monkeypatch.setattr(transport_module, "build_a2a_auth_headers", _fake_auth_headers)
     monkeypatch.setattr(transport_module.httpx, "AsyncClient", _FakeAsyncClient)
 
     transport = HttpA2ADepartmentTransport(
@@ -1466,7 +1640,7 @@ async def test_http_transport_retries_timeout_and_succeeds(monkeypatch):
         department=Department.FINANCE,
         orchestrator=None,
         query="Harc odemesi nasil yapilir?",
-        context_id="ctx-http-retry-success",
+        context_id="ctx-http-timeout-no-retry",
         task_type=None,
         metadata={},
         disable_specialist_llm=False,
@@ -1475,9 +1649,11 @@ async def test_http_transport_retries_timeout_and_succeeds(monkeypatch):
     extracted = extract_department_response(response_task)
 
     assert extracted is not None
-    assert extracted.success is True
-    assert extracted.answer == "Retry sonrasi finans cevabi"
+    assert extracted.success is False
+    assert extracted.error == "a2a_transport_timeout"
+    assert extracted.metadata["attempt"] == 2
     assert attempts["count"] == 2
+    assert header_nonces == ["nonce-1", "nonce-2"]
 
 
 @pytest.mark.asyncio
@@ -1612,7 +1788,8 @@ async def test_http_transport_opens_circuit_after_repeated_request_failures(monk
     assert first.error == "a2a_transport_failed"
     assert second.error == "a2a_transport_failed"
     assert third.error == "a2a_circuit_open"
-    assert "gecici olarak korumaya alindi" in third.answer
+    assert third.metadata["transport_error"]
+    assert third.metadata["circuit_failures"] == 2
     assert attempts["count"] == 2
 
 

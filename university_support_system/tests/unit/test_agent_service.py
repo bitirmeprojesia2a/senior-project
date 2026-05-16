@@ -530,6 +530,12 @@ def test_agent_service_jsonrpc_message_send_returns_a2a_task(monkeypatch):
         metadata={
             "task_type": "tuition_query",
             "student_department": "Bilgisayar Muhendisligi",
+            "final_answer_owner": "main_orchestrator",
+            "specialist_response_mode": "evidence_packet",
+            "capability_planner": {"action": {"capability": "finance.tuition_fee"}},
+            "source_owner": {"primary": "tuition_fee_catalog"},
+            "decision_contract": {"contract": {"source_owner": {"primary": "tuition_fee_catalog"}}},
+            "branch_dispatch_gate": {"restored_primary_department": "finance"},
         },
     )
 
@@ -557,6 +563,13 @@ def test_agent_service_jsonrpc_message_send_returns_a2a_task(monkeypatch):
     assert "omu.department_response.v1" in payload["result"]["artifacts"][1]["extensions"]
     assert payload["result"]["artifacts"][1]["parts"][0]["data"]["answer"] == "Finans JSON-RPC cevabi"
     orchestrator.handle.assert_awaited_once()
+    metadata = orchestrator.handle.await_args.kwargs["metadata"]
+    assert metadata["final_answer_owner"] == "main_orchestrator"
+    assert metadata["specialist_response_mode"] == "evidence_packet"
+    assert metadata["capability_planner"]["action"]["capability"] == "finance.tuition_fee"
+    assert metadata["source_owner"]["primary"] == "tuition_fee_catalog"
+    assert metadata["decision_contract"]["contract"]["source_owner"]["primary"] == "tuition_fee_catalog"
+    assert metadata["branch_dispatch_gate"]["restored_primary_department"] == "finance"
 
 
 def test_agent_service_jsonrpc_rejects_unsupported_method(monkeypatch):

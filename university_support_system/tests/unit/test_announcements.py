@@ -8,6 +8,18 @@ from src.db.support_models import Announcement, AnnouncementLink
 
 
 @pytest.mark.asyncio
+async def test_supplemental_probe_requires_non_empty_keywords():
+    rows = await announcements_module.fetch_relevant_announcements(
+        "Son duyurular neler?",
+        probe_mode="supplemental",
+        require_keyword_match=True,
+        allow_latest_fallback=False,
+    )
+
+    assert rows == []
+
+
+@pytest.mark.asyncio
 async def test_fetch_relevant_announcements_prefers_exact_faculty_matches(db_session, monkeypatch):
     generic = Announcement(
         title="Genel Duyuru",

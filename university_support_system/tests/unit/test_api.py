@@ -18,6 +18,7 @@ from src.api.main import (
 )
 from src.core.config import settings
 from src.core.constants import Department, TaskType
+from src.core.text_normalization import normalize_text
 from src.db.schemas import DepartmentResponse, RAGSource, UserQueryResponse
 
 pytestmark = pytest.mark.api
@@ -373,7 +374,7 @@ def test_request_otp_endpoint_returns_masked_email_and_preview_code():
     assert payload["success"] is True
     assert payload["student_number"] is None
     assert payload["otp_preview_code"] is None
-    assert "dogruysa" in payload["message"].lower()
+    assert "dogruysa" in normalize_text(payload["message"])
 
 
 def test_verify_otp_endpoint_returns_session_token():
@@ -487,6 +488,46 @@ def test_a2a_dispatch_endpoint_routes_to_department_orchestrator_with_auth_resol
     assert payload["department"] == "finance"
     assert "finance cevabi" in payload["answer"]
     assert payload["sources"][0]["metadata"]["student_id"] == 42
+
+
+def test_a2a_dispatch_endpoint_generates_context_id_when_missing():
+    app.dependency_overrides[get_main_orchestrator] = lambda: _FakeMainOrchestrator()
+    app.dependency_overrides[get_auth_service] = lambda: _FakeAuthService()
+    client = TestClient(app)
+    previous_key = settings.server.internal_api_key
+    settings.server.internal_api_key = "test-internal-key"
+
+    try:
+        first = client.post(
+            "/a2a/dispatch",
+            json={
+                "department": "finance",
+                "query": "Harc dekontu nasil alinir?",
+                "task_type": "tuition_query",
+                "session_token": "session-xyz",
+            },
+            headers={"X-Internal-API-Key": "test-internal-key"},
+        )
+        second = client.post(
+            "/a2a/dispatch",
+            json={
+                "department": "finance",
+                "query": "Harc dekontu nasil alinir?",
+                "task_type": "tuition_query",
+                "session_token": "session-xyz",
+            },
+            headers={"X-Internal-API-Key": "test-internal-key"},
+        )
+    finally:
+        settings.server.internal_api_key = previous_key
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    first_context_id = first.json()["sources"][0]["metadata"]["context_id"]
+    second_context_id = second.json()["sources"][0]["metadata"]["context_id"]
+    assert first_context_id != "api-a2a-context"
+    assert second_context_id != "api-a2a-context"
+    assert first_context_id != second_context_id
 
 
 def test_a2a_dispatch_endpoint_rejects_requests_without_internal_key():

@@ -21,12 +21,38 @@ from src.cache import (
     question_cache,
 )
 from src.core.config import settings
+from src.core.answer_contracts import (
+    answer_contract_policy_facet,
+    contract_from_metadata,
+    resolve_answer_contract,
+    should_use_deterministic_final,
+    validate_answer_against_contract,
+)
+from src.core.contract_answer_policy import build_contract_answer_plan, render_contract_answer_plan
 from src.core.messages import CONTACT_SUGGESTION
 from src.core.profiling import get_current_profiler, profile_stage
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
+from src.core.decision_authority import build_resolved_decision_metadata
+from src.core.source_ownership import (
+    OWNER_ACADEMIC_CALENDAR,
+    OWNER_INTERNATIONAL_POLICY,
+    OWNER_STUDENT_AFFAIRS_POLICY,
+    resolve_source_ownership,
+    source_ownership_to_metadata,
+)
 from src.core.text_normalization import normalize_text
+from src.diagnostics import (
+    build_decision_trace_record,
+    build_shadow_decision_contract,
+    decision_contract_to_metadata,
+    write_decision_trace_record,
+)
 from src.db.conversation_context import ConversationContextService, ConversationResolution
 from src.db.schemas import DepartmentResponse, IntentAnalysis, RoutingResult, UserQueryResponse
+from src.agents.student.graduation_utils import (
+    GRADUATION_AKTS_POLICY_FACET,
+    is_graduation_akts_total_query,
+)
 from src.db.telemetry import (
     TelemetryService,
     build_department_orchestrator_identity,
@@ -34,6 +60,13 @@ from src.db.telemetry import (
 )
 from src.llm.llm_service import LLMService, LLMServiceError
 from src.llm.prompt_templates import MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT
+from src.quality.evidence_answer_validator import (
+    AnswerValidationResult,
+    should_enforce_validation,
+    validate_evidence_answer,
+)
+from src.quality.answer_coverage import validate_answer_coverage
+from src.quality.answer_value_conflict import validate_answer_value_conflicts
 from src.quality.judge import run_judge
 from src.orchestrators.announcement_utils import (
     build_announcement_response,
@@ -42,9 +75,11 @@ from src.orchestrators.announcement_utils import (
 from src.orchestrators.defaults import build_default_orchestrators, build_remote_department_targets
 from src.orchestrators.department_dispatch import dispatch_to_departments
 from src.orchestrators.event_utils import build_event_response, request_event_response
+from src.orchestrators.final_quality import TEMPORARY_SYNTHESIS_FAILURE_ANSWER
 from src.orchestrators.query_policy import (
     ACADEMIC_DEPARTMENT_CLARIFICATION_MESSAGE,
     CLARIFICATION_MESSAGE,
+    build_supplemental_announcement_probe_query,
     build_missing_slot_clarification_message,
     looks_like_announcement_query,
     looks_like_contact_query,
@@ -62,7 +97,13 @@ from src.orchestrators.query_normalization import (
     unchanged_query,
 )
 from src.orchestrators.response_utils import compose_department_answers
-from src.orchestrators.response_utils import filter_low_confidence_responses
+from src.orchestrators.response_utils import (
+    build_response_filter_diagnostics,
+    filter_low_confidence_responses,
+    is_announcement_response,
+    is_low_confidence_rag_response,
+    is_no_info_response,
+)
 from src.orchestrators.synthesis_utils import (
     _clean_source_name,
     build_evidence_packet_fallback_answer,
@@ -90,6 +131,21 @@ _ACK_ONLY_RESPONSES = {
     "smalltalk": "Merhaba. Size öğrenci işleri, akademik programlar, finans, duyuru veya etkinlik konularında yardımcı olabilirim.",
     "hayir": "Tamam. Farklı bir konuda yardım isterseniz yazabilirsiniz.",
 }
+
+
+def _status_severity(status: str) -> int:
+    return {"skipped": 0, "pass": 0, "check": 1, "fail": 2}.get(str(status or ""), 1)
+
+
+def _preserved_required_values(result: AnswerValidationResult) -> set[str]:
+    answer_values = set(result.answer_values)
+    preserved: set[str] = set()
+    for claim in result.required_claims:
+        for value in claim.required_values:
+            labels = {value.raw, *value.aliases}
+            if labels & answer_values:
+                preserved.add(value.raw)
+    return preserved
 
 
 class MainOrchestrator:
@@ -232,6 +288,7 @@ class MainOrchestrator:
                             student_department=student_department,
                             student_faculty=student_faculty,
                             conversation_resolution=conversation_resolution,
+                            is_authenticated=is_authenticated,
                             routing_reason=str(early_event_gate_decision["routing_reason"]),
                             capability_params=self._capability_params_from_gate(
                                 early_event_gate_decision
@@ -337,6 +394,7 @@ class MainOrchestrator:
                         student_department=student_department,
                         student_faculty=student_faculty,
                         conversation_resolution=conversation_resolution,
+                        is_authenticated=is_authenticated,
                         routing_reasoning=early_announcement_reason,
                         capability_params=self._capability_params_from_gate(
                             early_announcement_gate_decision
@@ -413,18 +471,44 @@ class MainOrchestrator:
                                     routing_task_type=None,
                                     conversation_resolution=conversation_resolution,
                                 )
+                        self._maybe_record_decision_trace(
+                            original_query=query,
+                            effective_query=effective_query,
+                            context_id=context_id,
+                            query_log_id=query_log_id,
+                            trace_metadata=trace,
+                            is_authenticated=is_authenticated,
+                            conversation_resolution=conversation_resolution,
+                            responses=[],
+                            final_response=final_response,
+                            final_answer_owner="question_cache",
+                            cache_lookup_policy=pre_route_cache_lookup.reason,
+                            cache_store_policy="cache_hit",
+                            deterministic_rules=["pre_route_question_cache_hit"],
+                        )
                         return final_response
 
                 capability_planner_payload = None
                 # Routing (normalization dahil) her zaman ana karar katmani olarak kalir.
                 # Capability planner router'i atlamaz; yalnizca routing sonrasinda
                 # whitelisted capability metadata'si uretmek icin kullanilir.
+                routing_department_hints = conversation_resolution.department_hints
+                routing_task_type_hint = conversation_resolution.task_type_hint
+                frame = conversation_resolution.frame
+                if frame is not None:
+                    safe_context_operations = {"same_topic", "answer_slot", "correction"}
+                    if (
+                        frame.operation not in safe_context_operations
+                        or float(frame.confidence or 0.0) < 0.75
+                    ):
+                        routing_department_hints = []
+                        routing_task_type_hint = None
                 with profile_stage("main.router.route"):
                     routing = await self.router.route(
                         effective_query,
                         llm_profile=llm_profile,
-                        preferred_departments=conversation_resolution.department_hints,
-                        preferred_task_type=conversation_resolution.task_type_hint,
+                        preferred_departments=routing_department_hints,
+                        preferred_task_type=routing_task_type_hint,
                     )
                 if routing.task_type is None and conversation_resolution.task_type_hint is not None:
                     routing = routing.model_copy(
@@ -541,6 +625,22 @@ class MainOrchestrator:
                                     routing_task_type=None,
                                     conversation_resolution=conversation_resolution,
                                 )
+                        self._maybe_record_decision_trace(
+                            original_query=query,
+                            effective_query=effective_query,
+                            context_id=context_id,
+                            query_log_id=query_log_id,
+                            trace_metadata=trace,
+                            is_authenticated=is_authenticated,
+                            routing=routing,
+                            conversation_resolution=conversation_resolution,
+                            responses=[],
+                            final_response=final_response,
+                            final_answer_owner="question_cache",
+                            cache_lookup_policy=cache_lookup_decision.reason,
+                            cache_store_policy="cache_hit",
+                            deterministic_rules=["question_cache_hit"],
+                        )
                         return final_response
                     if profiler is not None:
                         profiler.set_attribute(
@@ -602,6 +702,7 @@ class MainOrchestrator:
                         student_department=student_department,
                         student_faculty=student_faculty,
                         conversation_resolution=conversation_resolution,
+                        is_authenticated=is_authenticated,
                         routing_reason=event_short_circuit_reason,
                         capability_params=event_short_circuit_params,
                         trace_metadata=trace,
@@ -668,6 +769,34 @@ class MainOrchestrator:
                         "allow_latest_fallback",
                         default=should_allow_announcement_latest_fallback(effective_query),
                     )
+                    source_owner_payload = source_ownership_to_metadata(
+                        resolve_source_ownership(override="announcement_search")
+                    )
+                    source_owner_payload["final_answer_owner"] = "announcement_agent"
+                    decision_contract_payload = self._build_runtime_decision_contract_metadata(
+                        original_query=query,
+                        effective_query=effective_query,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        final_answer_owner="announcement_agent",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        source_owner_override="announcement_search",
+                        source_owner_payload=source_owner_payload,
+                        deterministic_rules=["announcement_short_circuit"],
+                        stage="announcement_short_circuit",
+                    )
+                    resolved_decision_payload = build_resolved_decision_metadata(
+                        original_query=query,
+                        effective_query=effective_query,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        capability_planner_payload=capability_planner_payload,
+                        source_owner_payload=source_owner_payload,
+                        final_answer_owner="announcement_agent",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        decision_contract_payload=decision_contract_payload,
+                        stage="announcement_short_circuit",
+                    )
                     with profile_stage("main.announcement_short_circuit"):
                         with profile_stage("main.telemetry.create_query_log"):
                             query_log_id = await self.telemetry_service.create_query_log(
@@ -693,8 +822,12 @@ class MainOrchestrator:
                             conversation_source_refs=conversation_resolution.source_hints,
                             allow_latest_fallback=allow_latest_fallback,
                             limit=planner_limit,
+                            decision_contract=decision_contract_payload,
+                            resolved_decision=resolved_decision_payload,
                             trace_metadata=trace,
                         )
+                    if announcement_user_response.answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:
+                        return announcement_user_response
                     if self.conversation_service is not None:
                         with profile_stage("main.conversation.record_announcement"):
                             await self._record_conversation_turn(
@@ -708,6 +841,23 @@ class MainOrchestrator:
                                 routing_task_type=None,
                                 conversation_resolution=conversation_resolution,
                             )
+                    self._maybe_record_decision_trace(
+                        original_query=query,
+                        effective_query=effective_query,
+                        context_id=context_id,
+                        query_log_id=query_log_id,
+                        trace_metadata=trace,
+                        is_authenticated=is_authenticated,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        responses=[],
+                        final_response=announcement_user_response,
+                        final_answer_owner="announcement_agent",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        source_owner_override="announcement_search",
+                        source_owner_payload=source_owner_payload,
+                        deterministic_rules=["announcement_short_circuit"],
+                    )
                     return announcement_user_response
 
                 # Routing zaten yukarida yapildi; sadece profil bilgisi ekle
@@ -746,6 +896,7 @@ class MainOrchestrator:
                         student_department=student_department,
                         student_faculty=student_faculty,
                         conversation_resolution=conversation_resolution,
+                        is_authenticated=is_authenticated,
                         capability_params=None,
                         trace_metadata=trace,
                     )
@@ -776,6 +927,34 @@ class MainOrchestrator:
                         student_department=student_department,
                         student_faculty=student_faculty,
                     )
+                    source_owner_payload = source_ownership_to_metadata(
+                        resolve_source_ownership(override="announcement_search")
+                    )
+                    source_owner_payload["final_answer_owner"] = "announcement_agent"
+                    decision_contract_payload = self._build_runtime_decision_contract_metadata(
+                        original_query=query,
+                        effective_query=effective_query,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        final_answer_owner="announcement_agent",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        source_owner_override="announcement_search",
+                        source_owner_payload=source_owner_payload,
+                        deterministic_rules=["announcement_short_circuit"],
+                        stage="announcement_short_circuit",
+                    )
+                    resolved_decision_payload = build_resolved_decision_metadata(
+                        original_query=query,
+                        effective_query=effective_query,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        capability_planner_payload=capability_planner_payload,
+                        source_owner_payload=source_owner_payload,
+                        final_answer_owner="announcement_agent",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        decision_contract_payload=decision_contract_payload,
+                        stage="announcement_short_circuit",
+                    )
                     with profile_stage("main.announcement_short_circuit"):
                         announcement_user_response = await build_announcement_response(
                             announcement_agent=self.announcement_agent,
@@ -792,8 +971,15 @@ class MainOrchestrator:
                             faculty=announcement_scope["faculty"],
                             unit_name=announcement_scope["unit_name"],
                             conversation_source_refs=conversation_resolution.source_hints,
+                            allow_latest_fallback=should_allow_announcement_latest_fallback(
+                                effective_query
+                            ),
+                            decision_contract=decision_contract_payload,
+                            resolved_decision=resolved_decision_payload,
                             trace_metadata=trace,
                         )
+                    if announcement_user_response.answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:
+                        return announcement_user_response
                     if self.conversation_service is not None:
                         with profile_stage("main.conversation.record_announcement"):
                             await self._record_conversation_turn(
@@ -806,6 +992,23 @@ class MainOrchestrator:
                                 final_response=announcement_user_response,
                                 routing_task_type=routing.task_type,
                                 conversation_resolution=conversation_resolution,
+                    )
+                    self._maybe_record_decision_trace(
+                        original_query=query,
+                        effective_query=effective_query,
+                        context_id=context_id,
+                        query_log_id=query_log_id,
+                        trace_metadata=trace,
+                        is_authenticated=is_authenticated,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        responses=[],
+                        final_response=announcement_user_response,
+                        final_answer_owner="announcement_agent",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        source_owner_override="announcement_search",
+                        source_owner_payload=source_owner_payload,
+                        deterministic_rules=["announcement_short_circuit"],
                     )
                     return announcement_user_response
 
@@ -853,16 +1056,45 @@ class MainOrchestrator:
                                 routing_task_type=routing.task_type,
                                 conversation_resolution=conversation_resolution,
                             )
+                    self._maybe_record_decision_trace(
+                        original_query=query,
+                        effective_query=effective_query,
+                        context_id=context_id,
+                        query_log_id=query_log_id,
+                        trace_metadata=trace,
+                        is_authenticated=is_authenticated,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        final_response=clarification_response,
+                        final_answer_owner="clarification",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        deterministic_rules=["missing_slot_clarification"],
+                    )
                     return clarification_response
 
                 if routing.strategy.name == "CLARIFICATION" and not routing.departments:
-                    return self._build_clarification_response(
+                    clarification_response = self._build_clarification_response(
                         context_id=context_id,
                         start_time=start_time,
                         query_log_id=query_log_id,
                         routing_reasoning=routing.reasoning,
                         full_name=student_full_name,
                     )
+                    self._maybe_record_decision_trace(
+                        original_query=query,
+                        effective_query=effective_query,
+                        context_id=context_id,
+                        query_log_id=query_log_id,
+                        trace_metadata=trace,
+                        is_authenticated=is_authenticated,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        final_response=clarification_response,
+                        final_answer_owner="clarification",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        deterministic_rules=["router_clarification"],
+                    )
+                    return clarification_response
 
                 if requires_academic_department_clarification(
                     query=effective_query,
@@ -902,6 +1134,20 @@ class MainOrchestrator:
                                 routing_task_type=routing.task_type,
                                 conversation_resolution=conversation_resolution,
                             )
+                    self._maybe_record_decision_trace(
+                        original_query=query,
+                        effective_query=effective_query,
+                        context_id=context_id,
+                        query_log_id=query_log_id,
+                        trace_metadata=trace,
+                        is_authenticated=is_authenticated,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        final_response=clarification_response,
+                        final_answer_owner="clarification",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        deterministic_rules=["academic_department_clarification"],
+                    )
                     return clarification_response
 
                 intent = routing.intent
@@ -943,6 +1189,30 @@ class MainOrchestrator:
                     ),
                     **trace,
                 }
+                frame_payload = None
+                if conversation_resolution is not None and conversation_resolution.frame is not None:
+                    try:
+                        frame_payload = conversation_resolution.frame.to_prompt_context()
+                    except Exception:
+                        frame_payload = None
+                answer_contract = resolve_answer_contract(
+                    effective_query,
+                    conversation_frame=frame_payload if isinstance(frame_payload, dict) else None,
+                )
+                if answer_contract is not None:
+                    if should_use_deterministic_final(answer_contract):
+                        final_answer_owner = "department_orchestrator"
+                        metadata["final_answer_owner"] = final_answer_owner
+                        metadata["specialist_response_mode"] = "answer"
+                    metadata["answer_contract"] = answer_contract.to_metadata()
+                policy_facet_payload = self._policy_facet_payload(
+                    query=effective_query,
+                    conversation_resolution=conversation_resolution,
+                )
+                if policy_facet_payload is not None:
+                    metadata["policy_facet"] = policy_facet_payload
+                elif answer_contract is not None:
+                    metadata["policy_facet"] = answer_contract_policy_facet(answer_contract)
                 if capability_planner_payload is None:
                     capability_planner_payload = await self._maybe_plan_capability(
                         query=effective_query,
@@ -953,8 +1223,79 @@ class MainOrchestrator:
                         student_type=student_type,
                         llm_profile=llm_profile,
                     )
+                capability_planner_payload = self._enforce_policy_facet_capability(
+                    capability_planner_payload,
+                    policy_facet_payload=policy_facet_payload,
+                    query=effective_query,
+                )
+                capability_planner_payload = self._enforce_answer_contract_capability(
+                    capability_planner_payload,
+                    answer_contract_payload=metadata.get("answer_contract"),
+                    query=effective_query,
+                )
                 if capability_planner_payload is not None:
                     metadata["capability_planner"] = capability_planner_payload
+                source_owner_payload = self._resolve_source_owner_payload(
+                    original_query=query,
+                    effective_query=effective_query,
+                    routing=routing,
+                    capability_planner_payload=capability_planner_payload,
+                    final_answer_owner=final_answer_owner,
+                )
+                if answer_contract is not None:
+                    source_owner_payload["primary"] = answer_contract.source_owner
+                    source_owner_payload["capability"] = answer_contract.capability
+                    source_owner_payload["reasoning"] = (
+                        f"answer_contract:{answer_contract.contract_id}"
+                    )
+                    source_owner_payload["confidence"] = 1.0
+                    source_owner_payload["final_answer_owner"] = final_answer_owner
+                metadata["source_owner"] = source_owner_payload
+                if profiler is not None:
+                    profiler.set_attribute("source_owner", source_owner_payload)
+                decision_contract_payload = self._build_runtime_decision_contract_metadata(
+                    original_query=query,
+                    effective_query=effective_query,
+                    routing=routing,
+                    conversation_resolution=conversation_resolution,
+                    capability_planner_payload=capability_planner_payload,
+                    final_answer_owner=final_answer_owner,
+                    cache_lookup_policy=cache_lookup_decision.reason,
+                    source_owner_payload=source_owner_payload,
+                    stage="department_dispatch",
+                )
+                if decision_contract_payload is not None:
+                    metadata["decision_contract"] = decision_contract_payload
+                    if profiler is not None:
+                        profiler.set_attribute(
+                            "decision_contract",
+                            {
+                                "mode": decision_contract_payload.get("mode"),
+                                "stage": decision_contract_payload.get("stage"),
+                                "schema": decision_contract_payload.get("schema"),
+                                "source_owner": (
+                                    decision_contract_payload.get("contract", {})
+                                    .get("source_owner", {})
+                                    .get("primary")
+                                ),
+                            },
+                        )
+                resolved_decision_payload = build_resolved_decision_metadata(
+                    original_query=query,
+                    effective_query=effective_query,
+                    routing=routing,
+                    conversation_resolution=conversation_resolution,
+                    answer_contract=answer_contract,
+                    capability_planner_payload=capability_planner_payload,
+                    source_owner_payload=source_owner_payload,
+                    final_answer_owner=final_answer_owner,
+                    cache_lookup_policy=cache_lookup_decision.reason,
+                    decision_contract_payload=decision_contract_payload,
+                    stage="department_dispatch",
+                )
+                metadata["resolved_decision"] = resolved_decision_payload
+                if profiler is not None:
+                    profiler.set_attribute("resolved_decision", resolved_decision_payload)
 
                 with profile_stage("main.dispatch_departments"):
                     department_responses = await dispatch_to_departments(
@@ -1009,6 +1350,23 @@ class MainOrchestrator:
                                 routing_task_type=routing.task_type,
                                 conversation_resolution=conversation_resolution,
                             )
+                    self._maybe_record_decision_trace(
+                        original_query=query,
+                        effective_query=effective_query,
+                        context_id=context_id,
+                        query_log_id=query_log_id,
+                        trace_metadata=trace,
+                        is_authenticated=is_authenticated,
+                        routing=routing,
+                        conversation_resolution=conversation_resolution,
+                        capability_planner_payload=capability_planner_payload,
+                        responses=department_responses,
+                        final_response=clarification_response,
+                        final_answer_owner="clarification",
+                        cache_lookup_policy=cache_lookup_decision.reason,
+                        source_owner_payload=source_owner_payload,
+                        deterministic_rules=["department_context_clarification"],
+                    )
                     return clarification_response
 
                 responses: list[DepartmentResponse] = list(department_responses)
@@ -1032,6 +1390,11 @@ class MainOrchestrator:
                             faculty=announcement_scope["faculty"],
                             unit_name=announcement_scope["unit_name"],
                             conversation_source_refs=conversation_resolution.source_hints,
+                            allow_latest_fallback=should_allow_announcement_latest_fallback(
+                                effective_query
+                            ),
+                            decision_contract=decision_contract_payload,
+                            resolved_decision=resolved_decision_payload,
                             trace_metadata=trace,
                         )
                         responses.append(fallback)
@@ -1059,13 +1422,82 @@ class MainOrchestrator:
                                 allow_latest_fallback=should_allow_announcement_latest_fallback(
                                     effective_query
                                 ),
+                                decision_contract=decision_contract_payload,
+                                resolved_decision=resolved_decision_payload,
                                 trace_metadata=trace,
                             )
                     if announcement_response is not None and announcement_response.sources:
                         responses.append(announcement_response)
+                    supplemental_probe_query = build_supplemental_announcement_probe_query(effective_query)
+                    if supplemental_probe_query:
+                        announcement_scope = self._resolve_announcement_scope(
+                            query=effective_query,
+                            conversation_resolution=conversation_resolution,
+                            student_department=student_department,
+                            student_faculty=student_faculty,
+                        )
+                        with profile_stage("main.supplemental_announcement_probe"):
+                            supplemental_response = await request_announcement_response(
+                                announcement_agent=self.announcement_agent,
+                                telemetry_service=self.telemetry_service,
+                                query=supplemental_probe_query,
+                                context_id=context_id,
+                                routing_reason=routing.reasoning,
+                                query_log_id=query_log_id,
+                                task_type=routing.task_type,
+                                faculty=announcement_scope["faculty"],
+                                unit_name=announcement_scope["unit_name"],
+                                conversation_source_refs=conversation_resolution.source_hints,
+                                allow_latest_fallback=False,
+                                probe_mode="supplemental",
+                                require_keyword_match=True,
+                                minimum_match_score=10,
+                                recent_days=240,
+                                limit=3,
+                                decision_contract=decision_contract_payload,
+                                resolved_decision=resolved_decision_payload,
+                                trace_metadata=trace,
+                            )
+                        if supplemental_response is not None:
+                            supplemental_response.metadata = {
+                                **(supplemental_response.metadata or {}),
+                                "supplemental_probe": {
+                                    "mode": "pilot",
+                                    "query": supplemental_probe_query,
+                                    "record_count": len(supplemental_response.sources),
+                                    "status": (
+                                        "ran_appended"
+                                        if supplemental_response.sources
+                                        else "ran_no_match"
+                                    ),
+                                },
+                            }
+                        if supplemental_response is not None and (
+                            supplemental_response.sources
+                            or (
+                                answer_contract is not None
+                                and answer_contract.contract_id
+                                in {"cap_application_dates"}
+                            )
+                        ):
+                            responses.append(supplemental_response)
 
                 with profile_stage("main.filter_low_confidence"):
-                    filtered_responses = filter_low_confidence_responses(responses)
+                    filter_source_owner = str(
+                        (source_owner_payload or {}).get("primary") or ""
+                    ).strip() or None
+                    filtered_responses = filter_low_confidence_responses(
+                        responses,
+                        source_owner=filter_source_owner,
+                    )
+                    filter_diagnostics = build_response_filter_diagnostics(
+                        original=responses,
+                        filtered=filtered_responses,
+                        source_owner=filter_source_owner,
+                    )
+                    profiler = get_current_profiler()
+                    if profiler is not None:
+                        profiler.set_attribute("response_filter", filter_diagnostics)
                     filtered_departments = list(department_responses)
 
                 with profile_stage("main.compose_response"):
@@ -1073,14 +1505,85 @@ class MainOrchestrator:
                         query=effective_query,
                         responses=filtered_responses,
                         llm_profile=llm_profile,
+                        answer_contract=answer_contract,
                     )
+                synthesis_failed_temporarily = (
+                    answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER
+                )
 
-                # Post-synthesis judge quality gate
-                # Only runs when LLM_MAIN_JUDGE_ENABLED is true AND
-                # the answer used global synthesis or is multi-department risky.
+                if synthesis_failed_temporarily:
+                    response_time_ms = round((perf_counter() - start_time) * 1000, 2)
+                    final_response = build_clarification_user_response(
+                        context_id=context_id,
+                        message=answer,
+                        response_time_ms=response_time_ms,
+                        full_name=student_full_name,
+                    )
+                    await self.telemetry_service.finalize_query_log(
+                        query_log_id=query_log_id,
+                        response_text=answer,
+                        response_time_ms=final_response.response_time_ms,
+                        status="failed",
+                        error="llm_synthesis_failed",
+                        departments=[response.department.value for response in filtered_responses],
+                    )
+                    profiler = get_current_profiler()
+                    if profiler is not None and final_response.diagnostics is not None:
+                        final_response.diagnostics.local_profile = profiler.snapshot()
+                    elif profiler is not None:
+                        from src.db.schemas import QueryDiagnostics
+                        final_response.diagnostics = QueryDiagnostics(local_profile=profiler.snapshot())
+                    return final_response
+
+                with profile_stage("main.evidence_answer_validator"):
+                    answer_validation = validate_evidence_answer(
+                        query=effective_query,
+                        answer=answer,
+                        responses=filtered_responses,
+                        mode=settings.answer_validation.mode,
+                    )
+                    profiler = get_current_profiler()
+                    if profiler is not None:
+                        profiler.set_attribute(
+                            "evidence_answer_validator",
+                            answer_validation.to_dict(),
+                        )
+                with profile_stage("main.answer_coverage_shadow"):
+                    answer_coverage = validate_answer_coverage(
+                        query=effective_query,
+                        answer=answer,
+                        responses=filtered_responses,
+                    )
+                    profiler = get_current_profiler()
+                    if profiler is not None:
+                        profiler.set_attribute(
+                            "answer_coverage_validator",
+                            answer_coverage.to_dict(),
+                        )
+                with profile_stage("main.answer_value_conflict_shadow"):
+                    answer_value_conflict = validate_answer_value_conflicts(
+                        query=effective_query,
+                        answer=answer,
+                        responses=filtered_responses,
+                    )
+                    profiler = get_current_profiler()
+                    if profiler is not None:
+                        profiler.set_attribute(
+                            "answer_value_conflict_validator",
+                            answer_value_conflict.to_dict(),
+                        )
+
+                is_multi_department_answer = (
+                    len({r.department for r in filtered_responses if r.answer.strip()}) >= 2
+                )
+
+                # Post-synthesis judge quality gate. The deterministic
+                # validator does not decide the answer; it only escalates
+                # suspicious evidence/answer mismatches to the existing judge.
                 if settings.llm.main_judge_enabled and (
                     used_global_synthesis
-                    or len({r.department for r in filtered_responses if r.answer.strip()}) >= 2
+                    or is_multi_department_answer
+                    or should_enforce_validation(answer_validation)
                 ):
                     answer = await self._apply_main_judge_gate(
                         query=effective_query,
@@ -1088,7 +1591,114 @@ class MainOrchestrator:
                         responses=filtered_responses,
                         llm_profile=llm_profile,
                         used_global_synthesis=used_global_synthesis,
+                        answer_validation=answer_validation,
                     )
+
+                answer = await self._apply_final_quality_gate(
+                    query=effective_query,
+                    answer=answer,
+                    llm_profile=llm_profile,
+                )
+                if answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:
+                    response_time_ms = round((perf_counter() - start_time) * 1000, 2)
+                    final_response = build_clarification_user_response(
+                        context_id=context_id,
+                        message=answer,
+                        response_time_ms=response_time_ms,
+                        full_name=student_full_name,
+                    )
+                    await self.telemetry_service.finalize_query_log(
+                        query_log_id=query_log_id,
+                        response_text=answer,
+                        response_time_ms=final_response.response_time_ms,
+                        status="failed",
+                        error="final_quality_gate_failed",
+                        departments=[response.department.value for response in filtered_responses],
+                    )
+                    profiler = get_current_profiler()
+                    if profiler is not None and final_response.diagnostics is not None:
+                        final_response.diagnostics.local_profile = profiler.snapshot()
+                    elif profiler is not None:
+                        from src.db.schemas import QueryDiagnostics
+                        final_response.diagnostics = QueryDiagnostics(local_profile=profiler.snapshot())
+                    return final_response
+
+                contract_validation = validate_answer_against_contract(
+                    query=effective_query,
+                    answer=answer,
+                    contract=answer_contract,
+                )
+                profiler = get_current_profiler()
+                if profiler is not None:
+                    profiler.set_attribute("answer_contract_validation", contract_validation)
+                if contract_validation.get("status") == "fail":
+                    original_contract_violations = list(contract_validation.get("violations") or [])
+                    contract_fallback = self._contract_validation_fallback(
+                        query=effective_query,
+                        contract=answer_contract,
+                    )
+                    if contract_fallback:
+                        fallback_validation = validate_answer_against_contract(
+                            query=effective_query,
+                            answer=contract_fallback,
+                            contract=answer_contract,
+                        )
+                        fallback_answer = await self._apply_final_quality_gate(
+                            query=effective_query,
+                            answer=contract_fallback,
+                            llm_profile=llm_profile,
+                        )
+                        if (
+                            fallback_validation.get("status") != "fail"
+                            and fallback_answer != TEMPORARY_SYNTHESIS_FAILURE_ANSWER
+                        ):
+                            logger.info(
+                                "answer_contract_validation_recovered_with_fallback contract=%s violations=%s",
+                                contract_validation.get("contract_id"),
+                                contract_validation.get("violations"),
+                            )
+                            answer = fallback_answer
+                            contract_validation = fallback_validation
+                            if profiler is not None:
+                                profiler.set_attribute(
+                                    "answer_contract_validation",
+                                    {
+                                        **fallback_validation,
+                                        "recovered_from": original_contract_violations,
+                                        "fallback": "deterministic_contract_template",
+                                    },
+                                )
+                        else:
+                            contract_fallback = None
+                    if contract_fallback:
+                        pass
+                    else:
+                        logger.warning(
+                            "answer_contract_validation_failed contract=%s violations=%s",
+                            contract_validation.get("contract_id"),
+                            contract_validation.get("violations"),
+                        )
+                        response_time_ms = round((perf_counter() - start_time) * 1000, 2)
+                        final_response = build_clarification_user_response(
+                            context_id=context_id,
+                            message=TEMPORARY_SYNTHESIS_FAILURE_ANSWER,
+                            response_time_ms=response_time_ms,
+                            full_name=student_full_name,
+                        )
+                        await self.telemetry_service.finalize_query_log(
+                            query_log_id=query_log_id,
+                            response_text=TEMPORARY_SYNTHESIS_FAILURE_ANSWER,
+                            response_time_ms=final_response.response_time_ms,
+                            status="failed",
+                            error="answer_contract_validation_failed",
+                            departments=[response.department.value for response in filtered_responses],
+                        )
+                        if profiler is not None and final_response.diagnostics is not None:
+                            final_response.diagnostics.local_profile = profiler.snapshot()
+                        elif profiler is not None:
+                            from src.db.schemas import QueryDiagnostics
+                            final_response.diagnostics = QueryDiagnostics(local_profile=profiler.snapshot())
+                        return final_response
 
                 memory_answer = build_memory_answer(answer=answer)
                 
@@ -1139,6 +1749,24 @@ class MainOrchestrator:
                 if cache_store_decision.allowed:
                     with profile_stage("main.question_cache.put"):
                         question_cache.put(question_cache_key, final_response)
+                self._maybe_record_decision_trace(
+                    original_query=query,
+                    effective_query=effective_query,
+                    context_id=context_id,
+                    query_log_id=query_log_id,
+                    trace_metadata=trace,
+                    is_authenticated=is_authenticated,
+                    routing=routing,
+                    conversation_resolution=conversation_resolution,
+                    capability_planner_payload=capability_planner_payload,
+                    responses=filtered_responses,
+                    final_response=final_response,
+                    final_answer_owner=final_answer_owner,
+                    used_global_synthesis=used_global_synthesis,
+                    cache_lookup_policy=cache_lookup_decision.reason,
+                    cache_store_policy=cache_store_decision.reason,
+                    source_owner_payload=source_owner_payload,
+                )
                 # Stage surelerini diagnostics'e ekle
                 profiler = get_current_profiler()
                 if profiler is not None and final_response.diagnostics is not None:
@@ -1189,6 +1817,352 @@ class MainOrchestrator:
             )
         except Exception as exc:
             logger.warning("conversation_turn_record_skipped reason=%s", type(exc).__name__)
+
+    @staticmethod
+    def _channel_from_context_id(context_id: str | None) -> str:
+        if context_id and context_id.startswith("slack:"):
+            return "slack"
+        return "api_or_a2a"
+
+    @staticmethod
+    def _selected_specialists_from_responses(responses: list[DepartmentResponse]) -> list[str]:
+        specialists: list[str] = []
+        for response in responses:
+            metadata = dict(response.metadata or {})
+            selection = metadata.get("specialist_selection")
+            selection_agent_id = (
+                selection.get("selected_agent_id")
+                if isinstance(selection, dict)
+                else None
+            )
+            agent_id = str(
+                selection_agent_id
+                or metadata.get("selected_agent_id")
+                or metadata.get("agent_id")
+                or response.department.value
+            ).strip()
+            if agent_id and agent_id not in specialists:
+                specialists.append(agent_id)
+        return specialists
+
+    @staticmethod
+    def _planner_action_payload(planner_payload: dict | None) -> dict | None:
+        if not isinstance(planner_payload, dict):
+            return None
+        action = planner_payload.get("action")
+        return action if isinstance(action, dict) else None
+
+    @staticmethod
+    def _policy_facet_payload(
+        *,
+        query: str,
+        conversation_resolution: ConversationResolution | None,
+    ) -> dict | None:
+        frame_payload = None
+        if conversation_resolution is not None and conversation_resolution.frame is not None:
+            try:
+                frame_payload = conversation_resolution.frame.to_prompt_context()
+            except Exception:
+                frame_payload = None
+        frame_facet = ""
+        if isinstance(frame_payload, dict):
+            frame_facet = str(frame_payload.get("policy_facet") or frame_payload.get("facet") or "")
+        if not is_graduation_akts_total_query(query, policy_facet=frame_facet):
+            return None
+        return {
+            "schema": "omu.policy_facet.v1",
+            "facet": GRADUATION_AKTS_POLICY_FACET,
+            "question_type": "graduation_total_akts",
+            "source_owner": OWNER_STUDENT_AFFAIRS_POLICY,
+            "capability": "student_affairs.policy_lookup",
+            "contract": "education_level_graduation_total",
+        }
+
+    @staticmethod
+    def _enforce_policy_facet_capability(
+        planner_payload: dict | None,
+        *,
+        policy_facet_payload: dict | None,
+        query: str,
+    ) -> dict | None:
+        if not isinstance(policy_facet_payload, dict):
+            return planner_payload
+        if policy_facet_payload.get("facet") != GRADUATION_AKTS_POLICY_FACET:
+            return planner_payload
+        payload = dict(planner_payload or {})
+        action = {
+            "capability": "student_affairs.policy_lookup",
+            "intent": "graduation_akts_total",
+            "params": {
+                "query": query,
+                "topic": "mezuniyet",
+                "policy_facet": GRADUATION_AKTS_POLICY_FACET,
+                "question_type": "graduation_total_akts",
+            },
+            "missing_params": [],
+            "answer_contract": {
+                "must_answer": [
+                    "mezuniyet icin toplam AKTS",
+                    "on lisans/lisans seviye ayrimi",
+                    "ders donemi AKTS yukunden ayirma",
+                ],
+            },
+            "evidence_contract": {
+                "preferred_sources": ["on_lisans_lisans_yonetmeligi", "mezuniyet_kosullari"],
+                "avoid_sources": ["formasyon", "erasmus", "lisansustu", "staj", "donemlik_ders_yuku"],
+            },
+            "fallback_route": None,
+            "confidence": 1.0,
+            "fallback": None,
+            "reasoning": "policy_facet_contract:graduation_akts_total",
+        }
+        payload.update(
+            {
+                "mode": payload.get("mode") or "contract",
+                "apply": True,
+                "action": action,
+                "plan_decision": action,
+                "policy_facet_enforced": True,
+            }
+        )
+        return payload
+
+    @staticmethod
+    def _enforce_answer_contract_capability(
+        planner_payload: dict | None,
+        *,
+        answer_contract_payload: dict | None,
+        query: str,
+    ) -> dict | None:
+        if not isinstance(answer_contract_payload, dict):
+            return planner_payload
+        capability = str(answer_contract_payload.get("capability") or "").strip()
+        if not capability:
+            return planner_payload
+
+        contract_id = str(answer_contract_payload.get("contract_id") or "").strip()
+        facet = str(answer_contract_payload.get("facet") or contract_id).strip()
+        existing_action = (
+            planner_payload.get("action")
+            if isinstance(planner_payload, dict) and isinstance(planner_payload.get("action"), dict)
+            else {}
+        )
+        existing_params = (
+            existing_action.get("params")
+            if isinstance(existing_action, dict) and isinstance(existing_action.get("params"), dict)
+            else {}
+        )
+        params: dict[str, object] = {
+            **existing_params,
+            "query": query,
+            "policy_facet": facet,
+            "answer_contract": answer_contract_payload,
+        }
+        if capability == "schedule.weekly_program":
+            program = None
+            frame_entities = answer_contract_payload.get("entities")
+            if isinstance(frame_entities, dict):
+                program = frame_entities.get("program")
+            # The planner is still free to provide a better canonical program.
+            # This fallback keeps the action valid when conversation context
+            # already rewrote the query to include the program name.
+            if params.get("program"):
+                pass
+            elif not program:
+                for marker in ("icin", "ders programi"):
+                    if marker in normalize_text(query):
+                        break
+                params["program"] = query
+            else:
+                params["program"] = str(program)
+        action = {
+            "capability": capability,
+            "intent": contract_id or facet,
+            "params": params,
+            "missing_params": [],
+            "answer_contract": answer_contract_payload,
+            "evidence_contract": {
+                "source_owner": answer_contract_payload.get("source_owner"),
+                "forbidden_source_families": answer_contract_payload.get("forbidden_source_families", []),
+            },
+            "fallback_route": None,
+            "confidence": 1.0,
+            "fallback": None,
+            "reasoning": f"answer_contract:{contract_id or facet}",
+        }
+        payload = dict(planner_payload or {})
+        payload.update(
+            {
+                "mode": payload.get("mode") or "contract",
+                "apply": True,
+                "action": action,
+                "plan_decision": action,
+                "answer_contract_enforced": True,
+            }
+        )
+        return payload
+
+    def _resolve_source_owner_payload(
+        self,
+        *,
+        original_query: str,
+        effective_query: str,
+        routing: RoutingResult | None,
+        capability_planner_payload: dict | None,
+        final_answer_owner: str | None,
+    ) -> dict:
+        """Build the runtime source-owner contract carried through A2A metadata."""
+        intent = getattr(routing, "intent", None) if routing is not None else None
+        departments = [
+            getattr(department, "value", str(department))
+            for department in (getattr(routing, "departments", None) or [])
+        ]
+        action = self._planner_action_payload(capability_planner_payload)
+        capability = str(action.get("capability") or "").strip() if action else None
+        policy_facet_payload = (
+            action.get("params", {}).get("policy_facet")
+            if isinstance(action, dict) and isinstance(action.get("params"), dict)
+            else None
+        )
+        if policy_facet_payload == GRADUATION_AKTS_POLICY_FACET:
+            capability = "student_affairs.policy_lookup"
+        action_confidence = None
+        if action is not None and action.get("confidence") is not None:
+            try:
+                action_confidence = float(action.get("confidence"))
+            except (TypeError, ValueError):
+                action_confidence = None
+        resolution = resolve_source_ownership(
+            original_query=original_query,
+            effective_query=effective_query,
+            capability=capability,
+            primary_intent=getattr(intent, "primary_intent", None),
+            target_capability=getattr(intent, "target_capability", None),
+            task_type=getattr(routing, "task_type", None) if routing is not None else None,
+            is_personal=bool(getattr(intent, "is_personal", False)),
+            confidence=action_confidence
+            if action_confidence is not None
+            else getattr(routing, "confidence", None),
+            final_departments=departments,
+        )
+        payload = source_ownership_to_metadata(resolution)
+        payload["routing_departments"] = departments
+        payload["final_answer_owner"] = final_answer_owner
+        if capability:
+            payload["capability"] = capability
+        return payload
+
+    @staticmethod
+    def _build_runtime_decision_contract_metadata(
+        *,
+        original_query: str,
+        effective_query: str,
+        routing: RoutingResult | None = None,
+        conversation_resolution: ConversationResolution | None = None,
+        capability_planner_payload: dict | None = None,
+        final_answer_owner: str | None = None,
+        cache_lookup_policy: str | None = None,
+        cache_store_policy: str | None = None,
+        source_owner_payload: dict | None = None,
+        source_owner_override: str | None = None,
+        deterministic_rules: list[str] | None = None,
+        stage: str = "runtime",
+    ) -> dict | None:
+        """Build read-only decision contract metadata; never affect behavior."""
+        try:
+            contract = build_shadow_decision_contract(
+                original_query=original_query,
+                effective_query=effective_query,
+                routing=routing,
+                conversation_resolution=conversation_resolution,
+                capability_planner_payload=capability_planner_payload,
+                final_answer_owner=final_answer_owner,
+                cache_lookup_policy=cache_lookup_policy,
+                cache_store_policy=cache_store_policy,
+                source_owner_override=source_owner_override,
+                source_owner_payload=source_owner_payload,
+                deterministic_rules=deterministic_rules,
+            )
+            return decision_contract_to_metadata(
+                contract,
+                producer="main_orchestrator",
+                stage=stage,
+            )
+        except Exception as exc:
+            logger.warning(
+                "runtime_decision_contract_skipped reason=%s",
+                type(exc).__name__,
+            )
+            return None
+
+    def _maybe_record_decision_trace(
+        self,
+        *,
+        original_query: str,
+        effective_query: str,
+        context_id: str,
+        query_log_id: int | None,
+        trace_metadata: dict | None,
+        is_authenticated: bool,
+        routing: RoutingResult | None = None,
+        conversation_resolution: ConversationResolution | None = None,
+        capability_planner_payload: dict | None = None,
+        responses: list[DepartmentResponse] | None = None,
+        final_response: UserQueryResponse | None = None,
+        final_answer_owner: str | None = None,
+        used_global_synthesis: bool = False,
+        cache_lookup_policy: str | None = None,
+        cache_store_policy: str | None = None,
+        source_owner_override: str | None = None,
+        source_owner_payload: dict | None = None,
+        deterministic_rules: list[str] | None = None,
+    ) -> None:
+        """Best-effort shadow contract trace writer; never affects answers."""
+        if not settings.decision_trace.enabled:
+            return
+        try:
+            responses = list(responses or [])
+            profiler = get_current_profiler()
+            profiler_snapshot = profiler.snapshot() if profiler is not None else None
+            record = build_decision_trace_record(
+                original_query=original_query,
+                effective_query=effective_query,
+                trace_metadata=trace_metadata,
+                runtime_mode=settings.a2a.mode,
+                channel=self._channel_from_context_id(context_id),
+                context_id=context_id,
+                query_log_id=query_log_id,
+                is_authenticated=is_authenticated,
+                routing=routing,
+                conversation_resolution=conversation_resolution,
+                capability_planner_payload=capability_planner_payload,
+                responses=responses,
+                final_response=final_response,
+                final_answer_owner=final_answer_owner,
+                used_global_synthesis=used_global_synthesis,
+                cache_lookup_policy=cache_lookup_policy,
+                cache_store_policy=cache_store_policy,
+                selected_specialists=self._selected_specialists_from_responses(responses),
+                profiler_snapshot=profiler_snapshot,
+                include_answer_preview=settings.decision_trace.include_answer_preview,
+                source_owner_override=source_owner_override,
+                source_owner_payload=source_owner_payload,
+                deterministic_rules=deterministic_rules,
+            )
+            with profile_stage("main.decision_trace.write"):
+                output_path = write_decision_trace_record(record)
+            if profiler is not None:
+                profiler.set_attribute(
+                    "decision_trace",
+                    {
+                        "enabled": True,
+                        "written": True,
+                        "path": str(output_path),
+                        "trace_id": record.trace_id,
+                    },
+                )
+        except Exception as exc:
+            logger.warning("decision_trace_record_skipped reason=%s", type(exc).__name__)
 
     def _routing_for_capability_owner(
         self,
@@ -1417,6 +2391,37 @@ class MainOrchestrator:
             ),
         )
 
+    @staticmethod
+    def _post_route_planner_scope(
+        *,
+        query: str,
+        routing,
+        scope: set[str],
+    ) -> tuple[list[str], str]:
+        """Limit planner choices to router-owned departments plus registry guards."""
+        department_values = {
+            getattr(department, "value", str(department))
+            for department in (routing.departments or [])
+        }
+        planner_scope = set(department_values).intersection(scope)
+        intent = getattr(routing, "intent", None)
+        owner_hint = resolve_source_ownership(
+            original_query=query,
+            effective_query=query,
+            primary_intent=getattr(intent, "primary_intent", None),
+            target_capability=getattr(intent, "target_capability", None),
+            task_type=getattr(routing, "task_type", None),
+            is_personal=bool(getattr(intent, "is_personal", False)),
+            confidence=getattr(routing, "confidence", None),
+            final_departments=sorted(department_values),
+        )
+        owner_scope_expansions = {
+            OWNER_ACADEMIC_CALENDAR: {Department.STUDENT_AFFAIRS.value},
+            OWNER_INTERNATIONAL_POLICY: {Department.ACADEMIC_PROGRAMS.value},
+        }
+        planner_scope.update(owner_scope_expansions.get(owner_hint.primary, set()).intersection(scope))
+        return sorted(planner_scope), "router_first_with_source_registry_expansions"
+
     async def _maybe_plan_capability(
         self,
         *,
@@ -1437,24 +2442,14 @@ class MainOrchestrator:
             for department in (routing.departments or [])
         }
         scope = planner_settings.scope_set
-        if planner_settings.mode in {"on", "shadow"}:
-            # In global modes the planner should see every enabled capability
-            # family, including non-Department executors such as announcement
-            # and event search. Legacy routing remains available as fallback;
-            # this only expands the LLM planner's allowed whitelist.
-            scoped_department_values = set(scope)
-            if not scoped_department_values:
-                return None
-            planner_departments = sorted(scoped_department_values)
-        else:
-            scoped_department_values = department_values.intersection(scope)
-            if not scoped_department_values:
-                return None
-            planner_departments = [
-                department
-                for department in (routing.departments or [])
-                if getattr(department, "value", str(department)) in scoped_department_values
-            ]
+        planner_departments, planner_scope_policy = self._post_route_planner_scope(
+            query=query,
+            routing=routing,
+            scope=scope,
+        )
+        scoped_department_values = set(planner_departments)
+        if not scoped_department_values:
+            return None
         if planner_settings.mode == "pilot" and (
             len(department_values) != 1 or department_values != scoped_department_values
         ):
@@ -1471,6 +2466,8 @@ class MainOrchestrator:
                 "plan_decision": None,
                 "skipped": "pilot_requires_single_scoped_department",
                 "departments": sorted(department_values),
+                "planner_scope": planner_departments,
+                "planner_scope_policy": planner_scope_policy,
                 "legacy_routing": {
                     "departments": sorted(department_values),
                     "reasoning": getattr(routing, "reasoning", None),
@@ -1498,6 +2495,7 @@ class MainOrchestrator:
             "student_faculty": student_faculty,
             "student_type": student_type,
             "llm_profile": llm_profile,
+            "planner_scope_policy": planner_scope_policy,
         }
         if conversation_resolution.frame is not None:
             context["conversation_frame"] = conversation_resolution.frame.to_prompt_context()
@@ -1518,6 +2516,8 @@ class MainOrchestrator:
             "action": action.model_dump() if action is not None else None,
             "plan_decision": action.to_plan_decision().model_dump() if action is not None else None,
             "departments": sorted(department_values),
+            "planner_scope": planner_departments,
+            "planner_scope_policy": planner_scope_policy,
             "legacy_routing": {
                 "departments": sorted(department_values),
                 "reasoning": getattr(routing, "reasoning", None),
@@ -1734,7 +2734,7 @@ class MainOrchestrator:
         text = str(value).strip().lower()
         if text in {"true", "1", "yes", "evet"}:
             return True
-        if text in {"false", "0", "no", "hayir", "hayÄ±r"}:
+        if text in {"false", "0", "no", "hayir", "hayır"}:
             return False
         return default
 
@@ -1788,6 +2788,7 @@ class MainOrchestrator:
         student_department: str | None,
         student_faculty: str | None,
         conversation_resolution: ConversationResolution,
+        is_authenticated: bool = False,
         routing_reason: str | None = None,
         capability_params: dict[str, object] | None = None,
         trace_metadata: dict | None = None,
@@ -1797,6 +2798,29 @@ class MainOrchestrator:
             query=query,
             student_department=student_department,
             student_faculty=student_faculty,
+        )
+        source_owner_payload = source_ownership_to_metadata(
+            resolve_source_ownership(override="event_search")
+        )
+        source_owner_payload["final_answer_owner"] = "event_agent"
+        decision_contract_payload = self._build_runtime_decision_contract_metadata(
+            original_query=original_query,
+            effective_query=query,
+            conversation_resolution=conversation_resolution,
+            final_answer_owner="event_agent",
+            source_owner_override="event_search",
+            source_owner_payload=source_owner_payload,
+            deterministic_rules=["event_short_circuit"],
+            stage="event_short_circuit",
+        )
+        resolved_decision_payload = build_resolved_decision_metadata(
+            original_query=original_query,
+            effective_query=query,
+            conversation_resolution=conversation_resolution,
+            source_owner_payload=source_owner_payload,
+            final_answer_owner="event_agent",
+            decision_contract_payload=decision_contract_payload,
+            stage="event_short_circuit",
         )
         planner_faculty = self._capability_param_text(capability_params, "faculty")
         planner_unit_name = self._capability_param_text(capability_params, "unit_name")
@@ -1832,6 +2856,8 @@ class MainOrchestrator:
                 faculty=planner_faculty or event_scope["faculty"],
                 unit_name=planner_unit_name or event_scope["unit_name"],
                 limit=planner_limit or 5,
+                decision_contract=decision_contract_payload,
+                resolved_decision=resolved_decision_payload,
                 trace_metadata=trace_metadata,
             )
             event_user_response = await build_event_response(
@@ -1841,6 +2867,8 @@ class MainOrchestrator:
                 start_time=start_time,
                 query_log_id=query_log_id,
             )
+        if event_user_response.answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:
+            return event_user_response
         if self.conversation_service is not None:
             with profile_stage("main.conversation.record_event"):
                 await self._record_conversation_turn(
@@ -1852,6 +2880,21 @@ class MainOrchestrator:
                     routing_task_type=None,
                     conversation_resolution=conversation_resolution,
                 )
+        self._maybe_record_decision_trace(
+            original_query=original_query,
+            effective_query=query,
+            context_id=context_id,
+            query_log_id=query_log_id,
+            trace_metadata=trace_metadata,
+            is_authenticated=is_authenticated,
+            conversation_resolution=conversation_resolution,
+            responses=[],
+            final_response=event_user_response,
+            final_answer_owner="event_agent",
+            source_owner_override="event_search",
+            source_owner_payload=source_owner_payload,
+            deterministic_rules=["event_short_circuit"],
+        )
         return event_user_response
 
     async def _handle_announcement_short_circuit(
@@ -1867,6 +2910,7 @@ class MainOrchestrator:
         student_faculty: str | None,
         conversation_resolution: ConversationResolution,
         routing_reasoning: str,
+        is_authenticated: bool = False,
         task_type: TaskType | None = None,
         query_log_id: int | None = None,
         capability_params: dict[str, object] | None = None,
@@ -1878,6 +2922,29 @@ class MainOrchestrator:
             conversation_resolution=conversation_resolution,
             student_department=student_department,
             student_faculty=student_faculty,
+        )
+        source_owner_payload = source_ownership_to_metadata(
+            resolve_source_ownership(override="announcement_search")
+        )
+        source_owner_payload["final_answer_owner"] = "announcement_agent"
+        decision_contract_payload = self._build_runtime_decision_contract_metadata(
+            original_query=original_query,
+            effective_query=query,
+            conversation_resolution=conversation_resolution,
+            final_answer_owner="announcement_agent",
+            source_owner_override="announcement_search",
+            source_owner_payload=source_owner_payload,
+            deterministic_rules=["announcement_short_circuit"],
+            stage="announcement_short_circuit",
+        )
+        resolved_decision_payload = build_resolved_decision_metadata(
+            original_query=original_query,
+            effective_query=query,
+            conversation_resolution=conversation_resolution,
+            source_owner_payload=source_owner_payload,
+            final_answer_owner="announcement_agent",
+            decision_contract_payload=decision_contract_payload,
+            stage="announcement_short_circuit",
         )
         planner_faculty = self._capability_param_text(capability_params, "faculty")
         planner_unit_name = self._capability_param_text(capability_params, "unit_name")
@@ -1919,8 +2986,12 @@ class MainOrchestrator:
                 conversation_source_refs=conversation_resolution.source_hints,
                 allow_latest_fallback=allow_latest_fallback,
                 limit=planner_limit,
+                decision_contract=decision_contract_payload,
+                resolved_decision=resolved_decision_payload,
                 trace_metadata=trace_metadata,
             )
+        if announcement_user_response.answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:
+            return announcement_user_response
         if self.conversation_service is not None:
             with profile_stage("main.conversation.record_announcement"):
                 await self._record_conversation_turn(
@@ -1932,6 +3003,21 @@ class MainOrchestrator:
                     routing_task_type=task_type,
                     conversation_resolution=conversation_resolution,
                 )
+        self._maybe_record_decision_trace(
+            original_query=original_query,
+            effective_query=query,
+            context_id=context_id,
+            query_log_id=query_log_id,
+            trace_metadata=trace_metadata,
+            is_authenticated=is_authenticated,
+            conversation_resolution=conversation_resolution,
+            responses=[],
+            final_response=announcement_user_response,
+            final_answer_owner="announcement_agent",
+            source_owner_override="announcement_search",
+            source_owner_payload=source_owner_payload,
+            deterministic_rules=["announcement_short_circuit"],
+        )
         return announcement_user_response
 
     @staticmethod
@@ -2129,19 +3215,48 @@ class MainOrchestrator:
         query: str,
         responses: list[DepartmentResponse],
         llm_profile: str | None = None,
+        answer_contract=None,
     ) -> tuple[str, bool]:
+        if should_use_deterministic_final(answer_contract):
+            deterministic_fallback = self._compose_deterministic_contract_fallback(responses)
+            if deterministic_fallback:
+                return deterministic_fallback, False
+            return self._compose_answers(responses), False
+
         if not should_use_global_synthesis(query=query, responses=responses):
             return self._compose_answers(responses), False
 
         # Source-backed answers are refined here even for a single department.
         # If final refinement fails, the specialist answer remains the fallback.
-        synthesized = await self._synthesize_department_answers(
+        synthesized, synthesis_failed = await self._synthesize_department_answers(
             query=query,
             responses=responses,
             llm_profile=llm_profile,
         )
         if not synthesized:
-            fallback = build_evidence_packet_fallback_answer(responses)
+            if synthesis_failed:
+                deterministic_fallback = self._compose_deterministic_contract_fallback(responses)
+                if deterministic_fallback:
+                    return deterministic_fallback, False
+                strong_fallback = self._compose_strong_non_llm_fallback(responses)
+                if strong_fallback:
+                    return strong_fallback, False
+                contract_fallback = self._contract_validation_fallback(
+                    query=query,
+                    contract=answer_contract,
+                )
+                if contract_fallback:
+                    return contract_fallback, False
+                evidence_fallback = build_evidence_packet_fallback_answer(responses, query=query)
+                if evidence_fallback:
+                    if responses_need_contact_suggestion(responses):
+                        evidence_fallback += CONTACT_SUGGESTION
+                    return evidence_fallback, False
+                announcement_no_match = self._compose_announcement_no_match_fallback(responses)
+                if announcement_no_match:
+                    return announcement_no_match, False
+                return TEMPORARY_SYNTHESIS_FAILURE_ANSWER, False
+            fallback = build_evidence_packet_fallback_answer(responses, query=query)
             if fallback:
                 if responses_need_contact_suggestion(responses):
                     fallback += CONTACT_SUGGESTION
@@ -2194,16 +3309,70 @@ class MainOrchestrator:
             synthesized += CONTACT_SUGGESTION
         return synthesized, True
 
+    def _compose_deterministic_contract_fallback(self, responses: list[DepartmentResponse]) -> str | None:
+        deterministic_responses: list[DepartmentResponse] = []
+        for response in responses:
+            contract = contract_from_metadata(response.metadata)
+            if contract is not None and contract.synthesis_policy == "deterministic":
+                deterministic_responses.append(response)
+        if not deterministic_responses:
+            return None
+        return self._compose_answers(deterministic_responses)
+
+    def _compose_strong_non_llm_fallback(self, responses: list[DepartmentResponse]) -> str | None:
+        """Keep a reliable branch answer when optional final synthesis fails."""
+        strong_responses = [
+            response
+            for response in responses
+            if not (
+                isinstance(response.metadata, dict)
+                and (
+                    response.metadata.get("specialist_response_mode") == "evidence_packet"
+                    or response.metadata.get("final_answer_owner") == "main_orchestrator"
+                )
+            )
+            if (
+                response.success
+                and response.answer.strip()
+                and not is_announcement_response(response)
+                and not is_low_confidence_rag_response(response)
+                and not is_no_info_response(response)
+            )
+        ]
+        if not strong_responses:
+            return None
+        return self._compose_answers(strong_responses)
+
+    def _compose_announcement_no_match_fallback(self, responses: list[DepartmentResponse]) -> str | None:
+        """Surface scoped announcement no-match answers instead of a synthesis error."""
+        no_match_responses = [
+            response
+            for response in responses
+            if (
+                response.success
+                and "ilgili aktif duyuru bulunamadi" in normalize_text(response.answer)
+            )
+        ]
+        if not no_match_responses:
+            return None
+        return self._compose_answers(no_match_responses)
+
+    @staticmethod
+    def _contract_validation_fallback(*, query: str, contract) -> str | None:
+        """Return a conservative answer from the shared contract answer policy."""
+        plan = build_contract_answer_plan(query=query, contract=contract)
+        return render_contract_answer_plan(plan)
+
     async def _synthesize_department_answers(
         self,
         *,
         query: str,
         responses: list[DepartmentResponse],
         llm_profile: str | None = None,
-    ) -> str | None:
+    ) -> tuple[str | None, bool]:
         prompt, meaningful = build_global_synthesis_prompt(query, responses)
         if not prompt:
-            return None
+            return None, False
 
         synthesis_role = (
             "global_synthesis"
@@ -2225,7 +3394,7 @@ class MainOrchestrator:
         )
         try:
             with profile_stage("main.final_llm_synthesis"):
-                return await asyncio.wait_for(
+                answer = await asyncio.wait_for(
                     self.llm_service.generate(
                         prompt=prompt,
                         system=MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT,
@@ -2234,12 +3403,13 @@ class MainOrchestrator:
                     ),
                     timeout=_GLOBAL_SYNTHESIS_TIMEOUT_SECONDS,
                 )
+                return answer, False
         except (asyncio.TimeoutError, LLMServiceError) as exc:
             logger.warning(
-                "global_llm_synthesis_fallback_used reason=%s",
+                "global_llm_synthesis_failed_controlled_error reason=%s",
                 type(exc).__name__,
             )
-            return None
+            return None, True
 
     async def _apply_main_judge_gate(
         self,
@@ -2249,6 +3419,7 @@ class MainOrchestrator:
         responses: list[DepartmentResponse],
         llm_profile: str | None = None,
         used_global_synthesis: bool = False,
+        answer_validation: AnswerValidationResult | None = None,
     ) -> str:
         """Run the LLM-as-a-Judge quality gate on the final composed answer.
 
@@ -2263,6 +3434,22 @@ class MainOrchestrator:
 
         # Multi-department detection
         is_multi_department = len({r.department for r in responses if r.answer.strip()}) >= 2
+        pre_validation = answer_validation or validate_evidence_answer(
+            query=query,
+            answer=answer,
+            responses=responses,
+            mode=settings.answer_validation.mode,
+        )
+        pre_coverage = validate_answer_coverage(
+            query=query,
+            answer=answer,
+            responses=responses,
+        )
+        pre_value_conflict = validate_answer_value_conflicts(
+            query=query,
+            answer=answer,
+            responses=responses,
+        )
 
         # Build structured evidence summary for judge
         # NOTE: RAGSource.metadata does NOT carry selected_sentences or
@@ -2279,6 +3466,13 @@ class MainOrchestrator:
                 entry += f"\n  \u0130\u00e7erik: {s.content[:500]}"
                 evidence_parts.append(entry)
         evidence_summary = "\n\n".join(evidence_parts)[:2000]
+        validation_context = (
+            pre_validation.to_judge_context()
+            if pre_validation is not None
+            else ""
+        )
+        if validation_context:
+            evidence_summary = f"{validation_context}\n\n{evidence_summary}"[:2500]
         plan_decision: dict | None = None
         answer_contract: dict | None = None
         evidence_contract: dict | None = None
@@ -2305,9 +3499,9 @@ class MainOrchestrator:
             from src.quality.intent_coverage import compute_intent_coverage
             coverage = compute_intent_coverage(query, [r.answer for r in responses if r.answer.strip()])
             intent_coverage_is_low = coverage.is_low
-            missing_intents = coverage.uncovered
-        except Exception:
-            pass
+            missing_intents = coverage.missing_intents
+        except Exception as exc:
+            logger.warning("intent_coverage_check_failed reason=%s", type(exc).__name__)
 
         judge_result = await run_judge(
             query=query,
@@ -2322,6 +3516,8 @@ class MainOrchestrator:
             has_foreign_suspicion=has_foreign_suspicion,
             intent_coverage_is_low=intent_coverage_is_low,
             missing_intents=missing_intents if missing_intents else None,
+            force=bool(pre_validation and should_enforce_validation(pre_validation)),
+            validator_result=pre_validation.to_dict() if pre_validation else None,
         )
 
         if judge_result is None:
@@ -2336,6 +3532,8 @@ class MainOrchestrator:
             "plan_decision": plan_decision,
             "answer_contract": answer_contract,
             "evidence_contract": evidence_contract,
+            "triggered_by_validator": bool(pre_validation and should_enforce_validation(pre_validation)),
+            "answer_validation": pre_validation.to_dict() if pre_validation else {},
         }
         if _profiler is not None:
             _profiler.set_attribute("main_judge", judge_meta)
@@ -2381,12 +3579,238 @@ class MainOrchestrator:
                             llm_profile=llm_profile,
                         ),
                         timeout=_GLOBAL_SYNTHESIS_TIMEOUT_SECONDS,
-                    )
+                )
                 if repaired and repaired.strip():
-                    logger.info("main_judge_repair_success original_len=%d repaired_len=%d", len(answer), len(repaired))
-                    return repaired.strip()
+                    repaired_answer = repaired.strip()
+                    post_validation = validate_evidence_answer(
+                        query=query,
+                        answer=repaired_answer,
+                        responses=responses,
+                        mode=pre_validation.mode if pre_validation else settings.answer_validation.mode,
+                    )
+                    post_coverage = validate_answer_coverage(
+                        query=query,
+                        answer=repaired_answer,
+                        responses=responses,
+                    )
+                    post_value_conflict = validate_answer_value_conflicts(
+                        query=query,
+                        answer=repaired_answer,
+                        responses=responses,
+                    )
+                    repair_decision = self._judge_repair_decision(
+                        pre_validation=pre_validation,
+                        post_validation=post_validation,
+                        pre_coverage=pre_coverage.to_dict(),
+                        post_coverage=post_coverage.to_dict(),
+                        pre_value_conflict=pre_value_conflict.to_dict(),
+                        post_value_conflict=post_value_conflict.to_dict(),
+                    )
+                    judge_meta["repair"] = {
+                        "accepted": repair_decision["accepted"],
+                        "outcome": repair_decision["outcome"],
+                        "rejection_reason": repair_decision["reason"],
+                        "pre_repair_validation": pre_validation.to_dict(),
+                        "post_repair_validation": post_validation.to_dict(),
+                        "pre_repair_coverage": pre_coverage.to_dict(),
+                        "post_repair_coverage": post_coverage.to_dict(),
+                        "pre_repair_value_conflict": pre_value_conflict.to_dict(),
+                        "post_repair_value_conflict": post_value_conflict.to_dict(),
+                    }
+                    if _profiler is not None:
+                        _profiler.set_attribute("main_judge", judge_meta)
+                    if _profiler is not None and repair_decision["accepted"]:
+                        post_validation_meta = post_validation.to_dict()
+                        post_validation_meta["pre_judge"] = pre_validation.to_dict()
+                        post_validation_meta["judge_escalated"] = True
+                        if repair_decision["outcome"] == "accepted_improved":
+                            post_validation_meta["repair_accepted"] = True
+                        else:
+                            post_validation_meta["repair_neutral"] = True
+                        post_validation_meta["repair_outcome"] = repair_decision["outcome"]
+                        _profiler.set_attribute(
+                            "evidence_answer_validator",
+                            post_validation_meta,
+                        )
+                        post_coverage_meta = post_coverage.to_dict()
+                        post_coverage_meta["pre_judge"] = pre_coverage.to_dict()
+                        post_coverage_meta["repair_outcome"] = repair_decision["outcome"]
+                        _profiler.set_attribute("answer_coverage_validator", post_coverage_meta)
+                        post_value_conflict_meta = post_value_conflict.to_dict()
+                        post_value_conflict_meta["pre_judge"] = pre_value_conflict.to_dict()
+                        post_value_conflict_meta["repair_outcome"] = repair_decision["outcome"]
+                        _profiler.set_attribute(
+                            "answer_value_conflict_validator",
+                            post_value_conflict_meta,
+                        )
+                    if repair_decision["accepted"]:
+                        logger.info(
+                            "main_judge_repair_success original_len=%d repaired_len=%d",
+                            len(answer),
+                            len(repaired),
+                        )
+                        return repaired_answer
+                    if _profiler is not None:
+                        pre_validation_meta = pre_validation.to_dict()
+                        pre_validation_meta["post_repair_validation"] = post_validation.to_dict()
+                        pre_validation_meta["judge_escalated"] = True
+                        pre_validation_meta["repair_rejected"] = True
+                        pre_validation_meta["rejection_reason"] = repair_decision["reason"]
+                        _profiler.set_attribute(
+                            "evidence_answer_validator",
+                            pre_validation_meta,
+                        )
+                        pre_coverage_meta = pre_coverage.to_dict()
+                        pre_coverage_meta["post_repair_coverage"] = post_coverage.to_dict()
+                        pre_coverage_meta["repair_rejected"] = True
+                        pre_coverage_meta["rejection_reason"] = repair_decision["reason"]
+                        _profiler.set_attribute("answer_coverage_validator", pre_coverage_meta)
+                        pre_value_conflict_meta = pre_value_conflict.to_dict()
+                        pre_value_conflict_meta["post_repair_value_conflict"] = post_value_conflict.to_dict()
+                        pre_value_conflict_meta["repair_rejected"] = True
+                        pre_value_conflict_meta["rejection_reason"] = repair_decision["reason"]
+                        _profiler.set_attribute(
+                            "answer_value_conflict_validator",
+                            pre_value_conflict_meta,
+                        )
+                    logger.info(
+                        "main_judge_repair_rejected reason=%s original_len=%d repaired_len=%d",
+                        repair_decision["reason"],
+                        len(answer),
+                        len(repaired),
+                    )
+                    return answer
             except (asyncio.TimeoutError, LLMServiceError) as exc:
                 logger.warning("main_judge_repair_failed reason=%s", type(exc).__name__)
 
         # Fallback: return original answer
         return answer
+
+    async def _apply_final_quality_gate(
+        self,
+        *,
+        query: str,
+        answer: str,
+        llm_profile: str | None = None,
+    ) -> str:
+        """Run the shared bad-token gate after all judge/repair steps."""
+        from src.orchestrators.response_utils import clean_final_answer
+        from src.quality.answer_filter import (
+            REWRITE_ONLY_SYSTEM_SUFFIX,
+            check_answer_quality,
+            quality_issue_blocks_answer,
+        )
+
+        cleaned = clean_final_answer(answer)
+        quality = check_answer_quality(cleaned)
+        if not quality.needs_rewrite:
+            return cleaned
+
+        repair_prompt = (
+            f"Kullanici sorusu:\n{query}\n\n"
+            f"Cevap:\n{cleaned}\n\n"
+            "Cevabi ayni bilgileri koruyarak dogal Turkce ile yeniden yaz. "
+            "Sayi, tarih, ucret, AKTS ve kaynakta gecen kosullari degistirme."
+        )
+        try:
+            with profile_stage("main.final_quality_repair"):
+                repaired = await asyncio.wait_for(
+                    self.llm_service.generate(
+                        prompt=repair_prompt,
+                        system=MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT + REWRITE_ONLY_SYSTEM_SUFFIX,
+                        model_role="final_refinement",
+                        llm_profile=llm_profile,
+                    ),
+                    timeout=_GLOBAL_SYNTHESIS_TIMEOUT_SECONDS,
+                )
+        except (asyncio.TimeoutError, LLMServiceError) as exc:
+            logger.warning("final_quality_repair_failed reason=%s", type(exc).__name__)
+            if not quality_issue_blocks_answer(quality):
+                logger.warning(
+                    "final_quality_gate_tolerated_minor_issue bad_tokens=%s issues=%s",
+                    quality.bad_tokens,
+                    quality.detected_issues,
+                )
+                return cleaned
+            return TEMPORARY_SYNTHESIS_FAILURE_ANSWER
+
+        repaired_answer = clean_final_answer(str(repaired or "").strip())
+        repaired_quality = check_answer_quality(repaired_answer)
+        if repaired_answer and not repaired_quality.needs_rewrite:
+            return repaired_answer
+        if repaired_answer and not quality_issue_blocks_answer(repaired_quality):
+            logger.warning(
+                "final_quality_gate_tolerated_repaired_minor_issue bad_tokens=%s issues=%s",
+                repaired_quality.bad_tokens,
+                repaired_quality.detected_issues,
+            )
+            return repaired_answer
+        logger.warning(
+            "final_quality_gate_rejected bad_tokens=%s repaired_bad_tokens=%s",
+            quality.bad_tokens,
+            repaired_quality.bad_tokens,
+        )
+        return TEMPORARY_SYNTHESIS_FAILURE_ANSWER
+
+    @staticmethod
+    def _judge_repair_decision(
+        *,
+        pre_validation: AnswerValidationResult,
+        post_validation: AnswerValidationResult,
+        pre_coverage: dict,
+        post_coverage: dict,
+        pre_value_conflict: dict,
+        post_value_conflict: dict,
+    ) -> dict[str, object]:
+        """Accept a judge repair only when it does not degrade guardrail signals."""
+        if _status_severity(post_validation.status) > _status_severity(pre_validation.status):
+            return {
+                "accepted": False,
+                "outcome": "rejected_worse",
+                "reason": "evidence_validation_worsened",
+            }
+        if _status_severity(str(post_coverage.get("status") or "skipped")) > _status_severity(
+            str(pre_coverage.get("status") or "skipped")
+        ):
+            return {
+                "accepted": False,
+                "outcome": "rejected_worse",
+                "reason": "answer_coverage_worsened",
+            }
+        if _status_severity(str(post_value_conflict.get("status") or "skipped")) > _status_severity(
+            str(pre_value_conflict.get("status") or "skipped")
+        ):
+            return {
+                "accepted": False,
+                "outcome": "rejected_worse",
+                "reason": "answer_value_conflict_worsened",
+            }
+
+        preserved_before = _preserved_required_values(pre_validation)
+        missing_after = set(post_validation.missing_values)
+        if preserved_before & missing_after:
+            return {
+                "accepted": False,
+                "outcome": "rejected_worse",
+                "reason": "repair_lost_previously_preserved_required_value",
+            }
+
+        if post_validation.status == "fail" and pre_validation.status != "fail":
+            return {
+                "accepted": False,
+                "outcome": "rejected_worse",
+                "reason": "repair_failed_validation",
+            }
+
+        improved = (
+            _status_severity(post_validation.status) < _status_severity(pre_validation.status)
+            or _status_severity(str(post_coverage.get("status") or "skipped"))
+            < _status_severity(str(pre_coverage.get("status") or "skipped"))
+            or _status_severity(str(post_value_conflict.get("status") or "skipped"))
+            < _status_severity(str(pre_value_conflict.get("status") or "skipped"))
+        )
+        return {
+            "accepted": True,
+            "outcome": "accepted_improved" if improved else "accepted_neutral",
+            "reason": "repair_improved" if improved else "repair_not_worse",
+        }

@@ -8,8 +8,10 @@ from a2a.types import Task
 
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.agents.finance.tuition_utils import (
+    blocks_regular_tuition_catalog,
     build_catalog_fee_answer,
     build_honest_fee_fallback,
+    build_other_fee_policy_answer,
     build_structured_fee_answer,
     compact_source_content,
     display_unit_name,
@@ -20,7 +22,9 @@ from src.agents.finance.tuition_utils import (
     has_explicit_program_without_fee_unit,
     is_explicit_fee_amount_query,
     infer_requested_student_type,
+    infer_fee_scope,
     is_personal_query,
+    is_other_fee_query,
     is_structured_fee_query,
     looks_like_fee_result,
     looks_like_tuition_table_source,
@@ -88,6 +92,18 @@ class TuitionAgent(BaseSpecialistAgent):
             )
         )
 
+        if is_other_fee_query(query_text):
+            return DepartmentResponse(
+                department=self.department,
+                answer=build_other_fee_policy_answer(query_text),
+                generation_mode="kural",
+                success=True,
+                metadata={
+                    "fee_scope": "other_fee_policy",
+                    "final_answer_owner": "department_orchestrator",
+                },
+            )
+
         if is_personal_query(query_text):
             if not is_authenticated:
                 return DepartmentResponse(
@@ -135,6 +151,24 @@ class TuitionAgent(BaseSpecialistAgent):
         if capability_response is not None:
             return capability_response
 
+        fee_scope = infer_fee_scope(query_text)
+        if blocks_regular_tuition_catalog(query_text):
+            return DepartmentResponse(
+                department=self.department,
+                answer=(
+                    "Normal ogrenim ucreti katalogunda kayit olabilir; ancak bu "
+                    f"{fee_scope} sorusunun kaynagi degildir. Bu kapsam icin finans "
+                    "kaynaklarinda net tutar bulunamadi."
+                ),
+                generation_mode="kural",
+                success=False,
+                error="special_fee_scope_not_in_regular_tuition_catalog",
+                metadata={
+                    "fee_scope": fee_scope,
+                    "regular_tuition_catalog_blocked": True,
+                },
+            )
+
         if needs_fee_context_clarification(query_text, student_type, requested_unit):
             return DepartmentResponse(
                 department=self.department,
@@ -162,6 +196,11 @@ class TuitionAgent(BaseSpecialistAgent):
                         db_data=catalog_entry,
                         generation_mode="vt",
                         success=True,
+                        metadata={
+                            "source_owner": "tuition_fee_catalog",
+                            "final_answer_owner": "department_orchestrator",
+                            "fee_scope": "regular_tuition_fee",
+                        },
                     )
 
         return await super().handle_department_task(task)

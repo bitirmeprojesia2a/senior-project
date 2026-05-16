@@ -44,3 +44,53 @@ async def test_judge_runs_for_plan_contract_even_when_answer_is_not_otherwise_ri
     prompt = llm_service.generate.await_args.kwargs["prompt"]
     assert "answer_contract" in prompt
     assert "hic alinmamis ders" in prompt
+
+
+@pytest.mark.asyncio
+async def test_judge_can_be_forced_by_deterministic_validator():
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(
+        return_value={
+            "approved": False,
+            "action": "rewrite_only",
+            "failure_reason": "validator found a missing evidence value",
+        }
+    )
+
+    result = await run_judge(
+        query="CAP icin not ortalamasi kac olmali?",
+        answer="Kaynakta net bilgi yok.",
+        evidence_summary="Deterministic validator status: fail",
+        llm_service=llm_service,
+        force=True,
+        validator_result={
+            "status": "fail",
+            "missing_values": ["3,00"],
+            "reason": "answer_denies_available_evidence",
+        },
+    )
+
+    assert result is not None
+    assert result.action == "rewrite_only"
+    prompt = llm_service.generate.await_args.kwargs["prompt"]
+    assert "forced_by_validator" in prompt
+    assert "3,00" in prompt
+
+
+@pytest.mark.asyncio
+async def test_judge_parse_failure_is_not_approved():
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(return_value="judge failed to return json")
+
+    result = await run_judge(
+        query="CAP icin not ortalamasi kac olmali?",
+        answer="CAP icin not ortalamasi bilgisi verilebilir.",
+        evidence_summary="CAP kosullari kaynaklarda yer aliyor.",
+        llm_service=llm_service,
+        force=True,
+    )
+
+    assert result is not None
+    assert result.approved is False
+    assert result.action == "rewrite_only"
+    assert result.failure_reason == "judge_response_parse_failed"

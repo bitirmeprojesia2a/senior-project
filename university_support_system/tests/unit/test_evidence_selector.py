@@ -93,6 +93,30 @@ async def test_evidence_selector_falls_back_on_invalid_json(monkeypatch):
     assert decision.status == "fallback_error"
 
 
+async def test_evidence_selector_recovers_json_from_fenced_response_with_prose(monkeypatch):
+    monkeypatch.setattr(settings.rag, "llm_evidence_selection_enabled", True)
+    monkeypatch.setattr(settings.rag, "llm_evidence_selection_min_candidates", 2)
+
+    first = _item("a", "first.pdf", "Birinci kaynak.")
+    second = _item("b", "second.pdf", "Ikinci kaynak.")
+    payload = {
+        "selected_ids": ["b"],
+        "ranking": [{"source_id": "b", "answer_usefulness": 0.9, "reason": "direct"}],
+        "reason": "fenced json",
+    }
+
+    selected, decision = await select_evidence_with_llm(
+        "Soru",
+        [first, second],
+        FakeLLMService(f"Here is the JSON:\n```json\n{json.dumps(payload)}\n```"),
+        max_selected=2,
+    )
+
+    assert decision.used_llm is True
+    assert decision.status == "selected"
+    assert selected[0].source_id == "b"
+
+
 async def test_evidence_selector_falls_back_when_llm_returns_unknown_ids(monkeypatch):
     monkeypatch.setattr(settings.rag, "llm_evidence_selection_enabled", True)
     monkeypatch.setattr(settings.rag, "llm_evidence_selection_min_candidates", 2)

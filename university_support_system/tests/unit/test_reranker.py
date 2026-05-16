@@ -127,6 +127,22 @@ class TestRerankerRerank:
         assert len(results) == 3
         assert reranker.last_run_succeeded is False
 
+    def test_failure_fallback_returns_candidates_by_existing_score(self, mock_cross_encoder):
+        mock_cross_encoder.predict.side_effect = RuntimeError("predict failed")
+
+        reranker = CrossEncoderReranker()
+        reranker._model = mock_cross_encoder
+        candidates = [
+            {"content": "dusuk", "source": "a.pdf", "score": 0.2},
+            {"content": "yuksek", "source": "b.pdf", "score": 0.9},
+            {"content": "orta", "source": "c.pdf", "score": 0.5},
+        ]
+
+        results = reranker.rerank("test", candidates, top_k=2)
+
+        assert [result["source"] for result in results] == ["b.pdf", "c.pdf"]
+        assert reranker.last_run_succeeded is False
+
 
 class TestRerankerInit:
     """Constructor testleri."""

@@ -9,6 +9,7 @@ from a2a.types import Task
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.agents.student.registration_utils import (
     build_general_exam_calendar_answer,
+    build_payment_debt_course_registration_answer,
     build_registration_intro,
     preferred_registration_search_top_k,
     filter_registration_answer_results,
@@ -26,6 +27,7 @@ from src.capabilities.executor import execute_capability_action
 from src.capabilities.models import CapabilityAction
 from src.core.config import settings
 from src.core.constants import Department, TaskType
+from src.core.policy_facets import resolve_policy_facet
 from src.db.registration_data import RegistrationPeriodInfo, fetch_preferred_registration_period
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.llm.prompt_templates import REGISTRATION_AGENT_SYSTEM_PROMPT
@@ -58,6 +60,37 @@ class RegistrationAgent(BaseSpecialistAgent):
         query_text = str(metadata.get("query_text", "")).strip()
         if not query_text:
             query_text = self._extract_query_from_task(task)
+
+        payment_debt_answer = build_payment_debt_course_registration_answer(query_text)
+        if payment_debt_answer is not None:
+            response_metadata = {
+                "policy_facet": "payment_debt_course_registration",
+                "source_owner": {"primary": "student_affairs_policy"},
+            }
+            if isinstance(metadata.get("answer_contract"), dict):
+                response_metadata["answer_contract"] = metadata["answer_contract"]
+            return DepartmentResponse(
+                department=self.department,
+                answer=payment_debt_answer,
+                db_data={
+                    "query_type": "payment_debt_course_registration",
+                    "source": "registration_policy",
+                },
+                generation_mode="kural",
+                sources=[
+                    RAGSource(
+                        content=payment_debt_answer,
+                        score=1.0,
+                        metadata={
+                            "source": "sık_sorulan_sorular.txt",
+                            "record_type": "payment_debt_course_registration_policy",
+                        },
+                    )
+                ],
+                include_contact_suggestion=True,
+                success=True,
+                metadata=response_metadata,
+            )
 
         capability_response = await self._try_handle_capability_plan(query_text, metadata)
         if capability_response is not None:
@@ -276,6 +309,11 @@ class RegistrationAgent(BaseSpecialistAgent):
             "question_type": params.get("question_type"),
             "query": params.get("query") or query_text,
         }
+        updated_metadata["policy_facet"] = resolve_policy_facet(
+            query=params.get("query") or query_text,
+            params=params,
+            answer_contract=answer_contract,
+        )
         updated_metadata["retrieval_query"] = " ".join(retrieval_query_parts) or query_text
         updated_metadata["plan_decision"] = action.to_plan_decision().model_dump()
         if answer_contract:

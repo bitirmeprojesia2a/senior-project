@@ -1,0 +1,113 @@
+[
+  {
+    "id": "SLACK_COURSE_CONTEXT_BIL104",
+    "query": "BIL104 dersinin on kosulu var mi?",
+    "effective_query": "BIL104 dersinin on kosulu var mi?",
+    "answer": "BIL104 dersi icin kayitli on kosul bulunmuyor.",
+    "departments": ["academic_programs"],
+    "sources": ["course_catalog"],
+    "expected": {
+      "effective_contains": ["BIL104"],
+      "effective_forbidden": ["BIL203"],
+      "departments_include": ["academic_programs"],
+      "answer_forbidden": ["BIL203 dersinin on kosulu"]
+    }
+  },
+  {
+    "id": "SLACK_SUMMER_FEE_SCOPE",
+    "query": "Yaz okulu ucreti var mi?",
+    "effective_query": "Yaz okulu ucreti var mi?",
+    "answer": "Yaz okulu ucreti icin kaynakta net tutar bulunamadi; normal donem ogrenim ucreti farkli bir ucret turudur.",
+    "departments": ["student_affairs", "finance"],
+    "sources": ["yaz_okulu_egitim_ogretim_yonergesi.pdf"],
+    "expected": {
+      "answer_contains": ["kaynakta net tutar bulunamadi"],
+      "answer_forbidden": ["Yillik ucret", "Donemlik ucret", "2.397,00"],
+      "departments_include": ["finance"]
+    }
+  },
+  {
+    "id": "SLACK_CALENDAR_FOLLOWUP_NOT_ANNOUNCEMENT",
+    "query": "Takvimde hangi tarihler verilmis?",
+    "effective_query": "CAP basvuru tarihleri takvimde hangi tarihler olarak verilmis?",
+    "answer": "CAP basvuru tarihleri akademik takvimde belirtilen tarihlerde yapilir.",
+    "departments": ["student_affairs"],
+    "sources": ["akademik_takvim.pdf", "yonerge_cift_anadal_yandal.pdf"],
+    "expected": {
+      "departments_forbid": ["announcement"],
+      "answer_forbidden": ["Ilgili duyurular", "Sozlesmeli Personel"]
+    }
+  },
+  {
+    "id": "SLACK_COURSE_SEMESTER_BIL203",
+    "query": "Kacinci donemde bu ders?",
+    "effective_query": "BIL203 dersi hangi yariyilda?",
+    "answer": "BIL203 Veri Yapilari dersi 3. yariyil (2. sinif) olarak kayitli.",
+    "departments": ["academic_programs"],
+    "sources": ["course_catalog"],
+    "expected": {
+      "effective_contains": ["BIL203"],
+      "answer_contains": ["3. yariyil"],
+      "answer_forbidden": ["bulunamadi"]
+    }
+  },
+  {
+    "id": "SLACK_QUALITY_NO_BAD_TOKEN",
+    "query": "Topluluklar ne gibi durumlarda kapanir?",
+    "effective_query": "Topluluklar ne gibi durumlarda kapanir?",
+    "answer": "Topluluklar yonerge hukumlerine aykiri faaliyet veya yeterli uye sayisinin saglanamamasi gibi durumlarda kapatilabilir.",
+    "departments": ["student_affairs"],
+    "sources": ["ogrenci_topluluklari_yonergesi.pdf"],
+    "expected": {
+      "answer_forbidden": ["znajabilir", "departamento", "alumno"]
+    }
+  },
+  {
+    "id": "SLACK_GRADUATION_AKTS_EEM_TOTAL",
+    "query": "Elektrik-Elektronik Muhendisligi icin kac?",
+    "effective_query": "Elektrik-Elektronik Muhendisligi lisans programindan mezun olmak icin toplam kac AKTS gerekir?",
+    "answer": "Normal dort yillik lisans programindan mezun olmak icin toplam 240 AKTS tamamlanmalidir.",
+    "departments": ["student_affairs"],
+    "sources": ["education_level_graduation_rule"],
+    "expected": {
+      "effective_contains": ["Elektrik-Elektronik Muhendisligi", "mezun", "AKTS"],
+      "answer_contains": ["240 AKTS"],
+      "answer_forbidden": ["30 AKTS", "AKTS sayisi verilmemistir", "Erasmus", "formasyon"]
+    }
+  },
+  {
+    "id": "SLACK_PAYMENT_DEBT_COURSE_REGISTRATION",
+    "query": "Harc borcum bar ders kaydi yapabilir miyim?",
+    "effective_query": "Harc borcum var ders kaydi yapabilir miyim?",
+    "answer": "Hayir. Katki payi veya ogrenim ucretini odemeyen ogrenciler ders kaydi/kayit yenileme yaptiramaz ve ogrencilik haklarindan yararlanamaz.",
+    "departments": ["student_affairs"],
+    "sources": ["payment_debt_course_registration_policy"],
+    "expected": {
+      "answer_contains": ["Hayir", "ders kaydi", "yaptiramaz"],
+      "answer_forbidden": ["Turk ogrenci misiniz", "uluslararasi ogrenci misiniz", "Yillik ucret"]
+    }
+  },
+  {
+    "id": "SLACK_CAP_DATES_NO_GRADUATION_MIX",
+    "query": "Basvuru tarihleri ne peki?",
+    "effective_query": "CAP basvuru tarihleri ne peki?",
+    "answer": "CAP basvuru tarihleri akademik takvimde veya ilgili duyuruda ilan edilir; eslesen aktif duyuru bulunamazsa kesin tarih uydurulmaz.",
+    "departments": ["student_affairs", "academic_programs"],
+    "sources": ["yonerge_cift_anadal_yandal.pdf", "supplemental_announcement_probe"],
+    "expected": {
+      "answer_contains": ["tarih"],
+      "answer_forbidden": ["2,50", "2.50", "2,75", "240 AKTS", "120 AKTS"]
+    }
+  },
+  {
+    "id": "SLACK_QUALITY_NO_NECESSARY_SUFFIX",
+    "query": "Muafiyet icin ne yapmaliyim?",
+    "effective_query": "Muafiyet icin ne yapmaliyim?",
+    "answer": "Muafiyet basvurusu icin ilgili birime dilekce, transkript ve ders icerikleriyle basvurmaniz gerekir.",
+    "departments": ["student_affairs"],
+    "sources": ["ders_yeterlik_muafiyet_ve_intibak_yonergesi.pdf"],
+    "expected": {
+      "answer_forbidden": ["necessary", "necessarytir", "necessaire", "sorumlusanz", "hanrmlar"]
+    }
+  }
+]

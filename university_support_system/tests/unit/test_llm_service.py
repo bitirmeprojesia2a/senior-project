@@ -123,6 +123,9 @@ async def test_llm_generate_records_primary_provider_usage(llm_service):
             "path": "primary",
             "status": "success",
             "json_mode": False,
+            "prompt_chars": len("Selam"),
+            "system_chars": len("Sen asistansin."),
+            "estimated_input_tokens": 5,
             "llm_profile": "fast",
         }
     ]
@@ -148,6 +151,28 @@ async def test_llm_generate_uses_role_specific_provider(llm_service, monkeypatch
     mock_openai.assert_not_called()
     mock_google.assert_called_once()
     assert mock_google.await_args.kwargs["model"] == "gemini-3-flash-preview"
+
+
+@pytest.mark.asyncio
+async def test_llm_generate_uses_anthropic_provider(llm_service, monkeypatch):
+    monkeypatch.setattr(settings.llm, "global_synthesis_provider", "anthropic")
+    monkeypatch.setattr(settings.anthropic, "global_synthesis_model", "claude-sonnet-4-20250514")
+    llm_service.anthropic._api_keys = ["anthropic-test-key"]
+
+    with patch.object(llm_service.openai, "generate", new_callable=AsyncMock) as mock_openai, patch.object(
+        llm_service.anthropic, "generate", new_callable=AsyncMock
+    ) as mock_anthropic:
+        mock_anthropic.return_value = "Claude final synthesis"
+
+        response = await llm_service.generate(
+            "Final cevap yaz",
+            model_role="global_synthesis",
+        )
+
+    assert response == "Claude final synthesis"
+    mock_openai.assert_not_called()
+    mock_anthropic.assert_called_once()
+    assert mock_anthropic.await_args.kwargs["model"] == "claude-sonnet-4-20250514"
 
 
 @pytest.mark.asyncio

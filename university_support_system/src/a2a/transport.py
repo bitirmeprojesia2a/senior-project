@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import time
 from typing import Any, ClassVar, Literal, Protocol
 
@@ -212,19 +213,18 @@ class HttpA2ADepartmentTransport:
             disable_specialist_llm=disable_specialist_llm,
         )
         wire_payload = self._wire_payload(request_task=request_task, rest_payload=payload)
-        headers = build_a2a_auth_headers(
-            internal_api_key=self.internal_api_key,
-            caller_id=MAIN_ORCHESTRATOR_SERVICE_ID,
-            target_id=department_service_id(department),
-            body=wire_payload,
-            signature_secret=self._request_signature_secret(),
-        )
-
         last_exc: Exception | None = None
         response_task: Task | None = None
         total_attempts = self.retry_count + 1
         for attempt in range(1, total_attempts + 1):
             try:
+                headers = build_a2a_auth_headers(
+                    internal_api_key=self.internal_api_key,
+                    caller_id=MAIN_ORCHESTRATOR_SERVICE_ID,
+                    target_id=department_service_id(department),
+                    body=wire_payload,
+                    signature_secret=self._request_signature_secret(),
+                )
                 async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                     response = await client.post(
                         self._dispatch_url(endpoint),
@@ -248,7 +248,7 @@ class HttpA2ADepartmentTransport:
                         department=department,
                         endpoint=endpoint,
                         attempt=attempt,
-                        reason="timeout",
+                        reason=type(exc).__name__,
                         error=exc,
                     )
                     continue
@@ -573,6 +573,8 @@ class HttpA2ADepartmentTransport:
         error: Exception,
     ) -> None:
         delay = self.retry_backoff_seconds * attempt
+        if delay > 0:
+            delay *= random.uniform(0.8, 1.2)
         logger.info(
             "a2a_http_dispatch_retry department=%s endpoint=%s attempt=%s next_delay_s=%.2f reason=%s error=%s",
             department.value,
@@ -621,6 +623,12 @@ class HttpA2ADepartmentTransport:
             "final_answer_owner": metadata.get("final_answer_owner"),
             "specialist_response_mode": metadata.get("specialist_response_mode"),
             "capability_planner": metadata.get("capability_planner"),
+            "source_owner": metadata.get("source_owner"),
+            "decision_contract": metadata.get("decision_contract"),
+            "resolved_decision": metadata.get("resolved_decision"),
+            "branch_dispatch_gate": metadata.get("branch_dispatch_gate"),
+            "branch_role": metadata.get("branch_role"),
+            "retrieval_execution_policy": metadata.get("retrieval_execution_policy"),
             "trace_id": metadata.get("trace_id"),
             "span_id": metadata.get("span_id"),
             "parent_span_id": metadata.get("parent_span_id"),

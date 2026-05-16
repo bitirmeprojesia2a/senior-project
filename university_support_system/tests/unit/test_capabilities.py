@@ -255,7 +255,7 @@ async def test_main_orchestrator_shadow_mode_plans_without_applying(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_main_orchestrator_on_mode_plans_against_full_scope(monkeypatch):
+async def test_main_orchestrator_on_mode_uses_router_first_scope_with_registry_expansion(monkeypatch):
     planner_settings = CapabilityPlannerSettings(mode="on")
     monkeypatch.setattr(settings, "capability_planner", planner_settings)
     llm_service = AsyncMock()
@@ -292,11 +292,14 @@ async def test_main_orchestrator_on_mode_plans_against_full_scope(monkeypatch):
     assert payload["action"]["capability"] == "calendar.academic_date"
     assert payload["plan_decision"]["capability"] == "calendar.academic_date"
     assert payload["legacy_routing"]["departments"] == ["academic_programs"]
+    assert payload["planner_scope"] == ["academic_programs", "student_affairs"]
+    assert payload["planner_scope_policy"] == "router_first_with_source_registry_expansions"
     prompt = llm_service.generate.await_args.args[0]
     assert "calendar.academic_date" in prompt
     assert "course.exists_in_program" in prompt
-    assert "announcement.search" in prompt
-    assert "event.search" in prompt
+    assert "announcement.search" not in prompt
+    assert "event.search" not in prompt
+    assert "finance.tuition_fee" not in prompt
 
 
 @pytest.mark.asyncio
@@ -1083,6 +1086,123 @@ async def test_executor_finance_tuition_fee_uses_catalog(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_executor_finance_tuition_fee_rejects_special_fee_scope():
+    result = await execute_capability_action(
+        {
+            "capability": "finance.tuition_fee",
+            "params": {
+                "student_type": "Turk ogrenci",
+                "unit_name": "muhendislik fakultesi",
+                "query": "Yaz okulu ucreti ne kadar?",
+            },
+            "confidence": 0.9,
+        }
+    )
+
+    assert result.success is False
+    assert result.error == "not_fee_amount_query"
+
+
+@pytest.mark.asyncio
+async def test_curriculum_course_detail_returns_semester_and_prerequisites(monkeypatch):
+    async def fake_course_detail(course_code):
+        assert course_code == "BIL203"
+        return {
+            "course_code": "BIL203",
+            "course_name": "Veri Yapilari",
+            "credits": 3,
+            "akts": 5,
+            "curriculum_semester": 3,
+            "department": "Bilgisayar Muhendisligi",
+            "prerequisites": [
+                {"course_code": "BIL104", "course_name": "Programlamaya Giris II"}
+            ],
+        }
+
+    monkeypatch.setattr(curriculum_executor, "fetch_course_detail_by_code", fake_course_detail)
+
+    result = await curriculum_executor.course_detail({"course_code": "BIL203"})
+
+    assert result.success is True
+    assert result.records[0]["curriculum_semester"] == 3
+    assert result.records[0]["prerequisites"][0]["course_code"] == "BIL104"
+
+
+@pytest.mark.asyncio
+async def test_weekly_program_lists_program_rows_when_class_and_term_missing(monkeypatch):
+    async def fake_fetch_schedule_slots_by_department(program):
+        assert program == "Bilgisayar Muhendisligi"
+        return [
+            {
+                "schedule_group": "1. sinif",
+                "term": "bahar",
+                "day_of_week": "Pazartesi",
+                "start_time": "08:15",
+                "end_time": "09:00",
+                "course_name": "Matematik-II",
+            }
+        ]
+
+    monkeypatch.setattr(
+        curriculum_executor,
+        "fetch_schedule_slots_by_department",
+        fake_fetch_schedule_slots_by_department,
+    )
+
+    result = await curriculum_executor.weekly_program({"program": "Bilgisayar Muhendisligi"})
+
+    assert result.success is True
+    assert result.message is None
+    assert result.records
+    assert result.metadata["all_schedule_groups"] is True
+
+
+def test_course_detail_formatter_includes_semester_and_prerequisite():
+    answer = deterministic_answer_for_result(
+        query="BIL203 hangi donemde?",
+        capability="course.detail",
+        records=[
+            {
+                "course_code": "BIL203",
+                "course_name": "Veri Yapilari",
+                "credits": 3,
+                "akts": 5,
+                "curriculum_semester": 3,
+                "prerequisites": [
+                    {"course_code": "BIL104", "course_name": "Programlamaya Giris II"}
+                ],
+            }
+        ],
+        metadata={},
+        message=None,
+    )
+
+    assert "3. yariyil" in answer
+    assert "2. sinif" in answer
+    assert "BIL104 Programlamaya Giris II" in answer
+
+
+def test_semester_courses_formatter_groups_course_types():
+    answer = deterministic_answer_for_result(
+        query="5. yariyil dersleri",
+        capability="curriculum.semester_courses",
+        records=[
+            {"course_code": "BIL305", "course_name": "Bilgisayar Mimarisi", "course_type": "zorunlu"},
+            {"course_code": "BIL327", "course_name": "Mobil Programlama", "course_type": "teknik_secmeli"},
+            {"course_code": "SSD1", "course_name": "Sosyal Secmeli", "course_type": "sosyal_secmeli"},
+            {"course_code": "BIL392", "course_name": "Staj", "course_type": "staj"},
+        ],
+        metadata={"semester": 5},
+        message=None,
+    )
+
+    assert "Zorunlu dersler:" in answer
+    assert "Teknik/secmeli dersler:" in answer
+    assert "Sosyal/universite secmeli dersleri:" in answer
+    assert "Staj/MUP:" in answer
+
+
+@pytest.mark.asyncio
 async def test_executor_rejects_missing_required_params_without_crashing():
     result = await execute_capability_action(
         {
@@ -1121,12 +1241,18 @@ def test_a2a_payload_carries_capability_planner_metadata():
             "apply": True,
             "action": {"capability": "course.detail", "params": {"course_code": "BIL203"}},
         },
+        source_owner={
+            "schema": "omu.source_owner.v1",
+            "primary": "curriculum_catalog",
+            "reasoning": "capability_planner",
+        },
     )
 
     metadata = payload.to_metadata()
 
     assert metadata["capability_planner"]["mode"] == "pilot"
     assert metadata["capability_planner"]["apply"] is True
+    assert metadata["source_owner"]["primary"] == "curriculum_catalog"
 
 
 @pytest.mark.asyncio
@@ -1256,6 +1382,50 @@ def test_registration_agent_prepares_policy_lookup_task_for_rag_pipeline():
         "hic alinmamis ders",
         "devam sarti",
     ]
+
+
+def test_registration_agent_adds_application_policy_facet_even_when_planner_mentions_graduation():
+    task = build_query_task(
+        A2AQueryPayload(
+            query_text="CAP basvurusu icin not ortalamasi kac olmali?",
+            context_id="ctx-policy-facet-cap",
+            capability_planner={
+                "mode": "on",
+                "apply": True,
+                "action": {
+                    "capability": "student_affairs.policy_lookup",
+                    "intent": "double_major_application_gpa",
+                    "params": {
+                        "query": "Cift anadal programi basvurusu icin not ortalamasi kac olmali?",
+                        "topic": "CAP / Cift Anadal",
+                        "question_type": "eligibility",
+                        "must_answer": ["not ortalamasi", "basvuru kosullari", "mezuniyet sarti"],
+                        "preferred_sources": ["yonerge_cift_anadal_yandal.pdf"],
+                    },
+                    "answer_contract": {
+                        "must_answer": ["not ortalamasi kosulu", "mezuniyet sarti"],
+                    },
+                    "evidence_contract": {
+                        "preferred_sources": ["yonerge_cift_anadal_yandal.pdf"],
+                    },
+                    "confidence": 0.9,
+                },
+            },
+        )
+    )
+    agent = RegistrationAgent(llm_service=AsyncMock())
+
+    prepared = agent._prepare_policy_lookup_task(
+        task,
+        "CAP basvurusu icin not ortalamasi kac olmali?",
+        task.metadata or {},
+    )
+
+    facet = prepared.metadata["policy_facet"]
+    assert facet["facet"] == "eligibility"
+    assert facet["target_program"] == "double_major"
+    assert facet["reason"] == "policy_query_frame_detected_with_target_program"
+    assert "yan dal programina" in facet["program_avoid_evidence_markers"]
 
 
 def test_international_agent_prepares_policy_lookup_task_for_rag_pipeline():
@@ -1402,6 +1572,30 @@ async def test_tuition_agent_ignores_finance_capability_for_policy_query(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_tuition_agent_blocks_regular_catalog_for_special_fee_scope(monkeypatch):
+    fetch_mock = AsyncMock()
+    monkeypatch.setattr(
+        "src.agents.finance.tuition_agent.fetch_tuition_fee_catalog_entry",
+        fetch_mock,
+    )
+    agent = TuitionAgent(llm_service=AsyncMock())
+    task = build_query_task(
+        A2AQueryPayload(
+            query_text="Yaz okulu ucreti Turk ogrenci Muhendislik Fakultesi icin ne kadar?",
+            context_id="ctx-special-fee-scope",
+        )
+    )
+
+    response = await agent.handle_department_task(task)
+
+    assert response.success is False
+    assert response.error == "special_fee_scope_not_in_regular_tuition_catalog"
+    assert response.metadata["fee_scope"] == "summer_school_fee"
+    assert response.metadata["regular_tuition_catalog_blocked"] is True
+    fetch_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_curriculum_agent_ignores_low_confidence_capability_plan(monkeypatch):
     execute_mock = AsyncMock()
     monkeypatch.setattr(
@@ -1463,6 +1657,62 @@ async def test_curriculum_agent_falls_back_when_capability_execution_fails(monke
     )
 
     assert response is None
+
+
+def test_main_orchestrator_builds_runtime_source_owner_payload():
+    orchestrator = MainOrchestrator(
+        department_orchestrators={},
+        announcement_agent=object(),
+        event_agent=object(),
+        telemetry_service=object(),
+        llm_service=AsyncMock(),
+    )
+
+    payload = orchestrator._resolve_source_owner_payload(
+        original_query="Akademik takvimde derslerin bitimi ne zaman?",
+        effective_query="Akademik takvimde derslerin bitimi ne zaman?",
+        routing=_routing_result([Department.STUDENT_AFFAIRS]),
+        capability_planner_payload={
+            "apply": True,
+            "action": {
+                "capability": "calendar.academic_date",
+                "confidence": 0.91,
+                "params": {"query": "Akademik takvimde derslerin bitimi ne zaman?"},
+            },
+        },
+        final_answer_owner="main_orchestrator",
+    )
+
+    assert payload["schema"] == "omu.source_owner.v1"
+    assert payload["primary"] == "academic_calendar"
+    assert payload["reasoning"] == "capability_planner"
+    assert payload["routing_departments"] == ["student_affairs"]
+    assert payload["final_answer_owner"] == "main_orchestrator"
+
+    contract_payload = orchestrator._build_runtime_decision_contract_metadata(
+        original_query="Akademik takvimde derslerin bitimi ne zaman?",
+        effective_query="Akademik takvimde derslerin bitimi ne zaman?",
+        routing=_routing_result([Department.STUDENT_AFFAIRS]),
+        conversation_resolution=_conversation_resolution(
+            "Akademik takvimde derslerin bitimi ne zaman?"
+        ),
+        capability_planner_payload={
+            "apply": True,
+            "action": {
+                "capability": "calendar.academic_date",
+                "confidence": 0.91,
+                "params": {"query": "Akademik takvimde derslerin bitimi ne zaman?"},
+            },
+        },
+        final_answer_owner="main_orchestrator",
+        cache_lookup_policy="capability_planner_enabled",
+        source_owner_payload=payload,
+        stage="department_dispatch",
+    )
+
+    assert contract_payload["schema"] == "omu.decision_contract.v1"
+    assert contract_payload["mode"] == "read_only"
+    assert contract_payload["contract"]["source_owner"]["primary"] == "academic_calendar"
 
 
 def _routing_result(departments: list[Department]) -> RoutingResult:

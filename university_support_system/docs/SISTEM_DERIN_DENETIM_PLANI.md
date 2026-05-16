@@ -73,6 +73,16 @@ Kontrol edilecekler:
 - LLM'e giden context yeterli ve temiz mi?
 - Post-processing yabanci kelime, eksik cumle, kaynak disi iddia gibi riskleri yakaliyor mu?
 
+Kalite gate notu:
+- Contract/source/value ihlalleri cevap guvenilirligini bozar; bunlar deterministik fallback yoksa bloke edilir.
+- Dil/format kalitesi iki seviyeli ele alinacak: acik bozuk token veya yabanci alfabe cevapta kalirsa bloke edilir; daha yumusak supheli Ingilizce/suffix turu pürüzlerde once repair denenir, repair timeout olursa temizlenmis cevap kullaniciya gosterilebilir.
+- Bu politika tekrar gozden gecirilecek. Canlida "sentezleyemiyorum" orani artarsa kalite gate sebep kirilimi ve ornek cevaplar uzerinden esikler yeniden kalibre edilecek.
+
+Contract cevap politikasi:
+- Contract ihlali fallback'leri soru bazli metin gomerek buyutulmeyecek.
+- `contract_answer_policy` once fact/state plani uretir (`verified_total_akts`, `answer_status`, `direct_debt_bar_found` gibi); kullanici metni tek renderer'dan cikar.
+- LLM ileride bu plani dogal dile cevirebilir, fakat validator planin zorunlu fact/state sinirlarini korur. Yeni senaryoda oncelik yeni metin eklemek degil, yeni contract state/fact tanimlamaktir.
+
 ### 4. Structured DB / Finance / Curriculum / Schedule
 
 Kapsam:
@@ -105,6 +115,12 @@ Kontrol edilecekler:
 - Duyuru ile akademik bilgi sorulari birbirine karisiyor mu?
 - Ek dosya/link ozeti dogru ve yeterli mi?
 - Eski duyurular yanlislikla "guncel" diye geliyorsa neden?
+
+Ertelenen tasarim notu:
+- Duyuru probe'una paralel bir `department_scoped_document_probe` tasarlanacak.
+- Genel policy sorularinda once universite/genel yonetmelik cevabi korunacak; kullanici bolum/program belirtirse veya oturumda guvenilir bolum varsa bolum ozel staj, bitirme, uygulama esasi, form ve ders belgeleri destekleyici kanit olarak aranacak.
+- Bolum belgesi merkezi yonetmeligi otomatik ezmeyecek; yalniz "bolum uygulamasi/ek sart" olarak, yuksek guven ve dogru bolum eslesmesi varsa cevaba eklenecek.
+- Dusuk guvenli veya baska bolume ait belge cevaba sokulmayacak; telemetry'de aday/elenme sebebiyle izlenecek.
 
 ### 6. Slack Runtime / Auth / Personal Data
 
@@ -156,6 +172,13 @@ Kontrol edilecekler:
 Aktif risk:
 - `RAG_LLM_QUERY_EXPANSION_ENABLED=true` ise retrieval basina ayri LLM cagrisi latency/cost riski tasir. Routing/normalization LLM sinyaliyle birlestirme tekrar degerlendirilmeli.
 
+Ertelenen deney notu:
+- Turkish BGE / FP16 reranker denemesi bu fazin sonuna alindi. Once mevcut
+  contract, final-owner, quality gate ve replay stabil hale getirilecek; sonra
+  `scripts/compare_reranker_models.py` uzerinden mevcut reranker ile ayni
+  fixture setinde A/B kalibrasyon yapilacak. Canli default model yalniz
+  precision/latency kazanimi testle gorulurse degisecek.
+
 ### 9. Scripts / Tests / Benchmark / Docs
 
 Kapsam:
@@ -177,4 +200,3 @@ Kontrol edilecekler:
 4. Announcement/event precision ve bolum/zaman filtresi.
 5. Finance/curriculum/schedule structured data kapsam ve stale data riski.
 6. A2A production hardening ve Redis tabanli nonce store.
-

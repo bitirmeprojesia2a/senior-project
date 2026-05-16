@@ -483,6 +483,38 @@ _VAGUE_APPLICATION_TIMING_TOKENS = {
 }
 
 
+def _looks_like_grade_requirement_policy_query(normalized_query: str) -> bool:
+    """Return whether GPA/grade average is asked as a rule threshold.
+
+    "Not ortalamam kac?" is private student data, but "not ortalamasi kac
+    olmali?" usually asks for a policy threshold such as CAP, Erasmus or yatay
+    gecis eligibility. The latter must stay eligible for conversation context.
+    """
+    if _PERSONAL_POSSESSIVE_RE.search(normalized_query):
+        return False
+    if not contains_any(normalized_query, ("not ortalama", "not ortalamasi", "gno", "gano")):
+        return False
+    return contains_any(
+        normalized_query,
+        (
+            "kac olmali",
+            "ne olmali",
+            "kac olmasi",
+            "kac olmasi gerekir",
+            "gerekli",
+            "gerekir",
+            "sart",
+            "sarti",
+            "kosul",
+            "kosulu",
+            "basvuru",
+            "basvurabil",
+            "kabul",
+            "uygun",
+        ),
+    )
+
+
 def looks_like_personal_data_query(query: str) -> bool:
     """Return whether query likely asks for personal/private student data."""
     lowered = normalize_routing_text(query)
@@ -497,6 +529,9 @@ def looks_like_personal_data_query(query: str) -> bool:
     # Ornek: "kayit dondurma ile kayit yaptirmamak arasinda fark" → kural sorusu
     # Ornek: "mezuniyet icin gerekli kosullar" → kural sorusu
     if contains_any(lowered, _NON_PERSONAL_QUERY_PATTERNS):
+        return False
+
+    if _looks_like_grade_requirement_policy_query(lowered):
         return False
 
     # Marker tabanli kontrol

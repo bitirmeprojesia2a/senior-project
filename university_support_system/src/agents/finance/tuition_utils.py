@@ -77,6 +77,17 @@ EXPLICIT_FEE_AMOUNT_MARKERS = (
     "yillik ucret",
     "semester fee",
 )
+OTHER_FEE_QUERY_MARKERS = (
+    "baska ucret",
+    "baska bir ucret",
+    "baska var mi",
+    "baska odeme",
+    "ek ucret",
+    "ilave ucret",
+    "ayri ucret",
+    "ucret disinda",
+    "ogrenim ucreti disinda",
+)
 NON_TUITION_FEE_MARKERS = (
     "yemekhane",
     "yemek ucreti",
@@ -85,7 +96,26 @@ NON_TUITION_FEE_MARKERS = (
     "servis ucreti",
     "ulasim ucreti",
     "otopark",
+    "yaz okulu",
+    "yaz donemi",
+    "yaz ogretimi",
+    "cap",
+    "capa",
+    "cift anadal",
+    "cift ana dal",
+    "yandal",
+    "yan dal",
+    "erasmus",
+    "degisim programi",
+    "fazla odeme",
+    "ucret iadesi",
+    "harc iadesi",
 )
+SPECIAL_AMOUNT_FEE_SCOPES = {
+    "summer_school_fee",
+    "cap_extra_fee",
+    "erasmus_fee",
+}
 TUITION_TABLE_SOURCE_MARKERS = (
     "ogrenim_ucret",
     "ogrenim ucret",
@@ -186,6 +216,36 @@ def is_personal_query(query_text: str) -> bool:
     return False
 
 
+def infer_fee_scope(query_text: str) -> str | None:
+    """Infer which fee family the user is asking about.
+
+    Regular tuition tables are authoritative only for regular tuition/catalog
+    questions. Program-specific or special-period fee questions need explicit
+    evidence from their own policy/source family.
+    """
+    lowered = normalize_finance_text(query_text)
+    if is_other_fee_query(query_text):
+        return "other_fee_policy"
+    if any(marker in lowered for marker in ("fazla odeme", "ucret iadesi", "harc iadesi", "iade")):
+        return "refund_policy"
+    if any(marker in lowered for marker in ("borc", "borcum", "borcu", "borclu")):
+        return "payment_debt_eligibility"
+    if any(marker in lowered for marker in ("yaz okulu", "yaz donemi", "yaz ogretimi")):
+        return "summer_school_fee"
+    if any(marker in lowered for marker in ("cap", "capa", "cift anadal", "cift ana dal", "yandal", "yan dal")):
+        return "cap_extra_fee"
+    if any(marker in lowered for marker in ("erasmus", "degisim programi", "exchange")):
+        return "erasmus_fee"
+    if any(marker in lowered for marker in ("ogrenim ucreti", "katki payi", "harc", "donemlik", "yillik", "ucret")):
+        return "regular_tuition_fee"
+    return None
+
+
+def blocks_regular_tuition_catalog(query_text: str) -> bool:
+    """Return True when the regular tuition catalog must not answer the query."""
+    return infer_fee_scope(query_text) in SPECIAL_AMOUNT_FEE_SCOPES
+
+
 _FEE_POLICY_SIGNALS = (
     "asarsam", "astiginda", "asinca", "uzarsa", "uzatirsa",
     "program suresi", "normal sure", "ek sure",
@@ -207,6 +267,8 @@ _FEE_PROCEDURAL_SIGNALS = (
 def is_structured_fee_query(query_text: str) -> bool:
     """Return whether the query should prefer structured fee lookup."""
     lowered = normalize_finance_text(query_text)
+    if is_other_fee_query(query_text):
+        return False
     if any(signal in lowered for signal in NON_TUITION_FEE_MARKERS):
         return False
     if any(signal in lowered for signal in _FEE_POLICY_SIGNALS):
@@ -217,6 +279,8 @@ def is_structured_fee_query(query_text: str) -> bool:
 def is_explicit_fee_amount_query(query_text: str) -> bool:
     """Return whether the query explicitly asks for a tuition fee amount."""
     lowered = normalize_finance_text(query_text)
+    if is_other_fee_query(query_text):
+        return False
     if any(signal in lowered for signal in NON_TUITION_FEE_MARKERS):
         return False
     if any(signal in lowered for signal in _HYPOTHETICAL_POLICY_OVERRIDE):
@@ -358,6 +422,8 @@ def needs_fee_context_clarification(
 ) -> bool:
     """Return whether the system needs student type/unit clarification."""
     lowered = normalize_finance_text(query_text)
+    if is_other_fee_query(query_text):
+        return False
     if any(signal in lowered for signal in NON_TUITION_FEE_MARKERS):
         return False
     if not any(keyword in lowered for keyword in FEE_AMOUNT_KEYWORDS):
@@ -374,6 +440,28 @@ def needs_fee_context_clarification(
     if student_type not in {"domestic", "international"}:
         return True
     return not requested_unit
+
+
+def is_other_fee_query(query_text: str) -> bool:
+    """Return whether the user asks if there are additional fee items."""
+    lowered = normalize_finance_text(query_text)
+    return any(marker in lowered for marker in OTHER_FEE_QUERY_MARKERS)
+
+
+def build_other_fee_policy_answer(query_text: str) -> str:
+    """Build a conservative answer for additional-fee scope questions."""
+    requested_type = infer_requested_student_type(query_text)
+    student_prefix = ""
+    if requested_type == "international":
+        student_prefix = "Uluslararası öğrenci bağlamında "
+    elif requested_type == "domestic":
+        student_prefix = "Türk öğrenci bağlamında "
+    return (
+        f"{student_prefix}yapılandırılmış öğrenim ücreti kataloğunda öğrenim ücreti/katkı payı "
+        "dışında doğrulanmış ayrı bir zorunlu ücret kalemi görünmüyor. Yemekhane, yaz okulu, "
+        "değişim programı, başvuru veya benzeri özel ücretler varsa kendi duyuru/yönerge "
+        "kaynağıyla ayrıca doğrulanmalıdır."
+    )
 
 
 def pick_preferred_result(query_text: str, results: Sequence[dict]) -> dict | None:

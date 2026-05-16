@@ -75,6 +75,32 @@ Full A2A stack icin onerilen baslatma komutu:
 
 Kod degismediyse ayni komut `--skip-build` ile kullanilabilir; kod veya dependency degistiyse `--skip-build` kullanilmamalidir.
 
+Slack kalite replay oncesi pratik sira:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --skip-build --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --slack-service slack-bot-a2a --health-timeout-seconds 300
+docker exec uni_redis redis-cli -n 0 FLUSHDB
+.\venv\Scripts\python.exe -m scripts.slack_runtime restart --runtime a2a
+```
+
+Rollout `dependency failed to start: container uni_a2a_retrieval_service is unhealthy` ile biterse hemen karar vermeyin; GPU warmup bazen Compose health penceresine yetismeyebilir. Asagidaki komutlarla retrieval gercekten hata mi verdi yoksa sonradan `healthy` mi oldu kontrol edilir:
+
+```powershell
+docker ps -a --filter "name=uni_a2a_retrieval_service" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
+docker logs uni_a2a_retrieval_service --tail 220
+docker inspect uni_a2a_retrieval_service --format "{{json .State.Health}}"
+```
+
+Retrieval `healthy` oldugu halde API `Created` kaldiysa:
+
+```powershell
+docker start uni_a2a_api
+docker exec uni_a2a_api python -c "import json, urllib.request; print(json.dumps(json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=8)), ensure_ascii=False, indent=2))"
+docker restart uni_slack_bot_a2a
+```
+
+`docker-compose.a2a-app-gpu.yml` ve `docker-compose.a2a-app-gpu-all.yml` tek basina calistirilmaz; bunlar image/build tanimlamayan GPU overlay dosyalaridir. Standalone calistirilirsa `has neither an image nor a build context specified` hatasi normaldir.
+
 ## Kullanici Komutlari
 
 - Normal soru: `Ders kaydi ne zaman basliyor?`
@@ -91,6 +117,7 @@ Genel sorular giris olmadan yanitlanir. Kisisel sorularda Slack kullanicisi OTP 
 - Auth aktifse soru cache politikasi mevcut sistemdeki gibi kisisel guvenlik nedeniyle bypass edebilir.
 - Docker'da "Can not decode content-encoding: br" hatasi gorulurse aiohttp/brotli uyumsuzlugu veya image dependency farki incelenmelidir.
 - Slack'te iki cevap gelirse once `slack-bot-a2a` ve `slack-bot-inprocess` servislerinden yalniz birinin acik oldugunu kontrol edin. Ayni Slack app token seti iki Socket Mode client ile calisirsa duplicate cevap normaldir.
+- `scripts.slack_runtime up/restart` ve Slack dahil `scripts.a2a_rollout` secilen runtime'i acmadan once karsi Slack runtime'i stop eder. Bu guard eski/orphan container ihtimalini azaltir; yine de duplicate cevapta `docker ps -a --filter "name=slack"` ilk kontrol komutudur.
 - `Duyurular agent servisine ulasilamadi` veya genel `Kural` fallback'i gorulurse A2A endpoint profile, service auth/signature ve agent health kontrol edilmelidir.
 - `docker compose` orphan uyarisi genellikle `slack-bot-a2a` servisinin farkli compose dosya kombinasyonu ile ayakta kalmasindan kaynaklanir. Kapatmak icin once `scripts.slack_runtime stop --runtime a2a`, gerekirse ayni compose project altinda `docker compose ... down --remove-orphans` kullanilir.
 - Follow-up ucret sorularinda onceki fakulte/bolum baglami Slack thread context'inde tutulur; kullanici yeni konuya gecerse routing/slot mekanizmasi eski baglamin yanlis uygulanmasini engellemek icin eksik bilgi sorabilir.

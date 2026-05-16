@@ -74,6 +74,38 @@ STUDENT_TYPE_CLARIFICATION_MESSAGE = (
 )
 
 COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
+_KNOWN_COURSE_PREFIXES = {
+    "BIL",
+    "BMH",
+    "MAT",
+    "FIZ",
+    "KIM",
+    "MUH",
+    "SSD",
+    "TUR",
+    "ATA",
+    "ING",
+    "EEE",
+    "EEM",
+    "MAK",
+    "INS",
+}
+_INVALID_COURSE_PREFIXES = {
+    "ICIN",
+    "ODEME",
+    "EYLUL",
+    "MAYIS",
+    "HAZIRAN",
+    "TEMMUZ",
+    "AGUSTOS",
+    "MART",
+    "NISAN",
+    "ARALIK",
+    "OCAK",
+    "SUBAT",
+    "AKTS",
+    "TL",
+}
 
 _STUDENT_TYPE_SENSITIVE_INTENTS = {
     "tuition",
@@ -151,6 +183,45 @@ _ACADEMIC_DEPARTMENT_CLARIFICATION_BYPASS_MARKERS: tuple[str, ...] = (
     "tarih",
     "takvim",
     "surec",
+)
+
+_GENERAL_POLICY_ELIGIBILITY_TOPICS: tuple[str, ...] = (
+    "cap",
+    "cift anadal",
+    "cift ana dal",
+    "yandal",
+    "yan dal",
+    "yatay gecis",
+    "dikey gecis",
+    "muafiyet",
+    "intibak",
+    "tek ders",
+    "yaz okulu",
+    "staj",
+)
+_GENERAL_POLICY_ELIGIBILITY_QUESTIONS: tuple[str, ...] = (
+    "basvurabilir miyim",
+    "basvuru yapabilir miyim",
+    "yapabilir miyim",
+    "alabilir miyim",
+    "katilabilir miyim",
+    "uygun muyum",
+    "sartlari",
+    "kosullari",
+    "sart nedir",
+    "kosul nedir",
+)
+_PROGRAM_REQUIRED_POLICY_MARKERS: tuple[str, ...] = (
+    "kontenjan",
+    "hangi programa",
+    "hangi bolume",
+    "program bazli",
+    "bolum bazli",
+    "hedef program",
+    "ders programi",
+    "mufredat",
+    "acilan ders",
+    "hangi ders",
 )
 
 _ANNOUNCEMENT_DIRECT_LOOKUP_MARKERS: tuple[str, ...] = (
@@ -488,6 +559,18 @@ def _looks_like_international_registration_policy_query(query: str | None) -> bo
     return has_international and has_registration
 
 
+def _general_policy_query_can_answer_without_program_slot(query: str | None) -> bool:
+    if not query:
+        return False
+    normalized_query = normalize_text(query)
+    if contains_any_normalized(normalized_query, _PROGRAM_REQUIRED_POLICY_MARKERS):
+        return False
+    return contains_any_normalized(
+        normalized_query,
+        _GENERAL_POLICY_ELIGIBILITY_TOPICS,
+    ) and contains_any_normalized(normalized_query, _GENERAL_POLICY_ELIGIBILITY_QUESTIONS)
+
+
 def build_missing_slot_clarification_message(
     *,
     intent: IntentAnalysis | None,
@@ -526,6 +609,9 @@ def build_missing_slot_clarification_message(
         missing_slots.difference_update(fee_slots)
 
     if _looks_like_international_registration_policy_query(query):
+        missing_slots.difference_update({"faculty_or_program", "department_or_program", "program", "course_name"})
+
+    if _general_policy_query_can_answer_without_program_slot(query):
         missing_slots.difference_update({"faculty_or_program", "department_or_program", "program", "course_name"})
 
     if metadata.get("student_faculty") or metadata.get("student_department") or inferred_program:
@@ -572,7 +658,7 @@ def requires_academic_department_clarification(
 
     lowered = normalize_text(query)
     has_explicit_program_signal = any(keyword in lowered for keyword in ("bolumu", "anabilim dali"))
-    has_explicit_course_code = COURSE_CODE_PATTERN.search(query) is not None
+    has_explicit_course_code = _has_valid_course_code(query)
     has_known_program_name = infer_department_from_query(query) is not None
     if has_explicit_program_signal or has_explicit_course_code or has_known_program_name:
         return False
@@ -684,7 +770,9 @@ def should_fetch_related_announcements(query: str) -> bool:
             return False
     if looks_like_announcement_query(normalized):
         return True
-    if contains_any_normalized(normalized, _ACADEMIC_CALENDAR_DATE_MARKERS):
+    if contains_any_normalized(normalized, _ACADEMIC_CALENDAR_DATE_MARKERS) or (
+        "takvim" in normalized and not contains_any_normalized(normalized, _EXPLICIT_ANNOUNCEMENT_ALLOW_MARKERS)
+    ):
         return False
     # Ilgili duyuru sinyali, contact marker'larindan once degerlendirilir.
     # Aksi halde "nerede" marker'i "nereden takip edilir" gibi sorgulari
@@ -699,6 +787,51 @@ def should_fetch_related_announcements(query: str) -> bool:
         return True
     if looks_like_contact_query(normalized):
         return False
+    return False
+
+
+def build_supplemental_announcement_probe_query(query: str) -> str | None:
+    """Build a scoped, keyword-bearing announcement probe for date/offer facets."""
+    normalized = normalize_text(query)
+    needs_external_date_or_offer = contains_any_normalized(
+        normalized,
+        (
+            "basvuru tarihi",
+            "basvuru tarihleri",
+            "tarihleri",
+            "ne zaman",
+            "takvim",
+            "acilacak ders",
+            "hangi dersler acilacak",
+            "duyuruldu mu",
+        ),
+    )
+    if not needs_external_date_or_offer:
+        return None
+    academic_year = "2025-2026"
+    if contains_any_normalized(normalized, ("cap", "cift anadal", "cift ana dal", "yandal", "yan dal")):
+        return f"CAP cift anadal yandal basvuru tarihleri {academic_year}"
+    if "staj" in normalized:
+        return f"staj basvuru tarihleri {academic_year}"
+    if "yaz okulu" in normalized:
+        return f"yaz okulu acilacak dersler basvuru tarihleri {academic_year}"
+    if contains_any_normalized(normalized, ("sinav takvimi", "sinav programi")):
+        return f"sinav takvimi sinav programi {academic_year}"
+    return None
+
+
+def _has_valid_course_code(query: str) -> bool:
+    for match in COURSE_CODE_PATTERN.finditer(query):
+        raw = match.group(0).replace(" ", "")
+        prefix = re.sub(r"\d+", "", raw).upper()
+        if prefix in _INVALID_COURSE_PREFIXES:
+            continue
+        if prefix in _KNOWN_COURSE_PREFIXES:
+            return True
+        if not match.group(0).replace(" ", "").isupper():
+            continue
+        if 2 <= len(prefix) <= 4:
+            return True
     return False
 
 
@@ -717,6 +850,13 @@ def should_keep_announcement_follow_up(query: str) -> bool:
     normalized = normalize_text(query).strip(" \t\r\n?.!,;:")
     if looks_like_announcement_query(normalized):
         return True
+    if (
+        "takvim" in normalized
+        or "hangi tarih" in normalized
+        or "hangi tarihler" in normalized
+        or contains_any_normalized(normalized, _ACADEMIC_CALENDAR_DATE_MARKERS)
+    ):
+        return False
     if contains_any_normalized(normalized, _ANNOUNCEMENT_TOPIC_SHIFT_MARKERS):
         return False
     tokens = normalized.split()
@@ -742,6 +882,13 @@ def query_prefers_global_synthesis(query: str) -> bool:
 def should_use_global_synthesis(*, query: str, responses: list[DepartmentResponse]) -> bool:
     """Return whether final answer composition should use global synthesis."""
     if looks_like_contact_query(query):
+        return False
+    if any(
+        isinstance(response.metadata, dict)
+        and isinstance(response.metadata.get("answer_contract"), dict)
+        and str(response.metadata["answer_contract"].get("synthesis_policy") or "").strip() == "deterministic"
+        for response in responses
+    ):
         return False
     meaningful = [
         response

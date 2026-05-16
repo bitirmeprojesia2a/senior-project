@@ -4,10 +4,13 @@ from typing import ClassVar, List
 
 import structlog
 import torch
-from sentence_transformers import SentenceTransformer
 
-from src.core.config import settings
+from src.core.config import apply_model_cache_environment, settings
 from src.core.profiling import profile_stage
+
+apply_model_cache_environment()
+
+from sentence_transformers import SentenceTransformer  # noqa: E402
 
 logger = structlog.get_logger()
 
@@ -112,6 +115,9 @@ class Embedder:
                 self._model = SentenceTransformer(
                     self.model_name,
                     device=self.resolved_device,
+                    cache_folder=str(settings.model_cache.hf_hub_cache)
+                    if settings.model_cache.hf_hub_cache is not None
+                    else None,
                     model_kwargs=model_kwargs or None,
                     local_files_only=settings.embedding.local_files_only,
                 )

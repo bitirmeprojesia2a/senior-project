@@ -40,6 +40,7 @@ _LEGACY_METADATA_KEYS = frozenset({
     "transport",
     "protocol",
     "selected_agent_id",
+    "specialist_selection",
     "transport_error",
     "detail",
     "endpoint",
@@ -48,6 +49,31 @@ _LEGACY_METADATA_KEYS = frozenset({
     "http_status",
     "circuit_failures",
     "circuit_opened_until",
+})
+
+
+_TRACE_METADATA_KEYS = frozenset({
+    "answer_coverage",
+    "answer_coverage_validator",
+    "answer_validation",
+    "answer_value_conflict",
+    "answer_value_conflict_validator",
+    "branch_dispatch_gate",
+    "capability_planner",
+    "decision_contract",
+    "resolved_decision",
+    "evidence_packet",
+    "final_answer_owner",
+    "final_attempt_provider_error_stats",
+    "llm_key_distribution",
+    "llm_usage",
+    "provider_org_fingerprints",
+    "quality_check",
+    "retrieval_execution_policy",
+    "retrieval_execution_stats",
+    "specialist_response_mode",
+    "specialist_selection",
+    "source_owner",
 })
 
 
@@ -113,7 +139,7 @@ def agent_response_to_department_response(
     legacy_metadata = {
         key: value
         for key, value in dict(response.metadata or {}).items()
-        if key.startswith("remote_") or key in _LEGACY_METADATA_KEYS
+        if key.startswith("remote_") or key in _LEGACY_METADATA_KEYS or key in _TRACE_METADATA_KEYS
     }
     return DepartmentResponse(
         department=department,

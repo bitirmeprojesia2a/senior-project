@@ -9,9 +9,10 @@
 # Override A2A_INFRA_NETWORK if your infra network name is different.
 
 x-a2a-model-cache-env: &a2a-model-cache-env
+  MODEL_CACHE_HOST_DIR: /models
   HF_HOME: /models/huggingface
   SENTENCE_TRANSFORMERS_HOME: /models/huggingface/hub
-  A2A_TRANSPORT_PROTOCOL: ${A2A_TRANSPORT_PROTOCOL:-rest}
+  A2A_TRANSPORT_PROTOCOL: ${A2A_TRANSPORT_PROTOCOL:-jsonrpc}
   A2A_REQUIRE_SERVICE_IDENTITY: ${A2A_REQUIRE_SERVICE_IDENTITY:-true}
   A2A_REQUIRE_REQUEST_SIGNATURE: ${A2A_REQUIRE_REQUEST_SIGNATURE:-true}
   A2A_REQUEST_SIGNATURE_SECRET: ${A2A_REQUEST_SIGNATURE_SECRET:-}
@@ -73,7 +74,7 @@ services:
         aliases:
           - retrieval-service
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8140/health', timeout=3).read()"]
+      test: ["CMD", "python", "-c", "import json, sys, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8140/health', timeout=3)); sys.exit(0 if data.get('status') == 'healthy' else 1)"]
       interval: 10s
       timeout: 5s
       retries: 12

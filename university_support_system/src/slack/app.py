@@ -66,7 +66,7 @@ def create_slack_app(*, service: SlackBotService | None = None) -> AsyncApp:
             return
 
         reply_thread_ts = slack_message.thread_ts or slack_message.ts
-        asyncio.create_task(
+        task = asyncio.create_task(
             _process_and_reply(
                 service=active_service,
                 message=slack_message,
@@ -74,6 +74,7 @@ def create_slack_app(*, service: SlackBotService | None = None) -> AsyncApp:
                 thread_ts=reply_thread_ts,
             )
         )
+        task.add_done_callback(_log_background_task_result)
 
     @app.event("app_mention")
     async def handle_app_mention(event, say):
@@ -86,6 +87,15 @@ def create_slack_app(*, service: SlackBotService | None = None) -> AsyncApp:
         await _reply(event, say)
 
     return app
+
+
+def _log_background_task_result(task: asyncio.Task) -> None:
+    try:
+        task.result()
+    except asyncio.CancelledError:
+        logger.info("slack_background_task_cancelled")
+    except Exception:
+        logger.exception("slack_background_task_failed")
 
 
 def _should_ignore_event(event: dict) -> bool:

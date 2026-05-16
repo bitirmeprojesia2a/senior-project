@@ -46,19 +46,27 @@ class Chunk:
 
 # MADDE basligi deseni: "MADDE 5 -", "Madde 12 –", "MADDE 5-" vb.
 _MADDE_RE = re.compile(
-    r"^(MADDE|Madde)\s+(\d+)\s*[-–—]",
+    r"^\s*(MADDE|Madde)\s*[-:]?\s*(\d+[A-Za-z]?)\s*(?=[\-\u2013\u2014:\.\)]|\s|$)",
     re.MULTILINE,
 )
 
 # BOLUM basligi deseni: "IKINCI BOLUM", "UCUNCU BOLUM" vb.
+_BOLUM_ORDINAL_RE = (
+    r"B[İI]R[İI]NC[İI]|"
+    r"[İI]K[İI]NC[İI]|"
+    r"[ÜU]C[ÜU]NC[ÜU]|"
+    r"D[ÖO]RD[ÜU]NC[ÜU]|"
+    r"BE[ŞS][İI]NC[İI]|"
+    r"ALTINCI|YED[İI]NC[İI]|SEK[İI]Z[İI]NC[İI]|DOKUZUNCU|ONUNCU|"
+    r"[IVXLCDM]+\.?|\d+\.?"
+)
 _BOLUM_RE = re.compile(
-    r"^(BİRİNCİ|İKİNCİ|ÜÇÜNCÜ|DÖRDÜNCÜ|BEŞİNCİ|ALTINCI|YEDİNCİ|SEKİZİNCİ|DOKUZUNCU|ONUNCU)"
-    r"\s+BÖLÜM\b",
+    rf"^\s*({_BOLUM_ORDINAL_RE})\s+B[ÖO]L[ÜU]M\b",
     re.MULTILINE | re.IGNORECASE,
 )
 
 _FAQ_QUESTION_RE = re.compile(
-    r"^\s*(?:\d+[\.\)]\s*)?(.{10,120}\?)\s*$",
+    r"^\s*(?:\d+[\.\)]\s*)?(.{10,240}\?)\s*$",
     re.MULTILINE,
 )
 
@@ -146,7 +154,7 @@ class TextChunker:
     def _split_by_faq(self, text: str) -> List[Tuple[str, Optional[str], Optional[str]]]:
         """Split FAQ-style text by question boundaries."""
         matches = list(_FAQ_QUESTION_RE.finditer(text))
-        if len(matches) < 3:
+        if len(matches) < 2:
             return []
 
         sections: List[Tuple[str, Optional[str], Optional[str]]] = []

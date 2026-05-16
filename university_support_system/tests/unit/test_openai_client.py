@@ -5,6 +5,7 @@ import httpx
 import pytest
 
 from src.llm.openai_client import OpenAIClient, OpenAIClientError
+from src.llm.api_key_pool import reset_api_key_pools
 
 
 def _configure_openai_settings(mock_settings, *, api_key):
@@ -32,10 +33,11 @@ def openai_client_no_key():
 
 
 class MockResponse:
-    def __init__(self, json_data=None, text_data="", status_code=200):
+    def __init__(self, json_data=None, text_data="", status_code=200, headers=None):
         self._json_data = json_data
         self._text = text_data
         self.status_code = status_code
+        self.headers = headers or {}
 
     def json(self):
         return self._json_data
@@ -61,6 +63,47 @@ def test_get_headers(openai_client, openai_client_no_key):
 
     with pytest.raises(OpenAIClientError):
         openai_client_no_key._get_headers()
+
+
+def test_openai_client_key_rotation_is_process_wide_for_same_provider_config():
+    reset_api_key_pools()
+    config = SimpleNamespace(
+        api_key="key-a,key-b",
+        model="llama-3.3-70b-versatile",
+        base_url="https://api.groq.com/openai/v1",
+        timeout=30,
+        provider_name="groq",
+        reasoning_effort=None,
+    )
+
+    first_client = OpenAIClient(config)
+    second_client = OpenAIClient(config)
+
+    assert first_client._get_headers()["Authorization"] == "Bearer key-a"
+    assert second_client._get_headers()["Authorization"] == "Bearer key-b"
+    assert first_client.last_api_key_fingerprint
+    assert first_client.api_key_count == 2
+
+
+def test_openai_client_parses_groq_retry_after_duration_from_body():
+    response = MockResponse(
+        status_code=429,
+        text_data=(
+            '{"error":{"message":"Rate limit reached. Please try again in '
+            '1h17m39.552s."}}'
+        ),
+    )
+
+    assert OpenAIClient._rate_limit_cooldown_seconds(response) == pytest.approx(4659.552)
+
+
+def test_openai_client_parses_groq_retry_after_milliseconds_from_body():
+    response = MockResponse(
+        status_code=429,
+        text_data='{"error":{"message":"Please try again in 674.999999ms."}}',
+    )
+
+    assert OpenAIClient._rate_limit_cooldown_seconds(response) == pytest.approx(1.0)
 
 
 def test_client_accepts_custom_openai_compatible_config():

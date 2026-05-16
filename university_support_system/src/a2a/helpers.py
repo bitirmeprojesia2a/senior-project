@@ -65,6 +65,15 @@ class A2AQueryPayload:
     final_answer_owner: str | None = None
     specialist_response_mode: str | None = None
     capability_planner: dict[str, Any] | None = None
+    source_owner: dict[str, Any] | None = None
+    policy_facet: dict[str, Any] | None = None
+    answer_contract: dict[str, Any] | None = None
+    decision_contract: dict[str, Any] | None = None
+    resolved_decision: dict[str, Any] | None = None
+    branch_dispatch_gate: dict[str, Any] | None = None
+    specialist_selection: dict[str, Any] | None = None
+    branch_role: str | None = None
+    retrieval_execution_policy: dict[str, Any] | None = None
     trace_id: str | None = None
     span_id: str | None = None
     parent_span_id: str | None = None
@@ -93,6 +102,23 @@ class A2AQueryPayload:
             "final_answer_owner": self.final_answer_owner,
             "specialist_response_mode": self.specialist_response_mode,
             "capability_planner": dict(self.capability_planner) if self.capability_planner else None,
+            "source_owner": dict(self.source_owner) if self.source_owner else None,
+            "policy_facet": dict(self.policy_facet) if self.policy_facet else None,
+            "answer_contract": dict(self.answer_contract) if self.answer_contract else None,
+            "decision_contract": dict(self.decision_contract) if self.decision_contract else None,
+            "resolved_decision": dict(self.resolved_decision) if self.resolved_decision else None,
+            "branch_dispatch_gate": (
+                dict(self.branch_dispatch_gate) if self.branch_dispatch_gate else None
+            ),
+            "specialist_selection": (
+                dict(self.specialist_selection) if self.specialist_selection else None
+            ),
+            "branch_role": self.branch_role,
+            "retrieval_execution_policy": (
+                dict(self.retrieval_execution_policy)
+                if self.retrieval_execution_policy
+                else None
+            ),
             "trace_id": self.trace_id,
             "span_id": self.span_id,
             "parent_span_id": self.parent_span_id,

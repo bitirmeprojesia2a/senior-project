@@ -1488,7 +1488,8 @@ class TestCurriculumAgent:
         )
 
         assert response.success is True
-        assert "BIL309 dersi icin bulunan ders programi satirlari" in response.answer
+        assert "BIL309 dersi için bulunan ders programı satırları" in response.answer
+        assert "BIL309 | Yazilim Mimarisi" in response.answer
         assert "Pazartesi 08:15:00-09:00:00" in response.answer
         assert "Derslik: D101" in response.answer
 
@@ -1553,10 +1554,10 @@ class TestCurriculumAgent:
 
         assert response.success is True
         assert response.generation_mode == "vt"
-        assert "Bilgisayar Muhendisligi icin bulunan ders programi satirlari" in response.answer
-        assert "1. sinif:" in response.answer
-        assert "2. sinif:" in response.answer
-        assert response.answer.index("1. sinif:") < response.answer.index("2. sinif:")
+        assert "Bilgisayar Mühendisliği için bulunan ders programı satırları" in response.answer
+        assert "1. Sınıf:" in response.answer
+        assert "2. Sınıf:" in response.answer
+        assert response.answer.index("1. Sınıf:") < response.answer.index("2. Sınıf:")
         assert "Pazartesi 08:15:00-09:00:00" in response.answer
         assert response.answer.index("Pazartesi 08:15:00-09:00:00") < response.answer.index(
             "Cuma 08:15:00-09:00:00"
@@ -1590,8 +1591,8 @@ class TestCurriculumAgent:
 
         assert response.success is True
         assert response.generation_mode == "vt"
-        assert "Fizik icin bulunan ders programi satirlari" in response.answer
-        assert "Sali 10:15:00-11:00:00" in response.answer
+        assert "Fizik için bulunan ders programı satırları" in response.answer
+        assert "Salı 10:15:00-11:00:00" in response.answer
         schedule_fetcher.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -1628,8 +1629,8 @@ class TestCurriculumAgent:
         )
 
         assert response.success is True
-        assert "Elektrik-Elektronik Muhendisligi icin bulunan ders programi satirlari" in response.answer
-        assert "Bilgisayar Muhendisligi" not in response.answer
+        assert "Elektrik-Elektronik Mühendisliği için bulunan ders programı satırları" in response.answer
+        assert "Bilgisayar Mühendisliği" not in response.answer
         schedule_fetcher.assert_awaited_once_with(
             "Elektrik-Elektronik Muhendisligi",
             academic_year=None,
@@ -2021,7 +2022,7 @@ class TestTuitionAgent:
         )
 
         assert response.success is True
-        assert "5000.00 TL borc" in response.answer
+        assert "5000.00 tl borc" in normalize_text(response.answer)
 
     @pytest.mark.asyncio
     async def test_personal_query_shows_paid_info(self):
@@ -2035,7 +2036,7 @@ class TestTuitionAgent:
         )
 
         assert response.success is True
-        assert "kapanmis" in response.answer.lower()
+        assert "kapanmis" in normalize_text(response.answer)
 
     @pytest.mark.asyncio
     async def test_requires_auth_for_personal_query(self):
@@ -2072,7 +2073,7 @@ class TestTuitionAgent:
 
         assert response.success is False
         assert response.error == "student_type_context_required"
-        assert "ogrenci turune ve birime gore degisiyor" in response.answer.lower()
+        assert "ogrenci turune ve birime gore degisiyor" in normalize_text(response.answer)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("query", ["Kayit yenileme ucreti ne kadar?", "Kayıt yenileme ücreti ne kadar?"])
@@ -2145,7 +2146,7 @@ class TestTuitionAgent:
 
         assert response.success is True
         assert "3.057,00 TL" in response.answer
-        assert "Turk ogrenci" in response.answer
+        assert "turk ogrenci" in normalize_text(response.answer)
 
     @pytest.mark.asyncio
     async def test_explicit_query_student_type_overrides_profile_student_type(
@@ -2180,7 +2181,7 @@ class TestTuitionAgent:
 
         assert response.success is True
         assert "203.000,00 TL" in response.answer
-        assert "uluslararasi ogrenci" in response.answer
+        assert "uluslararasi ogrenci" in normalize_text(response.answer)
 
     @pytest.mark.asyncio
     async def test_structured_fee_catalog_miss_falls_back_to_rag(self, monkeypatch):
@@ -2203,6 +2204,18 @@ class TestTuitionAgent:
         assert response.success is True
         assert response.error is None
         assert "veritabaninda bulunmuyor" not in response.answer
+
+    @pytest.mark.asyncio
+    async def test_other_fee_follow_up_stays_policy_answer_without_slot_loop(self):
+        agent = TuitionAgent(tuition_fetcher=AsyncMock(), **_agent_kwargs())
+
+        response = await agent.handle_task(_task("Baska ucret var mi?"))
+
+        assert response.success is True
+        assert response.generation_mode == "kural"
+        assert "Turk ogrenci misiniz" not in response.answer
+        assert "uluslararasi ogrenci misiniz" not in response.answer
+        assert "ayri bir zorunlu ucret" in normalize_text(response.answer)
 
 
 # ══════════════════════════════════════════════════════════

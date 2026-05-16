@@ -10,6 +10,7 @@ from src.agents.academic.curriculum_utils import (
 )
 from src.capabilities.models import ExecutionResult
 from src.db.curriculum_data import (
+    fetch_course_detail_by_code,
     fetch_course_prerequisites,
     fetch_courses_by_curriculum_semester,
     fetch_courses_by_title,
@@ -17,12 +18,45 @@ from src.db.curriculum_data import (
 from src.db.schedule_data import (
     fetch_schedule_slots_by_department,
     fetch_schedule_slots_for_course,
+    normalize_schedule_rows_for_answer,
     schedule_row_sort_key,
 )
 from src.core.text_normalization import normalize_text
 
 
 MAX_RECORDS = 120
+_KNOWN_COURSE_PREFIXES = {
+    "BIL",
+    "BMH",
+    "MAT",
+    "FIZ",
+    "KIM",
+    "MUH",
+    "SSD",
+    "TUR",
+    "ATA",
+    "ING",
+    "EEE",
+    "EEM",
+    "MAK",
+    "INS",
+}
+_INVALID_COURSE_PREFIXES = {
+    "ICIN",
+    "ODEME",
+    "EYLUL",
+    "MAYIS",
+    "HAZIRAN",
+    "TEMMUZ",
+    "AGUSTOS",
+    "MART",
+    "NISAN",
+    "ARALIK",
+    "OCAK",
+    "SUBAT",
+    "AKTS",
+    "TL",
+}
 
 
 async def course_exists_in_program(params: dict[str, Any]) -> ExecutionResult:
@@ -50,7 +84,7 @@ async def course_detail(params: dict[str, Any]) -> ExecutionResult:
     course = _clean(params.get("course"))
 
     if course_code:
-        record = await fetch_course_prerequisites(course_code)
+        record = await fetch_course_detail_by_code(course_code)
         records = [record] if record else []
         return ExecutionResult(
             success=True,
@@ -149,13 +183,45 @@ async def weekly_program(params: dict[str, Any]) -> ExecutionResult:
     semester = _as_int(params.get("semester"))
     class_year = _as_int(params.get("class_year")) or _class_year_from_semester(semester)
     term = _normalize_term(params.get("term")) or _term_from_semester(semester)
+    wants_all = _wants_all_schedule(params)
 
     if course_code:
         rows = await fetch_schedule_slots_for_course(course_code, department=program)
     else:
         rows = await fetch_schedule_slots_by_department(program)
+        rows, schedule_filter = normalize_schedule_rows_for_answer(
+            rows,
+            query_text=str(params.get("query") or params.get("query_text") or program),
+            default_term_key=term,
+        )
+        if class_year is None and term is None and not wants_all:
+            wants_all = bool(rows)
+            if not rows:
+                return ExecutionResult(
+                    success=True,
+                    capability="schedule.weekly_program",
+                    params={
+                        "program": program,
+                        "course_code": course_code,
+                        "semester": semester,
+                        "class_year": class_year,
+                        "term": term,
+                    },
+                    records=[],
+                    metadata={
+                        "program": program,
+                        "needs_schedule_filter": True,
+                        "missing_filter": "class_year_or_semester",
+                    },
+                    message="schedule_filter_required",
+                    authoritative_no_records=False,
+                    fallback_allowed=False,
+                )
 
-    filtered = _filter_schedule_rows(rows, term=term, class_year=class_year)
+    if wants_all and class_year is None and term is None:
+        filtered = rows
+    else:
+        filtered = _filter_schedule_rows(rows, term=term, class_year=class_year)
     filtered.sort(key=schedule_row_sort_key)
     return ExecutionResult(
         success=True,
@@ -175,6 +241,8 @@ async def weekly_program(params: dict[str, Any]) -> ExecutionResult:
             "class_year": class_year,
             "term": term,
             "raw_count": len(rows),
+            "all_schedule_groups": wants_all,
+            "schedule_filter": schedule_filter if not course_code else None,
         },
         message=None if filtered else "schedule_not_found",
         authoritative_no_records=True,
@@ -220,10 +288,22 @@ def _extract_course_code(value: Any) -> str | None:
     text = _clean(value)
     if not text:
         return None
-    match = COURSE_CODE_PATTERN.search(text)
-    if not match:
-        return None
-    return match.group(0).upper().replace(" ", "")
+    for match in COURSE_CODE_PATTERN.finditer(text):
+        candidate = match.group(0).upper().replace(" ", "")
+        prefix = "".join(ch for ch in candidate if not ch.isdigit())
+        normalized_prefix = (
+            prefix.replace("Ç", "C")
+            .replace("Ğ", "G")
+            .replace("İ", "I")
+            .replace("Ö", "O")
+            .replace("Ş", "S")
+            .replace("Ü", "U")
+        )
+        if normalized_prefix in _INVALID_COURSE_PREFIXES:
+            continue
+        if normalized_prefix in _KNOWN_COURSE_PREFIXES or match.group(0).replace(" ", "").isupper():
+            return candidate
+    return None
 
 
 def _class_year_from_semester(semester: int | None) -> int | None:
@@ -247,6 +327,16 @@ def _normalize_term(value: Any) -> str | None:
     if any(marker in text for marker in ("bahar", "spring", "ikinci donem", "2 donem")):
         return "bahar"
     return None
+
+
+def _wants_all_schedule(params: dict[str, Any]) -> bool:
+    query = normalize_text(str(params.get("query") or ""))
+    raw = " ".join(str(params.get(key) or "") for key in ("scope", "mode", "program"))
+    normalized_raw = normalize_text(raw)
+    return any(
+        marker in f"{query} {normalized_raw}"
+        for marker in ("tum sinif", "butun sinif", "tum ders program", "hepsini", "sinif sinif")
+    )
 
 
 def _filter_schedule_rows(

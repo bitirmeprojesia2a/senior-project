@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from typing import Any
 
 from src.core.constants import Department
 from src.core.messages import CONTACT_SEPARATOR, CONTACT_SUGGESTION
@@ -45,6 +46,15 @@ _NO_INFO_RESPONSE_PATTERNS = (
     "verilen kaynaklarda bu soruyu dogrudan yanitlayan net bir bilgi bulunmuyor",
     "elimizdeki kaynaklarda bu konuda yeterli bilgi yok",
 )
+_SOURCE_OWNER_PRIMARY_DEPARTMENT: dict[str, Department] = {
+    "academic_calendar": Department.STUDENT_AFFAIRS,
+    "student_affairs_policy": Department.STUDENT_AFFAIRS,
+    "personal_student_data": Department.STUDENT_AFFAIRS,
+    "curriculum_catalog": Department.ACADEMIC_PROGRAMS,
+    "weekly_schedule": Department.ACADEMIC_PROGRAMS,
+    "international_policy": Department.ACADEMIC_PROGRAMS,
+    "tuition_fee_catalog": Department.FINANCE,
+}
 
 
 def split_answer_and_contact_flag(answer: str) -> tuple[str, bool]:
@@ -105,6 +115,7 @@ _EN_TO_TR: dict[str, str] = {
     "however": "ancak",
     "therefore": "bu nedenle",
     "necessary": "gerekli",
+    "necessaire": "gerekli",
     "important": "önemli",
     "information": "bilgi",
     "informationen": "bilgi",
@@ -155,6 +166,7 @@ _EN_TO_TR: dict[str, str] = {
     "approved": "onaylandı",
     "certain": "belirli",
     "siguientes": "aşağıdaki",
+    "seguinte": "şu şekilde",
 }
 
 # Turkce'ye ait olmayan aksanli harfler (é, è, ê, ñ, å, ø, vb.)
@@ -264,6 +276,7 @@ def _strip_foreign_words(text: str) -> str:
     text = re.sub(r'\bbilgi verir misin\b', 'bilgi vereyim', text, flags=re.IGNORECASE)
     # Yabanci dil sızıntıları
     text = re.sub(r'\bsiguientes\b', 'aşağıdaki', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bseguinte\w*\b', 'şu şekilde', text, flags=re.IGNORECASE)
     text = re.sub(r'\bonce_online\b', 'önce online', text, flags=re.IGNORECASE)
     text = re.sub(r'\bademás\b', 'ayrıca', text, flags=re.IGNORECASE)
     text = re.sub(r'\btambién\b', 'ayrıca', text, flags=re.IGNORECASE)
@@ -318,6 +331,12 @@ def _strip_foreign_words(text: str) -> str:
     # "tonabilir" — LLM bazen "tanınabilir" yerine "tonabilir" uretir
     text = re.sub(r'\btonabilir\b', 'tanınabilir', text, flags=re.IGNORECASE)
     text = re.sub(r'\btonabilir\w*\b', 'tanınabilir', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bdepartamento\b', 'birimi', text, flags=re.IGNORECASE)
+    text = re.sub(r'\balumno\w*\b', 'ogrenci', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bben[oö]tilen\b', 'belirtilen', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bdiret\b', 'direkt', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bcondi\w*\b', 'sarti', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bznajabilir\b', 'sayilabilir', text, flags=re.IGNORECASE)
     # Korece "필요" (gerekli) — en sik rastlanan Hangul token
     text = re.sub(r'필요', '', text)
 
@@ -332,6 +351,11 @@ def clean_final_answer(answer: str) -> str:
         cleaned,
         maxsplit=1,
     )[0].rstrip()
+    cleaned = re.sub(
+        r'(?ims)\n?\s*---\s*\n\s*Daha iyi yard[Äıi][^\n]*?ula[Åşs]abilirsiniz\.?\s*',
+        "",
+        cleaned,
+    )
     cleaned = re.sub(r"(?im)^\s*Merhaba,?\s*$", "", cleaned)
     cleaned = re.sub(
         r"(?im)^\s*(?:Siz,?\s*)?.{0,180}?(?:bilgi almak istiyorsunuz|hakkinda bilgi ariyorsunuz|hakkinda bilgi almak istiyorsunuz)\.?\s*$",
@@ -495,6 +519,18 @@ def clean_final_answer(answer: str) -> str:
         cleaned,
         flags=re.IGNORECASE,
     )
+    cleaned = re.sub(
+        r"\bOn lisans programindan mezun olmak icin toplam 120 AKTS tamamlanmalidir\b",
+        "Ön lisans programından mezun olmak için toplam 120 AKTS tamamlanmalıdır",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\bNormal dort yillik lisans programindan mezun olmak icin toplam 240 AKTS tamamlanmalidir\b",
+        "Normal dört yıllık lisans programından mezun olmak için toplam 240 AKTS tamamlanmalıdır",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = _strip_foreign_words(cleaned)
 
@@ -601,7 +637,14 @@ def is_announcement_response(response: DepartmentResponse) -> bool:
 
 def response_eligible_for_global_synthesis(response: DepartmentResponse) -> bool:
     """Return whether a response is safe and useful to include in global synthesis."""
-    if not response.answer.strip() or is_announcement_response(response):
+    metadata = response.metadata if isinstance(response.metadata, dict) else {}
+    contract = metadata.get("answer_contract") if isinstance(metadata, dict) else None
+    if isinstance(contract, dict) and str(contract.get("synthesis_policy") or "").strip() == "deterministic":
+        return False
+    supplemental_probe = metadata.get("supplemental_probe") if isinstance(metadata, dict) else None
+    if not response.answer.strip():
+        return False
+    if is_announcement_response(response) and not supplemental_probe:
         return False
     if bool(response.success) or response.error in _GLOBAL_SYNTHESIS_ALLOWED_ERRORS:
         return True
@@ -666,10 +709,20 @@ def is_no_info_response(response: DepartmentResponse) -> bool:
     return any(pattern in normalized_answer for pattern in _NO_INFO_RESPONSE_PATTERNS)
 
 
-def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list[DepartmentResponse]:
+def filter_low_confidence_responses(
+    responses: list[DepartmentResponse],
+    *,
+    source_owner: str | None = None,
+) -> list[DepartmentResponse]:
     """Guclu cevaplar varken cok dusuk skorlu yanitlari finalden ayiklar."""
     if len(responses) < 2:
         return responses
+
+    exact_tuition = [
+        response for response in responses if _is_exact_tuition_catalog_response(response)
+    ]
+    if exact_tuition:
+        return exact_tuition
 
     announcement_responses = [
         response for response in responses if is_announcement_response(response)
@@ -680,7 +733,11 @@ def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list
     if announcement_responses and non_announcement and all(
         is_no_info_response(response) for response in non_announcement
     ):
-        return announcement_responses
+        return _restore_source_owner_evidence(
+            original=responses,
+            filtered=announcement_responses,
+            source_owner=source_owner,
+        )
 
     strong_non_announcement = [
         response
@@ -694,6 +751,11 @@ def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list
     if not strong_non_announcement:
         return responses
 
+    supplemental_responses = [
+        response
+        for response in responses
+        if isinstance(response.metadata, dict) and response.metadata.get("supplemental_probe")
+    ]
     filtered = [
         response
         for response in responses
@@ -703,7 +765,150 @@ def filter_low_confidence_responses(responses: list[DepartmentResponse]) -> list
             and not is_no_info_response(response)
         )
     ]
-    return filtered or strong_non_announcement or responses
+    for response in supplemental_responses:
+        if response not in filtered:
+            filtered.append(response)
+    filtered = filtered or strong_non_announcement or responses
+    return _restore_source_owner_evidence(
+        original=responses,
+        filtered=filtered,
+        source_owner=source_owner,
+    )
+
+
+def build_response_filter_diagnostics(
+    *,
+    original: list[DepartmentResponse],
+    filtered: list[DepartmentResponse],
+    source_owner: str | None = None,
+) -> dict[str, Any]:
+    """Describe branch responses kept/dropped by the final response filter."""
+    kept_ids = {_response_identity(response) for response in filtered}
+    primary_department = _primary_department_for_source_owner(source_owner)
+    dropped: list[dict[str, Any]] = []
+    kept: list[dict[str, Any]] = []
+    for response in original:
+        item = _response_filter_item(
+            response,
+            source_owner=source_owner,
+            primary_department=primary_department,
+        )
+        if _response_identity(response) in kept_ids:
+            kept.append(item)
+        else:
+            dropped.append(item)
+    return {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": source_owner,
+        "primary_department": primary_department.value if primary_department else None,
+        "original_count": len(original),
+        "kept_count": len(filtered),
+        "dropped_count": len(dropped),
+        "kept": kept,
+        "dropped": dropped,
+    }
+
+
+def _restore_source_owner_evidence(
+    *,
+    original: list[DepartmentResponse],
+    filtered: list[DepartmentResponse],
+    source_owner: str | None,
+) -> list[DepartmentResponse]:
+    primary_department = _primary_department_for_source_owner(source_owner)
+    if primary_department is None:
+        return filtered
+    filtered_ids = {_response_identity(response) for response in filtered}
+    restored = list(filtered)
+    for response in original:
+        if response.department is not primary_department:
+            continue
+        if _response_identity(response) in filtered_ids:
+            continue
+        if not _has_source_owner_evidence(response, source_owner=source_owner):
+            continue
+        insert_at = 0 if primary_department is Department.STUDENT_AFFAIRS else len(restored)
+        restored.insert(insert_at, response)
+        filtered_ids.add(_response_identity(response))
+    return restored
+
+
+def _primary_department_for_source_owner(source_owner: str | None) -> Department | None:
+    key = str(source_owner or "").strip().lower()
+    return _SOURCE_OWNER_PRIMARY_DEPARTMENT.get(key)
+
+
+def _has_source_owner_evidence(
+    response: DepartmentResponse,
+    *,
+    source_owner: str | None,
+) -> bool:
+    if is_announcement_response(response):
+        return False
+
+    metadata = response.metadata if isinstance(response.metadata, dict) else {}
+    packet = metadata.get("evidence_packet") if isinstance(metadata, dict) else None
+    if isinstance(packet, dict):
+        packet_owner = packet.get("source_owner")
+        if isinstance(packet_owner, dict):
+            packet_owner = packet_owner.get("primary")
+        owner_matches = not source_owner or str(packet_owner or source_owner).strip().lower() == str(source_owner).strip().lower()
+        has_packet_evidence = any(
+            isinstance(packet.get(key), list) and bool(packet.get(key))
+            for key in ("facts", "selected_sources", "required_values", "supporting_claims")
+        )
+        if owner_matches and has_packet_evidence:
+            return True
+    return bool(response.sources)
+
+
+def _is_exact_tuition_catalog_response(response: DepartmentResponse) -> bool:
+    """Structured tuition catalog answers are already final-owner evidence."""
+    if response.department is not Department.FINANCE:
+        return False
+    if str(response.generation_mode or "").strip().lower() != "vt":
+        return False
+    db_data = response.db_data if isinstance(response.db_data, dict) else {}
+    if not ("annual_amount" in db_data or "semester_amount" in db_data):
+        return False
+    metadata = response.metadata if isinstance(response.metadata, dict) else {}
+    source_owner = str(metadata.get("source_owner") or "").strip().lower()
+    return source_owner in {"", "tuition_fee_catalog", "finance"}
+
+
+def _response_filter_item(
+    response: DepartmentResponse,
+    *,
+    source_owner: str | None,
+    primary_department: Department | None,
+) -> dict[str, Any]:
+    metadata = response.metadata if isinstance(response.metadata, dict) else {}
+    selection = metadata.get("specialist_selection") if isinstance(metadata, dict) else None
+    agent_id = (
+        selection.get("selected_agent_id")
+        if isinstance(selection, dict)
+        else metadata.get("selected_agent_id") or metadata.get("agent_id")
+    )
+    return {
+        "department": response.department.value,
+        "agent_id": str(agent_id or "").strip() or None,
+        "source_count": len(response.sources),
+        "success": bool(response.success),
+        "error": response.error,
+        "low_confidence": is_low_confidence_rag_response(response),
+        "no_info": is_no_info_response(response),
+        "announcement": is_announcement_response(response),
+        "source_owner_primary": response.department is primary_department,
+        "has_source_owner_evidence": _has_source_owner_evidence(
+            response,
+            source_owner=source_owner,
+        ),
+    }
+
+
+def _response_identity(response: DepartmentResponse) -> int:
+    return id(response)
 
 
 def format_source_summary_from_responses(responses: list[DepartmentResponse]) -> str:
@@ -919,6 +1124,13 @@ def _format_generation_mode_label(mode: str) -> str:
 def _infer_non_document_source_label(response: DepartmentResponse) -> str | None:
     answer = response.answer.strip()
     db_data = response.db_data or {}
+    metadata = response.metadata if isinstance(response.metadata, dict) else {}
+    supplemental_probe = metadata.get("supplemental_probe") if isinstance(metadata, dict) else None
+    if isinstance(supplemental_probe, dict):
+        query = supplemental_probe.get("query") or "supplemental duyuru aramasi"
+        count = int(supplemental_probe.get("record_count") or 0)
+        if count <= 0:
+            return f"Duyuru probe: eslesen aktif kayit bulunamadi ({query})"
 
     if answer.startswith("Ilgili birim iletisim bilgileri:"):
         title = DEPARTMENT_SECTION_TITLES.get(response.department, response.department.value)

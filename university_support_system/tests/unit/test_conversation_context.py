@@ -11,10 +11,12 @@ import pytest
 
 from src.core.config import settings
 from src.core.constants import Department, TaskType
+from src.core.text_normalization import normalize_text
 from src.db.conversation_context import (
     ConversationContextService,
     ConversationStateData,
     ConversationTurnData,
+    _filter_source_refs_for_topic,
 )
 
 pytestmark = pytest.mark.followup
@@ -27,6 +29,7 @@ def _state(
     task_type: str | None = TaskType.PROCEDURE_QUERY.value,
     last_query: str = "CAP basvurusu nasil yapilir?",
     last_answer: str = "Basvuru takvimini takip et.",
+    source_refs: list[str] | None = None,
 ) -> ConversationStateData:
     return ConversationStateData(
         context_id="ctx-1",
@@ -34,7 +37,7 @@ def _state(
         rolling_summary="Soru: CAP basvurusu nasil yapilir? | Yanit: Basvuru takvimini takip et.",
         active_entities=[topic],
         last_departments=departments or [Department.STUDENT_AFFAIRS.value, Department.ACADEMIC_PROGRAMS.value],
-        last_source_refs=["cap_yonergesi.pdf", "akademik_takvim.pdf"],
+        last_source_refs=source_refs if source_refs is not None else ["cap_yonergesi.pdf", "akademik_takvim.pdf"],
         last_task_type=task_type,
         last_turn_id=1,
         last_user_query=last_query,
@@ -88,6 +91,12 @@ def test_short_slot_follow_up_can_reuse_program_from_last_answer():
     )
 
     assert rewritten == "Bilgisayar Muhendisligi 5. yariyildaki dersler neler"
+
+
+def test_source_hint_filter_preserves_unknown_topic_refs():
+    refs = ["fakulte_duyuru_2026.pdf", "bolum_web_sayfasi.html"]
+
+    assert _filter_source_refs_for_topic(refs, topic="Duyurular") == refs
 
 
 @pytest.mark.asyncio
@@ -191,6 +200,212 @@ async def test_single_exam_question_does_not_inherit_summer_school_context(monke
     assert resolution.active_topic in {"Sinav ve Degerlendirme", "Ders Tekrari ve Devam"}
     assert resolution.active_topic != "Yaz Okulu"
     fake_llm.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_explicit_course_code_overrides_previous_course_reference(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mufredat ve Ders Yapisi",
+                departments=[Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.COURSE_QUERY.value,
+                last_query="BIL203 dersinin on kosulu var mi?",
+                last_answer="BIL203 dersinin on kosulu BIL104 Programlamaya Giris II dersidir.",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="BIL104 dersinin on kosulu var mi?",
+        llm_service=None,
+    )
+
+    assert resolution.effective_query == "BIL104 dersinin on kosulu var mi?"
+    assert resolution.is_follow_up is False
+
+
+def test_fake_numeric_fragments_are_not_course_topics():
+    service = ConversationContextService()
+
+    assert service._infer_topic("Ders kaydi icin 500 TL odedim, iade nasil yapilir?") != "icin500 dersi"
+    assert service._infer_topic("14-25 Eylul 2026 yaziyor nasil bulamadin?") != "Eylul2026 dersi"
+    assert service._infer_topic("Lisans icin 240 AKTS gerekir mi?") != "icin240 dersi"
+
+
+@pytest.mark.asyncio
+async def test_explicit_announcement_query_breaks_summer_school_context(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yaz Okulu",
+                departments=[Department.STUDENT_AFFAIRS.value, Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Yaz okulunda hangi dersler acilacak?",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Bilgisayar muhendisligi duyurulari",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.active_topic == "Duyurular"
+    assert resolution.frame is not None
+    assert resolution.frame.capability == "announcement.search"
+    assert resolution.frame.operation == "new_topic"
+
+
+@pytest.mark.asyncio
+async def test_capa_application_question_breaks_summer_school_context(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yaz Okulu",
+                departments=[Department.STUDENT_AFFAIRS.value, Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Yaz okulunda hangi dersler acilacak?",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Capa basvurabilir miyim?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is False
+    assert resolution.active_topic == "CAP / Cift Anadal"
+    assert resolution.effective_query == "Capa basvurabilir miyim?"
+
+
+@pytest.mark.asyncio
+async def test_correction_moves_previous_eligibility_question_to_corrected_topic(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yaz Okulu",
+                departments=[Department.STUDENT_AFFAIRS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Yaz okulu icin basvurabilir miyim?",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Yaz okulu degil cap",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.rewrite_method == "correction"
+    assert resolution.active_topic == "CAP / Cift Anadal"
+    assert resolution.effective_query == "cap basvurusu icin basvurabilir miyim?"
+
+
+@pytest.mark.asyncio
+async def test_correction_does_not_carry_old_special_fee_topic(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Yaz Okulu",
+                departments=[Department.FINANCE.value, Department.STUDENT_AFFAIRS.value],
+                task_type=TaskType.TUITION_QUERY.value,
+                last_query="Yaz okulu ucreti ne kadar?",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="CAP icin sordum",
+        llm_service=None,
+    )
+
+    assert resolution.rewrite_method == "correction"
+    assert resolution.active_topic == "CAP / Cift Anadal"
+    assert "yaz okulu" not in normalize_text(resolution.effective_query)
+    assert resolution.effective_query == "cap basvurusu ucreti veya harci var mi?"
+
+
+@pytest.mark.asyncio
+async def test_explanation_followup_keeps_previous_topic(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Ders Tekrari ve Devam",
+                departments=[Department.STUDENT_AFFAIRS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Matematik dersi yuzunden okulum uzuyor ne yapabilirim?",
+                last_answer="Yaz okulu veya tek ders sinavi gibi secenekler olabilir.",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Tam anlamadim daha acik anlatir misin?",
+        llm_service=None,
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.active_topic == "Ders Tekrari ve Devam"
+    assert resolution.rewrite_method == "clarify"
+    assert resolution.effective_query == "Matematik dersi yuzunden okulum uzuyor ne yapabilirim?"
+    assert resolution.frame is not None
+    assert resolution.frame.operation == "clarify"
+    assert resolution.frame.question_type == "explanation"
+
+
+@pytest.mark.asyncio
+async def test_course_property_follow_up_uses_previous_course_when_current_query_has_no_code(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mufredat ve Ders Yapisi",
+                departments=[Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.COURSE_QUERY.value,
+                last_query="Bilgisayar Muhendisliginde Veri Yapilari dersi var mi?",
+                last_answer="BIL203 Veri Yapilari dersi Bilgisayar Muhendisligi mufredatinda bulunur.",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Kacinci donemde bu ders?",
+        llm_service=None,
+    )
+
+    assert resolution.effective_query == "BIL203 dersi hangi yariyilda?"
+    assert resolution.is_follow_up is True
 
 
 @pytest.mark.asyncio
@@ -479,7 +694,7 @@ async def test_resolve_query_uses_previous_question_type_for_correction_followup
     )
 
     assert resolution.is_follow_up is True
-    assert resolution.rewrite_method == "llm"
+    assert resolution.rewrite_method == "correction"
     assert resolution.effective_query == "cap basvurusu tarihleri ne zaman?"
     assert resolution.active_topic == "CAP / Cift Anadal"
     assert resolution.department_hints == [
@@ -487,7 +702,7 @@ async def test_resolve_query_uses_previous_question_type_for_correction_followup
         Department.ACADEMIC_PROGRAMS,
     ]
     assert resolution.task_type_hint == TaskType.PROCEDURE_QUERY
-    fake_llm.generate.assert_awaited_once()
+    fake_llm.generate.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -598,7 +813,7 @@ async def test_resolve_query_rejects_correction_like_llm_without_correction_oper
         Department.STUDENT_AFFAIRS,
         Department.ACADEMIC_PROGRAMS,
     ]
-    fake_llm.generate.assert_awaited_once()
+    fake_llm.generate.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -1209,6 +1424,51 @@ async def test_resolve_query_uses_llm_when_available(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_follow_up_filters_incompatible_cap_source_hints(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                source_refs=[
+                    "on_lisans_ve_lisans_yatay_gecis_yonergesi.pdf",
+                    "yonerge_onlisans_lisans_staj.pdf",
+                    "cap_staj_karma_yonerge.pdf",
+                    "cift_ana_dal_ikinci_lisans_ve_yan_dal_programi.pdf",
+                    "yonerge_cift_anadal_yandal.pdf",
+                ],
+            )
+        ),
+    )
+    fake_llm = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=(
+                '{"is_follow_up": true, '
+                '"standalone_query": "Cift anadal programi basvurusu icin not ortalamasi kac olmali?", '
+                '"active_topic": "CAP / Cift Anadal", '
+                '"carry_over_departments": ["student_affairs", "academic_programs"], '
+                '"needs_clarification": false, '
+                '"clarification_message": null}'
+            )
+        )
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Peki not ortalamasi kac olmali?",
+        llm_service=fake_llm,
+        llm_profile="balanced",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.source_hints == [
+        "cift_ana_dal_ikinci_lisans_ve_yan_dal_programi.pdf",
+        "yonerge_cift_anadal_yandal.pdf",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_followup_llm_prompt_includes_configured_recent_turn_window(monkeypatch):
     service = ConversationContextService()
     monkeypatch.setattr(service, "get_state", AsyncMock(return_value=_state()))
@@ -1571,9 +1831,9 @@ async def test_resolve_query_maps_bu_deger_lisans_to_previous_akts_context(monke
     )
 
     assert resolution.is_follow_up is True
-    assert resolution.rewrite_method == "llm"
-    assert resolution.effective_query == "Lisans programindan mezun olmak icin kac AKTS tamamlanmali?"
-    fake_llm.generate.assert_awaited_once()
+    assert resolution.rewrite_method == "heuristic"
+    assert resolution.effective_query == "Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
+    fake_llm.generate.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -1612,9 +1872,9 @@ async def test_resolve_query_maps_short_lisans_metric_fragment_to_previous_akts_
     )
 
     assert resolution.is_follow_up is True
-    assert resolution.rewrite_method == "llm"
-    assert resolution.effective_query == "Lisans programindan mezun olmak icin kac AKTS tamamlanmali?"
-    fake_llm.generate.assert_awaited_once()
+    assert resolution.rewrite_method == "heuristic"
+    assert resolution.effective_query == "Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
+    fake_llm.generate.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -1656,6 +1916,95 @@ async def test_resolve_query_carries_last_explicit_program_for_short_schedule_sl
     assert resolution.rewrite_method == "llm"
     assert resolution.effective_query == "Fizik ogretmenligi ders programi ne?"
     assert resolution.department_hints == [Department.ACADEMIC_PROGRAMS]
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_keeps_graduation_akts_for_short_bachelor_followup(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mezuniyet ve Akademik Durum",
+                departments=[Department.STUDENT_AFFAIRS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Onlisans programindan mezun olmak icin kac AKTS tamamlamaliyim?",
+                last_answer="On lisans programindan mezun olmak icin toplam 120 AKTS tamamlanmalidir.",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Lisans icin kac peki?",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.policy_facet == "graduation_akts"
+    assert resolution.question_type == "graduation_akts"
+    assert resolution.department_hints == [Department.STUDENT_AFFAIRS]
+    assert "toplam kac AKTS" in resolution.effective_query
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_keeps_program_graduation_total_not_semester_load(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mezuniyet ve Akademik Durum",
+                departments=[Department.STUDENT_AFFAIRS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?",
+                last_answer="Normal dort yillik lisans programindan mezun olmak icin toplam 240 AKTS tamamlanmalidir.",
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="Bilgisayar Muhendisligi icin kac?",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.policy_facet == "graduation_akts"
+    assert "Bilgisayar Muhendisligi" in resolution.effective_query
+    assert "toplam kac AKTS" in resolution.effective_query
+
+
+@pytest.mark.asyncio
+async def test_resolve_query_keeps_numeric_graduation_confirmation_on_previous_program(monkeypatch):
+    service = ConversationContextService()
+    monkeypatch.setattr(
+        service,
+        "get_state",
+        AsyncMock(
+            return_value=_state(
+                topic="Mezuniyet ve Akademik Durum",
+                departments=[Department.STUDENT_AFFAIRS.value, Department.ACADEMIC_PROGRAMS.value],
+                task_type=TaskType.PROCEDURE_QUERY.value,
+                last_query="Dis hekimligi programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?",
+                last_answer=(
+                    "Bu program tipi icin mezuniyet AKTS yukumlulugu program turune gore "
+                    "degisebilir; elimde dogrulanmis toplam AKTS kosulu yok."
+                ),
+            )
+        ),
+    )
+
+    resolution = await service.resolve_query(
+        context_id="ctx-1",
+        query="240 degil mi?",
+    )
+
+    assert resolution.is_follow_up is True
+    assert resolution.policy_facet == "graduation_akts"
+    assert resolution.department_hints == [Department.STUDENT_AFFAIRS]
+    assert "Dis Hekimligi" in resolution.effective_query
+    assert "AKTS 240 mi" in resolution.effective_query
 
 
 @pytest.mark.asyncio

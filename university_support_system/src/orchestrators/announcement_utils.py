@@ -17,7 +17,12 @@ from src.db.telemetry import (
 )
 from src.orchestrators.response_utils import ANNOUNCEMENT_SURFACE_DEPARTMENT
 from src.orchestrators.task_builders import build_announcement_request_task
-from src.orchestrators.user_response_builders import build_announcement_user_response
+from src.orchestrators.final_quality import TEMPORARY_SYNTHESIS_FAILURE_ANSWER
+from src.orchestrators.user_response_builders import (
+    build_announcement_user_response,
+    build_clarification_user_response,
+)
+from src.quality.answer_filter import check_answer_quality, quality_issue_blocks_answer
 
 
 async def request_announcement_response(
@@ -34,7 +39,13 @@ async def request_announcement_response(
     unit_name: str | None = None,
     conversation_source_refs: list[str] | None = None,
     allow_latest_fallback: bool = True,
+    probe_mode: str | None = None,
+    require_keyword_match: bool = False,
+    minimum_match_score: int | None = None,
+    recent_days: int | None = None,
     limit: int | None = None,
+    decision_contract: dict | None = None,
+    resolved_decision: dict | None = None,
     trace_metadata: dict | None = None,
 ):
     """Call the announcement agent and record telemetry for the exchange."""
@@ -47,11 +58,20 @@ async def request_announcement_response(
         faculty=faculty,
         unit_name=unit_name,
         conversation_source_refs=conversation_source_refs,
+        decision_contract=decision_contract,
+        resolved_decision=resolved_decision,
         trace_id=announcement_trace.get("trace_id"),
         span_id=announcement_trace.get("span_id"),
         parent_span_id=announcement_trace.get("parent_span_id"),
     )
     announcement_task.metadata["allow_latest_fallback"] = allow_latest_fallback
+    if probe_mode:
+        announcement_task.metadata["probe_mode"] = probe_mode
+    announcement_task.metadata["require_keyword_match"] = require_keyword_match
+    if minimum_match_score is not None:
+        announcement_task.metadata["minimum_match_score"] = minimum_match_score
+    if recent_days is not None:
+        announcement_task.metadata["recent_days"] = recent_days
     if limit is not None:
         announcement_task.metadata["limit"] = limit
 
@@ -72,7 +92,13 @@ async def request_announcement_response(
                 unit_name=unit_name,
                 conversation_source_refs=list(conversation_source_refs or []),
                 allow_latest_fallback=allow_latest_fallback,
+                probe_mode=probe_mode,
+                require_keyword_match=require_keyword_match,
+                minimum_match_score=minimum_match_score,
+                recent_days=recent_days,
                 limit=limit or 5,
+                decision_contract=decision_contract,
+                resolved_decision=resolved_decision,
                 trace_id=announcement_trace.get("trace_id"),
                 span_id=announcement_trace.get("span_id"),
                 parent_span_id=announcement_trace.get("parent_span_id"),
@@ -116,7 +142,13 @@ async def build_announcement_response(
     unit_name: str | None = None,
     conversation_source_refs: list[str] | None = None,
     allow_latest_fallback: bool = True,
+    probe_mode: str | None = None,
+    require_keyword_match: bool = False,
+    minimum_match_score: int | None = None,
+    recent_days: int | None = None,
     limit: int | None = None,
+    decision_contract: dict | None = None,
+    resolved_decision: dict | None = None,
     trace_metadata: dict | None = None,
 ):
     """Build a full user-facing response for announcement-only requests."""
@@ -132,20 +164,43 @@ async def build_announcement_response(
         unit_name=unit_name,
         conversation_source_refs=conversation_source_refs,
         allow_latest_fallback=allow_latest_fallback,
+        probe_mode=probe_mode,
+        require_keyword_match=require_keyword_match,
+        minimum_match_score=minimum_match_score,
+        recent_days=recent_days,
         limit=limit,
+        decision_contract=decision_contract,
+        resolved_decision=resolved_decision,
         trace_metadata=trace_metadata,
     )
     response_time_ms = round((perf_counter() - start_time) * 1000, 2)
-    await telemetry_service.finalize_query_log(
-        query_log_id=query_log_id,
-        response_text=response.answer,
-        response_time_ms=response_time_ms,
-        status="completed",
-        departments=[ANNOUNCEMENT_SURFACE_DEPARTMENT],
-    )
-    return build_announcement_user_response(
+    user_response = build_announcement_user_response(
         context_id=context_id,
         answer=response.answer,
         sources=response.sources,
         response_time_ms=response_time_ms,
     )
+    quality = check_answer_quality(user_response.answer)
+    if quality.needs_rewrite and quality_issue_blocks_answer(quality):
+        await telemetry_service.finalize_query_log(
+            query_log_id=query_log_id,
+            response_text=TEMPORARY_SYNTHESIS_FAILURE_ANSWER,
+            response_time_ms=response_time_ms,
+            status="failed",
+            error="final_quality_gate_failed",
+            departments=[ANNOUNCEMENT_SURFACE_DEPARTMENT],
+        )
+        return build_clarification_user_response(
+            context_id=context_id,
+            message=TEMPORARY_SYNTHESIS_FAILURE_ANSWER,
+            response_time_ms=response_time_ms,
+        )
+
+    await telemetry_service.finalize_query_log(
+        query_log_id=query_log_id,
+        response_text=user_response.answer,
+        response_time_ms=response_time_ms,
+        status="completed",
+        departments=[ANNOUNCEMENT_SURFACE_DEPARTMENT],
+    )
+    return user_response

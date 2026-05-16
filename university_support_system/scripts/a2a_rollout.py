@@ -290,6 +290,13 @@ def _slack_container_name(service_name: str) -> str:
     }.get(service_name, service_name)
 
 
+def _opposite_slack_service_name(service_name: str) -> str:
+    return {
+        "slack-bot-a2a": "slack-bot-inprocess",
+        "slack-bot-inprocess": "slack-bot-a2a",
+    }.get(service_name, "")
+
+
 def _wait_for_container_running(
     container_name: str,
     *,
@@ -624,6 +631,11 @@ def main() -> int:
 
     if args.build_only:
         return 0
+
+    if include_slack:
+        opposite_slack_service = _opposite_slack_service_name(args.slack_service)
+        if opposite_slack_service:
+            _run_command([*compose_args, "stop", opposite_slack_service], env=env)
 
     _run_command(_compose_up_args(compose_args, services), env=env)
     if not args.skip_health_check:

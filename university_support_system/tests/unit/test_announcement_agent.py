@@ -89,7 +89,11 @@ async def test_announcement_agent_formats_matching_announcements():
         faculty=None,
         unit_name=None,
         limit=8,
+        recent_days=30,
         allow_latest_fallback=True,
+        probe_mode=None,
+        require_keyword_match=False,
+        minimum_match_score=0,
     )
 
 
@@ -164,6 +168,12 @@ def test_extract_announcement_keywords_filters_generic_words():
     assert "duyurulari" not in keywords
 
 
+def test_announcement_safe_bool_accepts_turkish_no():
+    agent = AnnouncementAgent(announcement_fetcher=AsyncMock())
+
+    assert agent._safe_bool("hayır", default=True) is False
+
+
 @pytest.mark.asyncio
 async def test_announcement_agent_uses_all_departments_when_multiple_departments_exist():
     fetcher = AsyncMock(return_value=[])
@@ -184,5 +194,9 @@ async def test_announcement_agent_uses_all_departments_when_multiple_departments
         faculty=None,
         unit_name=None,
         limit=8,
+        recent_days=30,
         allow_latest_fallback=True,
+        probe_mode=None,
+        require_keyword_match=False,
+        minimum_match_score=0,
     )

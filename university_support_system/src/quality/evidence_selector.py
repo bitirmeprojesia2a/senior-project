@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Sequence
 
@@ -121,11 +122,24 @@ def _build_selector_prompt(
 
 def _parse_selector_json(raw_text: str) -> dict[str, Any]:
     text = (raw_text or "").strip()
-    if text.startswith("```"):
-        text = text.strip("`").strip()
-        if text.lower().startswith("json"):
-            text = text[4:].strip()
-    return json.loads(text)
+    fenced_match = re.search(r"```(?:json)?\s*(.*?)```", text, flags=re.IGNORECASE | re.DOTALL)
+    if fenced_match:
+        text = fenced_match.group(1).strip()
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        decoder = json.JSONDecoder()
+        for match in re.finditer(r"\{", text):
+            try:
+                payload, _ = decoder.raw_decode(text[match.start():])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                return payload
+        raise
+    if not isinstance(payload, dict):
+        raise ValueError("selector_json_not_object")
+    return payload
 
 
 def _apply_selection(

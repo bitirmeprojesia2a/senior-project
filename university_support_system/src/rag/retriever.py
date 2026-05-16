@@ -10,6 +10,7 @@ Combines:
 from __future__ import annotations
 
 import re
+import threading
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
 
@@ -22,6 +23,10 @@ from langchain_core.retrievers import BaseRetriever
 
 from src.core.config import settings
 from src.core.constants import Department, academic_schedule_collection_name, collection_name_for_department
+from src.core.source_owner_collections import (
+    SourceOwnerCollectionBridge,
+    resolve_source_owner_collection_bridge,
+)
 from src.core.text_normalization import normalize_text
 from src.rag.candidate_utils import (
     deduplicate_candidate_dicts,
@@ -55,6 +60,20 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
+_RERANKER_SEMAPHORE: threading.BoundedSemaphore | None = None
+_RERANKER_SEMAPHORE_LIMIT: int | None = None
+
+
+def _reranker_semaphore() -> threading.BoundedSemaphore | None:
+    global _RERANKER_SEMAPHORE, _RERANKER_SEMAPHORE_LIMIT
+    limit = max(0, int(settings.rag.reranker_concurrency_limit or 0))
+    if limit <= 0:
+        return None
+    if _RERANKER_SEMAPHORE is None or _RERANKER_SEMAPHORE_LIMIT != limit:
+        _RERANKER_SEMAPHORE = threading.BoundedSemaphore(limit)
+        _RERANKER_SEMAPHORE_LIMIT = limit
+    return _RERANKER_SEMAPHORE
+
 
 _PUNCTUATION_RE = re.compile(r"[^\w\s]")
 _WHITESPACE_RE = re.compile(r"\s+")
@@ -80,6 +99,31 @@ _FAQ_LOW_WEIGHT_WORDS = frozenset({
     "mi", "mu", "icin", "ile", "ve", "bir", "var", "yok",
     "olur", "olmali", "gerekir", "yapmali", "kayit",
     "ogrenci", "universite", "belge", "bilgi",
+})
+_SOURCE_CONSTRAINED_LOW_WEIGHT_WORDS = _FAQ_LOW_WEIGHT_WORDS | frozenset({
+    "soru", "cevap", "konu", "hakkinda", "nedir", "olarak", "olan",
+    "olmasi", "program", "programi", "programlar", "surec", "sureci",
+    "kosul", "kosulu", "kosullari", "sart", "sarti", "sartlari",
+})
+_SOURCE_CONSTRAINED_NUMERIC_MARKERS = (
+    "kac",
+    "ne kadar",
+    "en az",
+    "ortalama",
+    "ortalamasi",
+    "gano",
+    "gno",
+    "akts",
+    "kredi",
+    "ucret",
+)
+_SOURCE_CONSTRAINED_NUMBER_RE = re.compile(r"\b\d+(?:[,.]\d+)?\b")
+_CONCRETE_SOURCE_HINT_RE = re.compile(
+    r"(?:\.(?:pdf|txt|html?|docx?|doc|csv|json)\b|[\\/])",
+    re.IGNORECASE,
+)
+_SOURCE_CONSTRAINT_TOKEN_STOPWORDS = frozenset({
+    "pdf", "txt", "html", "doc", "docx", "csv", "json", "yonerge", "belge",
 })
 
 
@@ -371,6 +415,339 @@ def _apply_conversation_source_hints(
             }
         )
     return adjusted
+
+
+def _source_constraint_text(*values: Any) -> str:
+    normalized_parts: list[str] = []
+    for value in values:
+        if value is None:
+            continue
+        normalized = normalize_text(str(value))
+        if not normalized:
+            continue
+        normalized_parts.append(normalized)
+        normalized_parts.append(re.sub(r"[_\-.]+", " ", normalized))
+    return " ".join(dict.fromkeys(part for part in normalized_parts if part))
+
+
+def _normalized_source_constraints(source_hints: List[str] | None) -> tuple[str, ...]:
+    constraints: list[str] = []
+    for hint in source_hints or []:
+        text = _source_constraint_text(hint)
+        if text:
+            constraints.append(text)
+    return tuple(dict.fromkeys(constraints))
+
+
+def _has_concrete_source_hints(source_hints: List[str] | None) -> bool:
+    return any(
+        bool(_CONCRETE_SOURCE_HINT_RE.search(str(hint or "")))
+        for hint in source_hints or []
+    )
+
+
+def _candidate_source_text(candidate: Dict[str, Any]) -> str:
+    metadata = candidate.get("metadata") or {}
+    return _source_constraint_text(
+        candidate.get("source"),
+        metadata.get("source"),
+        metadata.get("file_name"),
+        metadata.get("title"),
+        metadata.get("relative_path"),
+        metadata.get("source_url"),
+    )
+
+
+def _document_source_text(document: Document) -> str:
+    metadata = document.metadata or {}
+    return _source_constraint_text(
+        metadata.get("source"),
+        metadata.get("file_name"),
+        metadata.get("title"),
+        metadata.get("relative_path"),
+        metadata.get("source_url"),
+    )
+
+
+def _source_matches_constraints(source_text: str, constraints: tuple[str, ...]) -> bool:
+    if not source_text or not constraints:
+        return False
+    source_tokens = {
+        token
+        for token in source_text.split()
+        if len(token) >= 3 and token not in _SOURCE_CONSTRAINT_TOKEN_STOPWORDS
+    }
+    for constraint in constraints:
+        if constraint in source_text or source_text in constraint:
+            return True
+        constraint_tokens = {
+            token
+            for token in constraint.split()
+            if len(token) >= 3 and token not in _SOURCE_CONSTRAINT_TOKEN_STOPWORDS
+        }
+        if not constraint_tokens or not source_tokens:
+            continue
+        required_overlap = min(3, len(constraint_tokens))
+        if len(source_tokens & constraint_tokens) >= required_overlap:
+            return True
+    return False
+
+
+def _filter_candidates_by_source_constraints(
+    candidates: List[Dict[str, Any]],
+    source_constraints: tuple[str, ...],
+) -> List[Dict[str, Any]]:
+    if not candidates or not source_constraints:
+        return candidates
+    return [
+        candidate
+        for candidate in candidates
+        if _source_matches_constraints(_candidate_source_text(candidate), source_constraints)
+    ]
+
+
+def _source_constrained_query_terms(query: str, topic_hint: str | None) -> tuple[str, ...]:
+    raw_tokens = turkish_bm25_preprocess(f"{query} {topic_hint or ''}")
+    terms = [
+        token
+        for token in raw_tokens
+        if len(token) >= 3 and token not in _SOURCE_CONSTRAINED_LOW_WEIGHT_WORDS
+    ]
+    return tuple(dict.fromkeys(terms))
+
+
+def _source_constrained_query_phrases(query: str) -> tuple[str, ...]:
+    tokens = [
+        token
+        for token in normalize_text(query).split()
+        if len(token) >= 3 and token not in _SOURCE_CONSTRAINED_LOW_WEIGHT_WORDS
+    ]
+    phrases: list[str] = []
+    for size in (3, 2):
+        for index in range(0, max(len(tokens) - size + 1, 0)):
+            phrase = " ".join(tokens[index:index + size])
+            if len(phrase) >= 7:
+                phrases.append(phrase)
+    return tuple(dict.fromkeys(phrases))
+
+
+def _source_constrained_alignment_score(
+    *,
+    query: str,
+    topic_hint: str | None,
+    content: str,
+) -> float:
+    normalized_query = normalize_text(query)
+    normalized_topic = normalize_text(topic_hint or "")
+    normalized_content = normalize_text(content)
+    score = 0.0
+
+    asks_application = "basvur" in normalized_query
+    asks_grade = any(
+        marker in normalized_query
+        for marker in ("not ort", "ortalama", "gano", "gno")
+    )
+    asks_numeric = any(marker in normalized_query for marker in _SOURCE_CONSTRAINED_NUMERIC_MARKERS)
+    cap_topic = any(
+        marker in f"{normalized_query} {normalized_topic}"
+        for marker in ("cap", "cift anadal", "cift ana dal", "ikinci lisans")
+    )
+    yandal_topic = any(marker in f"{normalized_query} {normalized_topic}" for marker in ("yandal", "yan dal", "ydp"))
+
+    if asks_application:
+        if any(
+            marker in normalized_content
+            for marker in (
+                "basvuru kabul kayit",
+                "basvuru kosullari",
+                "basvuru sartlari",
+                "basvurabilmesi",
+                "basvurusu sirasindaki",
+            )
+        ):
+            score += 3.0
+        if any(
+            marker in normalized_content
+            for marker in (
+                "ayrilma",
+                "ilisik kesilme",
+                "mezuniyet kosullari",
+                "mezun olabilmesi",
+                "kaydi silinir",
+                "devam edebilmesi",
+            )
+        ):
+            score -= 2.0
+
+    if asks_grade:
+        if "not ortalamas" in normalized_content or "genel not ortalamas" in normalized_content:
+            score += 1.0
+        if "en az" in normalized_content and _SOURCE_CONSTRAINED_NUMBER_RE.search(normalized_content):
+            score += 1.0
+
+    if asks_numeric and _SOURCE_CONSTRAINED_NUMBER_RE.search(normalized_content):
+        score += 0.5
+
+    if cap_topic and not yandal_topic:
+        if "cap" in normalized_content and "basvur" in normalized_content:
+            score += 1.0
+        if any(marker in normalized_content for marker in ("ydp", "yan dal", "yandal")):
+            cap_application_chunk = any(
+                marker in normalized_content
+                for marker in (
+                    "cap'a basvuru kabul",
+                    "cap a basvuru kabul",
+                    "cap basvuru kabul",
+                    "cap'a basvurabilmesi",
+                    "cap a basvurabilmesi",
+                )
+            )
+            if not cap_application_chunk:
+                score -= 4.0
+
+    return score
+
+
+def _source_constrained_lexical_score(
+    *,
+    query: str,
+    topic_hint: str | None,
+    content: str,
+) -> float:
+    terms = _source_constrained_query_terms(query, topic_hint)
+    if not terms:
+        return 0.0
+
+    normalized_content = normalize_text(content)
+    if not normalized_content:
+        return 0.0
+
+    content_tokens = set(turkish_bm25_preprocess(normalized_content))
+    token_score = 0.0
+    for term in terms:
+        if term in content_tokens:
+            token_score += 1.0 if len(term) >= 5 else 0.7
+        elif len(term) >= 5 and term in normalized_content:
+            token_score += 0.5
+
+    phrase_score = sum(
+        1.5
+        for phrase in _source_constrained_query_phrases(query)
+        if phrase in normalized_content
+    )
+    normalized_query = normalize_text(query)
+    numeric_score = 0.0
+    if (
+        any(marker in normalized_query for marker in _SOURCE_CONSTRAINED_NUMERIC_MARKERS)
+        and _SOURCE_CONSTRAINED_NUMBER_RE.search(normalized_content)
+    ):
+        numeric_score = 1.0
+
+    return (
+        token_score
+        + phrase_score
+        + numeric_score
+        + _source_constrained_alignment_score(
+            query=query,
+            topic_hint=topic_hint,
+            content=content,
+        )
+    )
+
+
+def _source_constrained_recall_score(lexical_score: float) -> float:
+    return round(min(0.86, 0.44 + (lexical_score * 0.045)), 6)
+
+
+def _apply_source_constrained_post_rerank_bias(
+    results: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    adjusted: list[dict[str, Any]] = []
+    changed = False
+    for item in results:
+        candidate = dict(item)
+        metadata = dict(candidate.get("metadata") or {})
+        if metadata.get("source_constrained_recall"):
+            lexical_score = float(metadata.get("source_constrained_lexical_score") or 0.0)
+            alignment_score = max(float(metadata.get("source_constrained_alignment_score") or 0.0), 0.0)
+            boost = min(0.34, (lexical_score * 0.015) + (alignment_score * 0.025))
+            if boost > 0:
+                original_score = float(candidate.get("score", 0.0))
+                candidate["score"] = round(original_score + boost, 6)
+                metadata["source_constrained_post_rerank_boost"] = round(boost, 6)
+                candidate["metadata"] = metadata
+                changed = True
+        adjusted.append(candidate)
+
+    if changed:
+        adjusted.sort(key=lambda candidate: float(candidate.get("score", 0.0)), reverse=True)
+    return adjusted
+
+
+def _source_constrained_is_application_evidence(
+    *,
+    query: str,
+    content: str,
+) -> bool:
+    normalized_query = normalize_text(query)
+    normalized_content = normalize_text(content)
+    asks_application = "basvur" in normalized_query
+    if not asks_application:
+        return True
+
+    app_markers = (
+        "basvuru kabul kayit",
+        "basvuru kosullari",
+        "basvuru sartlari",
+        "basvurabilmesi",
+        "basvurusu sirasindaki",
+        "basvurularin degerlendirilmesinde",
+    )
+    if not any(marker in normalized_content for marker in app_markers):
+        return False
+
+    cap_topic = any(marker in normalized_query for marker in ("cap", "cift anadal", "cift ana dal"))
+    yandal_topic = any(marker in normalized_query for marker in ("ydp", "yandal", "yan dal"))
+    if cap_topic and not yandal_topic:
+        yandal_markers = ("ydp", "yandal", "yan dal")
+        cap_application_markers = (
+            "cap'a basvuru kabul",
+            "cap a basvuru kabul",
+            "cap basvuru kabul",
+            "cap'a basvurabilmesi",
+            "cap a basvurabilmesi",
+        )
+        if any(marker in normalized_content for marker in yandal_markers) and not any(
+            marker in normalized_content for marker in cap_application_markers
+        ):
+            return False
+
+    return True
+
+
+def _filter_source_constrained_by_query_facet(
+    results: List[Dict[str, Any]],
+    *,
+    query: str,
+) -> List[Dict[str, Any]]:
+    if not results:
+        return results
+
+    normalized_query = normalize_text(query)
+    if "basvur" not in normalized_query:
+        return results
+
+    facet_matches = [
+        item
+        for item in results
+        if _source_constrained_is_application_evidence(
+            query=query,
+            content=str(item.get("content") or ""),
+        )
+    ]
+    if not facet_matches:
+        return results
+    return facet_matches
 
 
 def _apply_department_metadata_boost(
@@ -775,19 +1152,166 @@ class HybridRetriever:
         expanded_query: str,
         primary_collections: List[str],
         fallback_collections: List[str],
+        *,
+        source_owner_bridge: SourceOwnerCollectionBridge | None = None,
     ) -> List[Dict[str, Any]]:
         """Collect candidates from primary collections, then fallback if needed."""
         candidates: List[Dict[str, Any]] = []
         for collection_name in primary_collections:
-            candidates.extend(self._search_collection_candidates(collection_name, expanded_query))
+            candidates.extend(
+                self._annotate_collection_candidates(
+                    self._search_collection_candidates(collection_name, expanded_query),
+                    collection_name=collection_name,
+                    source_owner_bridge=source_owner_bridge,
+                )
+            )
 
         if candidates or not fallback_collections:
             return candidates
 
         logger.info("hybrid_search_fallback", query=query, collections=fallback_collections)
         for collection_name in fallback_collections:
-            candidates.extend(self._search_collection_candidates(collection_name, expanded_query))
+            candidates.extend(
+                self._annotate_collection_candidates(
+                    self._search_collection_candidates(collection_name, expanded_query),
+                    collection_name=collection_name,
+                    source_owner_bridge=source_owner_bridge,
+                )
+            )
         return candidates
+
+    @staticmethod
+    def _annotate_collection_candidates(
+        candidates: List[Dict[str, Any]],
+        *,
+        collection_name: str,
+        source_owner_bridge: SourceOwnerCollectionBridge | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Attach collection/bridge diagnostics to retriever candidates."""
+        if not candidates:
+            return candidates
+        support_collections = set(source_owner_bridge.support_collections if source_owner_bridge else ())
+        bridge_active = bool(source_owner_bridge and source_owner_bridge.active)
+        annotated: list[dict[str, Any]] = []
+        for candidate in candidates:
+            item = dict(candidate)
+            metadata = dict(item.get("metadata") or {})
+            metadata.setdefault("retrieval_collection", collection_name)
+            if bridge_active:
+                if collection_name in support_collections:
+                    metadata["retrieval_collection_role"] = "source_owner_support"
+                    metadata["source_owner_collection_bridge"] = source_owner_bridge.as_metadata()
+                else:
+                    metadata.setdefault("retrieval_collection_role", "source_owner_primary")
+            item["metadata"] = metadata
+            annotated.append(item)
+        return annotated
+
+    def _source_documents_for_recall(self, collection_name: str) -> List[Document]:
+        """Return collection documents for source-constrained lexical recall."""
+        cached_documents = self._BM25_DOCUMENT_CACHE.get(collection_name)
+        if cached_documents is not None:
+            return cached_documents
+
+        try:
+            indexer = self._get_indexer(collection_name)
+            return self._load_bm25_documents(collection_name, indexer)
+        except Exception:
+            logger.warning(
+                "source_constrained_recall_documents_unavailable",
+                collection=collection_name,
+                exc_info=True,
+            )
+            return []
+
+    def _augment_candidates_with_source_constrained_recall(
+        self,
+        candidates: List[Dict[str, Any]],
+        *,
+        query: str,
+        collection_names: List[str],
+        source_constraints: tuple[str, ...],
+        topic_hint: str | None,
+        source_owner_bridge: SourceOwnerCollectionBridge | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Add high-signal lexical hits from contract/conversation-constrained sources."""
+        if (
+            not settings.rag.source_constrained_recall_enabled
+            or not source_constraints
+            or not collection_names
+        ):
+            return candidates
+
+        recalled: list[dict[str, Any]] = []
+        max_per_collection = max(settings.rag.source_constrained_recall_max_per_collection, 0)
+        max_total = max(settings.rag.source_constrained_recall_max_total, 0)
+        if max_per_collection <= 0 or max_total <= 0:
+            return candidates
+
+        for collection_name in collection_names:
+            collection_recalled: list[tuple[float, dict[str, Any]]] = []
+            for document in self._source_documents_for_recall(collection_name):
+                source_text = _document_source_text(document)
+                if not _source_matches_constraints(source_text, source_constraints):
+                    continue
+
+                lexical_score = _source_constrained_lexical_score(
+                    query=query,
+                    topic_hint=topic_hint,
+                    content=document.page_content,
+                )
+                if lexical_score < 3.0:
+                    continue
+                alignment_score = _source_constrained_alignment_score(
+                    query=query,
+                    topic_hint=topic_hint,
+                    content=document.page_content,
+                )
+
+                metadata = dict(document.metadata or {})
+                metadata["source_constrained_recall"] = True
+                metadata["source_constrained_recall_collection"] = collection_name
+                metadata.setdefault("retrieval_collection", collection_name)
+                if (
+                    source_owner_bridge
+                    and collection_name in set(source_owner_bridge.support_collections)
+                ):
+                    metadata["retrieval_collection_role"] = "source_owner_support"
+                    metadata["source_owner_collection_bridge"] = source_owner_bridge.as_metadata()
+                metadata["source_constrained_lexical_score"] = round(lexical_score, 4)
+                metadata["source_constrained_alignment_score"] = round(alignment_score, 4)
+                metadata.setdefault("score_type", "source_constrained_recall")
+                candidate = {
+                    "content": document.page_content,
+                    "source": metadata.get("source") or metadata.get("file_name") or "bilinmiyor",
+                    "category": metadata.get("category", "genel"),
+                    "score": _source_constrained_recall_score(lexical_score),
+                    "metadata": metadata,
+                }
+                collection_recalled.append((lexical_score, candidate))
+
+            collection_recalled.sort(
+                key=lambda pair: (
+                    pair[0],
+                    float(pair[1].get("score", 0.0)),
+                ),
+                reverse=True,
+            )
+            recalled.extend(candidate for _, candidate in collection_recalled[:max_per_collection])
+            if len(recalled) >= max_total:
+                break
+
+        if not recalled:
+            return candidates
+
+        logger.info(
+            "source_constrained_recall_applied",
+            query=query,
+            added_count=min(len(recalled), max_total),
+            constraints=list(source_constraints),
+            collections=collection_names,
+        )
+        return deduplicate_candidate_dicts([*candidates, *recalled[:max_total]])
 
     def _expand_query_for_search(self, query: str) -> str:
         """Apply deterministic expansion and optional LLM expansion."""
@@ -817,18 +1341,23 @@ class HybridRetriever:
         source_hints: List[str] | None = None,
         topic_hint: str | None = None,
         student_department: str | None = None,
+        source_owner: str | None = None,
+        reranker_candidate_limit: int | None = None,
     ) -> str:
         """Build a stable cache key for a search request."""
         normalized_hints = "|".join(sorted(hint.strip().casefold() for hint in (source_hints or []) if hint))
         normalized_topic = (topic_hint or "").strip().casefold()
         normalized_dept = (student_department or "").strip().casefold()
+        normalized_owner = (source_owner or "").strip().casefold()
         return (
             f"{query}::{top_k}::"
             f"{'|'.join(primary_collections)}::"
             f"{'|'.join(fallback_collections)}::"
             f"{normalized_hints}::"
             f"{normalized_topic}::"
-            f"{normalized_dept}"
+            f"{normalized_dept}::"
+            f"{normalized_owner}::"
+            f"{reranker_candidate_limit or ''}"
         )
 
     def _try_cache_hit(
@@ -861,6 +1390,8 @@ class HybridRetriever:
         candidates: List[Dict[str, Any]],
         search_scope: str,
         top_k: int,
+        source_constrained: bool = False,
+        reranker_candidate_limit: int | None = None,
     ) -> List[Dict[str, Any]]:
         """Apply reranker policy and return ranked candidates."""
         reranker_limit = self._reranker_candidate_limit(
@@ -869,6 +1400,16 @@ class HybridRetriever:
             top_k,
             query=query,
         )
+        if source_constrained:
+            reranker_limit = max(
+                reranker_limit,
+                min(
+                    len(candidates),
+                    top_k + settings.rag.source_constrained_reranker_extra,
+                ),
+            )
+        if reranker_candidate_limit is not None:
+            reranker_limit = min(reranker_limit, max(1, int(reranker_candidate_limit)))
         reranker_candidates = candidates[:reranker_limit]
         clean_query = _select_reranker_query(query, expanded_query)
         reranker_candidates = [
@@ -902,7 +1443,18 @@ class HybridRetriever:
             reranker_candidate_count=len(reranker_candidates),
             top_k=top_k,
         )
-        return self.reranker.rerank(clean_query, reranker_candidates, top_k=top_k)
+        semaphore = _reranker_semaphore()
+        if semaphore is None:
+            return self.reranker.rerank(clean_query, reranker_candidates, top_k=top_k)
+        wait_started = time.perf_counter()
+        with semaphore:
+            logger.info(
+                "reranker_concurrency_guard",
+                query=query,
+                limit=settings.rag.reranker_concurrency_limit,
+                waited_ms=round((time.perf_counter() - wait_started) * 1000, 1),
+            )
+            return self.reranker.rerank(clean_query, reranker_candidates, top_k=top_k)
 
     def _minimum_score_threshold_for(self, item: Dict[str, Any]) -> float:
         """Resolve score filtering threshold by score type."""
@@ -1090,6 +1642,8 @@ class HybridRetriever:
         source_hints: List[str] | None = None,
         topic_hint: str | None = None,
         student_department: str | None = None,
+        source_owner: str | None = None,
+        reranker_candidate_limit: int | None = None,
     ) -> List[Dict[str, Any]]:
         """Run hybrid retrieval and return ranked results."""
         start_time = time.perf_counter()
@@ -1098,6 +1652,24 @@ class HybridRetriever:
             query=query,
             department=department,
         )
+        source_owner_bridge = resolve_source_owner_collection_bridge(
+            source_owner=source_owner,
+            query=query,
+            department=department,
+            source_hints=source_hints,
+            topic_hint=topic_hint,
+        )
+        if source_owner_bridge.active:
+            for collection_name in source_owner_bridge.support_collections:
+                if collection_name not in primary_collections and collection_name not in fallback_collections:
+                    primary_collections.append(collection_name)
+            logger.info(
+                "source_owner_collection_bridge_applied",
+                source_owner=source_owner_bridge.source_owner,
+                support_collections=list(source_owner_bridge.support_collections),
+                reason=source_owner_bridge.reason,
+                activated_by=list(source_owner_bridge.activated_by),
+            )
 
         cache_key = self._build_cache_key(
             query=query,
@@ -1107,6 +1679,8 @@ class HybridRetriever:
             source_hints=source_hints,
             topic_hint=topic_hint,
             student_department=student_department,
+            source_owner=source_owner,
+            reranker_candidate_limit=reranker_candidate_limit,
         )
         cached = self._try_cache_hit(
             cache_key=cache_key,
@@ -1133,12 +1707,47 @@ class HybridRetriever:
             expanded_query=expanded_query,
             primary_collections=primary_collections,
             fallback_collections=fallback_collections,
+            source_owner_bridge=source_owner_bridge,
         )
+        source_constraints = _normalized_source_constraints(source_hints)
+        hard_constrain_sources = _has_concrete_source_hints(source_hints)
+        if not candidates:
+            candidates = self._augment_candidates_with_source_constrained_recall(
+                [],
+                query=query,
+                collection_names=[*primary_collections, *fallback_collections],
+                source_constraints=source_constraints,
+                topic_hint=topic_hint,
+                source_owner_bridge=source_owner_bridge,
+            )
         if not candidates:
             logger.warning("hybrid_search_no_candidates", query=query, collections=primary_collections)
             return []
 
         candidates = deduplicate_candidate_dicts(candidates)
+        candidates = self._augment_candidates_with_source_constrained_recall(
+            candidates,
+            query=query,
+            collection_names=primary_collections,
+            source_constraints=source_constraints,
+            topic_hint=topic_hint,
+            source_owner_bridge=source_owner_bridge,
+        )
+        if hard_constrain_sources:
+            constrained_candidates = _filter_candidates_by_source_constraints(
+                candidates,
+                source_constraints,
+            )
+            if constrained_candidates:
+                candidates = constrained_candidates
+            else:
+                logger.info(
+                    "source_constrained_filter_empty",
+                    query=query,
+                    constraints=list(source_constraints),
+                    collections=primary_collections,
+                )
+                return []
         candidates = _apply_conversation_source_hints(
             candidates,
             source_hints=source_hints,
@@ -1159,7 +1768,12 @@ class HybridRetriever:
             candidates=candidates,
             search_scope=search_scope,
             top_k=k,
+            source_constrained=bool(source_constraints),
+            reranker_candidate_limit=reranker_candidate_limit,
         )
+        if source_constraints:
+            results = _apply_source_constrained_post_rerank_bias(results)
+            results = _filter_source_constrained_by_query_facet(results, query=query)
         return self._finalize_results(
             query=query,
             query_type=query_type,

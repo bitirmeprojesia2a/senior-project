@@ -9,8 +9,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
+from pathlib import Path
 from typing import Any
+
+project_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(project_root))
 
 from src.core.config import settings
 from src.rag.embedder import Embedder
@@ -76,6 +81,17 @@ def main() -> int:
             "HF_HOME": os.getenv("HF_HOME"),
             "SENTENCE_TRANSFORMERS_HOME": os.getenv("SENTENCE_TRANSFORMERS_HOME"),
             "MODEL_CACHE_HOST_DIR": os.getenv("MODEL_CACHE_HOST_DIR"),
+        },
+        "configured_cache": {
+            "host_dir": str(settings.model_cache.resolved_host_dir)
+            if settings.model_cache.resolved_host_dir is not None
+            else None,
+            "hf_home": str(settings.model_cache.hf_home)
+            if settings.model_cache.hf_home is not None
+            else None,
+            "hf_hub_cache": str(settings.model_cache.hf_hub_cache)
+            if settings.model_cache.hf_hub_cache is not None
+            else None,
         },
         "checks": checks,
     }

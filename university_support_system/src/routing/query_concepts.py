@@ -223,6 +223,7 @@ _CONCEPT_MARKERS: dict[str, tuple[str, ...]] = {
     ),
     CONCEPT_CAP: _markers(
         "cap",
+        "capa",
         "cift anadal",
         "cift ana dal",
         "yandal",

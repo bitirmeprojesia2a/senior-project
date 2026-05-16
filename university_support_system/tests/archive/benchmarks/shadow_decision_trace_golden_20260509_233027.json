@@ -1,0 +1,210 @@
+{
+  "run_id": "20260509_233027",
+  "created_at": "2026-05-09T23:32:23",
+  "trace_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\tmp\\shadow_decision_trace_golden_20260509_233027.jsonl",
+  "report_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\docs\\archive\\benchmarks\\shadow_decision_trace_golden_20260509_233027.md",
+  "a2a_mode": "inprocess",
+  "llm_provider": {
+    "primary": "anthropic",
+    "fallback": "none"
+  },
+  "capability_planner": {
+    "mode": "on",
+    "scope": "academic_programs,student_affairs,finance,announcement,event"
+  },
+  "llm_profile": "balanced",
+  "question_cache": "bypass",
+  "answer_preview_chars": 800,
+  "results": [
+    {
+      "id": "GT01",
+      "family": "academic_calendar",
+      "query": "Final sinavlari ne zaman basliyor?",
+      "context_id": "shadow-golden-20260509_233027-GT01",
+      "expected_owner": "academic_calendar",
+      "departments": [
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "llm",
+        "vt"
+      ],
+      "source_count": 1,
+      "elapsed_ms": 16416.2,
+      "response_time_ms": 16361.21,
+      "answer_preview": "Benchmark, 2025-2026 eğitim öğretim yılı için final sınavları şu tarihlerde gerçekleştirilecek:\n\n• Güz dönemi: 3-16 Ocak 2026\n• Bahar dönemi: 1-14 Haziran 2026\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Final Sentez: LLM\n- VT\n- Routing: direct\n- Pipeline: student_affairs -> orchestrator\n\nKaynak Özeti:\n- Belge: 2025_2026_genel_akademik_takvim.pdf",
+      "error": null,
+      "note": "Structured calendar vs RAG/announcement ayrimi.",
+      "trace_owner": "academic_calendar",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 16361.21,
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT06",
+      "family": "international_policy",
+      "query": "Yabanci ogrenci kayit belgeleri ve ikamet izni icin neler gerekir?",
+      "context_id": "shadow-golden-20260509_233027-GT06",
+      "expected_owner": "international_policy",
+      "departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 7,
+      "elapsed_ms": 89773.5,
+      "response_time_ms": 89716.31,
+      "answer_preview": "Benchmark, İkamet izni başvurusu için önce e-ikamet.goc.gov.tr üzerinden başvuru formu oluşturman, ardından tüm belgelerle birlikte formun oluşturulduğu tarihten itibaren en geç 7 gün içinde Öğrenci İşleri Daire Başkanlığı / İkamet İşlemleri Ofisi'ne teslim etmen gerekmektedir.\n\nGerekli belgeler şunlardır:\n\n1. İkamet izni kayıt/başvuru formu: e-ikamet.goc.gov.tr sistemi üzerinden alınan ve öğrenci tarafından imzalanmış form.\n\n2. Pasaport fotokopisi: Kimlik bilgilerinin yer aldığı ilk sayfa, varsa vizenin bulunduğu sayfa ve ülkeye en son girişte alınan damganın yer aldığı sayfa; her biri ayrı ayrı fotokopi edilmelidir. Belgenin aslı dosya teslim günü yanında bulunmak zorundadır. Pasaportun, talep edilen ikamet izni süresinden en az 60 gün daha uzun geçerli olması zorunludur.\n\n3. Öğrencilik ...",
+      "error": null,
+      "note": "International policy lookup ve kaynak secimi.",
+      "trace_owner": "international_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 89716.31,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT12",
+      "family": "follow_up_resolution",
+      "query": "Peki not ortalamasi kac olmali?",
+      "context_id": "shadow-golden-20260509_233027-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 3766.0,
+      "response_time_ms": 3732.79,
+      "answer_preview": "Benchmark, Hangi başvuru türü için tarih sorduğunuzu yazar mısınız? Örneğin yatay geçiş, ÇAP/YAP, Erasmus, staj, yaz okulu veya kayıt başvurusu gibi yazabilirsiniz.",
+      "error": null,
+      "note": "Onceki CAP baglamina baglanmali.",
+      "trace_owner": "curriculum_catalog",
+      "trace_capability": null,
+      "trace_final_owner": "clarification",
+      "trace_departments": [
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 3732.79,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    }
+  ]
+}

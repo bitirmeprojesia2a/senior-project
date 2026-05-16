@@ -10,8 +10,13 @@ from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.agents.student.graduation_utils import (
     format_academic_snapshot,
     is_general_akts_rule_query,
+    is_graduation_akts_total_query,
     is_graduation_hybrid_query,
     is_graduation_personal_query,
+)
+from src.core.contract_answer_policy import (
+    build_graduation_akts_answer_plan,
+    render_contract_answer_plan,
 )
 from src.core.constants import Department, TaskType
 from src.db.curriculum_data import fetch_program_akts_summary
@@ -51,10 +56,65 @@ class GraduationAgent(BaseSpecialistAgent):
         is_authenticated = bool(metadata.get("is_authenticated", False))
         student_department = str(metadata.get("student_department", "") or "").strip()
 
-        if self._is_general_akts_rule_query(query_text):
-            summary = await self._curriculum_fetcher(student_department)
-            if summary is not None:
-                return self._build_program_akts_response(summary)
+        policy_facet = metadata.get("policy_facet")
+        facet_name = ""
+        if isinstance(policy_facet, dict):
+            facet_name = str(policy_facet.get("facet") or policy_facet.get("policy_facet") or "")
+        if self._is_general_akts_rule_query(query_text) or is_graduation_akts_total_query(
+            query_text,
+            policy_facet=facet_name,
+        ):
+            plan = build_graduation_akts_answer_plan(
+                query=query_text,
+                student_department=student_department,
+            )
+            answer = render_contract_answer_plan(plan)
+            if answer is not None and plan.answer_status in {
+                "verified_level_rule",
+                "missing_verified_program_requirement",
+            }:
+                total = plan.facts.get("verified_total_akts")
+                response_metadata = {
+                    "policy_facet": "graduation_akts",
+                    "source_contract": (
+                        "education_level_graduation_rule"
+                        if total is not None
+                        else "level_rule_requires_program_specific_verification"
+                    ),
+                    "program_level": plan.facts.get("program_level") or {},
+                    "contract_answer_plan": plan.to_metadata(),
+                }
+                if total is not None:
+                    response_metadata["authoritative_total_akts"] = total
+                if isinstance(metadata.get("answer_contract"), dict):
+                    response_metadata["answer_contract"] = metadata["answer_contract"]
+                source_content = answer
+                source_name = (
+                    "education_level_graduation_rule"
+                    if total is not None
+                    else "program_specific_graduation_requirement_check"
+                )
+                return DepartmentResponse(
+                    department=self.department,
+                    answer=answer,
+                    db_data={
+                        "education_level": plan.facts.get("education_level"),
+                        "graduation_akts": total,
+                    },
+                    generation_mode="kural",
+                    sources=[
+                        RAGSource(
+                            content=source_content,
+                            score=1.0,
+                            metadata={
+                                "source": source_name,
+                                "record_type": "contract_answer_plan",
+                            },
+                        )
+                    ],
+                    success=True,
+                    metadata=response_metadata,
+                )
 
         is_personal = self._is_personal_query(query_text)
         is_hybrid = self._is_hybrid_query(query_text)
@@ -132,6 +192,40 @@ class GraduationAgent(BaseSpecialistAgent):
             db_data=summary,
             generation_mode="vt",
             include_contact_suggestion=True,
+            success=True,
+        )
+
+    def _build_level_akts_response(
+        self,
+        *,
+        level: str,
+        program_level: dict | None = None,
+        answer_contract: dict | None = None,
+    ) -> DepartmentResponse:
+        if level == "associate":
+            answer = "Ön lisans programından mezun olmak için toplam 120 AKTS tamamlanmalıdır."
+            total = 120
+        else:
+            answer = (
+                "Normal dört yıllık lisans programından mezun olmak için toplam "
+                "240 AKTS tamamlanmalıdır."
+            )
+            total = 240
+        response_metadata = {
+            "policy_facet": "graduation_akts",
+            "source_contract": "education_level_graduation_rule",
+            "authoritative_total_akts": total,
+            "program_level": program_level or {"education_level": level},
+        }
+        if isinstance(answer_contract, dict):
+            response_metadata["answer_contract"] = answer_contract
+        return DepartmentResponse(
+            department=self.department,
+            answer=answer,
+            db_data={"education_level": level, "graduation_akts": total},
+            generation_mode="kural",
+            include_contact_suggestion=False,
+            metadata=response_metadata,
             success=True,
         )
 

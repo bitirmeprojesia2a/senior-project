@@ -38,7 +38,10 @@ class _FakeRetriever:
                 "content": f"search:{query}",
                 "score": 0.8,
                 "source": "test",
-                "metadata": {"department": kwargs["department"].value},
+                "metadata": {
+                    "department": kwargs["department"].value,
+                    "source_owner": kwargs.get("source_owner"),
+                },
             }
         ]
 
@@ -61,6 +64,7 @@ def test_remote_hybrid_retriever_sends_search_payload(monkeypatch) -> None:
         source_hints=["sik_sorulan_sorular.txt"],
         topic_hint="ders kaydi",
         student_department="Bilgisayar Muhendisligi",
+        source_owner="student_affairs_policy",
     )
 
     assert results[0]["content"] == "remote"
@@ -74,6 +78,7 @@ def test_remote_hybrid_retriever_sends_search_payload(monkeypatch) -> None:
                 "source_hints": ["sik_sorulan_sorular.txt"],
                 "topic_hint": "ders kaydi",
                 "student_department": "Bilgisayar Muhendisligi",
+                "source_owner": "student_affairs_policy",
             },
         )
     ]
@@ -100,6 +105,40 @@ def test_retrieval_service_search_and_enrich(monkeypatch) -> None:
     assert search.status_code == 200
     assert search.json()["results"][0]["content"] == "search:Mezuniyet sartlari"
     assert search.json()["results"][0]["metadata"]["department"] == "student_affairs"
+    assert search.json()["results"][0]["metadata"]["source_owner"] is None
     assert enrich.status_code == 200
     assert enrich.json()["results"][0]["content"] == "enriched"
     assert enrich.json()["results"][0]["metadata"]["department"] == "academic_programs"
+
+
+def test_retrieval_service_passes_source_owner(monkeypatch) -> None:
+    class _OwnerEchoRetriever(_FakeRetriever):
+        def search(self, query: str, **kwargs):
+            return [
+                {
+                    "content": query,
+                    "score": 0.8,
+                    "source": "test",
+                    "metadata": {
+                        "department": kwargs["department"].value,
+                        "source_owner": kwargs.get("source_owner"),
+                    },
+                }
+            ]
+
+    retrieval_service_module.get_retriever.cache_clear()
+    monkeypatch.setattr(retrieval_service_module, "get_retriever", lambda: _OwnerEchoRetriever())
+
+    app = create_retrieval_service_app()
+    with TestClient(app) as client:
+        response = client.post(
+            "/search",
+            json={
+                "query": "CAP not ortalamasi",
+                "department": "student_affairs",
+                "source_owner": "student_affairs_policy",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["metadata"]["source_owner"] == "student_affairs_policy"

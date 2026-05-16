@@ -372,6 +372,68 @@ async def fetch_courses_by_title(
     return [course for _, course in ranked[:limit]]
 
 
+async def fetch_course_detail_by_code(course_code: str) -> dict[str, Any] | None:
+    """Return authoritative course catalog metadata and prerequisites for a code."""
+    resolved_code, alias_from = resolve_course_code(course_code)
+
+    async with get_session() as session:
+        try:
+            course = await _fetch_course_by_code(session, resolved_code)
+            if course is None:
+                return None
+
+            payload = _course_to_dict(course)
+            prereq_stmt = (
+                select(CoursePrerequisite, Course)
+                .join(Course, CoursePrerequisite.prerequisite_id == Course.id)
+                .where(CoursePrerequisite.course_id == course.id)
+                .order_by(CoursePrerequisite.prerequisite_group)
+            )
+            prereq_rows = (await session.execute(prereq_stmt)).all()
+
+            groups: dict[int, list[dict[str, Any]]] = {}
+            flat_list: list[dict[str, Any]] = []
+            for prereq_rel, prereq_course in prereq_rows:
+                entry = {
+                    "course_code": prereq_course.course_code,
+                    "course_name": prereq_course.course_name,
+                    "group": prereq_rel.prerequisite_group,
+                }
+                flat_list.append(entry)
+                groups.setdefault(prereq_rel.prerequisite_group, []).append(entry)
+
+            payload.update(
+                {
+                    "prerequisites": flat_list,
+                    "prerequisite_groups": groups,
+                    "redirected_from": alias_from,
+                }
+            )
+            return payload
+        except (ProgrammingError, DBAPIError) as exc:
+            if not _is_missing_column_error(exc):
+                raise
+            await session.rollback()
+            logger.warning(
+                "legacy_course_detail_schema_fallback",
+                extra={"course_code": resolved_code},
+            )
+
+            course_stmt = _legacy_course_select().where(Course.course_code == resolved_code)
+            course_row = (await session.execute(course_stmt)).mappings().first()
+            if course_row is None:
+                return None
+            payload = _legacy_course_mapping_to_dict(course_row)
+            payload.update(
+                {
+                    "prerequisites": [],
+                    "prerequisite_groups": {},
+                    "redirected_from": alias_from,
+                }
+            )
+            return payload
+
+
 async def fetch_courses_by_elective_group(group_code: str) -> list[dict[str, Any]]:
     """Belirli bir secmeli grup koduna ait dersleri getirir."""
     async with get_session() as session:

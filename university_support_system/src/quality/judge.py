@@ -123,6 +123,14 @@ class JudgeResult:
     retry_plan: dict | None = None
 
 
+def _judge_parse_failure_result() -> JudgeResult:
+    return JudgeResult(
+        approved=False,
+        failure_reason="judge_response_parse_failed",
+        action="rewrite_only",
+    )
+
+
 def _parse_judge_response(raw: str) -> JudgeResult:
     """Parse judge JSON response, with safe defaults."""
     if isinstance(raw, dict):
@@ -138,9 +146,9 @@ def _parse_judge_response(raw: str) -> JudgeResult:
                 try:
                     payload = json.loads(json_match.group(0))
                 except json.JSONDecodeError:
-                    return JudgeResult(approved=True, action="accept")
+                    return _judge_parse_failure_result()
             else:
-                return JudgeResult(approved=True, action="accept")
+                return _judge_parse_failure_result()
 
     action = str(payload.get("action", "accept")).strip().lower()
     if action not in ("accept", "rewrite_only", "retrieve_again", "ask_clarification"):
@@ -172,13 +180,15 @@ async def run_judge(
     has_foreign_suspicion: bool = False,
     intent_coverage_is_low: bool = False,
     missing_intents: list[str] | None = None,
+    force: bool = False,
+    validator_result: dict | None = None,
 ) -> JudgeResult | None:
     """Run the judge on a risky answer. Returns None if not risky or on error.
 
     Only runs on risky answers. Maximum 1 quality loop is enforced by the caller.
     """
     has_plan_contract = bool(answer_contract or evidence_contract)
-    if not has_plan_contract and not _is_risky_answer(
+    if not force and not has_plan_contract and not _is_risky_answer(
         answer,
         is_multi_department=is_multi_department,
         has_foreign_suspicion=has_foreign_suspicion,
@@ -198,7 +208,9 @@ async def run_judge(
             "has_foreign_suspicion": has_foreign_suspicion,
             "intent_coverage_is_low": intent_coverage_is_low,
             "missing_intents": missing_intents or [],
+            "forced_by_validator": force,
         },
+        "validator_result": validator_result or {},
     }, ensure_ascii=False, indent=2)
 
     try:

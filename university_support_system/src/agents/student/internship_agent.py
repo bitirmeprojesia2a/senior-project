@@ -85,6 +85,20 @@ class InternshipAgent(BaseSpecialistAgent):
                 success=True,
             )
 
+        if self._is_general_staj_date_query(query_text, metadata):
+            return DepartmentResponse(
+                department=self.department,
+                answer=(
+                    "Staj tarihleri bolum/program staj komisyonunun ilan ettigi takvime gore belirlenir. "
+                    "Genel kural olarak staj, ders veya yaz okulu ders-sinav tarihleriyle cakismayacak sekilde "
+                    "ve devam mecburiyetinin bulunmadigi donemde yapilir. Net basvuru/tarih bilgisi icin "
+                    "ilgili bolumun guncel staj duyurusu kontrol edilmelidir."
+                ),
+                generation_mode="kural",
+                metadata={"policy_facet": "internship_date", "source_contract": "general_policy_no_stale_dates"},
+                success=True,
+            )
+
         response = await super().handle_department_task(task)
 
         if response.success and self._needs_cross_reference(query_text):
@@ -111,6 +125,15 @@ class InternshipAgent(BaseSpecialistAgent):
         return "staj" in lowered and any(
             marker in lowered for marker in cls._TEACHING_PROGRAM_MARKERS
         )
+
+    @classmethod
+    def _is_general_staj_date_query(cls, query_text: str, metadata: dict) -> bool:
+        lowered = normalize_text(query_text)
+        if "staj" not in lowered:
+            return False
+        if metadata.get("student_department") or metadata.get("student_faculty"):
+            return False
+        return any(marker in lowered for marker in ("ne zaman", "tarih", "takvim", "yazin", "yaz donemi"))
 
     def _should_enrich_results(self, query_text: str, results: Sequence[dict]) -> bool:
         lowered = normalize_text(query_text)

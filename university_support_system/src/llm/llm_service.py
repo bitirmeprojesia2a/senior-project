@@ -1,7 +1,7 @@
 """
 LLM cekirdek servisi.
 
-OpenAI-compatible ve Google AI provider'lari primary/fallback olarak koordine eder.
+OpenAI-compatible, Google AI ve Anthropic provider'larini primary/fallback olarak koordine eder.
 """
 
 import json
@@ -17,6 +17,7 @@ from tenacity import (
 
 from src.core.config import LLMProvider, settings
 from src.core.profiling import get_current_profiler, profile_stage
+from src.llm.anthropic_client import AnthropicClient, AnthropicClientError
 from src.llm.openai_client import OpenAIClient, OpenAIClientError
 
 logger = logging.getLogger(__name__)
@@ -34,10 +35,11 @@ LLM_ROLES = (
     "global_synthesis",
     "judge",
 )
+KNOWN_PROVIDERS = ("openai_compatible", "google_ai", "anthropic")
 
 
 def _should_retry_openai_error(exc: BaseException) -> bool:
-    return isinstance(exc, OpenAIClientError) and bool(getattr(exc, "retryable", False))
+    return isinstance(exc, (OpenAIClientError, AnthropicClientError)) and bool(getattr(exc, "retryable", False))
 
 
 class LLMServiceError(Exception):
@@ -45,7 +47,7 @@ class LLMServiceError(Exception):
 
 
 class LLMService:
-    """OpenAI-compatible ve Google AI provider'lari koordine eden ana LLM servisi."""
+    """OpenAI-compatible, Google AI ve Anthropic provider'larini koordine eden ana LLM servisi."""
 
     def __init__(self):
         self.openai = OpenAIClient()
@@ -53,6 +55,7 @@ class LLMService:
             settings.google_ai,
             api_key_env_name="GOOGLE_AI_API_KEY",
         )
+        self.anthropic = AnthropicClient()
         self.primary_provider = settings.llm.primary_provider
         self.fallback_provider = settings.llm.fallback_provider
 
@@ -64,10 +67,18 @@ class LLMService:
             return self.google_ai
         raise LLMServiceError(f"Provider OpenAI-compatible degil: {provider}")
 
+    def _client_for_provider(self, provider: str) -> OpenAIClient | AnthropicClient:
+        """Return the configured client backing a provider."""
+        if provider in {"openai_compatible", "google_ai"}:
+            return self._openai_client_for_provider(provider)
+        if provider == "anthropic":
+            return self.anthropic
+        raise LLMServiceError(f"Desteklenmeyen LLM provider: {provider}")
+
     def _is_provider_available(self, provider: str) -> bool:
         """Return whether a configured provider can be used."""
-        if provider in {"openai_compatible", "google_ai"}:
-            return self._openai_client_for_provider(provider).is_available
+        if provider in KNOWN_PROVIDERS:
+            return self._client_for_provider(provider).is_available
         return False  # pragma: no cover
 
     def _has_fallback(self, primary_provider: str | None = None) -> bool:
@@ -93,6 +104,8 @@ class LLMService:
             return self.openai.provider_name or "OpenAI-compatible"
         if provider == "google_ai":
             return self.google_ai.provider_name or "Google AI"
+        if provider == "anthropic":
+            return self.anthropic.provider_name or "Anthropic"
         return provider  # pragma: no cover
 
     @staticmethod
@@ -100,6 +113,8 @@ class LLMService:
         """Return whether exception belongs to the selected provider type."""
         if provider in {"openai_compatible", "google_ai"}:
             return isinstance(exc, OpenAIClientError)
+        if provider == "anthropic":
+            return isinstance(exc, AnthropicClientError)
         return False  # pragma: no cover
 
     def _provider_usage_label(self, provider: str) -> str:
@@ -108,6 +123,8 @@ class LLMService:
             return self.openai.provider_name or "openai_compatible"
         if provider == "google_ai":
             return self.google_ai.provider_name or "google_ai"
+        if provider == "anthropic":
+            return self.anthropic.provider_name or "anthropic"
         return provider
 
     def _record_llm_usage(
@@ -123,7 +140,13 @@ class LLMService:
         llm_profile: str | None = None,
         fallback_from: str | None = None,
         fallback_from_model: str | None = None,
+        prompt: str | None = None,
+        system: str | None = None,
         error: BaseException | None = None,
+        api_key_fingerprint: str | None = None,
+        api_key_index: int | None = None,
+        api_key_count: int | None = None,
+        provider_org_fingerprint: str | None = None,
     ) -> None:
         """Attach provider/model usage metadata to the active query profiler."""
         profiler = get_current_profiler()
@@ -141,6 +164,13 @@ class LLMService:
             "status": status,
             "json_mode": json_mode,
         }
+        if prompt is not None or system is not None:
+            prompt_chars = len(prompt or "")
+            system_chars = len(system or "")
+            total_input_chars = prompt_chars + system_chars
+            entry["prompt_chars"] = prompt_chars
+            entry["system_chars"] = system_chars
+            entry["estimated_input_tokens"] = int(total_input_chars / APPROX_CHARS_PER_TOKEN)
         if llm_profile:
             entry["llm_profile"] = settings.normalize_llm_profile(llm_profile)
         if fallback_from:
@@ -148,6 +178,14 @@ class LLMService:
             entry["fallback_from_label"] = self._provider_usage_label(fallback_from)
         if fallback_from_model:
             entry["fallback_from_model"] = fallback_from_model
+        if api_key_fingerprint:
+            entry["api_key_fingerprint"] = api_key_fingerprint
+        if api_key_index is not None:
+            entry["api_key_index"] = api_key_index
+        if api_key_count is not None and api_key_fingerprint:
+            entry["api_key_count"] = api_key_count
+        if provider_org_fingerprint:
+            entry["provider_org_fingerprint"] = provider_org_fingerprint
         if error is not None:
             entry["error_type"] = type(error).__name__
             entry["error_message"] = str(error)
@@ -199,7 +237,7 @@ class LLMService:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    async def _generate_openai_with_retry(
+    async def _generate_provider_with_retry(
         self,
         prompt: str,
         system: Optional[str] = None,
@@ -208,8 +246,8 @@ class LLMService:
         model: str | None = None,
         provider: str = "openai_compatible",
     ) -> str:
-        """OpenAI-compatible provider uzerinden retry mantigi ile uretim yapar."""
-        client = self._openai_client_for_provider(provider)
+        """Provider uzerinden retry mantigi ile uretim yapar."""
+        client = self._client_for_provider(provider)
         return await client.generate(
             prompt=prompt,
             system=system,
@@ -227,8 +265,8 @@ class LLMService:
         model: str,
     ) -> str:
         """Dispatch generate calls to the configured provider."""
-        if provider in {"openai_compatible", "google_ai"}:
-            return await self._generate_openai_with_retry(
+        if provider in KNOWN_PROVIDERS:
+            return await self._generate_provider_with_retry(
                 prompt=prompt,
                 system=system,
                 json_mode=json_mode,
@@ -236,6 +274,25 @@ class LLMService:
                 provider=provider,
             )
         raise LLMServiceError(f"Desteklenmeyen LLM provider: {provider}")
+
+    def _client_key_usage_metadata(self, provider: str, error: BaseException | None = None) -> dict[str, Any]:
+        client = self._client_for_provider(provider)
+        return {
+            "api_key_fingerprint": (
+                getattr(error, "api_key_fingerprint", None)
+                or getattr(client, "last_api_key_fingerprint", None)
+            ),
+            "api_key_index": (
+                getattr(error, "api_key_index", None)
+                if getattr(error, "api_key_index", None) is not None
+                else getattr(client, "last_api_key_index", None)
+            ),
+            "api_key_count": getattr(client, "api_key_count", None),
+            "provider_org_fingerprint": (
+                getattr(error, "provider_org_fingerprint", None)
+                or getattr(client, "last_provider_org_fingerprint", None)
+            ),
+        }
 
     async def _generate_stream_with_provider(
         self,
@@ -246,8 +303,8 @@ class LLMService:
         model: str,
     ) -> AsyncGenerator[str, None]:
         """Dispatch streaming calls to the configured provider."""
-        if provider in {"openai_compatible", "google_ai"}:
-            client = self._openai_client_for_provider(provider)
+        if provider in KNOWN_PROVIDERS:
+            client = self._client_for_provider(provider)
             async for chunk in client.generate_stream(prompt, system, model=model):
                 yield chunk
             return
@@ -305,8 +362,8 @@ class LLMService:
             return list(dict.fromkeys(str(model_map[key]) for key in keys if model_map.get(key)))
 
         provider_model_maps: Dict[str, Dict[str, Any]] = {
-            "openai_compatible": _provider_model_map("openai_compatible"),
-            "google_ai": _provider_model_map("google_ai"),
+            provider: _provider_model_map(provider)
+            for provider in KNOWN_PROVIDERS
         }
         needed_providers = {
             provider
@@ -319,19 +376,18 @@ class LLMService:
         }
 
         provider_healths: Dict[str, Dict[str, Any] | None] = {
-            "openai_compatible": None,
-            "google_ai": None,
+            provider: None for provider in KNOWN_PROVIDERS
         }
 
-        for provider in ("openai_compatible", "google_ai"):
+        for provider in KNOWN_PROVIDERS:
             if provider in needed_providers:
-                client = self._openai_client_for_provider(provider)
+                client = self._client_for_provider(provider)
                 provider_healths[provider] = await client.get_health(
                     models=_requested_models(provider_model_maps[provider])
                 )
 
         def _provider_health_payload(provider: str) -> Dict[str, Any]:
-            client = self._openai_client_for_provider(provider)
+            client = self._client_for_provider(provider)
             payload = provider_healths.get(provider) or {
                 "status": "unhealthy",
                 "reason": "NOT_CHECKED",
@@ -419,6 +475,9 @@ class LLMService:
                     status="success",
                     json_mode=json_mode,
                     llm_profile=llm_profile,
+                    prompt=prompt,
+                    system=system,
+                    **self._client_key_usage_metadata(primary_provider),
                 )
             except Exception as primary_error:
                 if not self._is_provider_exception(primary_provider, primary_error):
@@ -433,7 +492,10 @@ class LLMService:
                     status="error",
                     json_mode=json_mode,
                     llm_profile=llm_profile,
+                    prompt=prompt,
+                    system=system,
                     error=primary_error,
+                    **self._client_key_usage_metadata(primary_provider, primary_error),
                 )
 
                 logger.warning(
@@ -484,6 +546,9 @@ class LLMService:
                         llm_profile=llm_profile,
                         fallback_from=primary_provider,
                         fallback_from_model=resolved_model,
+                        prompt=prompt,
+                        system=system,
+                        **self._client_key_usage_metadata(fallback_provider),
                     )
                 except Exception as fallback_error:
                     if not self._is_provider_exception(self.fallback_provider, fallback_error):
@@ -499,7 +564,10 @@ class LLMService:
                         llm_profile=llm_profile,
                         fallback_from=primary_provider,
                         fallback_from_model=resolved_model,
+                        prompt=prompt,
+                        system=system,
                         error=fallback_error,
+                        **self._client_key_usage_metadata(self.fallback_provider, fallback_error),
                     )
                     logger.error(
                         "Fallback provider de basarisiz oldu. provider=%s error=%s",
@@ -553,6 +621,7 @@ class LLMService:
                 path="primary",
                 status="success",
                 llm_profile=llm_profile,
+                **self._client_key_usage_metadata(primary_provider),
             )
         except Exception as primary_error:
             if not self._is_provider_exception(primary_provider, primary_error):
@@ -567,6 +636,7 @@ class LLMService:
                 status="error",
                 llm_profile=llm_profile,
                 error=primary_error,
+                **self._client_key_usage_metadata(primary_provider, primary_error),
             )
 
             logger.warning(
@@ -607,6 +677,7 @@ class LLMService:
                     llm_profile=llm_profile,
                     fallback_from=primary_provider,
                     fallback_from_model=resolved_model,
+                    **self._client_key_usage_metadata(fallback_provider),
                 )
             except Exception as fallback_error:
                 if not self._is_provider_exception(self.fallback_provider, fallback_error):
@@ -622,6 +693,7 @@ class LLMService:
                     fallback_from=primary_provider,
                     fallback_from_model=resolved_model,
                     error=fallback_error,
+                    **self._client_key_usage_metadata(self.fallback_provider, fallback_error),
                 )
                 raise LLMServiceError(
                     "Stream: Tum LLM servisleri coktu. "

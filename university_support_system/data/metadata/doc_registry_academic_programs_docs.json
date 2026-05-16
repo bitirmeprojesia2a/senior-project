@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-30T11:48:30.857064+00:00",
+  "generated_at": "2026-05-16T11:47:59.465671+00:00",
   "source_dir": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\academic_programs",
   "total_documents": 201,
-  "total_chunks": 5057,
+  "total_chunks": 5076,
   "embedding_model": "BAAI/bge-m3",
   "collection_name": "academic_programs_docs",
   "documents": [
@@ -570,7 +570,7 @@
       "category": "uygulama",
       "file_type": "txt",
       "char_count": 3141,
-      "chunk_count": 6,
+      "chunk_count": 7,
       "content_hash": "4c1a6461a3a3b0ef"
     },
     {
@@ -1029,7 +1029,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 15026,
-      "chunk_count": 29,
+      "chunk_count": 28,
       "content_hash": "89e1fecdc63d2cd8"
     },
     {
@@ -1038,7 +1038,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 18367,
-      "chunk_count": 29,
+      "chunk_count": 32,
       "content_hash": "eb57ea19b68cb5bc"
     },
     {
@@ -1047,7 +1047,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 7214,
-      "chunk_count": 15,
+      "chunk_count": 16,
       "content_hash": "328faf5d28a37146"
     },
     {
@@ -1092,7 +1092,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 39153,
-      "chunk_count": 59,
+      "chunk_count": 60,
       "content_hash": "8af2793c9c39d494"
     },
     {
@@ -1209,7 +1209,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 12469,
-      "chunk_count": 26,
+      "chunk_count": 27,
       "content_hash": "c56facd4abd7521c"
     },
     {
@@ -1218,7 +1218,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 5638,
-      "chunk_count": 7,
+      "chunk_count": 5,
       "content_hash": "140732f130497f94"
     },
     {
@@ -1254,7 +1254,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 11786,
-      "chunk_count": 27,
+      "chunk_count": 29,
       "content_hash": "1f7ed4f118f7192b"
     },
     {
@@ -1299,7 +1299,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 103305,
-      "chunk_count": 145,
+      "chunk_count": 146,
       "content_hash": "0b090e6aa93f0df4"
     },
     {
@@ -1308,7 +1308,7 @@
       "category": "yonergeler_kurumsal",
       "file_type": "pdf",
       "char_count": 14575,
-      "chunk_count": 18,
+      "chunk_count": 19,
       "content_hash": "3fbfc3f1991463cf"
     },
     {
@@ -1722,7 +1722,7 @@
       "category": "yönetmelikler",
       "file_type": "pdf",
       "char_count": 10808,
-      "chunk_count": 13,
+      "chunk_count": 24,
       "content_hash": "63dee523c750c30d"
     },
     {

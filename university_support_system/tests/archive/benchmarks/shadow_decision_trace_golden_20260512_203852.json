@@ -1,0 +1,324 @@
+{
+  "run_id": "20260512_203852",
+  "created_at": "2026-05-12T20:42:13",
+  "trace_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\tmp\\shadow_decision_trace_golden_20260512_203852.jsonl",
+  "report_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\docs\\archive\\benchmarks\\shadow_decision_trace_golden_20260512_203852.md",
+  "a2a_mode": "inprocess",
+  "llm_provider": {
+    "primary": "openai_compatible",
+    "fallback": "none"
+  },
+  "capability_planner": {
+    "mode": "on",
+    "scope": "academic_programs,student_affairs,finance,announcement,event"
+  },
+  "llm_profile": "balanced",
+  "question_cache": "bypass",
+  "answer_preview_chars": 900,
+  "answer_validation_stats": {
+    "total": 2,
+    "pass": 2,
+    "check": 0,
+    "fail": 0,
+    "requires_judge": 0,
+    "enforceable_by_contract": 0,
+    "by_reason": {
+      "query_does_not_require_value_check": 1,
+      "required_values_preserved": 1
+    }
+  },
+  "results": [
+    {
+      "id": "GT11",
+      "family": "follow_up_seed",
+      "query": "CAP basvurusu nasil yapilir?",
+      "context_id": "shadow-golden-20260512_203852-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "rag"
+      ],
+      "source_count": 10,
+      "elapsed_ms": 125150.7,
+      "response_time_ms": 125020.53,
+      "answer_preview": "Benchmark, Kaynaklarda bu konuda şu bilgiler yer alıyor:\n- bakilmaksizin bir donemde en fazla 2 yatay gecis basvurusu yapilabilir\n- (2) bir alt sinifa/yari yila yapilan basvurular kabul edilmez\n- larinin ilk iki yariyili ile son iki yariyilina yatay gecis yapilamaz\n- kinci ogretime kontenjan sinirlamasi olmaksizin yatay gecis yapilabilir\n- den sadece ikinci ogretim diploma programlarina yatay gecis yapilabilir\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Ogrenci Isleri: RAG\n- Akademik Programlar: RAG\n- Routing: parallel\n- Pipeline: student_affairs -> academic_programs\n\nKaynak Özeti:\n- Belge: ön_lisans_ve_lisans_yatay_geçiş_yönergesi.pdf\n- Belge: staj_ilkeleri_23122019_inş_müh.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf (2 pa...",
+      "error": null,
+      "note": "Follow-up icin seed soru.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_selected_specialists": [
+        "registration_agent",
+        "regulation_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_first_keyword_fallback",
+          "department": "student_affairs",
+          "selected_agent_id": "registration_agent",
+          "selected_by": "contract",
+          "reason": "source_owner:student_affairs_policy",
+          "signals": {
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "registration_agent",
+            "reason": "source_owner:student_affairs_policy"
+          },
+          "task_type": {
+            "agent_id": "registration_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "registration_agent",
+            "reason": "keyword:cap",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "registration_agent"
+        },
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_first_keyword_fallback",
+          "department": "academic_programs",
+          "selected_agent_id": "regulation_agent",
+          "selected_by": "task_type",
+          "reason": "task_type:procedure_query",
+          "signals": {
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": null,
+            "reason": null
+          },
+          "task_type": {
+            "agent_id": "regulation_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "regulation_agent",
+            "reason": "keyword:cap",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "international_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "student_affairs:registration_agent/contract, legacy=registration_agent:match; academic_programs:regulation_agent/task_type, legacy=regulation_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": false,
+        "original_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "capability": null,
+        "source_owner": "student_affairs_policy",
+        "reason": "student_affairs_policy_contract_gate",
+        "task_type_overrides": {
+          "academic_programs": "procedure_query"
+        },
+        "kept_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "pruned_departments": []
+      },
+      "trace_branch_gate_summary": "observed: kept=student_affairs, academic_programs; pruned=-; reason=student_affairs_policy_contract_gate",
+      "trace_response_time_ms": 125020.53,
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "query_does_not_require_value_check",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": false,
+        "evidence_claim_count": 0,
+        "required_claims": [],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": []
+      },
+      "answer_validation_summary": "shadow/pass:query_does_not_require_value_check",
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "global_synthesis"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "OpenAIClientError",
+          "error_message": "groq baglanti hatasi: All connection attempts failed"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT12",
+      "family": "follow_up_resolution",
+      "query": "Peki not ortalamasi kac olmali?",
+      "context_id": "shadow-golden-20260512_203852-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "rag"
+      ],
+      "source_count": 1,
+      "elapsed_ms": 65343.1,
+      "response_time_ms": 65271.29,
+      "answer_preview": "Benchmark, Kaynaklarda bu konuda şu bilgiler yer alıyor:\n- ana dal not ortalamasinin 4,00 uzerinden en az 3,00 olmasi ve ana dal diploma programinin ilgili sinifinda basari siralamasi itibari ile en az ilk % 20'sinde bulunmasi gerekir\n- % 20\n- asari siralamasi itibari ile en az ilk % 20'sinde bulunmasi gerekir\n- edilerek birim yonetim kurulu karari ile senato tarafindan belirlenir\n- i anda birden fazla ikinci ana dal diploma programina kayit yapilamaz\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- RAG\n- Routing: parallel\n- Pipeline: academic_programs\n\nKaynak Özeti:\n- Belge: yonerge_cift_anadal_yandal.pdf",
+      "error": null,
+      "note": "Onceki CAP baglamina baglanmali.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_selected_specialists": [
+        "regulation_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_first_keyword_fallback",
+          "department": "academic_programs",
+          "selected_agent_id": "regulation_agent",
+          "selected_by": "task_type",
+          "reason": "task_type:procedure_query",
+          "signals": {
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": null,
+            "reason": null
+          },
+          "task_type": {
+            "agent_id": "regulation_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "regulation_agent",
+            "reason": "keyword:cap",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "international_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "academic_programs:regulation_agent/task_type, legacy=regulation_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": false,
+        "original_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "capability": null,
+        "source_owner": "student_affairs_policy",
+        "reason": "student_affairs_policy_contract_gate",
+        "task_type_overrides": {
+          "academic_programs": "procedure_query"
+        },
+        "kept_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "pruned_departments": []
+      },
+      "trace_branch_gate_summary": "observed: kept=student_affairs, academic_programs; pruned=-; reason=student_affairs_policy_contract_gate",
+      "trace_response_time_ms": 65271.29,
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "required_values_preserved",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": false,
+        "evidence_claim_count": 8,
+        "required_claims": [
+          {
+            "claim": "ana dal not ortalamasinin 4,00 uzerinden en az 3,00 olmasi ve ana dal diploma programinin ilgili sinifinda basari siralamasi itibari ile en az ilk % 20'sinde bulunmasi gerekir",
+            "source": "yonerge_cift_anadal_yandal.pdf",
+            "required_values": [
+              "3,00"
+            ],
+            "reason": "gpa_threshold"
+          }
+        ],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": [
+          "4,00",
+          "3,00",
+          "% 20"
+        ]
+      },
+      "answer_validation_summary": "shadow/pass:required_values_preserved",
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "conversation",
+        "final_refinement"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "conversation",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "OpenAIClientError",
+          "error_message": "groq baglanti hatasi: All connection attempts failed"
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "OpenAIClientError",
+          "error_message": "groq baglanti hatasi: All connection attempts failed"
+        }
+      ],
+      "trace_recorded": true
+    }
+  ]
+}

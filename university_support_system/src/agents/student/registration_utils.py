@@ -166,6 +166,25 @@ _COURSE_REGISTRATION_PROCESS_MARKERS: tuple[str, ...] = (
     "ilk kez",
 )
 
+_PAYMENT_DEBT_MARKERS: tuple[str, ...] = (
+    "borc",
+    "borcum",
+    "borcu",
+    "borclu",
+    "harc",
+    "katki payi",
+    "ogrenim ucreti",
+)
+
+_COURSE_REGISTRATION_ELIGIBILITY_MARKERS: tuple[str, ...] = (
+    "yapabilir",
+    "yaptirabilir",
+    "olur mu",
+    "miyim",
+    "mi",
+    "mumkun mu",
+)
+
 _COURSE_REGISTRATION_CONTENT_MARKERS: tuple[str, ...] = (
     "ubys.omu.edu.tr",
     "ogrenci bilgi sistemi",
@@ -383,6 +402,8 @@ _SUMMER_SCHOOL_CONTENT_MARKERS: tuple[str, ...] = (
 
 _SUMMER_SCHOOL_NEGATIVE_SOURCE_MARKERS: tuple[str, ...] = (
     "yabanci dil",
+    "dis hekimligi",
+    "tip fakultesi",
     "pedagojik formasyon",
     "egitim ogretim politikasi",
 )
@@ -549,6 +570,27 @@ def is_course_registration_process_query(query_text: str) -> bool:
     return has_course_registration and has_process_signal
 
 
+def is_payment_debt_course_registration_query(query_text: str) -> bool:
+    lowered = normalize_registration_text(query_text)
+    # Common typo in Slack messages: "borcum bar" should still behave as "borcum var".
+    lowered = lowered.replace("borcum bar", "borcum var")
+    has_debt = any(marker in lowered for marker in _PAYMENT_DEBT_MARKERS)
+    has_course_registration = any(marker in lowered for marker in _COURSE_REGISTRATION_QUERY_MARKERS)
+    has_eligibility = any(marker in lowered for marker in _COURSE_REGISTRATION_ELIGIBILITY_MARKERS)
+    return has_debt and has_course_registration and has_eligibility
+
+
+def build_payment_debt_course_registration_answer(query_text: str) -> str | None:
+    if not is_payment_debt_course_registration_query(query_text):
+        return None
+    return (
+        "Hayir. Katki payi veya ogrenim ucretini odemeyen ogrenciler ders kaydi/"
+        "kayit yenileme yaptiramaz ve ogrencilik haklarindan yararlanamaz. "
+        "Bu nedenle UBYS'de harc/katki payi borcu gorunuyorsa once odeme islemini "
+        "tamamlayip ardindan ders kaydinizi danisman onayina gondermeniz gerekir."
+    )
+
+
 def should_skip_registration_result_enrichment(query_text: str) -> bool:
     """Skip neighbor expansion for compact FAQ-style registration procedures."""
     lowered = normalize_registration_text(query_text)
@@ -620,6 +662,12 @@ _ACADEMIC_CALENDAR_PDF = (
     / "2025_2026_genel_akademik_takvim.pdf"
 )
 
+_CALENDAR_DATE_RE = re.compile(
+    r"\d{2}\s+[^\W\d_]+-\d{2}\s+[^\W\d_]+\s+\d{4}"
+    r"|\d{2}-\d{2}\s+[^\W\d_]+\s+\d{4}"
+    r"|\d{2}\s+[^\W\d_]+\s+\d{4}"
+)
+
 
 def _extract_pdf_text(path: Path) -> str:
     try:
@@ -634,21 +682,27 @@ def _extract_pdf_text(path: Path) -> str:
         return ""
 
 
-def _extract_calendar_row(label: str) -> tuple[str, str] | None:
+def _extract_calendar_row_dates(label: str) -> list[str]:
     text = _extract_pdf_text(_ACADEMIC_CALENDAR_PDF)
     if not text:
-        return None
+        return []
     normalized_label = normalize_registration_text(label)
-    for raw_line in text.splitlines():
-        line = " ".join(raw_line.split())
+    lines = [" ".join(raw_line.split()) for raw_line in text.splitlines()]
+    for index, line in enumerate(lines):
         if normalized_label not in normalize_registration_text(line):
             continue
-        matches = re.findall(
-            r"\d{2}(?:-\d{2})?\s+[A-Za-zÇĞİÖŞÜçğıöşü]+\s+\d{4}",
-            line,
-        )
-        if len(matches) >= 2:
-            return matches[0], matches[1]
+        current_line_matches = _CALENDAR_DATE_RE.findall(line)
+        if current_line_matches:
+            return current_line_matches
+        joined = " ".join(lines[index : min(index + 3, len(lines))])
+        return _CALENDAR_DATE_RE.findall(joined)
+    return []
+
+
+def _extract_calendar_row(label: str) -> tuple[str, str] | None:
+    matches = _extract_calendar_row_dates(label)
+    if len(matches) >= 2:
+        return matches[0], matches[1]
     return None
 
 
@@ -737,6 +791,197 @@ def _build_course_calendar_answer(lowered_query: str) -> tuple[str, dict] | None
     return None
 
 
+@dataclass(frozen=True)
+class AcademicCalendarFacet:
+    row_label: str
+    display_label: str
+    markers: tuple[str, ...]
+    term_labels: tuple[str, ...] = ("güz dönemi", "bahar dönemi", "ek sınav")
+    requires_application: bool = False
+
+
+_ACADEMIC_CALENDAR_FACETS: tuple[AcademicCalendarFacet, ...] = (
+    AcademicCalendarFacet(
+        row_label="Ders Kayitlari ve Katki Payi",
+        display_label="ders kayıtları ve katkı payı/öğrenim ücreti ödemeleri",
+        markers=("ders kayit", "ders kaydi", "kayit yenile", "katki payi", "ogrenim ucreti odem"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Danisman Onay Islemleri",
+        display_label="danışman onay işlemleri",
+        markers=("danisman onay", "danisman onayi", "onay islemleri"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Mazeretli Derse Yazilma Basvurularinin Son Gunu",
+        display_label="mazeretli derse yazılma başvurularının son günü",
+        markers=("mazeretli derse yazilma", "mazeretli ders", "derse yazilma basvuru"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Ara Sinav Haftasi",
+        display_label="ara sınav haftası",
+        markers=("ara sinav", "vize", "vize haftasi"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Yariyil Sonu Sinavlari",
+        display_label="yarıyıl sonu/final sınavları",
+        markers=("final sinav", "yariyil sonu sinav", "donem sonu sinav"),
+        term_labels=("güz dönemi", "bahar dönemi"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Yariyil Sonu Sinav Sonuclarinin Internetten Girilmesinin Son Gunu",
+        display_label="final sınav sonuçlarının girilmesi ve ilanı için son gün",
+        markers=(
+            "final sonuc",
+            "final not giris",
+            "yariyil sonu sinav sonuc",
+            "sonuclarinin ilani",
+            "sisteme giril",
+            "internetten giril",
+            "girilmesinin son gunu",
+        ),
+        term_labels=("güz dönemi", "bahar dönemi"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Butunleme Sinavlari",
+        display_label="bütünleme sınavları",
+        markers=("butunleme sinav", "but sinav", "bütünleme"),
+        term_labels=("güz dönemi", "bahar dönemi"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Butunleme Sinav Sonuclarinin Internetten Girilmesinin Son Gunu",
+        display_label="bütünleme sınav sonuçlarının girilmesi ve ilanı için son gün",
+        markers=("butunleme sonuc", "butunleme not giris", "but sonuc", "but not giris", "sisteme giril"),
+        term_labels=("güz dönemi", "bahar dönemi"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Ders Yeterlilik Sinavi Basvuru son gunu",
+        display_label="ders yeterlilik sınavı başvuru son günü",
+        markers=("ders yeterlilik basvuru", "ders yeterlilik sinavi basvuru"),
+        term_labels=("güz dönemi",),
+    ),
+    AcademicCalendarFacet(
+        row_label="Ders Yeterlilik Sinavlari",
+        display_label="ders yeterlilik sınavları",
+        markers=("ders yeterlilik sinav",),
+        term_labels=("güz dönemi",),
+    ),
+    AcademicCalendarFacet(
+        row_label="Ek Sinav Muracaatlarinin Son Gunu",
+        display_label="ek sınav müracaatlarının son günü",
+        markers=("ek sinav muracaat", "ek sinav basvuru"),
+        term_labels=("ek sınav",),
+    ),
+    AcademicCalendarFacet(
+        row_label="Ek Sinav Tarihleri",
+        display_label="ek sınav tarihleri",
+        markers=("ek sinav tarih", "ek sinav ne zaman"),
+        term_labels=("ek sınav",),
+    ),
+    AcademicCalendarFacet(
+        row_label="Tek Ders Sinav Muracaatlari Son Gunu",
+        display_label="tek ders sınavı müracaat son günü",
+        markers=("tek ders muracaat", "tek ders basvuru"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Tek Ders Sinavlari",
+        display_label="tek ders sınavları",
+        markers=("tek ders sinav", "tek ders ne zaman"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Tek Ders Sinav Sonuclarinin Internetten Girilmesinin Son Gunu",
+        display_label="tek ders sınav sonuçlarının girilmesi ve ilanı için son gün",
+        markers=("tek ders sonuc", "tek ders not giris"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Zorunlu Hazirlik Siniflari Yabanci Dil Yeterlilik Sinavi",
+        display_label="zorunlu hazırlık sınıfları yabancı dil yeterlilik sınavı",
+        markers=("yabanci dil yeterlilik", "hazirlik yeterlilik"),
+        term_labels=("güz dönemi",),
+    ),
+    AcademicCalendarFacet(
+        row_label="Yabanci Dil Yeterlilik Sinav Sonuclarinin Ilani",
+        display_label="yabancı dil yeterlilik sınav sonuçlarının ilanı",
+        markers=("yabanci dil yeterlilik sonuc", "hazirlik yeterlilik sonuc"),
+        term_labels=("güz dönemi",),
+    ),
+    AcademicCalendarFacet(
+        row_label="Hazirlik Siniflari Icin Duzey Belirleme Sinavi",
+        display_label="hazırlık sınıfları düzey belirleme sınavı",
+        markers=("duzey belirleme sinavi", "hazirlik duzey belirleme"),
+        term_labels=("güz dönemi",),
+    ),
+    AcademicCalendarFacet(
+        row_label="Yabanci Dil Muafiyet Sinavlari",
+        display_label="yabancı dil muafiyet sınavları",
+        markers=("yabanci dil muafiyet", "5/i", "5i dersi"),
+        term_labels=("güz dönemi",),
+    ),
+)
+
+
+def _requested_calendar_term(lowered_query: str, term_labels: tuple[str, ...]) -> str | None:
+    if "bahar" in lowered_query and "bahar dönemi" in term_labels:
+        return "bahar dönemi"
+    if ("guz" in lowered_query or "güz" in lowered_query) and "güz dönemi" in term_labels:
+        return "güz dönemi"
+    if "ek sinav" in lowered_query and "ek sınav" in term_labels:
+        return "ek sınav"
+    return None
+
+
+def _format_calendar_facet_answer(facet: AcademicCalendarFacet, lowered_query: str) -> tuple[str, dict] | None:
+    dates = _extract_calendar_row_dates(facet.row_label)
+    if not dates:
+        return None
+    pairs = list(zip(facet.term_labels, dates))
+    requested_term = _requested_calendar_term(lowered_query, facet.term_labels)
+    if requested_term:
+        requested_dates = dict(pairs).get(requested_term)
+        if requested_dates:
+            suffix = "tarihleri arasındadır" if "-" in requested_dates else "tarihidir"
+            if requested_term == "ek sınav":
+                answer = f"Genel akademik takvime göre {facet.display_label} {requested_dates} {suffix}."
+            else:
+                answer = f"Genel akademik takvime göre {facet.display_label} {requested_term} için {requested_dates} {suffix}."
+            return answer, _calendar_facet_metadata(facet, dates)
+    if len(pairs) == 1:
+        date_text = pairs[0][1]
+        suffix = "tarihleri arasındadır" if "-" in date_text else "tarihidir"
+        answer = f"Genel akademik takvime göre {facet.display_label} {date_text} {suffix}."
+    else:
+        joined = ", ".join(f"{label} için {date}" for label, date in pairs)
+        answer = f"Genel akademik takvime göre {facet.display_label}: {joined}."
+    return answer, _calendar_facet_metadata(facet, dates)
+
+
+def _calendar_facet_metadata(facet: AcademicCalendarFacet, dates: list[str]) -> dict:
+    metadata = {
+        "source": str(_ACADEMIC_CALENDAR_PDF),
+        "label": facet.row_label,
+        "dates": dates,
+    }
+    if dates:
+        metadata["fall"] = dates[0]
+    if len(dates) > 1:
+        metadata["spring"] = dates[1]
+    if len(dates) > 2:
+        metadata["extra_exam"] = dates[2]
+    return metadata
+
+
+def _build_registry_calendar_answer(lowered_query: str) -> tuple[str, dict] | None:
+    matches = [
+        (max(len(marker) for marker in facet.markers if marker in lowered_query), facet)
+        for facet in _ACADEMIC_CALENDAR_FACETS
+        if any(marker in lowered_query for marker in facet.markers)
+    ]
+    for _score, facet in sorted(matches, key=lambda item: item[0], reverse=True):
+        answer = _format_calendar_facet_answer(facet, lowered_query)
+        if answer is not None:
+            return answer
+    return None
+
+
 def build_general_exam_calendar_answer(query_text: str) -> tuple[str, dict] | None:
     """Return structured academic calendar dates for broad calendar date queries."""
     lowered = normalize_registration_text(query_text)
@@ -748,6 +993,36 @@ def build_general_exam_calendar_answer(query_text: str) -> tuple[str, dict] | No
     wants_date = any(marker in lowered for marker in ("ne zaman", "tarih", "takvim"))
     if not wants_date:
         return None
+
+    if (
+        any(marker in lowered for marker in ("cap", "capa", "cift anadal", "cift ana dal", "yandal", "yan dal"))
+        and "basvuru" in lowered
+    ):
+        application_dates = _extract_calendar_row_dates("Cift Anadal ve Yandal Basvurulari")
+        evaluation_dates = _extract_calendar_row_dates(
+            "Cift Anadal ve Yandal Basvurularinin Birimlerce Degerlendirilmesi ve Ilani"
+        )
+        if application_dates:
+            application = application_dates[0]
+            evaluation = evaluation_dates[0] if evaluation_dates else None
+            answer = f"Genel akademik takvime göre çift anadal ve yandal başvuruları {application} tarihleri arasındadır."
+            if evaluation:
+                answer += f" Başvuruların birimlerce değerlendirilmesi ve ilanı {evaluation} tarihleri arasında yapılır."
+            return (
+                answer,
+                {
+                    "source": str(_ACADEMIC_CALENDAR_PDF),
+                    "label": "Cift Anadal ve Yandal Basvurulari",
+                    "fall": application,
+                    "spring": evaluation or "",
+                    "application_dates": application,
+                    "evaluation_dates": evaluation,
+                },
+            )
+
+    registry_calendar_answer = _build_registry_calendar_answer(lowered)
+    if registry_calendar_answer is not None:
+        return registry_calendar_answer
 
     # "program" icerse bile takvim sinyali guclu ise devam et
     # (ornegin: "bilgisayar muhendisligi bahar doneminde final sinav tarihi")

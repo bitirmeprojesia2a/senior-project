@@ -39,6 +39,19 @@ _NON_AMOUNT_MARKERS = (
     "iade",
     "muafiyet",
     "burs",
+    "yaz okulu",
+    "yaz donemi",
+    "yaz ogretimi",
+    "cap",
+    "cift anadal",
+    "cift ana dal",
+    "yandal",
+    "yan dal",
+    "erasmus",
+    "degisim programi",
+    "fazla odeme",
+    "ucret iadesi",
+    "harc iadesi",
 )
 
 

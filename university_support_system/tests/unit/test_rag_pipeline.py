@@ -311,6 +311,34 @@ class TestTextChunker:
         assert all(chunk.char_count >= 50 for chunk in chunks)
         assert all(chunk.content != "Amaç" for chunk in chunks)
 
+    def test_chunker_recognizes_madde_variants_and_ascii_bolum(self):
+        chunker = TextChunker(chunk_size=500)
+        text = (
+            "BIRINCI BOLUM\n"
+            "MADDE 5. Devam zorunlulugu teorik derslerde yuzde 70 olarak uygulanir.\n"
+            "MADDE-6 Basvuru islemleri form ve belgelerle yapilir."
+        )
+
+        chunks = chunker.split_text(text, metadata={"source": "yonerge.txt"})
+
+        assert [chunk.metadata.get("madde_no") for chunk in chunks if chunk.metadata.get("madde_no")] == ["5", "6"]
+        assert chunks[0].metadata["bolum"] == "BIRINCI BOLUM"
+
+    def test_chunker_splits_two_question_faq_and_long_questions(self):
+        chunker = TextChunker(chunk_size=1000)
+        text = (
+            "1. CAP basvurusu icin gerekli belgeler, basvuru formu ve teslim adimlari nelerdir?\n"
+            "Cevap: Belgeler duyuruda belirtilir.\n\n"
+            "2. Yandal basvurusunda danisman onayi ve ogrenci isleri teslim sureci nasil isler?\n"
+            "Cevap: Basvuru takviminde ilan edilir."
+        )
+
+        chunks = chunker.split_text(text, metadata={"source": "sss.txt"})
+
+        assert len(chunks) == 2
+        assert "CAP basvurusu" in chunks[0].content
+        assert "Yandal basvurusunda" in chunks[1].content
+
     def test_get_stats(self):
         """Chunk istatistikleri doğru hesaplanır."""
         chunker = TextChunker(chunk_size=100, chunk_overlap=10)

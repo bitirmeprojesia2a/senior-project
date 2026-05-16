@@ -4,9 +4,12 @@ import json
 from pathlib import Path
 
 from src.agents.finance.tuition_utils import (
+    blocks_regular_tuition_catalog,
     extract_requested_unit,
     has_explicit_program_without_fee_unit,
+    infer_fee_scope,
     is_explicit_fee_amount_query,
+    is_other_fee_query,
     is_personal_query,
     is_structured_fee_query,
     needs_fee_context_clarification,
@@ -66,6 +69,33 @@ def test_explicit_program_without_fee_unit_blocks_profile_unit_fallback():
 def test_meal_fee_does_not_trigger_tuition_clarification():
     query = "Yemekhane ucreti ne kadar?"
 
+    assert is_structured_fee_query(query) is False
+    assert needs_fee_context_clarification(query, None, None) is False
+
+
+def test_summer_school_fee_does_not_use_regular_tuition_catalog():
+    query = "Yaz okulu ucreti ne kadar?"
+
+    assert infer_fee_scope(query) == "summer_school_fee"
+    assert blocks_regular_tuition_catalog(query) is True
+    assert is_explicit_fee_amount_query(query) is False
+    assert is_structured_fee_query(query) is False
+    assert needs_fee_context_clarification(query, None, None) is False
+
+
+def test_cap_and_erasmus_fee_questions_do_not_use_regular_tuition_catalog():
+    assert infer_fee_scope("CAP programinda ders ucreti ayrica odenir mi?") == "cap_extra_fee"
+    assert blocks_regular_tuition_catalog("Erasmus ogrencisi yaz okulu ucreti ne kadar?") is True
+    assert is_explicit_fee_amount_query("CAP programinda ders ucreti ayrica odenir mi?") is False
+    assert is_explicit_fee_amount_query("Erasmus ogrencisi yaz okulu ucreti ne kadar?") is False
+
+
+def test_other_fee_follow_up_does_not_reenter_tuition_amount_slot_loop():
+    query = "Baska ucret var mi?"
+
+    assert is_other_fee_query(query) is True
+    assert infer_fee_scope(query) == "other_fee_policy"
+    assert is_explicit_fee_amount_query(query) is False
     assert is_structured_fee_query(query) is False
     assert needs_fee_context_clarification(query, None, None) is False
 

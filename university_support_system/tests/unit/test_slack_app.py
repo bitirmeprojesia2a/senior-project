@@ -1,8 +1,12 @@
 """Slack Bolt app wiring testleri."""
 
+import asyncio
+import logging
+
 from src.core.config import settings
 from src.slack.app import (
     _is_duplicate_event,
+    _log_background_task_result,
     _process_and_reply,
     _recent_event_keys,
     _should_ignore_event,
@@ -67,8 +71,6 @@ class _FakeSlackClient:
 
 
 def test_process_and_reply_posts_generated_messages():
-    import asyncio
-
     client = _FakeSlackClient()
 
     asyncio.run(
@@ -101,3 +103,18 @@ def test_process_and_reply_posts_generated_messages():
             "text": "ok: help",
         }
     ]
+
+
+def test_background_task_result_logs_exceptions(caplog):
+    async def _raise_error():
+        raise RuntimeError("background failed")
+
+    async def _run():
+        task = asyncio.create_task(_raise_error())
+        await asyncio.sleep(0)
+        with caplog.at_level(logging.ERROR):
+            _log_background_task_result(task)
+
+    asyncio.run(_run())
+
+    assert "slack_background_task_failed" in caplog.text

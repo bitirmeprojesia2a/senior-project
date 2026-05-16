@@ -5,10 +5,13 @@ import math
 
 import structlog
 import torch
-from sentence_transformers import CrossEncoder
 
-from src.core.config import settings
+from src.core.config import apply_model_cache_environment, settings
 from src.core.profiling import profile_stage
+
+apply_model_cache_environment()
+
+from sentence_transformers import CrossEncoder  # noqa: E402
 
 logger = structlog.get_logger()
 
@@ -136,6 +139,8 @@ class CrossEncoderReranker:
                     "device": self.resolved_device,
                     "local_files_only": settings.reranker.local_files_only,
                 }
+                if settings.model_cache.hf_hub_cache is not None:
+                    cross_encoder_kwargs["cache_dir"] = str(settings.model_cache.hf_hub_cache)
                 if automodel_args:
                     cross_encoder_kwargs["automodel_args"] = automodel_args
                 self._model = CrossEncoder(self.model_name, **cross_encoder_kwargs)
@@ -184,7 +189,11 @@ class CrossEncoderReranker:
         except (OSError, RuntimeError, ValueError):
             self.last_run_succeeded = False
             logger.exception("reranking_failed")
-            return candidates[:top_k]
+            return sorted(
+                candidates,
+                key=lambda candidate: float(candidate.get("score") or 0.0),
+                reverse=True,
+            )[:top_k]
 
         self.last_run_succeeded = True
 

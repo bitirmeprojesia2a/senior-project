@@ -32,7 +32,7 @@ Kurallar:
 6. Emin degilsen veya uygun capability yoksa capability="none", fallback="rag" dondur.
 7. Eksik zorunlu parametre varsa missing_params listesini doldur.
 8. Ders programi/haftalik saat sorularinda schedule.weekly_program; mufredat/yariyil ders listesi sorularinda curriculum.semester_courses sec.
-9. Ders var mi/yok mu sorularinda course.exists_in_program; onkosul sorularinda course.prerequisites; AKTS/kredi/ders detayinda course.detail sec.
+9. Ders var mi/yok mu sorularinda course.exists_in_program; onkosul sorularinda course.prerequisites; AKTS/kredi/ders detayinda course.detail sec. Ancak mezuniyet icin toplam AKTS/kredi sorularinda course.detail veya curriculum secme; student_affairs.policy_lookup sec.
 10. Akademik takvimde derslerin baslamasi/bitimi, final, butunleme veya not giris tarihi sorularinda calendar.academic_date sec.
 11. Ogrenim ucreti/katki payi/harc UCRET TUTARI sorularinda finance.tuition_fee sec; harc borcu, odeme yontemi, basvuru uygunlugu veya politika/prosedur sorularinda finance capability secme.
 12. Duyuru/haber/ilan arama sorularinda announcement.search; etkinlik/seminer/konferans arama sorularinda event.search sec.
@@ -79,8 +79,18 @@ async def plan_capability_action(
             ),
             timeout=timeout,
         )
-    except Exception as exc:  # pragma: no cover - timeout/provider safety
-        logger.warning("Capability planner failed; legacy path will continue: %s", exc)
+    except asyncio.TimeoutError:  # pragma: no cover - timeout/provider safety
+        logger.warning(
+            "Capability planner failed; legacy path will continue: reason=timeout timeout_seconds=%.1f",
+            timeout,
+        )
+        return None
+    except Exception as exc:  # pragma: no cover - provider safety
+        logger.warning(
+            "Capability planner failed; legacy path will continue: reason=%s error=%s",
+            type(exc).__name__,
+            exc,
+        )
         return None
 
     action = parse_planner_response(response)

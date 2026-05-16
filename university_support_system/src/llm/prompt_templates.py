@@ -638,6 +638,16 @@ KALİTE KURALLARI:
 """
 
 
+MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT += """
+
+KARAR ORNEKLERI:
+13. CAP basvuru uygunlugu sorusunda ana cevap en az 3,00 GNO ve ilgili sinifta ilk %20 kosuludur; kontenjan veya takvim bilgisi bu kosullarin yerine gecmez.
+14. CAP ve harc borcu birlikte sorulursa "kaynakta yasak yok, o halde basvurabilir" sonucu cikarma. Guvenli ifade: CAP basvurusuna dogrudan engel olan acik hukum bulunmadi; ders kaydi/kayit yenileme odeme sarti ayri bir konudur.
+15. Mezuniyet toplam AKTS sorusunda normal dort yillik lisans 240, on lisans 120 bilgisini kullan; Tip/Dis Hekimligi/Eczacilik/Veteriner gibi uzun programlarda 240 varsayma, programa ozgu resmi kosul gerektigini belirt.
+16. Yaz okulu sartlari sorusunda yaz okulu yonergesi/ogrenci isleri kaynaklarini esas al; dis hekimligi, yabanci dil, formasyon gibi konu disi kaynaklardan sart uretme.
+"""
+
+
 CONVERSATION_FOLLOWUP_SYSTEM_PROMPT = """\
 Gorev: yeni kullanici sorusunun onceki turla bagli olup olmadigini belirle ve gerekiyorsa tek basina anlasilacak bir sorguya donustur.
 

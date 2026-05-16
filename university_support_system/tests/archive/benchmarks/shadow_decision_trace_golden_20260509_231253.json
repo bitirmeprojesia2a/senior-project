@@ -1,0 +1,725 @@
+{
+  "run_id": "20260509_231253",
+  "created_at": "2026-05-09T23:17:31",
+  "trace_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\tmp\\shadow_decision_trace_golden_20260509_231253.jsonl",
+  "report_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\docs\\archive\\benchmarks\\shadow_decision_trace_golden_20260509_231253.md",
+  "a2a_mode": "inprocess",
+  "llm_provider": {
+    "primary": "anthropic",
+    "fallback": "none"
+  },
+  "capability_planner": {
+    "mode": "on",
+    "scope": "academic_programs,student_affairs,finance,announcement,event"
+  },
+  "llm_profile": "balanced",
+  "question_cache": "bypass",
+  "answer_preview_chars": 1600,
+  "results": [
+    {
+      "id": "GT01",
+      "family": "academic_calendar",
+      "query": "Final sinavlari ne zaman basliyor?",
+      "context_id": "shadow-golden-20260509_231253-GT01",
+      "expected_owner": "academic_calendar",
+      "departments": [
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "llm",
+        "vt"
+      ],
+      "source_count": 1,
+      "elapsed_ms": 11958.9,
+      "response_time_ms": 11887.54,
+      "answer_preview": "Benchmark, 2025-2026 eğitim öğretim yılı final sınavları şu tarihlerde gerçekleşecek:\n\n• Güz dönemi final sınavları: 3-16 Ocak 2026\n• Bahar dönemi final sınavları: 1-14 Haziran 2026\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Final Sentez: LLM\n- VT\n- Routing: direct\n- Pipeline: student_affairs -> orchestrator\n\nKaynak Özeti:\n- Belge: 2025_2026_genel_akademik_takvim.pdf",
+      "error": null,
+      "note": "Structured calendar vs RAG/announcement ayrimi.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 11887.54,
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT02",
+      "family": "curriculum",
+      "query": "BIL203 dersinin AKTS'si ve on kosulu nedir?",
+      "context_id": "shadow-golden-20260509_231253-GT02",
+      "expected_owner": "curriculum_catalog",
+      "departments": [
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 7843.0,
+      "response_time_ms": 7789.42,
+      "answer_preview": "Benchmark, BIL203 Veri Yapilari (3 kredi, 5 AKTS) dersinin önkoşulları: BIL104 Programlamaya Giris II. Önkoşullu derslerden en az DD alınmış olması gerekir.\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- VT\n- Routing: direct\n- Pipeline: academic_programs\n\nKaynak Özeti:\n- Veritabani kaydi: ders onkosulu",
+      "error": null,
+      "note": "Ders katalog/curriculum capability sinyali.",
+      "trace_owner": "curriculum_catalog",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 7789.42,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT03",
+      "family": "finance",
+      "query": "Bilgisayar Muhendisligi ikinci ogretim harc ucreti ne kadar?",
+      "context_id": "shadow-golden-20260509_231253-GT03",
+      "expected_owner": "tuition_fee_catalog",
+      "departments": [
+        "finance"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 7494.2,
+      "response_time_ms": 7447.77,
+      "answer_preview": "Benchmark, Öğrenim ücreti için Türk öğrenci / Mühendislik Fakültesi bilgisi veritabanında kayıtlı. Yıllık ücret: 2.397,00 TL. Dönemlik ücret: 1.198,50 TL.\n\n(Kaynak: 2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf)\n\nÜretim Türü:\n- VT\n- Routing: direct\n- Pipeline: finance\n\nKaynak Özeti:\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "error": null,
+      "note": "Ucret rakami structured finance katalogundan gelmeli.",
+      "trace_owner": "tuition_fee_catalog",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "finance"
+      ],
+      "trace_response_time_ms": 7447.77,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT04",
+      "family": "student_affairs_policy",
+      "query": "Yatay gecisle gelen ogrenci muafiyet basvurusunu ne zaman yapmali?",
+      "context_id": "shadow-golden-20260509_231253-GT04",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 9,
+      "elapsed_ms": 69457.4,
+      "response_time_ms": 69386.01,
+      "answer_preview": "Benchmark, Yatay geçişle gelip ilk kez kayıt yaptıran öğrenciler, ders muafiyeti başvurusunu eğitim öğretimin başladığı tarihten itibaren üç hafta içinde yapmalıdır.\n\nBaşvuru için dilekçenin yanı sıra onaylı transkript ve onaylı ders içeriklerini ilgili fakülte, yüksekokul veya meslek yüksekokuluna teslim etmen gerekir. Başvurun sonuçlanana kadar mağdur olmamak için dönem derslerine devam etmeye özen göster.\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Ogrenci Isleri: RAG\n- Akademik Programlar: RAG\n- Routing: parallel\n- Pipeline: student_affairs -> academic_programs -> orchestrator\n\nKaynak Özeti:\n- Belge: ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf\n- Belge: sık_sorulan_sorular.txt (3 parça)\n- Belge: yonerge_ders_yeterlik_muafiyet_intibak.pdf\n- Belge: yonerge_dis_hekimligi_lisans_egitim_ogretim.pdf\n- Belge: mezunlar_için_pedagojik_formasyon_eğitimi.pdf\n- Belge: yonerge_uluslararasi_ogrenci_yatay_gecis.pdf\n- Belge: bilgisayar_derslerinin_muafiyeti_sınav_yönergesi.pdf",
+      "error": null,
+      "note": "Policy RAG + sure/slot sinyali.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 69386.01,
+      "llm_call_count": 3,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT05",
+      "family": "cross_department",
+      "query": "CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+      "context_id": "shadow-golden-20260509_231253-GT05",
+      "expected_owner": null,
+      "departments": [
+        "academic_programs",
+        "student_affairs",
+        "finance"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag",
+        "vt"
+      ],
+      "source_count": 8,
+      "elapsed_ms": 37355.1,
+      "response_time_ms": 37278.87,
+      "answer_preview": "Benchmark, ÇAP'ta başarı ve mezuniyet koşulları şunlardır:\n\n• ÇAP'ı başarıyla tamamlayan ve ana dal programında mezuniyet hakkını elde eden öğrenciye ikinci ana dalın lisans diploması verilir; ancak ana daldan mezuniyet hakkı elde edilmeden ÇAP lisans diploması verilmez.\n• ÇAP öğrencileri arasında sınıf içinde başarı sıralaması yapılmaz.\n• ÇAP danışmanı, ilgili bölümün önerisi ve birim yönetim kurulu kararıyla üç yıl için seçilir; her iki programın danışmanları birlikte öğrencinin ders programını hazırlar.\n\nHarç ve öğrenim ücreti ödemesine gelince, yönetmeliğe göre öğrencilerin akademik takvimde belirtilen süreler içinde her öğretim döneminde ilgili mevzuatta belirlenen katkı payını veya öğrenim ücretini ödemesi gerekmektedir. Ödemenin hangi kanal üzerinden yapılacağı ve tam ücret tutarı kaynaklarda yer almadığından bu konuyu öğrenci işleri ya da finans birimi ile doğruca teyit etmen gerekir.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Akademik Programlar: RAG\n- Ogrenci Isleri: RAG\n- Finans: VT\n- Routing: parallel\n- Pipeline: academic_programs -> student_affairs -> finance -> orchestrator\n\nKaynak Özeti:\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf\n- Belge: yonerge_cift_anadal_yandal.pdf (3 parça)\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: ön_lisans_ve_lisans.pdf (2 parça)\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "error": null,
+      "note": "Academic + finance parallel karar ve final owner.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs",
+        "student_affairs",
+        "finance"
+      ],
+      "trace_response_time_ms": 37278.87,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT06",
+      "family": "international_policy",
+      "query": "Yabanci ogrenci kayit belgeleri ve ikamet izni icin neler gerekir?",
+      "context_id": "shadow-golden-20260509_231253-GT06",
+      "expected_owner": "international_policy",
+      "departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 7,
+      "elapsed_ms": 40777.2,
+      "response_time_ms": 40721.17,
+      "answer_preview": "Benchmark, Kayıt işlemleri, Öğrenci İşleri Daire Başkanlığı tarafından şahsen yapılan kesin kayıt veya elektronik ortamda yapılan ön kayıt biçiminde iki farklı yöntemle yürütülür. Kesin kayıt için gerekli belgeler senato tarafından belirlenerek uluslararası öğrenci alım kılavuzunda ilan edilir; bu listeye kılavuzdan ya da Öğrenci İşleri Daire Başkanlığı'ndan ulaşabilirsin.\n\nİkamet izni başvurusu için gereken belgeler şunlardır:\n\n• İkamet izni kayıt/başvuru formu: e-ikamet.goc.gov.tr adresi üzerinden oluşturulan ve öğrenci tarafından imzalanmış form.\n\n• Pasaport fotokopileri: Kimlik bilgilerinin yer aldığı ilk sayfa, varsa vizenin bulunduğu sayfa ve ülkeye en son giriş yapılan damganın yer aldığı sayfa, her biri ayrı sayfada olacak şekilde fotokopi olarak sunulmalıdır. Belgenin aslı dosya teslim gününde yanında bulunmalıdır. Pasaport, talep edilen ikamet izni süresinden en az 60 gün daha uzun süreli geçerliliğe sahip olmalıdır.\n\n• Öğrencilik durumunu gösterir belge: Kayıtlı olduğun fakülte, yüksekokul veya meslek yüksekokulundan alınan belge.\n\nTüm belgeler hazırlandıktan sonra başvuru formu oluşturulduğu tarihten itibaren en geç 7 gün içinde Öğrenci İşleri Daire Başkanlığı İkamet İşlemleri Ofisi'ne teslim edilmesi gerekir.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Akademik Programlar: RAG\n- Ogrenci Isleri: RAG\n- Routing: parallel\n- Pipeline: academic_programs -> student_affairs -> orchestrator\n\nKaynak Özeti:\n- Belge: ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf (3 parça)\n- Belge: uluslararası_öğrenci_yönergesi.pdf\n- Belge: uluslararası_öğrenci_ikamet_işlemleri.pdf\n- Belge:...",
+      "error": null,
+      "note": "International policy lookup ve kaynak secimi.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 40721.17,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT07",
+      "family": "announcement",
+      "query": "Bilgisayar muhendisligindeki son duyurular neler?",
+      "context_id": "shadow-golden-20260509_231253-GT07",
+      "expected_owner": "announcement_search",
+      "departments": [
+        "announcement"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 5,
+      "elapsed_ms": 7736.6,
+      "response_time_ms": 7674.32,
+      "answer_preview": "İlgili duyurular:\n1. Vefat Haberi - Öğrencimiz Mahfuz AGİL\n Ondokuz Mayıs Üniversitesi Bilgisayar Mühendisliği Bölümü son sınıf öğrencilerimizden Mahfuz Agil’in vefatını derin bir üzüntüyle öğrenmiş bulunmaktay…\n Detay: https://bil-muhendislik.omu.edu.tr/tr/haberler/vefat-haberi-ogrencimiz-mahfuz-agil\n2. 2024-2025 Eğitim Öğretim Yılı Ek Sınav I ve II Sınav Programları\n 2024-2025 Eğitim Öğretim Yılı Bilgisayar Mühendisliği Bölümü Ek Sınav I ve II Sınav Programları için tıklayınız.\n Detay: https://bil-muhendislik.omu.edu.tr/tr/haberler/2024-2025-egitim-ogretim-yili-ek-sinav-i-sinav-programi\n3. TBFİZ121 FİZİK I ve TBFİZ123 FİZİK I DERSİNİ ALAN ÖĞRENCİLERİN DİKKATİNE!\n Laboratuvardan Devam Almış fakat Ders Tekrarı Olan Öğrencilerin Laboratuvar Notunu Belirlemek Üzere, LABORATUVAR SINAVI YAPILACAKTIR.\n Detay: https://bil-muhendislik.omu.edu.tr/tr/haberler/tbfiz121-fizik-i-ve-tbfiz123-fizik-i-dersini-alan-ogrencilerin-dikkatine\n4. Sayısal Denetim 2 ve Bilgisayarlı Görüye Giriş Derslerinin Değerlendirmeleri Hakkında\n 2023-2024 Bahar dönenimdeki Sayısal Denetim 2 ve Bilgisayarlı Görüye Giriş derslerinin değerlendirmeleri hakkında bilgi almak için tıklayınız.\n Detay: https://bil-muhendislik.omu.edu.tr/tr/haberler/sayisal-denetim-2-ve-bilgisayarli-goerueye-giris-derslerinin-degerlendirmeleri-hakkinda\n Ek bağlantı: Bahar Dönemi Değerlendirme Usulü Hakkında Duyuru - https://bil-muhendislik.omu.edu.tr/tr/haberler/sayisal-denetim-2-ve-bilgisayarli-goerueye-giris-derslerinin-degerlendirmeleri-hakkinda/Bahar Dönemi Değerlendirme Usulü Hakkında Duyuru.pdf\n5. 2. Ek Sınav Gün ve Tarihleri\n Bi...",
+      "error": null,
+      "note": "Announcement DB short-circuit ve bolum filtresi.",
+      "trace_owner": "announcement_search",
+      "trace_capability": null,
+      "trace_final_owner": "announcement_agent",
+      "trace_departments": [
+        "announcement"
+      ],
+      "trace_response_time_ms": 7674.32,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT08",
+      "family": "event",
+      "query": "Bu hafta Muhendislik Fakultesinde seminer var mi?",
+      "context_id": "shadow-golden-20260509_231253-GT08",
+      "expected_owner": "event_search",
+      "departments": [
+        "event"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 7414.3,
+      "response_time_ms": 7368.94,
+      "answer_preview": "Bu sorguya uygun guncel veya yakin tarihli etkinlik bulamadim. Isterseniz fakulte, bolum ya da etkinlik turu belirterek tekrar sorabilirsiniz.\n\nKaynak Özeti:\n- Veritabanı kaydı: etkinlik araması (uygun kayıt bulunamadı)",
+      "error": null,
+      "note": "Event DB short-circuit ve zaman penceresi.",
+      "trace_owner": "event_search",
+      "trace_capability": null,
+      "trace_final_owner": "event_agent",
+      "trace_departments": [
+        "event"
+      ],
+      "trace_response_time_ms": 7368.94,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT09",
+      "family": "personal_auth",
+      "query": "Harc borcum var mi?",
+      "context_id": "shadow-golden-20260509_231253-GT09",
+      "expected_owner": "personal_student_data",
+      "departments": [
+        "finance"
+      ],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 3453.9,
+      "response_time_ms": 3422.23,
+      "answer_preview": "Benchmark, Kişisel sorunuza yanıt verebilmem için kimliğinizi doğrulamam gerekiyor. Doğrulamayı öğrenci e-posta adresinize göndereceğim tek kullanımlık kod ile tamamlayabilirsiniz.",
+      "error": null,
+      "note": "Auth gerektiren kisisel veri guard'i.",
+      "trace_owner": "personal_student_data",
+      "trace_capability": null,
+      "trace_final_owner": "clarification",
+      "trace_departments": [
+        "finance"
+      ],
+      "trace_response_time_ms": 3422.23,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT10",
+      "family": "ambiguous",
+      "query": "Sey basvuru ne zaman?",
+      "context_id": "shadow-golden-20260509_231253-GT10",
+      "expected_owner": null,
+      "departments": [],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 3915.0,
+      "response_time_ms": 3883.53,
+      "answer_preview": "Benchmark, Hangi başvuru türü için tarih sorduğunuzu yazar mısınız? Örneğin yatay geçiş, ÇAP/YAP, Erasmus, staj, yaz okulu veya kayıt başvurusu gibi yazabilirsiniz.",
+      "error": null,
+      "note": "Eksik slot/ambiguity davranisi.",
+      "trace_owner": null,
+      "trace_capability": null,
+      "trace_final_owner": "clarification",
+      "trace_departments": [],
+      "trace_response_time_ms": 3883.53,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT11",
+      "family": "follow_up_seed",
+      "query": "CAP basvurusu nasil yapilir?",
+      "context_id": "shadow-golden-20260509_231253-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 10,
+      "elapsed_ms": 30340.4,
+      "response_time_ms": 30298.52,
+      "answer_preview": "Benchmark, Çift anadal programına (ÇAP) başvuru yapmak için öncelikle kayıtlı olduğun ana dal programındaki yükümlülüklerini yerine getirmiş olman gerekir.\n\nKaynakta bu konuda ayrıntılı başvuru koşulları ve süreci tam olarak yer almamaktadır. Kesin başvuru koşullarını, gerekli not ortalamasını ve başvuru takvimini öğrenmek için bağlı olduğun fakülte ya da yüksekokulun öğrenci işleri birimine danışman en doğru yol olacaktır.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Ogrenci Isleri: RAG\n- Akademik Programlar: RAG\n- Routing: parallel\n- Pipeline: student_affairs -> academic_programs -> orchestrator\n\nKaynak Özeti:\n- Belge: ön_lisans_ve_lisans_yatay_geçiş_yönergesi.pdf\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: ön_lisans_ve_lisans_eğitim_öğretim_yönetmeliği.pdf\n- Belge: yonetmelik_onlisans_lisans_egitim_ogretim.pdf\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf (2 parça)\n- Belge: yonerge_cift_anadal_yandal.pdf (3 parça)",
+      "error": null,
+      "note": "Follow-up icin seed soru.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 30298.52,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT12",
+      "family": "follow_up_resolution",
+      "query": "Peki not ortalamasi kac olmali?",
+      "context_id": "shadow-golden-20260509_231253-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 3684.4,
+      "response_time_ms": 3655.35,
+      "answer_preview": "Benchmark, Hangi başvuru türü için tarih sorduğunuzu yazar mısınız? Örneğin yatay geçiş, ÇAP/YAP, Erasmus, staj, yaz okulu veya kayıt başvurusu gibi yazabilirsiniz.",
+      "error": null,
+      "note": "Onceki CAP baglamina baglanmali.",
+      "trace_owner": "curriculum_catalog",
+      "trace_capability": null,
+      "trace_final_owner": "clarification",
+      "trace_departments": [
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 3655.35,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    }
+  ]
+}

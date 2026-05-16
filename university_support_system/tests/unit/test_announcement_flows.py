@@ -132,10 +132,66 @@ async def test_main_orchestrator_returns_direct_announcement_response_with_attac
         faculty=None,
         unit_name=None,
         limit=8,
+        recent_days=30,
         allow_latest_fallback=True,
+        probe_mode=None,
+        require_keyword_match=False,
+        minimum_match_score=0,
     )
     router.route.assert_awaited_once()
     telemetry.create_query_log.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_announcement_short_circuit_quality_failure_is_not_recorded_to_conversation():
+    router = AsyncMock()
+    router.route = AsyncMock(return_value=_announcement_routing_result("Duyuru sorgusu"))
+    fetcher = AsyncMock(
+        return_value=[
+            _build_announcement_record(
+                title="CAP Basvuru Duyurusu",
+                source_url="https://omu.edu.tr/duyuru/cap",
+                display_summary="Detayli bilgi icin duyurulari takip etmeniz sorumlusanz.",
+            )
+        ]
+    )
+    announcement_agent = AnnouncementAgent(announcement_fetcher=fetcher)
+    telemetry = AsyncMock()
+    telemetry.create_query_log = AsyncMock(return_value=909)
+    telemetry.finalize_query_log = AsyncMock()
+    telemetry.record_agent_task = AsyncMock()
+    conversation_service = AsyncMock()
+    conversation_service.resolve_query = AsyncMock(
+        return_value=ConversationResolution(
+            original_query="CAP basvuru duyurusu var mi?",
+            effective_query="CAP basvuru duyurusu var mi?",
+            is_follow_up=False,
+            used_context=False,
+            active_topic=None,
+            department_hints=[],
+            source_hints=[],
+        )
+    )
+    conversation_service.record_turn = AsyncMock()
+
+    orchestrator = MainOrchestrator(
+        router=router,
+        department_orchestrators={},
+        announcement_agent=announcement_agent,
+        telemetry_service=telemetry,
+        conversation_service=conversation_service,
+    )
+
+    response = await orchestrator.handle_query(
+        "CAP basvuru duyurusu var mi?",
+        context_id="ctx-ann-quality-fail",
+    )
+
+    assert "güvenilir biçimde sentezleyemiyorum" in response.answer
+    conversation_service.record_turn.assert_not_awaited()
+    finalize_kwargs = telemetry.finalize_query_log.await_args.kwargs
+    assert finalize_kwargs["status"] == "failed"
+    assert finalize_kwargs["error"] == "final_quality_gate_failed"
 
 
 @pytest.mark.asyncio
@@ -192,7 +248,11 @@ async def test_main_orchestrator_records_follow_up_state_for_announcement_only_q
         faculty=None,
         unit_name="Bilgisayar Muhendisligi",
         limit=8,
+        recent_days=30,
         allow_latest_fallback=True,
+        probe_mode=None,
+        require_keyword_match=False,
+        minimum_match_score=0,
     )
     record_kwargs = conversation_service.record_turn.await_args.kwargs
     assert record_kwargs["resolved_query"] == "Bilgisayar muhendisligindeki son duyurular neler?"
@@ -316,7 +376,11 @@ async def test_main_orchestrator_uses_announcement_context_for_markerless_follow
         faculty=None,
         unit_name=None,
         limit=8,
+        recent_days=30,
         allow_latest_fallback=False,
+        probe_mode=None,
+        require_keyword_match=False,
+        minimum_match_score=0,
     )
     router.route.assert_awaited_once()
 

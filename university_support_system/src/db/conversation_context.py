@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.capabilities.conversation_frame import ConversationFrame
 from src.core.config import settings
 from src.core.constants import Department, TaskType
+from src.core.source_ownership import source_owner_from_capability
 from src.core.text_normalization import normalize_text
 from src.db.connection import get_session
 from src.cache.conversation_cache import get_cached_state, set_cached_state
@@ -51,6 +52,15 @@ def _parse_build_timestamp(value: str | None) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 _COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
+_KNOWN_COURSE_PREFIXES = {
+    "bil", "eem", "end", "mak", "ins", "muh", "mat", "fiz", "kim",
+    "bio", "ist", "ikt", "huk", "tip", "dis", "ecz", "ssd", "ydl",
+    "tur", "ata", "ing", "alm", "frn", "egf",
+}
+_INVALID_COURSE_PREFIXES = {
+    "icin", "mayis", "eylul", "ekim", "kasim", "aralik", "ocak",
+    "subat", "mart", "nisan", "haziran", "temmuz", "agustos",
+}
 _FOLLOW_UP_PREFIXES = (
     "peki",
     "bir de",
@@ -144,9 +154,18 @@ _CONFUSION_OR_RESET_MARKERS = (
     "isler karisti",
     "kafam karisti",
     "karisti",
-    "anlamadim",
     "emin degilim",
     "bilmiyorum",
+)
+_EXPLANATION_FOLLOW_UP_MARKERS = (
+    "anlamadim",
+    "tam anlamadim",
+    "daha acik",
+    "daha anlasilir",
+    "aciklar misin",
+    "aciklar misiniz",
+    "detayli aciklar",
+    "daha detayli",
 )
 _INDEPENDENT_SHORT_QUERY_MARKERS = (
     "ogrencilik hak",
@@ -175,6 +194,8 @@ _INDEPENDENT_TOPIC_CHANGE_MARKERS = (
     "donem dondurma",
     "burs basvuru",
     "yaz okulu",
+    "capa",
+    "capa basvuru",
     "cap basvuru",
     "cift anadal",
     "yandal basvuru",
@@ -189,6 +210,11 @@ _INDEPENDENT_TOPIC_CHANGE_MARKERS = (
     "mufredat",
     "ders programi",
     "ogrenci belge",
+    "duyuru",
+    "duyurular",
+    "ilan",
+    "haber",
+    "sinav takvimi",
     "kimlik kart",
     "harc ucreti",
     "ogrenim ucreti",
@@ -359,6 +385,34 @@ _CORRECTION_FOLLOW_UP_MARKERS = (
     "kastettim",
     "bahsettim",
 )
+
+
+def _normalize_course_prefix(text: str) -> str:
+    table = str.maketrans({
+        "Ç": "c", "Ğ": "g", "İ": "i", "I": "i", "Ö": "o", "Ş": "s", "Ü": "u",
+        "ç": "c", "ğ": "g", "ı": "i", "i": "i", "ö": "o", "ş": "s", "ü": "u",
+    })
+    return text.translate(table).lower()
+
+
+def _is_valid_course_code_match(match: re.Match[str]) -> bool:
+    raw = match.group(0).replace(" ", "")
+    prefix = re.sub(r"\d+", "", raw)
+    normalized_prefix = _normalize_course_prefix(prefix)
+    if normalized_prefix in _INVALID_COURSE_PREFIXES:
+        return False
+    if normalized_prefix in _KNOWN_COURSE_PREFIXES:
+        return True
+    return prefix == prefix.upper() and len(prefix) <= 5
+
+
+def _first_valid_course_code_match(text: str | None) -> re.Match[str] | None:
+    if not text:
+        return None
+    for match in _COURSE_CODE_PATTERN.finditer(text):
+        if _is_valid_course_code_match(match):
+            return match
+    return None
 _SCHEDULE_CONTEXT_MARKERS = (
     "ders programi",
     "haftalik program",
@@ -576,6 +630,19 @@ def _looks_like_correction_follow_up(query: str) -> bool:
     return any(marker in normalized_query for marker in _CORRECTION_FOLLOW_UP_MARKERS)
 
 
+def _infer_corrected_topic_from_correction(query: str) -> str | None:
+    normalized_query = normalize_text(query)
+    if "degil" in normalized_query:
+        tail = normalized_query.split("degil", 1)[1].strip(" \t\r\n?.!,;:")
+        topic = ConversationContextService._infer_topic(tail)
+        if topic:
+            return topic
+    topic = ConversationContextService._infer_topic(query)
+    if topic:
+        return topic
+    return None
+
+
 def _extract_schedule_term_correction(query: str) -> str | None:
     normalized_query = normalize_text(query)
     if any(marker in normalized_query for marker in ("guz", "ilk donem", "ilk yariyil")):
@@ -678,6 +745,29 @@ def _infer_program_fragment(query: str) -> str | None:
     except Exception:
         return None
     return infer_department_from_query(query)
+
+
+def _infer_graduation_program_fragment(query: str) -> str | None:
+    program = _infer_program_fragment(query)
+    if program:
+        return program
+    normalized = normalize_text(query)
+    if "dis hekimligi" in normalized or "dis hekimliginden" in normalized:
+        return "Dis Hekimligi"
+    if "tip" in normalized or "tip fakultesi" in normalized:
+        return "Tip"
+    if "eczacilik" in normalized:
+        return "Eczacilik"
+    special_programs = (
+        ("Diş Hekimliği", ("dis hekimligi", "dis hekimliginden")),
+        ("Tıp", ("tip", "tip fakultesi")),
+        ("Eczacılık", ("eczacilik",)),
+        ("Veteriner", ("veteriner", "veterinerlik")),
+    )
+    for label, markers in special_programs:
+        if any(marker in normalized for marker in markers):
+            return label
+    return None
 
 
 def _replace_program_fragment_in_query(previous_query: str, new_program: str) -> str | None:
@@ -793,7 +883,7 @@ def _looks_like_course_property_query(query: str) -> bool:
 def _extract_course_reference(text: str | None) -> _CourseReference | None:
     if not text:
         return None
-    match = _COURSE_CODE_PATTERN.search(text)
+    match = _first_valid_course_code_match(text)
     if match is None:
         return None
 
@@ -852,6 +942,11 @@ def _build_query_for_course_property(query: str, reference: _CourseReference) ->
 
 def _build_course_reference_query(query: str, *, state: "ConversationStateData") -> str | None:
     if not _looks_like_course_property_query(query):
+        return None
+    # Current-turn course codes are authoritative.  If the user asks
+    # "BIL104 on kosulu var mi?" right after a BIL203 answer, do not rewrite it
+    # back to the previous course reference.
+    if _extract_course_reference(query) is not None:
         return None
     reference = _extract_recent_course_reference(state)
     if reference is None:
@@ -1154,6 +1249,90 @@ def _build_heuristic_follow_up_query(query: str, *, topic: str | None) -> str:
     return f"{topic_seed} hakkinda: {stripped_query}"
 
 
+def _build_graduation_akts_follow_up_query(query: str, *, state: "ConversationStateData") -> str | None:
+    if not _has_graduation_akts_context(state):
+        return None
+
+    normalized = normalize_text(query).strip(" \t\r\n?.!,;:*")
+    if not normalized:
+        return None
+
+    program_name = _infer_graduation_program_fragment(query)
+    if program_name and any(marker in normalized for marker in ("kac", "icin kac", "toplam")):
+        return (
+            f"{program_name} programindan mezun olmak icin "
+            "toplam kac AKTS tamamlamaliyim?"
+        )
+
+    if (
+        re.fullmatch(r"(120|240|300|360)\s*(akts)?\s*(mi|degil mi|degilmi)?", normalized)
+        or (
+            any(value in normalized for value in ("120", "240", "300", "360"))
+            and any(marker in normalized for marker in ("degil mi", "mi"))
+        )
+    ):
+        previous = state.last_resolved_query or state.last_user_query or ""
+        previous_program = _infer_graduation_program_fragment(previous)
+        asked_value_match = re.search(r"\b(120|240|300|360)\b", normalized)
+        asked_value = asked_value_match.group(1) if asked_value_match else "240"
+        if previous_program:
+            return (
+                f"{previous_program} programindan mezun olmak icin toplam "
+                f"AKTS {asked_value} mi?"
+            )
+        previous_normalized = normalize_text(previous)
+        if "onlisans" in previous_normalized or "on lisans" in previous_normalized:
+            return f"On lisans programindan mezun olmak icin toplam AKTS {asked_value} mi?"
+        if "lisans" in previous_normalized:
+            return f"Normal lisans programindan mezun olmak icin toplam AKTS {asked_value} mi?"
+
+    if any(marker in normalized for marker in ("donem icin sormadim", "donem icin demedim", "toplam sordum", "toplamini sordum")):
+        previous = state.last_resolved_query or state.last_user_query or ""
+        previous_program = _infer_graduation_program_fragment(previous)
+        if previous_program:
+            return (
+                f"{previous_program} programindan mezun olmak icin "
+                "toplam kac AKTS tamamlamaliyim?"
+            )
+        return "Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
+
+    if any(marker in normalized for marker in ("lisans icin kac", "lisans icin kac peki", "lisans kac", "lisans icin")):
+        if "onlisans" not in normalized and "on lisans" not in normalized:
+            return "Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
+
+    if any(marker in normalized for marker in ("onlisans icin kac", "on lisans icin kac", "onlisans kac")):
+        return "On lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
+
+    if normalized in {"kac", "kac peki", "peki kac", "toplam kac"}:
+        previous = normalize_text(state.last_resolved_query or state.last_user_query or "")
+        if "onlisans" in previous or "on lisans" in previous:
+            return "Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
+        if "lisans" in previous:
+            return "Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
+
+    return None
+
+
+def _has_graduation_akts_context(state: "ConversationStateData") -> bool:
+    context = normalize_text(
+        " ".join(
+            item
+            for item in (
+                state.last_resolved_query,
+                state.last_user_query,
+                state.last_assistant_answer,
+                state.active_topic,
+            )
+            if item
+        )
+    )
+    if any(marker in context for marker in ("cap", "cift anadal", "yandal")):
+        return False
+    if "akts" not in context and "kredi" not in context:
+        return False
+    return any(marker in context for marker in ("mezun", "mezuniyet", "tamamlam", "lisans programindan"))
+
+
 def _build_answer_fragment_query(query: str, *, state: "ConversationStateData") -> str | None:
     """Merge short answer fragments with the last concrete question."""
     previous_query = (state.last_resolved_query or state.last_user_query or "").strip()
@@ -1282,7 +1461,7 @@ def _should_accept_llm_clarification(
 
 
 _TOPIC_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("CAP / Cift Anadal", ("cap", "cift anadal", "cift ana dal", "ikinci lisans")),
+    ("CAP / Cift Anadal", ("cap", "capa", "cift anadal", "cift ana dal", "ikinci lisans")),
     ("Yandal", ("yandal", "yan dal")),
     ("Erasmus ve Uluslararasi Surecler", ("erasmus", "ikamet", "yos", "tomer", "denklik", "mevlana", "farabi", "degisim programi")),
     ("Harc ve Ogrenim Ucretleri", ("harc", "katki payi", "ucret", "odeme", "taksit", "ogrenim ucreti")),
@@ -1296,6 +1475,7 @@ _TOPIC_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Mufredat ve Ders Yapisi", ("mufredat", "onkosul", "ders programi", "akts", "secmeli", "zorunlu ders")),
     ("Mevzuat ve Yonergeler", ("yonerge", "yonetmelik", "madde", "prosedur", "genelge")),
     ("Belgeler", ("ogrenci belgesi", "transkript belgesi", "diploma eki", "tecil", "askerlik belgesi")),
+    ("Duyurular", ("duyurular", "duyuru", "ilan", "haber")),
     ("Yaz Okulu", ("yaz okulu", "yaz donemi")),
     (
         "Ders Tekrari ve Devam",
@@ -1353,10 +1533,282 @@ _TOPIC_DEPARTMENT_HINTS: dict[str, tuple[Department, ...]] = {
 }
 
 
+_SOURCE_HINT_TOPIC_RULES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "CAP / Cift Anadal": (
+        ("cap", "cift anadal", "cift ana dal", "anadal", "ana dal", "ikinci lisans", "yandal", "yan dal"),
+        ("staj", "mup", "sanayi", "yatay gecis", "dikey gecis", "mezun", "diploma", "transkript"),
+    ),
+    "Yandal": (
+        ("yandal", "yan dal", "cift anadal", "cift ana dal", "anadal"),
+        ("staj", "mup", "sanayi", "yatay gecis", "dikey gecis", "mezun", "diploma", "transkript"),
+    ),
+    "Erasmus ve Uluslararasi Surecler": (
+        ("erasmus", "uluslararasi", "yabanci", "ikamet", "yos", "tomer", "denklik", "mevlana", "farabi"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "dikey gecis", "harc"),
+    ),
+    "Harc ve Ogrenim Ucretleri": (
+        ("harc", "katki payi", "ucret", "odeme", "taksit", "ogrenim ucreti", "tuition"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "mufredat"),
+    ),
+    "Burs ve Destekler": (
+        ("burs", "yemek bursu", "kismi zamanli", "destek", "scholarship"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "mufredat"),
+    ),
+    "Kayit ve Akademik Takvim": (
+        ("kayit", "takvim", "akademik takvim", "muafiyet", "intibak", "ders kaydi"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "mezun", "diploma"),
+    ),
+    "Kayit Dondurma ve Silme": (
+        ("kayit dondurma", "dondurma", "kayit sildirme", "ilisik", "silme"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "mufredat"),
+    ),
+    "Mezuniyet ve Akademik Durum": (
+        ("mezun", "diploma", "transkript", "not ortalamasi", "gno", "gano", "azami"),
+        ("staj", "cift anadal", "cap", "yatay gecis"),
+    ),
+    "Staj ve Uygulamali Egitim": (
+        ("staj", "mup", "sanayi", "mesleki uygulama", "uygulama", "bitirme"),
+        ("cift anadal", "cap", "yatay gecis", "diploma", "mezun"),
+    ),
+    "Sinav ve Degerlendirme": (
+        ("sinav", "final", "vize", "butunleme", "mazeret", "tek ders", "bagil", "takvim"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "mufredat"),
+    ),
+    "Yatay ve Dikey Gecis": (
+        ("yatay gecis", "dikey gecis", "kurum ici", "kurumlar arasi", "gecis"),
+        ("staj", "cift anadal", "cap", "yandal", "mezun", "diploma"),
+    ),
+    "Mufredat ve Ders Yapisi": (
+        ("mufredat", "ders", "akts", "onkosul", "program", "curriculum", "course"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "harc"),
+    ),
+    "Yaz Okulu": (
+        ("yaz okulu", "yaz donemi"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "mufredat"),
+    ),
+    "Ders Tekrari ve Devam": (
+        ("ders tekrari", "tekrar", "devam", "devamsizlik", "hic almadigim", "alt donem"),
+        ("staj", "cift anadal", "cap", "yatay gecis", "harc"),
+    ),
+}
+
+
 def _departments_for_topic(topic: str | None) -> list[Department]:
     if not topic:
         return []
     return list(_TOPIC_DEPARTMENT_HINTS.get(topic, ()))
+
+
+def _source_ref_text(value: str) -> str:
+    normalized = normalize_text(value)
+    spaced = re.sub(r"[_\-.]+", " ", normalized)
+    return f"{normalized} {spaced}"
+
+
+def _topic_source_hint_rules(
+    topic: str | None,
+    query: str | None = None,
+) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+    topic_key = topic or ConversationContextService._infer_topic(query or "")
+    if not topic_key:
+        return None
+    return _SOURCE_HINT_TOPIC_RULES.get(topic_key)
+
+
+def _filter_source_refs_for_topic(
+    source_refs: Sequence[str],
+    *,
+    topic: str | None,
+    query: str | None = None,
+) -> list[str]:
+    """Return source hints safe to reuse as hard boosts for a follow-up."""
+    deduped = [ref for ref in dict.fromkeys(str(ref).strip() for ref in source_refs) if ref]
+    if not deduped:
+        return []
+
+    rules = _topic_source_hint_rules(topic, query=query)
+    if rules is None:
+        return deduped[: settings.conversation.max_source_refs]
+
+    allowed_markers, rejected_markers = rules
+    allowed = tuple(normalize_text(marker) for marker in allowed_markers if marker)
+    rejected = tuple(normalize_text(marker) for marker in rejected_markers if marker)
+    filtered: list[str] = []
+    for ref in deduped:
+        normalized_ref = _source_ref_text(ref)
+        has_allowed = bool(allowed) and any(marker in normalized_ref for marker in allowed)
+        if not has_allowed:
+            continue
+        has_rejected = bool(rejected) and any(marker in normalized_ref for marker in rejected)
+        if has_rejected:
+            continue
+        filtered.append(ref)
+    return filtered[: settings.conversation.max_source_refs]
+
+
+def _source_hints_for_follow_up(
+    state: "ConversationStateData",
+    *,
+    topic: str | None,
+    query: str | None = None,
+) -> list[str]:
+    raw_hints = list(state.last_source_refs or [])
+    filtered = _filter_source_refs_for_topic(raw_hints, topic=topic, query=query)
+    if len(filtered) != len([hint for hint in raw_hints if str(hint).strip()]):
+        logger.info(
+            "conversation_source_hints_filtered topic=%s kept=%s original=%s",
+            topic or state.active_topic,
+            filtered,
+            raw_hints,
+        )
+    return filtered
+
+
+def _topic_id_for(topic: str | None) -> str | None:
+    if not topic:
+        return None
+    normalized = normalize_text(topic)
+    return re.sub(r"[^a-z0-9]+", "_", normalized).strip("_") or None
+
+
+def _infer_question_type(query: str) -> str | None:
+    normalized = normalize_text(query)
+    tokens = set(_normalized_tokens(query))
+    if any(marker in normalized for marker in ("duyuru", "duyurular", "ilan", "haber")):
+        return "announcement"
+    if any(marker in normalized for marker in ("ders programi", "haftalik program", "sinav takvimi")):
+        return "schedule"
+    if any(marker in normalized for marker in ("ne zaman", "hangi tarihte", "tarih", "takvim", "son gun", "son tarih")):
+        return "date"
+    if any(marker in normalized for marker in ("ne kadar", "kac tl", "kac lira", "ucret", "harc", "katki payi")):
+        return "amount"
+    if any(marker in normalized for marker in ("basvurabilir", "yapabilir", "girebilir", "alabilir", "olur mu", "miyim", "miydim")):
+        return "eligibility"
+    if any(marker in normalized for marker in ("sart", "sartlari", "kosul", "kosullari", "gerekli")):
+        return "conditions"
+    if any(marker in normalized for marker in ("acilacak", "acilan ders", "hangi dersler")):
+        return "offerings"
+    if any(marker in normalized for marker in ("belge", "belgeler", "evrak")):
+        return "documents"
+    if any(marker in normalized for marker in ("detay", "acikla", "anlamadim")):
+        return "explanation"
+    if "akts" in tokens and any(marker in normalized for marker in ("mezun", "mezuniyet", "tamamlam")):
+        return "graduation_akts"
+    return None
+
+
+def _infer_fee_scope(query: str) -> str | None:
+    normalized = normalize_text(query)
+    if any(marker in normalized for marker in ("fazla odeme", "iade", "harc iadesi", "ucret iadesi")):
+        return "refund_policy"
+    if any(marker in normalized for marker in ("borc", "borcum", "borcu", "borclu")):
+        return "payment_debt_eligibility"
+    if any(marker in normalized for marker in ("yaz okulu", "yaz donemi", "yaz ogretimi")):
+        return "summer_school_fee"
+    if any(marker in normalized for marker in ("cap", "capa", "cift anadal", "cift ana dal", "yandal", "yan dal")):
+        return "cap_extra_fee"
+    if any(marker in normalized for marker in ("erasmus", "degisim programi")):
+        return "erasmus_fee"
+    if any(marker in normalized for marker in ("ogrenim ucreti", "katki payi", "harc", "donemlik", "yillik")):
+        return "regular_tuition_fee"
+    return None
+
+
+def _infer_policy_facet(query: str, topic: str | None = None) -> str | None:
+    normalized = normalize_text(" ".join(item for item in (query, topic) if item))
+    fee_scope = _infer_fee_scope(query)
+    if fee_scope:
+        return fee_scope
+    if any(marker in normalized for marker in ("duyuru", "duyurular", "ilan", "haber")):
+        return "announcement"
+    if any(marker in normalized for marker in ("yaz okulu", "yaz donemi", "yaz ogretimi")):
+        return "summer_school"
+    if any(marker in normalized for marker in ("cap", "capa", "cift anadal", "cift ana dal")):
+        return "cap"
+    if any(marker in normalized for marker in ("staj", "mesleki uygulama", "mup")):
+        return "internship"
+    if "akts" in normalized and any(marker in normalized for marker in ("mezun", "mezuniyet", "tamamlam")):
+        return "graduation_akts"
+    if any(marker in normalized for marker in ("formasyon", "pedagojik")):
+        return "pedagogical_formation"
+    if any(marker in normalized for marker in ("takvim", "tarih", "ne zaman")):
+        return "calendar"
+    if any(marker in normalized for marker in ("ders programi", "mufredat", "onkosul", "on kosul")):
+        return "curriculum"
+    return _topic_id_for(topic)
+
+
+def _infer_conversation_capability(
+    query: str,
+    *,
+    question_type: str | None,
+    policy_facet: str | None,
+) -> str | None:
+    normalized = normalize_text(query)
+    fee_scope = _infer_fee_scope(query)
+    if question_type == "announcement":
+        return "announcement.search"
+    if question_type == "schedule" and "sinav takvimi" in normalized:
+        return "calendar.academic_date"
+    if question_type == "date" and any(marker in normalized for marker in ("final", "butunleme", "derslerin", "akademik takvim")):
+        return "calendar.academic_date"
+    if fee_scope == "regular_tuition_fee" and question_type == "amount":
+        return "finance.tuition_fee"
+    if _first_valid_course_code_match(query) and _looks_like_prerequisite_property_query(query):
+        return "course.prerequisites"
+    if _first_valid_course_code_match(query) and _looks_like_course_property_query(query):
+        return "course.detail"
+    if any(marker in normalized for marker in ("ders programi", "haftalik program")):
+        return "schedule.weekly_program"
+    if any(marker in normalized for marker in ("yariyil ders", "donem ders", "kacinci donem", "hangi yariyil")):
+        return "curriculum.semester_courses"
+    if policy_facet in {"summer_school", "cap", "internship", "graduation_akts", "refund_policy", "payment_debt_eligibility", "summer_school_fee", "cap_extra_fee", "erasmus_fee"}:
+        return "student_affairs.policy_lookup"
+    return None
+
+
+def _infer_source_owner_from_capability(capability: str | None, *, policy_facet: str | None) -> str | None:
+    return source_owner_from_capability(capability)
+
+
+def _build_conversation_entities(
+    query: str,
+    *,
+    existing: dict | None,
+    student_type_hint: str | None,
+) -> dict:
+    entities = dict(existing or {})
+    reference = _extract_course_reference(query)
+    if reference is not None:
+        entities["course_code"] = reference.code
+    program = _infer_program_fragment(query)
+    if program:
+        entities["program"] = program
+    student_type = student_type_hint or _rewrite_fee_student_type_fragment(query)
+    if normalize_text(student_type) in {"turk ogrenci", "uluslararasi ogrenci"}:
+        entities["student_type"] = "international" if "uluslararasi" in normalize_text(student_type) else "domestic"
+    fee_scope = _infer_fee_scope(query)
+    if fee_scope:
+        entities["fee_scope"] = fee_scope
+    normalized = normalize_text(query)
+    if "onlisans" in normalized or "on lisans" in normalized:
+        entities["education_level"] = "associate"
+    elif "lisans" in normalized:
+        entities["education_level"] = "bachelor"
+    return entities
+
+
+def _infer_temporal_scope(query: str, *, existing: dict | None = None) -> dict:
+    temporal = dict(existing or {})
+    normalized = normalize_text(query)
+    if any(marker in normalized for marker in ("guncel", "son", "bu yil", "2025 2026", "2025-2026")):
+        temporal.setdefault("scope", "current")
+    if any(marker in normalized for marker in ("ne zaman", "tarih", "takvim", "son gun", "son tarih")):
+        temporal.setdefault("scope", "current")
+    year_match = re.search(r"\b(20\d{2})\b", query)
+    if year_match:
+        temporal["year"] = year_match.group(1)
+    return temporal
 
 
 @dataclass(frozen=True)
@@ -1415,10 +1867,45 @@ class ConversationResolution:
     rewrite_method: str = "none"  # none | heuristic | llm | answer_fragment
     standalone_query: str | None = None  # explicit standalone form for telemetry
     frame: ConversationFrame | None = None
+    operation: str = "new_topic"
+    topic_id: str | None = None
+    source_owner: str | None = None
+    capability: str | None = None
+    policy_facet: str | None = None
+    question_type: str | None = None
+    entities: dict | None = None
+    temporal_scope: dict | None = None
+    base_turn_index: int | None = None
+    confidence: float | None = None
+    expires_after_turns: int | None = None
 
     def __post_init__(self) -> None:
         if self.frame is not None:
             return
+        query_for_contract = self.standalone_query or self.effective_query or self.original_query
+        question_type = self.question_type or _infer_question_type(query_for_contract)
+        policy_facet = self.policy_facet or _infer_policy_facet(query_for_contract, self.active_topic)
+        capability = self.capability or _infer_conversation_capability(
+            query_for_contract,
+            question_type=question_type,
+            policy_facet=policy_facet,
+        )
+        source_owner = self.source_owner or _infer_source_owner_from_capability(
+            capability,
+            policy_facet=policy_facet,
+        )
+        entities = _build_conversation_entities(
+            query_for_contract,
+            existing=self.entities,
+            student_type_hint=self.student_type_hint,
+        )
+        temporal_scope = _infer_temporal_scope(query_for_contract, existing=self.temporal_scope)
+        object.__setattr__(self, "question_type", question_type)
+        object.__setattr__(self, "policy_facet", policy_facet)
+        object.__setattr__(self, "capability", capability)
+        object.__setattr__(self, "source_owner", source_owner)
+        object.__setattr__(self, "entities", entities)
+        object.__setattr__(self, "temporal_scope", temporal_scope)
         object.__setattr__(
             self,
             "frame",
@@ -1434,6 +1921,17 @@ class ConversationResolution:
                 task_type_hint=self.task_type_hint,
                 announcement_context=self.announcement_context,
                 rewrite_method=self.rewrite_method,
+                operation=self.operation,
+                topic_id=self.topic_id or _topic_id_for(self.active_topic),
+                source_owner=source_owner,
+                capability=capability,
+                policy_facet=policy_facet,
+                question_type=question_type,
+                entities=entities,
+                temporal_scope=temporal_scope,
+                base_turn_index=self.base_turn_index,
+                confidence=self.confidence,
+                expires_after_turns=self.expires_after_turns,
             ),
         )
 
@@ -1494,6 +1992,51 @@ class ConversationContextService:
             return self._direct_resolution(query)
 
         correction_fallback = self._build_correction_resolution(query=query, state=state)
+        if correction_fallback is not None:
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=true "
+                "rewrite_method=correction_preferred original=%r effective=%r topic=%s",
+                context_id,
+                query,
+                correction_fallback.effective_query,
+                correction_fallback.active_topic,
+            )
+            return correction_fallback
+
+        graduation_akts_follow_up_query = _build_graduation_akts_follow_up_query(
+            query,
+            state=state,
+        )
+        if graduation_akts_follow_up_query:
+            logger.info(
+                "conversation_resolution context_id=%s is_follow_up=true "
+                "rewrite_method=graduation_akts_follow_up original=%r effective=%r topic=%s",
+                context_id,
+                query,
+                graduation_akts_follow_up_query,
+                state.active_topic,
+            )
+            return ConversationResolution(
+                original_query=query,
+                effective_query=graduation_akts_follow_up_query,
+                is_follow_up=True,
+                used_context=graduation_akts_follow_up_query != query,
+                active_topic=state.active_topic or "Mezuniyet ve Akademik Durum",
+                department_hints=[Department.STUDENT_AFFAIRS],
+                source_hints=_source_hints_for_follow_up(
+                    state,
+                    topic=state.active_topic,
+                    query=graduation_akts_follow_up_query,
+                ),
+                task_type_hint=TaskType.PROCEDURE_QUERY,
+                announcement_context=False,
+                rewrite_method="heuristic",
+                standalone_query=graduation_akts_follow_up_query,
+                operation="same_topic",
+                policy_facet="graduation_akts",
+                question_type="graduation_akts",
+                confidence=0.9,
+            )
 
         course_slot_fragment_query = _build_course_slot_fragment_query(query, state=state)
         if course_slot_fragment_query:
@@ -1513,11 +2056,17 @@ class ConversationContextService:
                 used_context=True,
                 active_topic=topic,
                 department_hints=_course_reference_departments(state),
-                source_hints=list(state.last_source_refs),
+                source_hints=_source_hints_for_follow_up(
+                    state,
+                    topic=topic,
+                    query=course_slot_fragment_query,
+                ),
                 task_type_hint=TaskType.COURSE_QUERY,
                 announcement_context=False,
                 rewrite_method="answer_fragment",
                 standalone_query=course_slot_fragment_query,
+                operation="answer_slot",
+                confidence=0.9,
             )
 
         course_reference_query = _build_course_reference_query(query, state=state)
@@ -1538,11 +2087,17 @@ class ConversationContextService:
                 used_context=True,
                 active_topic=topic,
                 department_hints=_course_reference_departments(state),
-                source_hints=list(state.last_source_refs),
+                source_hints=_source_hints_for_follow_up(
+                    state,
+                    topic=topic,
+                    query=course_reference_query,
+                ),
                 task_type_hint=TaskType.COURSE_QUERY,
                 announcement_context=False,
                 rewrite_method="heuristic",
                 standalone_query=course_reference_query,
+                operation="same_topic",
+                confidence=0.85,
             )
 
         deterministic_answer_fragment_query = _build_answer_fragment_query(
@@ -1588,11 +2143,17 @@ class ConversationContextService:
                 used_context=deterministic_answer_fragment_query != query,
                 active_topic=fragment_topic,
                 department_hints=fragment_departments,
-                source_hints=list(state.last_source_refs),
+                source_hints=_source_hints_for_follow_up(
+                    state,
+                    topic=fragment_topic,
+                    query=deterministic_answer_fragment_query,
+                ),
                 task_type_hint=self._parse_task_type(state.last_task_type),
                 announcement_context=self._has_announcement_department_hint(state.last_departments),
                 rewrite_method="answer_fragment",
                 standalone_query=deterministic_answer_fragment_query,
+                operation="answer_slot",
+                confidence=0.85,
             )
 
         heuristic = self._classify_follow_up(query=query, state=state)
@@ -1641,10 +2202,47 @@ class ConversationContextService:
                 source_hints=[],
                 rewrite_method="none",
                 standalone_query=query,
+                operation="new_topic",
+                confidence=0.9,
             )
 
         rewrite_method = "heuristic"
         llm_resolution = None
+        if heuristic.get("operation") == "clarify":
+            effective_query = (
+                state.last_resolved_query
+                or state.last_user_query
+                or _build_heuristic_follow_up_query(query, topic=state.active_topic)
+            )
+            department_hints = list(
+                dict.fromkeys(
+                    [
+                        *self._parse_departments(state.last_departments),
+                        *_departments_for_topic(state.active_topic),
+                    ]
+                )
+            )
+            return ConversationResolution(
+                original_query=query,
+                effective_query=effective_query,
+                is_follow_up=True,
+                used_context=True,
+                active_topic=state.active_topic,
+                department_hints=department_hints,
+                source_hints=_source_hints_for_follow_up(
+                    state,
+                    topic=state.active_topic,
+                    query=effective_query,
+                ),
+                task_type_hint=self._parse_task_type(state.last_task_type),
+                student_type_hint=_infer_student_type_from_state(state),
+                announcement_context=self._has_announcement_department_hint(state.last_departments),
+                rewrite_method="clarify",
+                standalone_query=effective_query,
+                operation="clarify",
+                question_type="explanation",
+                confidence=0.9,
+            )
         if settings.conversation.rewrite_with_llm and llm_service is not None:
             llm_resolution = await self._rewrite_with_llm(
                 query=query,
@@ -1713,7 +2311,11 @@ class ConversationContextService:
             used_context=effective_query != query,
             active_topic=state.active_topic,
             department_hints=department_hints,
-            source_hints=list(state.last_source_refs),
+            source_hints=_source_hints_for_follow_up(
+                state,
+                topic=state.active_topic,
+                query=effective_query,
+            ),
             task_type_hint=(
                 TaskType.PROCEDURE_QUERY
                 if _query_requests_primary_topic_only(query, state)
@@ -1723,6 +2325,8 @@ class ConversationContextService:
             announcement_context=self._has_announcement_department_hint(state.last_departments),
             rewrite_method=rewrite_method,
             standalone_query=effective_query if effective_query != query else None,
+            operation="same_topic",
+            confidence=0.75,
         )
 
     async def record_turn(
@@ -1846,6 +2450,8 @@ class ConversationContextService:
             source_hints=[],
             rewrite_method="none",
             standalone_query=query,
+            operation="new_topic",
+            confidence=0.9,
         )
 
     def _build_correction_resolution(
@@ -1870,14 +2476,20 @@ class ConversationContextService:
                     used_context=True,
                     active_topic=state.active_topic,
                     department_hints=[Department.ACADEMIC_PROGRAMS],
-                    source_hints=list(state.last_source_refs),
+                    source_hints=_source_hints_for_follow_up(
+                        state,
+                        topic=state.active_topic,
+                        query=effective_query,
+                    ),
                     task_type_hint=TaskType.COURSE_QUERY,
                     announcement_context=False,
                     rewrite_method="correction",
                     standalone_query=effective_query,
+                    operation="correction",
+                    confidence=0.9,
                 )
 
-        corrected_topic = self._infer_topic(query)
+        corrected_topic = _infer_corrected_topic_from_correction(query)
         if not corrected_topic:
             return None
 
@@ -1908,6 +2520,8 @@ class ConversationContextService:
             announcement_context=False,
             rewrite_method="correction",
             standalone_query=effective_query,
+            operation="correction",
+            confidence=0.9,
         )
 
     @staticmethod
@@ -1933,6 +2547,18 @@ class ConversationContextService:
             return f"{topic_seed} icin hangi belgeler gerekli?"
         if any(marker in normalized_previous for marker in ("kosul", "kosullari", "sart", "sartlari")):
             return f"{topic_seed} kosullari neler?"
+        if any(marker in normalized_previous for marker in ("borc", "borcum", "borcu", "harc")) and any(
+            marker in normalized_previous
+            for marker in ("basvurabilir", "basvurabilir miyim", "basvurabilir miydim", "engel", "olur mu")
+        ):
+            return f"{topic_seed} icin harc borcu basvuruya engel mi?"
+        if any(marker in normalized_previous for marker in ("ucret", "harc", "katki payi", "odeme", "ne kadar")):
+            return f"{topic_seed} ucreti veya harci var mi?"
+        if any(
+            marker in normalized_previous
+            for marker in ("basvurabilir", "basvurabilir miyim", "basvurabilir miydim", "yapabilir miyim", "olur mu")
+        ):
+            return f"{topic_seed} icin basvurabilir miyim?"
         if "ne zaman" in normalized_previous or "tarih" in normalized_previous:
             return f"{topic_seed} ne zaman?"
         return _build_heuristic_follow_up_query(previous_question, topic=corrected_topic)
@@ -1963,6 +2589,18 @@ class ConversationContextService:
     ) -> dict[str, str | bool | None]:
         normalized_query = normalize_text(query)
         query_tokens = _normalized_tokens(query)
+
+        if (
+            state.turn_count > 0
+            and any(marker in normalized_query for marker in _EXPLANATION_FOLLOW_UP_MARKERS)
+        ):
+            return {
+                "is_follow_up": True,
+                "needs_llm_decision": False,
+                "allow_llm_downgrade": False,
+                "operation": "clarify",
+                "topic": state.active_topic,
+            }
 
         if any(marker in normalized_query for marker in _CONFUSION_OR_RESET_MARKERS):
             return {
@@ -2018,6 +2656,10 @@ class ConversationContextService:
             token in _FOLLOW_UP_PRONOUNS
             for token in query_tokens[:4]
         )
+        explicit_topic_change_marker = any(
+            marker in normalized_query
+            for marker in _INDEPENDENT_TOPIC_CHANGE_MARKERS
+        )
         if (
             state.turn_count > 0
             and state.active_topic is None
@@ -2037,8 +2679,13 @@ class ConversationContextService:
             state.active_topic is not None
             and query_inferred_topic is not None
             and normalize_text(query_inferred_topic) != normalize_text(state.active_topic)
-            and any(marker in normalized_query for marker in _INDEPENDENT_TOPIC_CHANGE_MARKERS)
+            and explicit_topic_change_marker
             and not short_slot_follow_up
+            and not starts_with_follow_up
+            and (
+                not pronoun_like
+                or _topic_transition_score(query, state) >= _TOPIC_TRANSITION_THRESHOLD
+            )
         ):
             return {
                 "is_follow_up": False,
@@ -2460,7 +3107,15 @@ class ConversationContextService:
             used_context=standalone_query != query,
             active_topic=resolved_active_topic,
             department_hints=carry_over_departments if is_follow_up else [],
-            source_hints=list(state.last_source_refs) if is_follow_up else [],
+            source_hints=(
+                _source_hints_for_follow_up(
+                    state,
+                    topic=resolved_active_topic,
+                    query=standalone_query,
+                )
+                if is_follow_up
+                else []
+            ),
             task_type_hint=(
                 (
                     TaskType.PROCEDURE_QUERY
@@ -2476,6 +3131,12 @@ class ConversationContextService:
             announcement_context=self._has_announcement_department_hint(state.last_departments) if is_follow_up else False,
             rewrite_method="llm",
             standalone_query=standalone_query if standalone_query != query else None,
+            operation=(
+                "same_topic"
+                if is_follow_up
+                else "new_topic"
+            ),
+            confidence=0.8 if is_follow_up else 0.9,
         )
 
     def _build_llm_correction_resolution(
@@ -2487,7 +3148,12 @@ class ConversationContextService:
         standalone_query: str,
     ) -> ConversationResolution | None:
         corrected_topic = (
-            str(payload.get("active_topic") or "").strip()
+            _infer_corrected_topic_from_correction(query)
+            or (
+                str(payload.get("active_topic") or "").strip()
+                if not _looks_like_correction_follow_up(query)
+                else ""
+            )
             or self._infer_topic(query)
             or state.active_topic
         )
@@ -2552,6 +3218,8 @@ class ConversationContextService:
             announcement_context=False,
             rewrite_method="llm",
             standalone_query=standalone_query,
+            operation="correction",
+            confidence=0.85,
         )
 
     @staticmethod
@@ -2714,7 +3382,7 @@ class ConversationContextService:
     @staticmethod
     def _infer_topic(query: str) -> str | None:
         normalized_query = normalize_text(query)
-        course_code_match = _COURSE_CODE_PATTERN.search(query)
+        course_code_match = _first_valid_course_code_match(query)
         if course_code_match:
             return f"{course_code_match.group(0).replace(' ', '')} dersi"
 
@@ -2755,7 +3423,11 @@ class ConversationContextService:
         merged = list(existing or [])
         if topic:
             merged.append(topic)
-        merged.extend(match.group(0).replace(" ", "") for match in _COURSE_CODE_PATTERN.finditer(query))
+        merged.extend(
+            match.group(0).replace(" ", "")
+            for match in _COURSE_CODE_PATTERN.finditer(query)
+            if _is_valid_course_code_match(match)
+        )
         return list(dict.fromkeys(entity for entity in merged if entity))
 
     @staticmethod

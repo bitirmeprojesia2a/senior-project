@@ -41,6 +41,12 @@ def build_department_request_task(
         final_answer_owner=metadata.get("final_answer_owner"),
         specialist_response_mode=metadata.get("specialist_response_mode"),
         capability_planner=metadata.get("capability_planner"),
+        source_owner=metadata.get("source_owner"),
+        policy_facet=metadata.get("policy_facet"),
+        decision_contract=metadata.get("decision_contract"),
+        resolved_decision=metadata.get("resolved_decision"),
+        branch_role=metadata.get("branch_role"),
+        retrieval_execution_policy=metadata.get("retrieval_execution_policy"),
         trace_id=metadata.get("trace_id"),
         span_id=metadata.get("span_id"),
         parent_span_id=metadata.get("parent_span_id"),
@@ -57,6 +63,13 @@ def build_department_request_task(
         "final_answer_owner",
         "specialist_response_mode",
         "capability_planner",
+        "source_owner",
+        "policy_facet",
+        "decision_contract",
+        "resolved_decision",
+        "branch_dispatch_gate",
+        "branch_role",
+        "retrieval_execution_policy",
         "conversation_is_follow_up",
         "conversation_topic",
         "conversation_source_refs",
@@ -78,6 +91,8 @@ def build_announcement_request_task(
     faculty: str | None = None,
     unit_name: str | None = None,
     conversation_source_refs: list[str] | None = None,
+    decision_contract: dict | None = None,
+    resolved_decision: dict | None = None,
     trace_id: str | None = None,
     span_id: str | None = None,
     parent_span_id: str | None = None,
@@ -87,6 +102,8 @@ def build_announcement_request_task(
             query_text=query,
             context_id=context_id,
             routing_reason=routing_reason,
+            decision_contract=decision_contract,
+            resolved_decision=resolved_decision,
             trace_id=trace_id,
             span_id=span_id,
             parent_span_id=parent_span_id,
@@ -100,6 +117,10 @@ def build_announcement_request_task(
         task.metadata["unit_name"] = unit_name
     if conversation_source_refs:
         task.metadata["conversation_source_refs"] = list(conversation_source_refs)
+    if decision_contract:
+        task.metadata["decision_contract"] = dict(decision_contract)
+    if resolved_decision:
+        task.metadata["resolved_decision"] = dict(resolved_decision)
     return task
 
 
@@ -112,6 +133,8 @@ def build_event_request_task(
     faculty: str | None = None,
     unit_name: str | None = None,
     limit: int | None = None,
+    decision_contract: dict | None = None,
+    resolved_decision: dict | None = None,
     trace_id: str | None = None,
     span_id: str | None = None,
     parent_span_id: str | None = None,
@@ -121,6 +144,8 @@ def build_event_request_task(
             query_text=query,
             context_id=context_id,
             routing_reason=routing_reason,
+            decision_contract=decision_contract,
+            resolved_decision=resolved_decision,
             trace_id=trace_id,
             span_id=span_id,
             parent_span_id=parent_span_id,
@@ -134,4 +159,8 @@ def build_event_request_task(
         task.metadata["unit_name"] = unit_name
     if limit is not None:
         task.metadata["limit"] = int(limit)
+    if decision_contract:
+        task.metadata["decision_contract"] = dict(decision_contract)
+    if resolved_decision:
+        task.metadata["resolved_decision"] = dict(resolved_decision)
     return task

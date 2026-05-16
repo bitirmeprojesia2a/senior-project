@@ -4,6 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.db.schedule_data import (
+    format_schedule_course_name,
+    format_schedule_day,
+    format_schedule_group,
+    format_schedule_label,
+    schedule_group_sort_key,
+)
+
 
 def records_for_prompt(records: list[dict[str, Any]], *, max_records: int) -> str:
     lines: list[str] = []
@@ -105,28 +113,54 @@ def deterministic_answer_for_result(
         name = record.get("course_name") or record.get("name") or ""
         akts = record.get("akts")
         credit = record.get("credits") or record.get("credit")
+        semester = record.get("curriculum_semester") or record.get("semester")
+        class_year = _class_year_from_semester(semester)
+        prerequisites = record.get("prerequisites") or []
         pieces = [f"{code} {name}".strip() or "Ders"]
         if credit:
             pieces.append(f"{credit} kredi")
         if akts:
             pieces.append(f"{akts} AKTS")
+        if semester:
+            semester_text = f"{semester}. yariyil"
+            if class_year:
+                semester_text += f" ({class_year}. sinif)"
+            pieces.append(semester_text)
+        if prerequisites:
+            items = "; ".join(_format_prerequisite(item) for item in prerequisites)
+            pieces.append(f"on kosul: {items}")
+        elif "onkosul" in str(metadata.get("query") or "").lower():
+            pieces.append("kayitli on kosul yok")
         if len(pieces) <= 1:
             return pieces[0]
-        return " dersi ".join([pieces[0], ", ".join(pieces[1:]) + " olarak kayitli."])
+        return f"{pieces[0]} dersi " + ", ".join(pieces[1:]) + " olarak kayitli."
 
     if capability == "curriculum.semester_courses":
         semester = metadata.get("semester")
         if not records:
             return f"{semester}. yariyil icin mufredat veritabaninda ders kaydi bulunamadi."
-        return _format_course_list(
+        return _format_grouped_course_list(
             records,
-            heading=f"{semester}. yariyil doneminde kayitli {len(records)} ders/grup bulundu:",
+            heading=f"{semester}. yariyil dersleri:",
         )
 
     if capability == "schedule.weekly_program":
+        if message == "schedule_filter_required" or metadata.get("needs_schedule_filter"):
+            program = metadata.get("program") or "ilgili program"
+            return (
+                f"{program} ders programini karisik listelememek icin sinif/donem bilgisi gerekiyor. "
+                "Ornegin 'Bilgisayar Muhendisligi 3. sinif guz ders programi' diye sorabilirsiniz. "
+                "Tum siniflari istiyorsaniz 'tum siniflar' diye belirtin."
+            )
         if not records:
             return "Bu filtrelerle ders programi veritabaninda kayit bulunamadi."
-        return _format_schedule(records, heading="Bulunan ders programi satirlari:")
+        if metadata.get("all_schedule_groups"):
+            program = metadata.get("program") or "program"
+            return _format_schedule_by_group(
+                records,
+                heading=f"{format_schedule_label(program)} için bulunan ders programı satırları:",
+            )
+        return _format_schedule(records, heading="Bulunan ders programı satırları:")
 
     return records_for_prompt(records, max_records=20)
 
@@ -178,19 +212,108 @@ def _format_course_list(records: list[dict[str, Any]], *, heading: str) -> str:
     return "\n".join(lines)
 
 
+def _format_grouped_course_list(records: list[dict[str, Any]], *, heading: str) -> str:
+    groups: list[tuple[str, list[dict[str, Any]]]] = [
+        ("Zorunlu dersler", []),
+        ("Teknik/secmeli dersler", []),
+        ("Sosyal/universite secmeli dersleri", []),
+        ("Staj/MUP", []),
+        ("Diger dersler", []),
+    ]
+    group_map = {name: bucket for name, bucket in groups}
+    seen: set[tuple[str, str]] = set()
+    for record in records:
+        code = str(record.get("course_code") or record.get("code") or "").strip()
+        name = str(record.get("course_name") or record.get("name") or "").strip()
+        key = (code.upper(), name.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        course_type = str(record.get("course_type") or "").lower()
+        normalized_name = name.lower()
+        if course_type in {"staj", "mup", "sanayi"} or "staj" in normalized_name:
+            group_map["Staj/MUP"].append(record)
+        elif course_type in {"teknik_secmeli", "lab_secmeli", "secmeli_grup"}:
+            group_map["Teknik/secmeli dersler"].append(record)
+        elif course_type in {"sosyal_secmeli", "universite_secmeli"}:
+            group_map["Sosyal/universite secmeli dersleri"].append(record)
+        elif course_type in {"zorunlu", "entegre", "ortak"} or not course_type:
+            group_map["Zorunlu dersler"].append(record)
+        else:
+            group_map["Diger dersler"].append(record)
+
+    lines = [heading]
+    for group_name, bucket in groups:
+        if not bucket:
+            continue
+        lines.append("")
+        lines.append(f"{group_name}:")
+        for record in bucket:
+            lines.append(f"- {_format_course_line(record)}")
+    return "\n".join(lines)
+
+
+def _format_course_line(record: dict[str, Any]) -> str:
+    code = record.get("course_code") or record.get("code") or ""
+    name = record.get("course_name") or record.get("name") or ""
+    credit = record.get("credits") or record.get("credit")
+    akts = record.get("akts")
+    details = []
+    if credit:
+        details.append(f"{credit}K")
+    if akts:
+        details.append(f"{akts} AKTS")
+    suffix = f" ({' / '.join(details)})" if details else ""
+    return f"{code} {name}{suffix}".strip()
+
+
 def _format_schedule(records: list[dict[str, Any]], *, heading: str) -> str:
     lines = [heading]
-    for record in records:
-        day = record.get("day") or record.get("day_name") or ""
+    limit = 120
+    for record in records[:limit]:
+        day = format_schedule_day(record.get("day") or record.get("day_name") or record.get("day_of_week") or "")
         start = record.get("start_time") or ""
         end = record.get("end_time") or ""
-        name = record.get("course_name") or record.get("name") or ""
-        group = record.get("schedule_group") or ""
+        name = format_schedule_course_name(record.get("course_name") or record.get("name") or "")
+        group = format_schedule_group(record.get("schedule_group") or "")
         room = record.get("classroom") or record.get("room") or ""
         group_text = f" | {group}" if group else ""
         room_text = f" | Derslik: {room}" if room else ""
         time_text = f"{start}-{end}" if start or end else ""
         lines.append(f"- {day} {time_text} | {name}{group_text}{room_text}".strip())
+    if len(records) > limit:
+        lines.append(f"... {len(records) - limit} satir daha var; sinif veya gun belirtirseniz daraltabilirim.")
+    return "\n".join(lines)
+
+
+def _format_schedule_by_group(records: list[dict[str, Any]], *, heading: str) -> str:
+    lines = [heading]
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        group = (
+            format_schedule_group(record.get("schedule_group") or "")
+            or "Sınıf/grup belirtilmeyen dersler"
+        )
+        grouped.setdefault(group, []).append(record)
+    emitted = 0
+    limit = 1000
+    for group in sorted(grouped, key=schedule_group_sort_key):
+        lines.append("")
+        lines.append(f"{group}:")
+        for record in grouped[group]:
+            if emitted >= limit:
+                break
+            day = format_schedule_day(record.get("day") or record.get("day_name") or record.get("day_of_week") or "")
+            start = record.get("start_time") or ""
+            end = record.get("end_time") or ""
+            name = format_schedule_course_name(record.get("course_name") or record.get("name") or "")
+            room = record.get("classroom") or record.get("room") or ""
+            room_text = f" | Derslik: {room}" if room else ""
+            time_text = f"{start}-{end}" if start or end else ""
+            lines.append(f"- {day} {time_text} | {name}{room_text}".strip())
+            emitted += 1
+    if len(records) > emitted:
+        lines.append(f"... {len(records) - emitted} satir daha var; sinif veya gun belirtirseniz daraltabilirim.")
     return "\n".join(lines)
 
 
@@ -203,3 +326,11 @@ def _format_currency_tr(amount: Any) -> str:
         return str(amount)
     formatted = f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return f"{formatted} TL"
+
+
+def _class_year_from_semester(value: Any) -> int | None:
+    try:
+        semester = int(str(value))
+    except (TypeError, ValueError):
+        return None
+    return (semester + 1) // 2

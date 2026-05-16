@@ -43,6 +43,8 @@ class RemoteHybridRetriever:
         source_hints: list[str] | None = None,
         topic_hint: str | None = None,
         student_department: str | None = None,
+        source_owner: str | None = None,
+        reranker_candidate_limit: int | None = None,
     ) -> list[dict[str, Any]]:
         payload = {
             "query": query,
@@ -51,7 +53,10 @@ class RemoteHybridRetriever:
             "source_hints": source_hints or [],
             "topic_hint": topic_hint,
             "student_department": student_department,
+            "source_owner": source_owner,
         }
+        if reranker_candidate_limit is not None:
+            payload["reranker_candidate_limit"] = reranker_candidate_limit
         response = self._client.post(f"{self.base_url}/search", json=payload)
         response.raise_for_status()
         data = response.json()
@@ -76,4 +81,3 @@ class RemoteHybridRetriever:
 
     def close(self) -> None:
         self._client.close()
-

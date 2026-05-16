@@ -1,0 +1,205 @@
+{
+  "run_id": "20260509_233736",
+  "created_at": "2026-05-09T23:39:35",
+  "trace_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\tmp\\shadow_decision_trace_golden_20260509_233736.jsonl",
+  "report_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\docs\\archive\\benchmarks\\shadow_decision_trace_golden_20260509_233736.md",
+  "a2a_mode": "inprocess",
+  "llm_provider": {
+    "primary": "anthropic",
+    "fallback": "none"
+  },
+  "capability_planner": {
+    "mode": "on",
+    "scope": "academic_programs,student_affairs,finance,announcement,event"
+  },
+  "llm_profile": "balanced",
+  "question_cache": "bypass",
+  "answer_preview_chars": 900,
+  "results": [
+    {
+      "id": "GT11",
+      "family": "follow_up_seed",
+      "query": "CAP basvurusu nasil yapilir?",
+      "context_id": "shadow-golden-20260509_233736-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 9,
+      "elapsed_ms": 75094.2,
+      "response_time_ms": 75009.54,
+      "answer_preview": "Benchmark, Çift ana dal programına (ÇAP) başvurabilmek için kayıtlı olduğun ana dal programının ilgili yükümlülüklerini yerine getirmiş olman gerekir. Başvuru ve kabul süreci bağlı olduğun birimin (fakülte/yüksekokul) yönetim kurulu tarafından yürütülür.\n\nBaşvuruların hangi dönemde ve nasıl yapılacağına ilişkin ayrıntılar biriminin duyuruları ve akademik takvimle ilan edildiğinden, güncel başvuru takvimi ve koşulları için biriminle veya ilgili öğrenci işleri birimiyle iletişime geçmeni öneririm.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Ogrenci Isleri: RAG\n- Akademik Programlar: RAG\n- Routing: parallel\n- Pipeline: student_affairs -> academic_programs -> orchestrator\n\nKaynak Özeti:\n- Belge: ön_lisans_ve_lisans.pdf\n- Belge: 2025_2026_güz_yarıyılı_yatay_geçiş_ı̇lan_metni.pdf\n- Belge: ön_lisans_ve_lisans_yatay_geçiş_yönergesi2.pdf\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: çift_ana_...",
+      "error": null,
+      "note": "Follow-up icin seed soru.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": "student_affairs.policy_lookup",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 75009.54,
+      "llm_call_count": 5,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT12",
+      "family": "follow_up_resolution",
+      "query": "Peki not ortalamasi kac olmali?",
+      "context_id": "shadow-golden-20260509_233736-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 10,
+      "elapsed_ms": 40819.7,
+      "response_time_ms": 40763.01,
+      "answer_preview": "Benchmark, Çift anadal programına (ÇAP) başvurabilmek için başvurduğun yarı yıla kadar ana dal lisans programındaki tüm dersleri almış ve başarmış olman, ayrıca başvuru sırasındaki ana dal genel not ortalamanın 4,00 üzerinden en az 2,50 olması gerekir. Bunun yanı sıra başarı sıralaması itibarıyla programının en az ilk %20'sinde bulunman da aranmaktadır.\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Akademik Programlar: RAG\n- Ogrenci Isleri: RAG\n- Routing: parallel\n- Pipeline: academic_programs -> student_affairs -> orchestrator\n\nKaynak Özeti:\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf (4 parça)\n- Belge: yonerge_cift_anadal_yandal.pdf\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf (2 parça)\n- Belge: ön_...",
+      "error": null,
+      "note": "Onceki CAP baglamina baglanmali.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 40763.01,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "conversation",
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "conversation",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-6",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced"
+        }
+      ],
+      "trace_recorded": true
+    }
+  ]
+}

@@ -17,12 +17,13 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.core.console import configure_utf8_stdio
+from src.core.config import apply_model_cache_environment, settings
 
 configure_utf8_stdio()
+apply_model_cache_environment()
 
-from sentence_transformers import CrossEncoder
+from sentence_transformers import CrossEncoder  # noqa: E402
 
-from src.core.config import settings
 from src.rag.retriever import HybridRetriever
 from src.rag.candidate_utils import deduplicate_candidate_dicts
 
@@ -92,7 +93,15 @@ def load_model(model_name: str, max_length: int) -> CrossEncoder:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"  Model yukleniyor: {model_name} (max_length={max_length}, device={device})")
     t0 = time.perf_counter()
-    model = CrossEncoder(model_name, max_length=max_length, device=device)
+    model = CrossEncoder(
+        model_name,
+        max_length=max_length,
+        device=device,
+        cache_dir=str(settings.model_cache.hf_hub_cache)
+        if settings.model_cache.hf_hub_cache is not None
+        else None,
+        local_files_only=settings.reranker.local_files_only,
+    )
     elapsed = time.perf_counter() - t0
     print(f"  Yuklendi: {elapsed:.1f}s")
     return model

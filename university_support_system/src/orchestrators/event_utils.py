@@ -20,7 +20,12 @@ from src.db.telemetry import (
 )
 from src.orchestrators.task_builders import build_event_request_task
 from src.orchestrators.response_utils import EVENT_SURFACE_DEPARTMENT
-from src.orchestrators.user_response_builders import build_event_user_response
+from src.orchestrators.final_quality import TEMPORARY_SYNTHESIS_FAILURE_ANSWER
+from src.orchestrators.user_response_builders import (
+    build_clarification_user_response,
+    build_event_user_response,
+)
+from src.quality.answer_filter import check_answer_quality, quality_issue_blocks_answer
 
 _ISTANBUL = timezone(timedelta(hours=3))
 
@@ -121,19 +126,36 @@ async def build_event_response(
 ):
     """Build a full user-facing response for event-only requests."""
     response_time_ms = round((perf_counter() - start_time) * 1000, 2)
-    await telemetry_service.finalize_query_log(
-        query_log_id=query_log_id,
-        response_text=response.answer,
-        response_time_ms=response_time_ms,
-        status="completed",
-        departments=[EVENT_SURFACE_DEPARTMENT],
-    )
-    return build_event_user_response(
+    user_response = build_event_user_response(
         context_id=context_id,
         answer=response.answer,
         sources=response.sources,
         response_time_ms=response_time_ms,
     )
+    quality = check_answer_quality(user_response.answer)
+    if quality.needs_rewrite and quality_issue_blocks_answer(quality):
+        await telemetry_service.finalize_query_log(
+            query_log_id=query_log_id,
+            response_text=TEMPORARY_SYNTHESIS_FAILURE_ANSWER,
+            response_time_ms=response_time_ms,
+            status="failed",
+            error="final_quality_gate_failed",
+            departments=[EVENT_SURFACE_DEPARTMENT],
+        )
+        return build_clarification_user_response(
+            context_id=context_id,
+            message=TEMPORARY_SYNTHESIS_FAILURE_ANSWER,
+            response_time_ms=response_time_ms,
+        )
+
+    await telemetry_service.finalize_query_log(
+        query_log_id=query_log_id,
+        response_text=user_response.answer,
+        response_time_ms=response_time_ms,
+        status="completed",
+        departments=[EVENT_SURFACE_DEPARTMENT],
+    )
+    return user_response
 
 
 async def request_event_response(
@@ -149,6 +171,8 @@ async def request_event_response(
     faculty: str | None = None,
     unit_name: str | None = None,
     limit: int = 5,
+    decision_contract: dict | None = None,
+    resolved_decision: dict | None = None,
     trace_metadata: dict | None = None,
 ):
     """Call the event agent through local or HTTP capability transport."""
@@ -161,6 +185,8 @@ async def request_event_response(
         faculty=faculty,
         unit_name=unit_name,
         limit=limit,
+        decision_contract=decision_contract,
+        resolved_decision=resolved_decision,
         trace_id=event_trace.get("trace_id"),
         span_id=event_trace.get("span_id"),
         parent_span_id=event_trace.get("parent_span_id"),
@@ -182,6 +208,8 @@ async def request_event_response(
                 faculty=faculty,
                 unit_name=unit_name,
                 limit=limit,
+                decision_contract=decision_contract,
+                resolved_decision=resolved_decision,
                 trace_id=event_trace.get("trace_id"),
                 span_id=event_trace.get("span_id"),
                 parent_span_id=event_trace.get("parent_span_id"),

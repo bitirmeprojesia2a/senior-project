@@ -17,6 +17,11 @@ SPECIALIST_METADATA_PASSTHROUGH_KEYS = (
     "final_answer_owner",
     "specialist_response_mode",
     "capability_planner",
+    "source_owner",
+    "policy_facet",
+    "answer_contract",
+    "decision_contract",
+    "specialist_selection",
     "original_query",
     "resolved_query",
     "conversation_is_follow_up",
@@ -25,6 +30,8 @@ SPECIALIST_METADATA_PASSTHROUGH_KEYS = (
     "trace_id",
     "span_id",
     "parent_span_id",
+    "branch_role",
+    "retrieval_execution_policy",
 )
 
 
@@ -77,9 +84,16 @@ def build_request_task(
         final_answer_owner=meta.get("final_answer_owner"),
         specialist_response_mode=meta.get("specialist_response_mode"),
         capability_planner=meta.get("capability_planner"),
+        source_owner=meta.get("source_owner"),
+        policy_facet=meta.get("policy_facet"),
+        answer_contract=meta.get("answer_contract"),
+        decision_contract=meta.get("decision_contract"),
+        specialist_selection=meta.get("specialist_selection"),
         trace_id=meta.get("trace_id"),
         span_id=meta.get("span_id"),
         parent_span_id=meta.get("parent_span_id"),
+        branch_role=meta.get("branch_role"),
+        retrieval_execution_policy=meta.get("retrieval_execution_policy"),
     )
     return build_query_task(payload)
 
@@ -116,9 +130,16 @@ def build_specialist_task(
         final_answer_owner=metadata.get("final_answer_owner"),
         specialist_response_mode=metadata.get("specialist_response_mode"),
         capability_planner=metadata.get("capability_planner"),
+        source_owner=metadata.get("source_owner"),
+        policy_facet=metadata.get("policy_facet"),
+        answer_contract=metadata.get("answer_contract"),
+        decision_contract=metadata.get("decision_contract"),
+        specialist_selection=metadata.get("specialist_selection"),
         trace_id=metadata.get("trace_id"),
         span_id=metadata.get("span_id"),
         parent_span_id=metadata.get("parent_span_id"),
+        branch_role=metadata.get("branch_role"),
+        retrieval_execution_policy=metadata.get("retrieval_execution_policy"),
     )
     task = build_query_task(payload)
     for key in SPECIALIST_METADATA_PASSTHROUGH_KEYS:

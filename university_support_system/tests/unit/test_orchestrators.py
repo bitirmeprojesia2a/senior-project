@@ -11,6 +11,7 @@ from src.a2a import A2AQueryPayload, build_department_response_task, build_query
 from src.cache import question_cache
 from src.capabilities.models import CapabilityAction
 from src.core.config import settings
+from src.core.answer_contracts import resolve_answer_contract
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
 from src.core.messages import CONTACT_SUGGESTION
 from src.core.profiling import QueryProfiler, activate_profiler
@@ -18,10 +19,12 @@ from src.db.conversation_context import ConversationResolution
 from src.db.events import EventLinkRecord, EventRecord
 from src.db.schemas import DepartmentResponse, IntentAnalysis, RAGSource, RoutingResult
 from src.agents.academic.curriculum_agent import CurriculumAgent
-from src.orchestrators.department import DepartmentOrchestrator
+from src.orchestrators.department import DepartmentOrchestrator, _is_transport_timeout_error
 from src.orchestrators.defaults import RemoteDepartmentTarget
 from src.orchestrators.department_dispatch import dispatch_to_departments
 from src.orchestrators.department_factories import build_student_affairs_orchestrator
+from src.orchestrators.department_task_utils import build_specialist_task
+from src.orchestrators.task_builders import build_department_request_task
 from src.orchestrators.announcement_utils import request_announcement_response
 from src.orchestrators.event_utils import request_event_response
 from src.orchestrators.main import MainOrchestrator
@@ -37,8 +40,14 @@ from src.orchestrators.query_policy import (
     should_keep_announcement_follow_up,
     should_use_global_synthesis,
 )
-from src.orchestrators.response_utils import filter_low_confidence_responses
-from src.orchestrators.synthesis_utils import build_global_synthesis_prompt
+from src.orchestrators.response_utils import (
+    build_response_filter_diagnostics,
+    filter_low_confidence_responses,
+)
+from src.orchestrators.synthesis_utils import (
+    build_evidence_packet_fallback_answer,
+    build_global_synthesis_prompt,
+)
 from src.orchestrators.user_response_builders import build_final_user_response
 
 
@@ -65,6 +74,17 @@ class _FakeAgent:
             )
 
         self.handle_task = AsyncMock(side_effect=_handle_task)
+
+
+def test_main_capability_param_bool_accepts_turkish_no():
+    assert (
+        MainOrchestrator._capability_param_bool(
+            {"allow_latest_fallback": "hayır"},
+            "allow_latest_fallback",
+            default=True,
+        )
+        is False
+    )
 
 
 class _FakeDepartmentOrchestrator:
@@ -132,6 +152,15 @@ class _FakeDepartmentTransport:
             emitter_id=f"{department.value}_transport",
             emitter_name=f"{department.value} Transport",
         )
+
+
+def test_calendar_follow_up_does_not_stay_in_announcement_flow():
+    assert should_keep_announcement_follow_up("Takvimde hangi tarihler verilmis?") is False
+    assert should_keep_announcement_follow_up("Hangi tarihler?") is False
+
+
+def test_related_announcements_not_fetched_for_calendar_follow_up():
+    assert should_fetch_related_announcements("CAP takvimde hangi tarihler verilmis?") is False
 
 
 @pytest.mark.asyncio
@@ -340,6 +369,270 @@ async def test_dispatch_to_departments_recomputes_branch_task_types_per_departme
 
 
 @pytest.mark.asyncio
+async def test_branch_dispatch_gate_prunes_academic_for_student_affairs_policy_process():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS],
+        confidence=0.91,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.PARALLEL,
+        reasoning="Muafiyet basvuru sureci",
+        task_type=TaskType.REGISTRATION_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    await dispatch_to_departments(
+        department_orchestrators={
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+        },
+        query="Yatay gecisle gelen ogrenci muafiyet basvurusunu ne zaman yapmali?",
+        context_id="ctx-branch-gate-student-policy",
+        routing=routing,
+        metadata={
+            "capability_planner": {
+                "action": {
+                    "capability": "student_affairs.policy_lookup",
+                    "params": {
+                        "topic": "muafiyet basvurusu",
+                        "question_type": "deadline",
+                    },
+                }
+            },
+            "source_owner": {"primary": "student_affairs_policy"},
+        },
+        transport=transport,
+    )
+
+    assert [call["department"] for call in transport.calls] == [Department.STUDENT_AFFAIRS]
+    gate = transport.calls[0]["metadata"]["branch_dispatch_gate"]
+    assert gate["applied"] is True
+    assert gate["kept_departments"] == ["student_affairs"]
+    assert gate["pruned_departments"] == ["academic_programs"]
+    assert transport.calls[0]["disable_specialist_llm"] is False
+
+
+@pytest.mark.asyncio
+async def test_branch_dispatch_gate_keeps_academic_for_student_affairs_policy_conditions():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS],
+        confidence=0.91,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.PARALLEL,
+        reasoning="CAP basvuru sureci ve kosullari",
+        task_type=TaskType.REGISTRATION_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    await dispatch_to_departments(
+        department_orchestrators={
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+        },
+        query="CAP basvurusu nasil yapilir ve GNO sarti nedir?",
+        context_id="ctx-branch-gate-cap",
+        routing=routing,
+        metadata={
+            "capability_planner": {
+                "action": {
+                    "capability": "student_affairs.policy_lookup",
+                    "params": {
+                        "topic": "cift anadal basvuru sartlari",
+                        "question_type": "conditions",
+                    },
+                    "answer_contract": {"must_answer": ["GNO kosulu", "basvuru sureci"]},
+                }
+            },
+            "source_owner": {"primary": "student_affairs_policy"},
+        },
+        transport=transport,
+    )
+
+    calls_by_department = {call["department"]: call for call in transport.calls}
+    assert set(calls_by_department) == {Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS}
+    assert calls_by_department[Department.ACADEMIC_PROGRAMS]["task_type"] == TaskType.PROCEDURE_QUERY
+    gate = calls_by_department[Department.STUDENT_AFFAIRS]["metadata"]["branch_dispatch_gate"]
+    assert gate["reason"] == "student_affairs_policy_contract_gate"
+    assert gate["pruned_departments"] == []
+
+
+@pytest.mark.asyncio
+async def test_branch_dispatch_gate_restores_student_affairs_owner_primary_branch():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[Department.ACADEMIC_PROGRAMS],
+        confidence=0.9,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.DIRECT,
+        reasoning="CAP not ortalamasi onceki akademik kaynak baglamina baglandi",
+        task_type=TaskType.PROCEDURE_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    await dispatch_to_departments(
+        department_orchestrators={
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+        },
+        query="CAP basvurusu icin not ortalamasi kac olmali?",
+        context_id="ctx-branch-restore-student-owner",
+        routing=routing,
+        metadata={
+            "capability_planner": {
+                "action": {
+                    "capability": "student_affairs.policy_lookup",
+                    "params": {
+                        "topic": "CAP / Cift Anadal",
+                        "question_type": "eligibility",
+                    },
+                    "answer_contract": {"must_answer": ["GNO kosulu"]},
+                }
+            },
+            "source_owner": {"primary": "student_affairs_policy"},
+        },
+        transport=transport,
+    )
+
+    calls_by_department = {call["department"]: call for call in transport.calls}
+    assert set(calls_by_department) == {Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS}
+    assert all(call["disable_specialist_llm"] is True for call in transport.calls)
+    gate = calls_by_department[Department.STUDENT_AFFAIRS]["metadata"]["branch_dispatch_gate"]
+    assert gate["applied"] is True
+    assert gate["original_departments"] == ["academic_programs"]
+    assert gate["restored_departments"] == ["student_affairs"]
+    assert gate["router_departments"] == ["academic_programs"]
+    assert gate["restored_primary_department"] == "student_affairs"
+    assert gate["support_departments"] == ["academic_programs", "finance"]
+    assert gate["owner_routing_policy"]["reason"] == "student_affairs_policy_primary"
+    assert gate["kept_departments"] == ["student_affairs", "academic_programs"]
+    assert gate["pruned_departments"] == []
+    assert gate["reason"] == "student_affairs_policy_contract_gate"
+    assert calls_by_department[Department.STUDENT_AFFAIRS]["task_type"] == TaskType.PROCEDURE_QUERY
+    assert calls_by_department[Department.ACADEMIC_PROGRAMS]["task_type"] == TaskType.PROCEDURE_QUERY
+
+
+@pytest.mark.asyncio
+async def test_branch_dispatch_gate_keeps_academic_support_for_special_long_graduation_akts():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[Department.ACADEMIC_PROGRAMS],
+        confidence=0.9,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.DIRECT,
+        reasoning="Dis hekimligi akademik program sorgusu",
+        task_type=TaskType.PROCEDURE_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+    contract = resolve_answer_contract(
+        "Dis hekimliginden mezun olmak icin kac AKTS lazim?"
+    )
+    assert contract is not None
+
+    await dispatch_to_departments(
+        department_orchestrators={
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+        },
+        query="Dis hekimliginden mezun olmak icin kac AKTS lazim?",
+        context_id="ctx-branch-special-long-graduation-akts",
+        routing=routing,
+        metadata={
+            "capability_planner": {
+                "action": {
+                    "capability": contract.capability,
+                    "intent": contract.contract_id,
+                    "params": {
+                        "policy_facet": contract.facet,
+                        "answer_contract": contract.to_metadata(),
+                    },
+                    "answer_contract": contract.to_metadata(),
+                }
+            },
+            "source_owner": {"primary": contract.source_owner},
+        },
+        transport=transport,
+    )
+
+    calls_by_department = {call["department"]: call for call in transport.calls}
+    assert set(calls_by_department) == {Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS}
+    gate = calls_by_department[Department.STUDENT_AFFAIRS]["metadata"]["branch_dispatch_gate"]
+    assert gate["reason"] == "graduation_akts_program_specific_support_branch"
+    assert gate["restored_departments"] == ["student_affairs"]
+
+
+@pytest.mark.asyncio
+async def test_branch_dispatch_gate_prunes_student_affairs_for_international_policy():
+    student_orchestrator = SimpleNamespace(
+        department=Department.STUDENT_AFFAIRS,
+        handle_task=AsyncMock(),
+    )
+    academic_orchestrator = SimpleNamespace(
+        department=Department.ACADEMIC_PROGRAMS,
+        handle_task=AsyncMock(),
+    )
+    routing = RoutingResult(
+        departments=[Department.ACADEMIC_PROGRAMS, Department.STUDENT_AFFAIRS],
+        confidence=0.9,
+        confidence_level=ConfidenceLevel.HIGH,
+        strategy=RoutingStrategy.PARALLEL,
+        reasoning="Uluslararasi kayit belgeleri",
+        task_type=TaskType.REGISTRATION_QUERY,
+    )
+    transport = _FakeDepartmentTransport()
+
+    await dispatch_to_departments(
+        department_orchestrators={
+            Department.ACADEMIC_PROGRAMS: academic_orchestrator,
+            Department.STUDENT_AFFAIRS: student_orchestrator,
+        },
+        query="Yabanci ogrenci kayit belgeleri ve ikamet izni icin neler gerekir?",
+        context_id="ctx-branch-gate-international",
+        routing=routing,
+        metadata={
+            "capability_planner": {
+                "action": {"capability": "international.policy_lookup"}
+            },
+            "source_owner": {"primary": "international_policy"},
+        },
+        transport=transport,
+    )
+
+    assert [call["department"] for call in transport.calls] == [Department.ACADEMIC_PROGRAMS]
+    gate = transport.calls[0]["metadata"]["branch_dispatch_gate"]
+    assert gate["applied"] is True
+    assert gate["pruned_departments"] == ["student_affairs"]
+
+
+@pytest.mark.asyncio
 async def test_dispatch_keeps_specialist_llm_disabled_for_multi_department_force_llm():
     student_orchestrator = SimpleNamespace(
         department=Department.STUDENT_AFFAIRS,
@@ -425,6 +718,15 @@ async def test_student_affairs_factory_prefers_registration_agent_for_admin_work
         orchestrator._select_agent(
             TaskType.PROCEDURE_QUERY,
             "Staj sureci nasil isler?",
+            metadata={
+                "capability_planner": {
+                    "action": {
+                        "capability": "student_affairs.policy_lookup",
+                        "params": {"topic": "staj"},
+                    }
+                },
+                "source_owner": {"primary": "student_affairs_policy"},
+            },
         ).agent_id
         == "internship_agent"
     )
@@ -501,7 +803,7 @@ async def test_main_orchestrator_filters_related_announcements_when_strong_answe
     )
     academic_orchestrator = _FakeDepartmentOrchestrator(
         Department.ACADEMIC_PROGRAMS,
-        "Akademik program cevabi",
+        "Akademik program cevabi: CAP basvurusu icin not ortalamasi en az 3,00 olmali ve ilk %20 kosulu saglanmalidir.",
     )
     announcement_agent = _FakeAgent("announcement", Department.STUDENT_AFFAIRS)
 
@@ -537,7 +839,7 @@ async def test_main_orchestrator_filters_related_announcements_when_strong_answe
         telemetry_service=telemetry,
     )
 
-    response = await orchestrator.handle_query("Cap basvurulari ne zaman?", context_id="ctx-announce")
+    response = await orchestrator.handle_query("Cap basvurulari acildi mi?", context_id="ctx-announce")
 
     assert "Akademik program cevabi" in response.answer
     assert "Ilgili duyurular" not in response.answer
@@ -569,6 +871,64 @@ def test_announcement_latest_fallback_is_only_for_generic_latest_queries():
     assert should_allow_announcement_latest_fallback("Guncel duyurular neler?")
     assert not should_allow_announcement_latest_fallback("Sinav takvimi var mi?")
     assert not looks_like_announcement_query("Final sinavlarinin girilmesinin son gunu ne zaman?")
+
+
+def test_transport_timeout_errors_are_detected_for_no_fallback_policy():
+    assert _is_transport_timeout_error("a2a_transport_timeout")
+    assert _is_transport_timeout_error("httpx.ReadTimeout")
+    assert not _is_transport_timeout_error("a2a_transport_failed")
+
+
+def test_specialist_task_preserves_retrieval_execution_metadata():
+    policy = {
+        "schema": "omu.retrieval_execution_policy.v1",
+        "branch_role": "primary",
+        "reranker_candidate_limit": 8,
+        "max_multi_query_variants": 1,
+    }
+
+    payload, task = build_specialist_task(
+        query_text="Yatay gecis muafiyet basvurusu ne zaman?",
+        context_id="ctx-retrieval-policy",
+        task_type=TaskType.PROCEDURE_QUERY,
+        metadata={
+            "branch_role": "primary",
+            "retrieval_execution_policy": policy,
+            "source_owner": {"primary": "student_affairs_policy"},
+        },
+    )
+
+    assert payload.branch_role == "primary"
+    assert payload.retrieval_execution_policy == policy
+    assert task.metadata["branch_role"] == "primary"
+    assert task.metadata["retrieval_execution_policy"]["reranker_candidate_limit"] == 8
+
+
+def test_department_request_task_preserves_retrieval_execution_metadata():
+    policy = {
+        "schema": "omu.retrieval_execution_policy.v1",
+        "branch_role": "support",
+        "top_k": 4,
+        "reranker_candidate_limit": 4,
+        "max_multi_query_variants": 0,
+    }
+
+    task = build_department_request_task(
+        department=Department.ACADEMIC_PROGRAMS,
+        query="Yatay gecis muafiyet basvurusu ne zaman?",
+        context_id="ctx-branch-policy",
+        task_type=TaskType.PROCEDURE_QUERY,
+        metadata={
+            "branch_role": "support",
+            "retrieval_execution_policy": policy,
+            "source_owner": {"primary": "student_affairs_policy"},
+            "branch_dispatch_gate": {"schema": "omu.branch_dispatch_gate.v1"},
+        },
+    )
+
+    assert task.metadata["branch_role"] == "support"
+    assert task.metadata["retrieval_execution_policy"]["top_k"] == 4
+    assert task.metadata["retrieval_execution_policy"]["reranker_candidate_limit"] == 4
 
 
 def test_announcement_follow_up_stops_on_clear_topic_shift():
@@ -1195,7 +1555,7 @@ async def test_main_orchestrator_records_canonical_memory_answer_without_contact
         context_id="ctx-memory-1",
     )
 
-    assert CONTACT_SUGGESTION in response.answer
+    assert CONTACT_SUGGESTION not in response.answer
     record_kwargs = conversation_service.record_turn.await_args.kwargs
     assert CONTACT_SUGGESTION not in record_kwargs["assistant_answer"]
     assert "Kaynak Ozeti:" not in record_kwargs["assistant_answer"]
@@ -1527,6 +1887,91 @@ def test_filter_low_confidence_responses_respects_score_type_thresholds():
     assert strong in filtered
 
 
+def test_filter_low_confidence_responses_preserves_source_owner_evidence_branch():
+    student_affairs_primary = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="Kaynak bilgisi final cevap icin hazirlandi.",
+        sources=[
+            RAGSource(
+                content="CAP icin not ortalamasi en az 3,00 olmalidir.",
+                score=0.001,
+                metadata={"source": "cift_anadal_yonergesi.pdf"},
+            )
+        ],
+        metadata={
+            "specialist_selection": {"selected_agent_id": "registration_agent"},
+            "evidence_packet": {
+                "source_owner": "student_affairs_policy",
+                "facts": [{"claim": "CAP icin not ortalamasi en az 3,00 olmalidir."}],
+            },
+        },
+    )
+    academic_support = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Akademik program kaynaklarina gore en az 3,00 gerekir.",
+        sources=[
+            RAGSource(
+                content="Ana dal not ortalamasi 4,00 uzerinden en az 3,00 olmalidir.",
+                score=0.45,
+                metadata={"source": "yonerge_cift_anadal_yandal.pdf"},
+            )
+        ],
+        metadata={"specialist_selection": {"selected_agent_id": "regulation_agent"}},
+    )
+
+    filtered = filter_low_confidence_responses(
+        [academic_support, student_affairs_primary],
+        source_owner="student_affairs_policy",
+    )
+    diagnostics = build_response_filter_diagnostics(
+        original=[academic_support, student_affairs_primary],
+        filtered=filtered,
+        source_owner="student_affairs_policy",
+    )
+
+    assert student_affairs_primary in filtered
+    assert filtered[0] is student_affairs_primary
+    assert academic_support in filtered
+    assert diagnostics["dropped_count"] == 0
+    assert diagnostics["primary_department"] == "student_affairs"
+
+
+def test_response_filter_diagnostics_reports_dropped_branch_reason():
+    weak_no_info = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="Bu konuda elimdeki kaynaklarda net bilgi bulunamadi.",
+        sources=[],
+        metadata={"specialist_selection": {"selected_agent_id": "registration_agent"}},
+    )
+    strong = DepartmentResponse(
+        department=Department.ACADEMIC_PROGRAMS,
+        answer="Guclu akademik cevap",
+        sources=[
+            RAGSource(
+                content="CAP yonergesi ilgili maddeler",
+                score=0.40,
+                metadata={"source": "yonerge_cift_anadal_yandal.pdf"},
+            )
+        ],
+    )
+
+    filtered = filter_low_confidence_responses(
+        [weak_no_info, strong],
+        source_owner="student_affairs_policy",
+    )
+    diagnostics = build_response_filter_diagnostics(
+        original=[weak_no_info, strong],
+        filtered=filtered,
+        source_owner="student_affairs_policy",
+    )
+
+    assert weak_no_info not in filtered
+    assert diagnostics["dropped_count"] == 1
+    assert diagnostics["dropped"][0]["department"] == "student_affairs"
+    assert diagnostics["dropped"][0]["no_info"] is True
+    assert diagnostics["dropped"][0]["source_owner_primary"] is True
+
+
 def test_build_global_synthesis_prompt_keeps_substantial_department_context():
     long_tail = "SON-BOLUM-TAM-METIN"
     academic_answer = "Akademik cevap " + ("detay " * 160) + long_tail
@@ -1626,6 +2071,61 @@ def test_build_global_synthesis_prompt_prefers_evidence_packet():
     assert "CAP basvurusu icin GANO en az 2.00 olmalidir." in prompt
     assert "Basvuru tarihleri bu kaynakta yer almiyor." in prompt
     assert "yonerge_cift_anadal_yandal.pdf" in prompt
+
+
+def test_build_global_synthesis_prompt_adds_synthesis_value_contract():
+    retention_claim = (
+        "Not ortalamasinin 4,00 uzerinden en az 2,00 olmasi sarttir; "
+        "saglayamayan ogrencinin cift ana dal kaydi silinir."
+    )
+    application_claim = (
+        "Ana dal not ortalamasinin 4,00 uzerinden en az 3,00 olmasi ve ana dal "
+        "diploma programinin ilgili sinifinda basari siralamasi itibari ile en az ilk "
+        "% 20'sinde bulunmasi gerekir."
+    )
+    prompt, meaningful = build_global_synthesis_prompt(
+        "Peki not ortalamasi kac olmali?",
+        [
+            DepartmentResponse(
+                department=Department.STUDENT_AFFAIRS,
+                answer="Kaynak bilgisi final cevap icin hazirlandi.",
+                sources=[],
+                metadata={
+                    "evidence_packet": {
+                        "version": 1,
+                        "department": "student_affairs",
+                        "final_answer_owner": "main_orchestrator",
+                        "specialist_response_mode": "evidence_packet",
+                        "confidence": "high",
+                        "facts": [
+                            {
+                                "claim": retention_claim,
+                                "source": "yonerge_cift_anadal_yandal.pdf",
+                                "policy_alignment": {
+                                    "status": "match",
+                                    "matched_programs": ["double_major"],
+                                },
+                            },
+                            {
+                                "claim": application_claim,
+                                "source": "yonerge_cift_anadal_yandal.pdf",
+                                "policy_alignment": {
+                                    "status": "match",
+                                    "matched_programs": ["double_major"],
+                                },
+                            },
+                        ],
+                    }
+                },
+            )
+        ],
+    )
+
+    assert len(meaningful) == 1
+    assert "synthesis_value_contract" in prompt
+    assert '"primary_values": [\n      "3,00"\n    ]' in prompt
+    assert '"secondary_values": [\n      "2,00"\n    ]' in prompt
+    assert "secondary_values/conflicting_values icindeki degerleri" in prompt
 
 
 def test_global_synthesis_marks_evidence_packet_mode_as_non_final_answer():
@@ -1888,6 +2388,124 @@ async def test_compose_final_answer_uses_final_refinement_for_single_department_
 
 
 @pytest.mark.asyncio
+async def test_compose_final_answer_skips_llm_when_main_contract_is_deterministic():
+    from src.core.answer_contracts import resolve_answer_contract
+
+    query = "Bilgisayar Muhendisligi ders programi ne?"
+    contract = resolve_answer_contract(query)
+    assert contract is not None
+    assert contract.synthesis_policy == "deterministic"
+
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(return_value="Final LLM cevabi.")
+    orchestrator = MainOrchestrator(
+        router=AsyncMock(),
+        department_orchestrators={},
+        announcement_agent=_FakeAgent("announcement", Department.STUDENT_AFFAIRS),
+        telemetry_service=AsyncMock(),
+        llm_service=llm_service,
+    )
+    responses = [
+        DepartmentResponse(
+            department=Department.ACADEMIC_PROGRAMS,
+            answer="Bilgisayar Muhendisligi ders programi: Pazartesi 09:00.",
+            sources=[
+                RAGSource(
+                    content="Bilgisayar Muhendisligi ders programi: Pazartesi 09:00.",
+                    score=1.0,
+                    metadata={"source": "weekly_schedule"},
+                )
+            ],
+            db_data={"query_type": "schedule_lookup"},
+            success=True,
+            generation_mode="kural",
+            metadata={"answer_contract": contract.to_metadata()},
+        )
+    ]
+
+    answer, used_global_synthesis = await orchestrator._compose_final_answer(
+        query=query,
+        responses=responses,
+        llm_profile="balanced",
+        answer_contract=contract,
+    )
+
+    assert used_global_synthesis is False
+    assert "Pazartesi 09:00" in answer
+    llm_service.generate.assert_not_awaited()
+
+
+def test_contract_validation_fallback_for_cap_eligibility_is_contract_safe():
+    from src.core.answer_contracts import (
+        resolve_answer_contract,
+        validate_answer_against_contract,
+    )
+
+    query = "Çapa başvurabilir miyim?"
+    contract = resolve_answer_contract(query)
+    fallback = MainOrchestrator._contract_validation_fallback(
+        query=query,
+        contract=contract,
+    )
+
+    assert fallback is not None
+    assert "3,00" in fallback
+    assert "ilk %20" in fallback
+    assert "120 AKTS" not in fallback
+    assert validate_answer_against_contract(
+        query=query,
+        answer=fallback,
+        contract=contract,
+    )["status"] == "pass"
+
+
+def test_contract_validation_fallback_for_special_long_graduation_akts_is_safe():
+    from src.core.answer_contracts import (
+        resolve_answer_contract,
+        validate_answer_against_contract,
+    )
+
+    query = "Diş hekimliğinden mezun olmak için kaç AKTS lazım?"
+    contract = resolve_answer_contract(query)
+    fallback = MainOrchestrator._contract_validation_fallback(
+        query=query,
+        contract=contract,
+    )
+
+    assert fallback is not None
+    assert "doğrulanmış toplam AKTS koşulu yok" in fallback
+    assert "240 AKTS" not in fallback
+    assert validate_answer_against_contract(
+        query=query,
+        answer=fallback,
+        contract=contract,
+    )["status"] == "pass"
+
+
+@pytest.mark.asyncio
+async def test_final_quality_gate_tolerates_minor_issue_when_repair_times_out():
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(side_effect=asyncio.TimeoutError())
+    orchestrator = MainOrchestrator(
+        router=AsyncMock(),
+        department_orchestrators={},
+        announcement_agent=_FakeAgent("announcement", Department.STUDENT_AFFAIRS),
+        telemetry_service=AsyncMock(),
+        llm_service=llm_service,
+    )
+
+    answer = await orchestrator._apply_final_quality_gate(
+        query="Basvuru sureci ne zaman?",
+        answer="Basvuru sureci before ve during duyurularda aciklanir.",
+        llm_profile="balanced",
+    )
+
+    assert "güvenilir biçimde sentezleyemiyorum" not in answer
+    assert "before" in answer
+    llm_service.generate.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_compose_final_answer_uses_evidence_packet_fallback_when_final_llm_fails():
     llm_service = AsyncMock()
     llm_service.generate = AsyncMock(side_effect=asyncio.TimeoutError())
@@ -1944,6 +2562,37 @@ async def test_compose_final_answer_uses_evidence_packet_fallback_when_final_llm
     assert "Kaynak bilgisi final cevap" not in answer
     assert "Devam kosulu teorik derslerde yuzde 70" in answer
     llm_service.generate.assert_awaited_once()
+
+
+def test_evidence_packet_fallback_can_use_sources_when_packet_is_missing():
+    responses = [
+        DepartmentResponse(
+            department=Department.ACADEMIC_PROGRAMS,
+            answer="Kaynak bilgisi final cevap icin hazirlandi.",
+            sources=[
+                RAGSource(
+                    content=(
+                        "CAP'a basvurularda ana dal not ortalamasinin 4,00 uzerinden "
+                        "en az 3,00 olmasi ve basari siralamasi itibariyle ilk yuzde "
+                        "20 icinde bulunmasi gerekir."
+                    ),
+                    score=0.91,
+                    metadata={"source": "yonerge_cift_anadal_yandal.pdf"},
+                )
+            ],
+            success=True,
+            generation_mode="rag",
+        )
+    ]
+
+    answer = build_evidence_packet_fallback_answer(
+        responses,
+        query="cap basvurusu icin not ortalamasi kac olmali",
+    )
+
+    assert answer is not None
+    assert "3,00" in answer
+    assert "not ortalamas" in answer
 
 
 @pytest.mark.asyncio
@@ -2190,6 +2839,7 @@ async def test_main_orchestrator_uses_question_cache_when_enabled(monkeypatch):
     question_cache.configure(ttl_seconds=300, enabled=True)
     monkeypatch.setattr(settings.cache, "enabled", True)
     monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+    monkeypatch.setattr(settings.capability_planner, "mode", "off")
 
     router = AsyncMock()
     router.route = AsyncMock(
@@ -2338,6 +2988,22 @@ async def test_main_orchestrator_does_not_question_cache_announcement_queries(mo
     question_cache.configure(ttl_seconds=300, enabled=True)
     monkeypatch.setattr(settings.cache, "enabled", True)
     monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+    monkeypatch.setattr(settings.capability_planner, "mode", "pilot")
+    monkeypatch.setattr(settings.capability_planner, "scope", "announcement")
+
+    async def _plan_capability_action(*args, **kwargs):
+        return CapabilityAction(
+            capability="announcement.search",
+            params={"query": "Son duyurular neler?"},
+            confidence=0.95,
+            reasoning="duyuru aramasi",
+        )
+
+    monkeypatch.setattr(
+        main_module,
+        "plan_capability_action",
+        _plan_capability_action,
+    )
 
     router = AsyncMock()
     router.route = AsyncMock()

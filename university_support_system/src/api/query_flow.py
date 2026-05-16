@@ -126,7 +126,7 @@ async def resolve_dispatch_context(
         allow_slack_identity=True,
         allow_trusted_identity_claims=True,
     )
-    return payload.context_id or "api-a2a-context", resolved
+    return payload.context_id or str(uuid4()), resolved
 
 
 def build_dispatch_metadata(
@@ -157,6 +157,13 @@ def build_dispatch_metadata(
         "final_answer_owner": payload.final_answer_owner,
         "specialist_response_mode": payload.specialist_response_mode,
         "capability_planner": getattr(payload, "capability_planner", None),
+        "source_owner": getattr(payload, "source_owner", None),
+        "policy_facet": getattr(payload, "policy_facet", None),
+        "decision_contract": getattr(payload, "decision_contract", None),
+        "resolved_decision": getattr(payload, "resolved_decision", None),
+        "branch_dispatch_gate": getattr(payload, "branch_dispatch_gate", None),
+        "branch_role": getattr(payload, "branch_role", None),
+        "retrieval_execution_policy": getattr(payload, "retrieval_execution_policy", None),
         "disable_specialist_llm": payload.disable_specialist_llm,
         "trace_id": payload.trace_id,
         "span_id": payload.span_id,

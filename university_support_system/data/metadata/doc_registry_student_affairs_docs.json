@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-30T11:38:29.543727+00:00",
+  "generated_at": "2026-05-16T11:39:40.515795+00:00",
   "source_dir": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs",
   "total_documents": 106,
-  "total_chunks": 1802,
+  "total_chunks": 1827,
   "embedding_model": "BAAI/bge-m3",
   "collection_name": "student_affairs_docs",
   "documents": [
@@ -363,7 +363,7 @@
       "category": "uygulama esasları",
       "file_type": "pdf",
       "char_count": 11174,
-      "chunk_count": 15,
+      "chunk_count": 21,
       "content_hash": "44cde97b16a69b35"
     },
     {
@@ -435,7 +435,7 @@
       "category": "uygulama esasları",
       "file_type": "pdf",
       "char_count": 8864,
-      "chunk_count": 12,
+      "chunk_count": 17,
       "content_hash": "bb456f83c4eebfb9"
     },
     {
@@ -444,7 +444,7 @@
       "category": "uygulama esasları",
       "file_type": "pdf",
       "char_count": 6631,
-      "chunk_count": 13,
+      "chunk_count": 15,
       "content_hash": "ad257be498210aa2"
     },
     {
@@ -579,7 +579,7 @@
       "category": "uygulama esasları",
       "file_type": "pdf",
       "char_count": 12853,
-      "chunk_count": 25,
+      "chunk_count": 26,
       "content_hash": "88000a6848e78bc2"
     },
     {
@@ -642,7 +642,7 @@
       "category": "uygulama",
       "file_type": "txt",
       "char_count": 36276,
-      "chunk_count": 116,
+      "chunk_count": 124,
       "content_hash": "31d5f87981112337"
     },
     {
@@ -678,7 +678,7 @@
       "category": "yönergeler",
       "file_type": "pdf",
       "char_count": 8314,
-      "chunk_count": 10,
+      "chunk_count": 11,
       "content_hash": "c01c7f18d03ac0bc"
     },
     {
@@ -732,7 +732,7 @@
       "category": "yönergeler",
       "file_type": "pdf",
       "char_count": 9831,
-      "chunk_count": 21,
+      "chunk_count": 22,
       "content_hash": "d5834311b7d889d8"
     },
     {
@@ -750,7 +750,7 @@
       "category": "yönergeler",
       "file_type": "pdf",
       "char_count": 12853,
-      "chunk_count": 25,
+      "chunk_count": 26,
       "content_hash": "88000a6848e78bc2"
     },
     {

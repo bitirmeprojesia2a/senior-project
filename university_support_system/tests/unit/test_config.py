@@ -4,9 +4,12 @@ Config ve Constants Unit Testleri
 src/core/constants.py modülünün testleri.
 """
 
+import os
+
 import pytest
 
-from src.core.config import Settings
+from src.core import config as config_module
+from src.core.config import ModelCacheSettings, Settings
 from src.core.constants import (
     AgentRole,
     build_department_routing_descriptions,
@@ -228,6 +231,59 @@ class TestLLMModelResolution:
             == "gemini-3-flash-preview"
         )
         assert test_settings.configured_llm_models()["global_synthesis_provider"] == "google_ai"
+
+    def test_anthropic_provider_model_resolution(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "anthropic")
+        monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "none")
+        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+        monkeypatch.setenv("ANTHROPIC_SECONDARY_MODEL", "claude-3-5-haiku-20241022")
+        monkeypatch.setenv("ANTHROPIC_ROUTING_MODEL", "claude-3-5-haiku-20241022")
+        monkeypatch.setenv("ANTHROPIC_VERSION", "2023-06-01")
+
+        test_settings = Settings()
+
+        assert test_settings.anthropic.anthropic_version == "2023-06-01"
+        assert test_settings.resolve_llm_provider(role="routing") == "anthropic"
+        assert test_settings.resolve_llm_model(role="routing", provider="anthropic") == "claude-3-5-haiku-20241022"
+        assert test_settings.resolve_llm_model(role="global_synthesis", provider="anthropic") == "claude-sonnet-4-20250514"
+        assert test_settings.configured_llm_models()["provider"] == "anthropic"
+
+
+class TestModelCacheSettings:
+    """Local model cache path helpers."""
+
+    def test_model_cache_host_dir_resolves_against_project_root(self, monkeypatch):
+        monkeypatch.setenv("MODEL_CACHE_HOST_DIR", "./data/models")
+
+        test_settings = Settings()
+
+        assert test_settings.model_cache.hf_home == test_settings.base_dir / "data" / "models" / "huggingface"
+        assert test_settings.model_cache.hf_hub_cache == (
+            test_settings.base_dir / "data" / "models" / "huggingface" / "hub"
+        )
+
+    def test_apply_model_cache_environment_sets_missing_hf_env(self, monkeypatch):
+        monkeypatch.delenv("HF_HOME", raising=False)
+        monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+        monkeypatch.delenv("SENTENCE_TRANSFORMERS_HOME", raising=False)
+        cache_root = Settings().base_dir / "tmp" / "model-cache-test"
+        cache = ModelCacheSettings.model_validate(
+            {
+                "MODEL_CACHE_HOST_DIR": str(cache_root),
+                "MODEL_CACHE_SET_HF_ENV": True,
+            }
+        )
+        monkeypatch.setattr(config_module.settings, "model_cache", cache)
+
+        applied = config_module.apply_model_cache_environment()
+
+        assert applied == {
+            "HF_HOME": str(cache_root / "huggingface"),
+            "HF_HUB_CACHE": str(cache_root / "huggingface" / "hub"),
+            "SENTENCE_TRANSFORMERS_HOME": str(cache_root / "huggingface" / "hub"),
+        }
+        assert os.environ["HF_HOME"] == str(cache_root / "huggingface")
 
 
 class TestSlackSettings:

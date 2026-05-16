@@ -1,0 +1,854 @@
+{
+  "run_id": "20260509_230458",
+  "created_at": "2026-05-09T23:07:43",
+  "trace_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\tmp\\shadow_decision_trace_golden_20260509_230458.jsonl",
+  "report_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\docs\\archive\\benchmarks\\shadow_decision_trace_golden_20260509_230458.md",
+  "a2a_mode": "inprocess",
+  "llm_provider": {
+    "primary": "anthropic",
+    "fallback": "none"
+  },
+  "capability_planner": {
+    "mode": "on",
+    "scope": "academic_programs,student_affairs,finance,announcement,event"
+  },
+  "llm_profile": "balanced",
+  "question_cache": "bypass",
+  "answer_preview_chars": 1600,
+  "results": [
+    {
+      "id": "GT01",
+      "family": "academic_calendar",
+      "query": "Final sinavlari ne zaman basliyor?",
+      "context_id": "shadow-golden-20260509_230458-GT01",
+      "expected_owner": "academic_calendar",
+      "departments": [
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 1,
+      "elapsed_ms": 4790.6,
+      "response_time_ms": 4680.77,
+      "answer_preview": "Benchmark, Genel akademik takvime gore yariyil sonu/final sinavlari guz donemi icin 03-16 Ocak 2026, bahar donemi icin 01-14 Haziran 2026 tarihlerindedir.\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- VT\n- Routing: direct\n- Pipeline: student_affairs\n\nKaynak Özeti:\n- Belge: 2025_2026_genel_akademik_takvim.pdf",
+      "error": null,
+      "note": "Structured calendar vs RAG/announcement ayrimi.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 4680.77,
+      "llm_call_count": 3,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbV1dts8BRzqJ1mggy5\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbV89KR2G2Gn4mgLFcA\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbVFKR3XCQRWQVL8mQL\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT02",
+      "family": "curriculum",
+      "query": "BIL203 dersinin AKTS'si ve on kosulu nedir?",
+      "context_id": "shadow-golden-20260509_230458-GT02",
+      "expected_owner": "curriculum_catalog",
+      "departments": [
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 2870.9,
+      "response_time_ms": 2833.5,
+      "answer_preview": "Benchmark, BIL203 Veri Yapilari (3 kredi, 5 AKTS) dersinin önkoşulları: BIL104 Programlamaya Giris II. Önkoşullu derslerden en az DD alınmış olması gerekir.\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- VT\n- Routing: direct\n- Pipeline: academic_programs\n\nKaynak Özeti:\n- Veritabani kaydi: ders onkosulu",
+      "error": null,
+      "note": "Ders katalog/curriculum capability sinyali.",
+      "trace_owner": "curriculum_catalog",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 2833.5,
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbVetFybAQMoUSkYYAE\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbVkZKDhWYhRZWN98hZ\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT03",
+      "family": "finance",
+      "query": "Bilgisayar Muhendisligi ikinci ogretim harc ucreti ne kadar?",
+      "context_id": "shadow-golden-20260509_230458-GT03",
+      "expected_owner": "tuition_fee_catalog",
+      "departments": [
+        "finance"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 2284.1,
+      "response_time_ms": 2243.12,
+      "answer_preview": "Benchmark, Öğrenim ücreti için Türk öğrenci / Mühendislik Fakültesi bilgisi veritabanında kayıtlı. Yıllık ücret: 2.397,00 TL. Dönemlik ücret: 1.198,50 TL.\n\n(Kaynak: 2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf)\n\nÜretim Türü:\n- VT\n- Routing: direct\n- Pipeline: finance\n\nKaynak Özeti:\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "error": null,
+      "note": "Ucret rakami structured finance katalogundan gelmeli.",
+      "trace_owner": "tuition_fee_catalog",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "finance"
+      ],
+      "trace_response_time_ms": 2243.12,
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbW9FKnFGDeXyLrxtEe\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbWDpA5px7i1bNEhMNX\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT04",
+      "family": "student_affairs_policy",
+      "query": "Yatay gecisle gelen ogrenci muafiyet basvurusunu ne zaman yapmali?",
+      "context_id": "shadow-golden-20260509_230458-GT04",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "rag"
+      ],
+      "source_count": 5,
+      "elapsed_ms": 54517.0,
+      "response_time_ms": 54403.58,
+      "answer_preview": "Benchmark, Kaynak bilgisi final cevap için hazırlandı.\n- ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf: MADDE 6 - (1) Komisyon, öğrencilerin yeterlik başvurusunda bulundukları, daha önce (2) Yeterlik ve/veya muafiyet talebi, ilgili yönetim kurulu tarafından karara bağlanıncaya\n- sık_sorulan_sorular.txt: Daha önceden başardığım derslerden muaf tutulabilmem için ne yapmam gerekir? Fakülteye/yüksekokula/meslek yüksekokuluna ilk kez kayıt yaptıran öğrenciler, eğitim öğretimin başladığı tarihten itibaren üç hafta içinde daha önce öğrenim gördüğü yükseköğretim kurumlarında aldığı ve başarılı olduğu dersler için muaf olmak istediği dersleri içeren bir dilekçe,...\n- sık_sorulan_sorular.txt: Yatay geçişle gelen öğrenciler, başvurdukları yarıyıla; dikey geçişle gelen öğrenciler, beşinci yarıyıla; merkezi yerleştirme sınavları ile gelen öğrenciler ise birinci yarıyıla intibak ettirilir.\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- RAG\n- Routing: direct\n- Pipeline: student_affairs\n\nKaynak Özeti:\n- Belge: ders_yeterlik_muafiyet_ve_intibak_yönergesi.pdf\n- Belge: sık_sorulan_sorular.txt (3 parça)\n- Belge: yonerge_ders_yeterlik_muafiyet_intibak.pdf",
+      "error": null,
+      "note": "Policy RAG + sure/slot sinyali.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 54403.58,
+      "llm_call_count": 3,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbWcX9sjkseAPit6FpC\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbWgpctDVs4LvWY3QuS\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbaXBYd6w7FbitgPn1x\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT05",
+      "family": "cross_department",
+      "query": "CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+      "context_id": "shadow-golden-20260509_230458-GT05",
+      "expected_owner": null,
+      "departments": [
+        "academic_programs",
+        "finance"
+      ],
+      "generation_modes": [
+        "rag",
+        "vt"
+      ],
+      "source_count": 4,
+      "elapsed_ms": 16263.6,
+      "response_time_ms": 16188.77,
+      "answer_preview": "Benchmark, Akademik Programlar:\nKaynak bilgisi final cevap için hazırlandı.\n- yonerge_cift_anadal_yandal.pdf: MADDE 8 - (1) ÇAP'ta başarı ve mezuniyet koşulları şunlardır: a) Ana dal programında mezuniyet hakkını elde eden ve ÇAP’ı başarıyla tamamlayan f) Öğrencinin ÇAP’tan mezun olabilmesi için ana dal genel not ortalamasının 4,00 üzerinden\n- yonerge_cift_anadal_yandal.pdf: MADDE 3 - (1) Bu Yönergede geçen;\n- yonerge_cift_anadal_yandal.pdf: MADDE 15 - (1) Ana dal programından mezuniyet hakkını elde eden ve YDP’yi 4,00 (5) Azami süre içinde YDP öğreniminin tamamlanamaması nedeniyle ilave ders alınması\n\nFinans:\nÖğrenim ücreti için Türk öğrenci / Mühendislik Fakültesi bilgisi veritabanında kayıtlı. Yıllık ücret: 2.397,00 TL. Dönemlik ücret: 1.198,50 TL.\n\n(Kaynak: 2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf)\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Akademik Programlar: RAG\n- Finans: VT\n- Routing: parallel\n- Pipeline: academic_programs -> finance\n\nKaynak Özeti:\n- Belge: yonerge_cift_anadal_yandal.pdf (4 parça)\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "error": null,
+      "note": "Academic + finance parallel karar ve final owner.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs",
+        "finance"
+      ],
+      "trace_response_time_ms": 16188.77,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbaw5yFRps7w7zYFeRP\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbb1dKacuqXQF4pD4Aw\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbbucwUYJDoqWPWuwWS\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbc1SgjsmXPjrR9CZHi\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT06",
+      "family": "international_policy",
+      "query": "Yabanci ogrenci kayit belgeleri ve ikamet izni icin neler gerekir?",
+      "context_id": "shadow-golden-20260509_230458-GT06",
+      "expected_owner": "international_policy",
+      "departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "rag"
+      ],
+      "source_count": 6,
+      "elapsed_ms": 6157.0,
+      "response_time_ms": 6087.36,
+      "answer_preview": "Benchmark, Ogrenci Isleri:\nKaynak bilgisi final cevap için hazırlandı.\n- öğrenci_konukevi_uygulama_yönergesi.pdf: MADDE 12 - (1) Uzun süreli konaklama, 1 (bir) aydan daha uzun süreli\n\nAkademik Programlar:\n- ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf: İKAMET İZNİ KAYIT/BAŞVURU FORMU i 18 yaşından küçük öğrenciler için muvafakatname sahibi kişi tarafından kendi adı soyadı\n- ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf: i Talep edilen ikamet izni süresinden 60 (altmış) gün daha uzun süreli pasaport ya da pasaport\n- ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf: Ofisimize gelirken öğrenci ikamet izni başvurusu için gerekli belgeleri eksiksiz olarak bitmeden) en geç 7 gün içerisinde belgelerinizin Ofisimize teslim edilmesi gerekmektedir.\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Akademik Programlar: RAG\n- Ogrenci Isleri: RAG\n- Routing: parallel\n- Pipeline: academic_programs -> student_affairs\n\nKaynak Özeti:\n- Belge: ikamet_izni_başvuru_adımları_ve_gerekli_belgeler.pdf (4 parça)\n- Belge: uluslararası_öğrenci_yönergesi.pdf\n- Belge: öğrenci_konukevi_uygulama_yönergesi.pdf",
+      "error": null,
+      "note": "International policy lookup ve kaynak secimi.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 6087.36,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbcRt78NHXP68icvG5G\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbcXRUzTsVeNMc8WQb8\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbcgt1MEg6KomJgRZGN\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbcnFiC5qcB6Y5QvfBh\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT07",
+      "family": "announcement",
+      "query": "Bilgisayar muhendisligindeki son duyurular neler?",
+      "context_id": "shadow-golden-20260509_230458-GT07",
+      "expected_owner": "announcement_search",
+      "departments": [],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 12340.9,
+      "response_time_ms": 12337.95,
+      "answer_preview": "Benchmark, Sorunuzun hangi alana ait olduğunu net olarak belirleyemedim. Aşağıdaki seçeneklerden birini belirterek tekrar sorabilirsiniz:\n- Öğrenci İşleri (kayıt, not, staj, mezuniyet)\n- Akademik Programlar (müfredat, yönetmelik, Erasmus)\n- Finans (harç, burs, ödeme)",
+      "error": null,
+      "note": "Announcement DB short-circuit ve bolum filtresi.",
+      "trace_owner": null,
+      "trace_capability": null,
+      "trace_final_owner": "clarification",
+      "trace_departments": [],
+      "trace_response_time_ms": 12337.95,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbdz2fNUo8NPsCRZhqf\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT08",
+      "family": "event",
+      "query": "Bu hafta Muhendislik Fakultesinde seminer var mi?",
+      "context_id": "shadow-golden-20260509_230458-GT08",
+      "expected_owner": "event_search",
+      "departments": [],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 3268.3,
+      "response_time_ms": 3266.59,
+      "answer_preview": "Benchmark, Sorunuzun hangi alana ait olduğunu net olarak belirleyemedim. Aşağıdaki seçeneklerden birini belirterek tekrar sorabilirsiniz:\n- Öğrenci İşleri (kayıt, not, staj, mezuniyet)\n- Akademik Programlar (müfredat, yönetmelik, Erasmus)\n- Finans (harç, burs, ödeme)",
+      "error": null,
+      "note": "Event DB short-circuit ve zaman penceresi.",
+      "trace_owner": null,
+      "trace_capability": null,
+      "trace_final_owner": "clarification",
+      "trace_departments": [],
+      "trace_response_time_ms": 3266.59,
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbeQAyR3Uzty2W9TVfw\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbeWk7XE7ZX1YFw7etz\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT09",
+      "family": "personal_auth",
+      "query": "Harc borcum var mi?",
+      "context_id": "shadow-golden-20260509_230458-GT09",
+      "expected_owner": "personal_student_data",
+      "departments": [
+        "finance"
+      ],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 2877.6,
+      "response_time_ms": 2837.04,
+      "answer_preview": "Benchmark, Kişisel sorunuza yanıt verebilmem için kimliğinizi doğrulamam gerekiyor. Doğrulamayı öğrenci e-posta adresinize göndereceğim tek kullanımlık kod ile tamamlayabilirsiniz.\n\nÜretim Türü:\n- Kural\n- Routing: direct\n- Pipeline: finance",
+      "error": null,
+      "note": "Auth gerektiren kisisel veri guard'i.",
+      "trace_owner": "tuition_fee_catalog",
+      "trace_capability": null,
+      "trace_final_owner": "department_orchestrator",
+      "trace_departments": [
+        "finance"
+      ],
+      "trace_response_time_ms": 2837.04,
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbewBHuWqquwfU7FcCp\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbf2ifUmbFhnQ3iE8Ga\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT10",
+      "family": "ambiguous",
+      "query": "Sey basvuru ne zaman?",
+      "context_id": "shadow-golden-20260509_230458-GT10",
+      "expected_owner": null,
+      "departments": [],
+      "generation_modes": [
+        "kural"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 1277.7,
+      "response_time_ms": 1242.65,
+      "answer_preview": "Benchmark, Hangi başvuru türü için tarih sorduğunuzu yazar mısınız? Örneğin yatay geçiş, ÇAP/YAP, Erasmus, staj, yaz okulu veya kayıt başvurusu gibi yazabilirsiniz.",
+      "error": null,
+      "note": "Eksik slot/ambiguity davranisi.",
+      "trace_owner": null,
+      "trace_capability": null,
+      "trace_final_owner": "clarification",
+      "trace_departments": [],
+      "trace_response_time_ms": 1242.65,
+      "llm_call_count": 1,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbfREVmJnN5MysVxM7s\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT11",
+      "family": "follow_up_seed",
+      "query": "CAP basvurusu nasil yapilir?",
+      "context_id": "shadow-golden-20260509_230458-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "rag"
+      ],
+      "source_count": 10,
+      "elapsed_ms": 6626.5,
+      "response_time_ms": 6547.97,
+      "answer_preview": "Benchmark, Ogrenci Isleri:\nKaynak bilgisi final cevap için hazırlandı.\n- ön_lisans_ve_lisans_yatay_geçiş_yönergesi.pdf: MADDE 4 – (1) Ön lisans ve lisans diploma programlarının hazırlık sınıfına; ön lisans (12) Öğrenci kayıt dondurmuş ise yatay geçiş başvurusu sırasında bu durumu belgelendirmesi\n- staj_ilkeleri_23122019_inş_müh.pdf: MADDE 10– Yatay ve dikey geçişle gelen öğrencilerin staj muafiyetlerinde,\n- yonetmelik_onlisans_lisans_egitim_ogretim.pdf: MADDE 30- (1) Kayıtlı olduğu programın 14 üncü maddede belirtilen yükümlülüklerini yerine getiren, ders (5) Ana dal lisans programında mezuniyet hakkını kazanamayan öğrenciye yan dal sertifikası verilmez.\n\nAkademik Programlar:\n- yonerge_cift_anadal_yandal.pdf: b) ÇAP öğrencileri arasında başarı sıralaması yapılmaz. c) ÇAP öğrenimi sırasında lisans öğrenimi gördükleri ana daldan mezun olan öğrencilerin d) Azami süre içinde ÇAP öğreniminin tamamlanamaması nedeniyle ilave ders alınması\n- yonerge_cift_anadal_yandal.pdf: MADDE 6 - (1) ÇAP, ilgili bölümün önerisi ve birim yönetim kurulu kararı ile üç yıl için (2) ÇAP öğrencisine, ikinci ana dal programında da ilgili bölüm başkanlığı tarafından\n- yonerge_cift_anadal_yandal.pdf: MADDE 3 - (1) Bu Yönergede geçen;\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- Ogrenci Isleri: RAG\n- Akademik Programlar: RAG\n- Routing: parallel\n- Pipeline: student_affairs -> academic_programs\n\nKaynak Özeti:\n- Belge: ön_lisans_ve_lisans_yatay_geçiş_yönergesi...",
+      "error": null,
+      "note": "Follow-up icin seed soru.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": null,
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_response_time_ms": 6547.97,
+      "llm_call_count": 4,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbfr7iSYmvTr9zmcQg7\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbfxu18GzboiJ8vQvQq\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbg8Qk9VQhjVrXXHe8H\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbgCcWUbvss1dYUCiaw\"}"
+        }
+      ],
+      "trace_recorded": true
+    },
+    {
+      "id": "GT12",
+      "family": "follow_up_resolution",
+      "query": "Peki not ortalamasi kac olmali?",
+      "context_id": "shadow-golden-20260509_230458-cap-followup",
+      "expected_owner": "student_affairs_policy",
+      "departments": [
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "rag"
+      ],
+      "source_count": 5,
+      "elapsed_ms": 6341.3,
+      "response_time_ms": 6265.0,
+      "answer_preview": "Benchmark, Eldeki en ilgili kaynakta su bilgi yer aliyor:\nMADDE 6 - (1) Üniversitemize yatay geçişler, diğer yükseköğretim kurumlarındaki aynı düzeydeki eşdeğer diploma programlarından yapılır. PP.1.2.PRS.0048, R0, Temmuz Sayfa 2 / 5 2025 (2) Kurumlar arası yatay geçişlerde öğrencinin kayıtlı olduğu programda genel not ortalamasının 4 lük sistem kullanan üniversiteler için en az 2.80, 100 lük sistem kullanan üniversiteler için en az 72 olması gerekir. Transkriptinde iki not sistemi de var ise 100 lük sistemdeki notu kullanılır. (3) Üniversitemizdeki ön lisans ve lisans programları için belirlenen yatay geçiş kontenjanları ile başvuru ve\n\n(Kaynak: ön_lisans_ve_lisans_yatay_geçiş_yönergesi.pdf)\n\n---\nDaha iyi yardımcı olabilmem için sorunuzu daha detaylı açıklayabilirsiniz ya da ilgili sekreterin iletişim bilgilerini paylaşırım. \"İletişim bilgisi\" yazarak ulaşabilirsiniz.\n\nÜretim Türü:\n- RAG\n- Routing: direct\n- Pipeline: student_affairs\n\nKaynak Özeti:\n- Belge: ön_lisans_ve_lisans_yatay_geçiş_yönergesi.pdf\n- Belge: ön_lisans_ve_lisans_yatay_geçiş_yönergesi2.pdf\n- Belge: yonerge_ders_yeterlik_muafiyet_intibak.pdf\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: ön_lisans_ve_lisans.pdf",
+      "error": null,
+      "note": "Onceki CAP baglamina baglanmali.",
+      "trace_owner": null,
+      "trace_capability": null,
+      "trace_final_owner": "department_orchestrator",
+      "trace_departments": [
+        "student_affairs"
+      ],
+      "trace_response_time_ms": 6265.0,
+      "llm_call_count": 3,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbgeUzsYsyJLFiqwCPL\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Casbgm68DHvLxEgt2m3FM\"}"
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "anthropic",
+          "provider_label": "anthropic",
+          "display_name": "anthropic",
+          "model": "claude-sonnet-4-20250514",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "error_type": "AnthropicClientError",
+          "error_message": "anthropic HTTP hatasi (404): {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011CasbgwPzDFoB9gqn2oenk\"}"
+        }
+      ],
+      "trace_recorded": true
+    }
+  ]
+}

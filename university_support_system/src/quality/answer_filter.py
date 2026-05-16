@@ -35,8 +35,13 @@ _NON_LATIN_SCRIPT_RE = re.compile(
 _BROKEN_TOKEN_RE = re.compile(
     r"\b(tonabilir|dentroslar|possibilite|konkret|bekannt|verificar|"
     r"información|requerido|puede|deber|espec\w+|además|además|también|"
-    r"por favor|necessario|podria|siguientes|continuation|"
-    r"appropriate|necesario|enen|bailikli|bailik|odense)\b",
+    r"por favor|necessario|necessaire|necessary\w*|podria|siguiente\w*|seguinte\w*|continuation|"
+    r"appropriate|necesario|enen|bailikli|bailik|odense|departamento|"
+    r"alumno\w*|ben[oö]tilen|diret|condi\w+|znajabilir)\b",
+    re.IGNORECASE,
+)
+_EXTRA_BROKEN_TOKEN_RE = re.compile(
+    r"\b(sorumlusanz|hanrmlar|condigini|condigini|znajabilir)\b",
     re.IGNORECASE,
 )
 
@@ -88,6 +93,18 @@ class QualityCheckResult:
     bad_tokens: list[str]
 
 
+def quality_issue_blocks_answer(result: QualityCheckResult) -> bool:
+    """Return whether a quality issue is severe enough to suppress the answer.
+
+    Contract/source validation owns factual blocking.  This post-generation
+    gate should only hard-block unrepaired text when the user would see clearly
+    broken tokens or foreign script.  Softer language issues still trigger a
+    repair attempt, but they should not turn an otherwise grounded answer into a
+    generic temporary failure.
+    """
+    return result.has_foreign_script or result.has_broken_tokens
+
+
 def check_answer_quality(answer: str) -> QualityCheckResult:
     """Check an answer for foreign/broken token quality issues.
 
@@ -105,6 +122,9 @@ def check_answer_quality(answer: str) -> QualityCheckResult:
 
     # 2) Broken / misrecognized tokens
     broken_matches = _BROKEN_TOKEN_RE.findall(answer)
+    extra_broken_matches = _EXTRA_BROKEN_TOKEN_RE.findall(answer)
+    if extra_broken_matches:
+        broken_matches.extend(extra_broken_matches)
     if broken_matches:
         issues.append("broken_tokens")
         bad_tokens.extend(broken_matches[:5])

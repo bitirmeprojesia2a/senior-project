@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import re
@@ -20,7 +21,14 @@ from src.core.constants import (
 )
 from src.core.config import settings
 from src.core.contact_intent import looks_like_contact_intent
+from src.core.policy_facets import align_policy_evidence, resolve_policy_facet
 from src.core.profiling import profile_stage
+from src.core.retrieval_execution_policy import (
+    RetrievalExecutionPolicy,
+    resolve_retrieval_execution_policy,
+    strong_primary_evidence,
+)
+from src.core.source_owner_policy import apply_source_owner_policy
 from src.core.text_normalization import normalize_text
 from src.rag.multi_query_expander import expand_query as _expand_multi_queries
 from src.rag.query_preprocessor import QueryPreprocessor
@@ -31,6 +39,7 @@ from src.quality.evidence import (
     extract_evidence_items,
     select_evidence_sentences,
 )
+from src.quality.evidence_answer_validator import extract_value_labels, infer_source_family
 from src.quality.evidence_selector import EvidenceSelectionDecision, select_evidence_with_llm
 from src.db.office_contacts import OfficeContactRecord, fetch_office_contacts
 from src.db.schemas import DepartmentResponse, RAGSource
@@ -242,10 +251,31 @@ class BaseSpecialistAgent:
             student_department = meta.get("student_department")
             intent_force_llm = bool(meta.get("force_llm_synthesis", False))
             plan_context = self._build_plan_context_from_metadata(meta)
+            source_owner_payload = (
+                plan_context.get("source_owner")
+                if isinstance(plan_context.get("source_owner"), dict)
+                else {}
+            )
+            source_owner_primary = str(source_owner_payload.get("primary") or "").strip() or None
             retrieval_query = str(meta.get("retrieval_query") or "").strip() or query_text
-            search_top_k = self._search_top_k(retrieval_query, meta)
+            retrieval_policy = resolve_retrieval_execution_policy(
+                department=self.department,
+                branch_role=str(meta.get("branch_role") or "").strip() or None,
+                metadata=meta,
+            )
+            search_top_k = retrieval_policy.top_k or self._search_top_k(retrieval_query, meta)
+            retrieval_stats: dict[str, object] = {
+                "schema": "omu.retrieval_execution_stats.v1",
+                "policy": retrieval_policy.to_metadata(),
+                "search_calls": 0,
+                "multi_query_variant_count": 0,
+                "multi_query_added_results": 0,
+                "early_stop_reason": None,
+                "support_lite_applied": retrieval_policy.support_lite,
+            }
             with profile_stage("agent.retriever.search", agent_id=self.agent_id, department=self.department.value):
                 try:
+                    retrieval_stats["search_calls"] = int(retrieval_stats["search_calls"]) + 1
                     results = retriever.search(
                         retrieval_query,
                         top_k=search_top_k,
@@ -253,6 +283,8 @@ class BaseSpecialistAgent:
                         source_hints=source_hints,
                         topic_hint=topic_hint,
                         student_department=student_department,
+                        source_owner=source_owner_primary,
+                        reranker_candidate_limit=retrieval_policy.reranker_candidate_limit,
                     )
                 except Exception:
                     if not settings.retrieval_service.enabled or not settings.retrieval_service.fallback_to_local:
@@ -263,6 +295,7 @@ class BaseSpecialistAgent:
                         exc_info=True,
                     )
                     retriever = self._build_shared_local_fallback_retriever()
+                    retrieval_stats["search_calls"] = int(retrieval_stats["search_calls"]) + 1
                     results = retriever.search(
                         retrieval_query,
                         top_k=search_top_k,
@@ -270,9 +303,16 @@ class BaseSpecialistAgent:
                         source_hints=source_hints,
                         topic_hint=topic_hint,
                         student_department=student_department,
+                        source_owner=source_owner_primary,
+                        reranker_candidate_limit=retrieval_policy.reranker_candidate_limit,
                     )
             # ── Multi-Query Expansion: search variant queries and merge ──
             with profile_stage("agent.multi_query_expansion", agent_id=self.agent_id):
+                strong_evidence, early_stop_reason = strong_primary_evidence(
+                    list(results),
+                    policy=retrieval_policy,
+                )
+                retrieval_stats["early_stop_reason"] = early_stop_reason
                 results = self._apply_multi_query_expansion(
                     retrieval_query,
                     results,
@@ -282,6 +322,10 @@ class BaseSpecialistAgent:
                     source_hints=source_hints,
                     topic_hint=topic_hint,
                     student_department=student_department,
+                    source_owner=source_owner_primary,
+                    policy=retrieval_policy,
+                    skip=strong_evidence,
+                    stats=retrieval_stats,
                 )
             enrich_results = getattr(type(retriever), "enrich_results", None)
             if callable(enrich_results) and self._should_enrich_results(query_text, results):
@@ -298,8 +342,33 @@ class BaseSpecialistAgent:
                         )
                         local_retriever = self._build_shared_local_fallback_retriever()
                         results = local_retriever.enrich_results(results, department=self.department)
+            plan_context = dict(plan_context or {})
+            plan_context["retrieval_execution_policy"] = retrieval_policy.to_metadata()
+            plan_context["retrieval_execution_stats"] = retrieval_stats
             with profile_stage("agent.plan_evidence_bias", agent_id=self.agent_id, department=self.department.value):
                 results = self._apply_plan_evidence_source_bias(results, plan_context)
+            with profile_stage("agent.source_owner_policy", agent_id=self.agent_id, department=self.department.value):
+                owner_policy = apply_source_owner_policy(
+                    results,
+                    plan_context.get("source_owner") if plan_context else None,
+                    mode=settings.source_owner_policy.mode,
+                    min_compatible_score=settings.source_owner_policy.min_compatible_score,
+                )
+                results = owner_policy.results
+                if owner_policy.diagnostics.get("status") != "skipped":
+                    plan_context = dict(plan_context or {})
+                    plan_context["source_owner_policy"] = owner_policy.diagnostics
+                if owner_policy.should_block:
+                    return self._build_department_response(
+                        answer=owner_policy.fallback_answer or "",
+                        query_text=query_text,
+                        results=results[:3],
+                        generation_mode="kural",
+                        include_contact_suggestion=True,
+                        final_answer_owner=final_answer_owner,
+                        specialist_response_mode=specialist_response_mode,
+                        plan_context=plan_context,
+                    )
             with profile_stage("agent.filter_results", agent_id=self.agent_id, department=self.department.value):
                 results = self._filter_results_for_answer(query_text, results)
             with profile_stage("agent.generate_answer", agent_id=self.agent_id):
@@ -374,9 +443,20 @@ class BaseSpecialistAgent:
                 plan_context=plan_context,
             )
         if plan_context:
-            response_metadata["plan_decision"] = plan_context.get("plan_decision")
-            response_metadata["answer_contract"] = plan_context.get("answer_contract")
-            response_metadata["evidence_contract"] = plan_context.get("evidence_contract")
+            for key in (
+                "plan_decision",
+                "answer_contract",
+                "evidence_contract",
+                "policy_facet",
+                "source_owner",
+                "source_owner_policy",
+                "retrieval_execution_policy",
+                "retrieval_execution_stats",
+                "decision_contract",
+                "resolved_decision",
+            ):
+                if key in plan_context:
+                    response_metadata[key] = plan_context.get(key)
         if final_answer_owner:
             response_metadata["final_answer_owner"] = final_answer_owner
         if specialist_response_mode:
@@ -452,7 +532,36 @@ class BaseSpecialistAgent:
         """Build compact grounding material for final synthesis."""
         selected_sources: list[dict] = []
         facts: list[dict] = []
+        source_families: list[str] = []
         seen_facts: set[tuple[str, str]] = set()
+        plan_context = dict(plan_context or {})
+        source_owner_payload = plan_context.get("source_owner") if isinstance(plan_context.get("source_owner"), dict) else {}
+        source_owner = str(source_owner_payload.get("primary") or "").strip() or None
+        specialist_selection = (
+            plan_context.get("specialist_selection")
+            if isinstance(plan_context.get("specialist_selection"), dict)
+            else {}
+        )
+        specialist = str(
+            specialist_selection.get("selected_agent_id")
+            or specialist_selection.get("agent_id")
+            or self.agent_id
+        ).strip()
+        registry = (
+            specialist_selection.get("registry")
+            if isinstance(specialist_selection.get("registry"), dict)
+            else {}
+        )
+        contract_match_reason = str(
+            registry.get("reason")
+            or specialist_selection.get("reason")
+            or ""
+        ).strip()
+        policy_facet = (
+            plan_context.get("policy_facet")
+            if isinstance(plan_context.get("policy_facet"), dict)
+            else {}
+        )
 
         for item in list(results)[:5]:
             content = str(item.get("content") or "")
@@ -477,25 +586,66 @@ class BaseSpecialistAgent:
                 min_score=0.30,
             )
             support = support[:700].strip()
+            family = infer_source_family(source=source_name, claim=support or content[:420])
+            policy_alignment = metadata.get("policy_alignment")
+            if not isinstance(policy_alignment, dict):
+                policy_alignment = align_policy_evidence(
+                    policy_facet,
+                    content=content,
+                    source_text=source_name,
+                )
             selected_sources.append(
                 {
                     "source": source_name,
                     "score": score,
                     "snippet": support or content[:420].strip(),
+                    "source_family": family,
+                    "source_owner": source_owner,
+                    "department": self.department.value,
+                    "specialist": specialist,
+                    "contract_match_reason": contract_match_reason,
+                    "policy_alignment": policy_alignment,
                 }
             )
+            if family and family not in source_families:
+                source_families.append(family)
 
             for claim in extract_factual_claims(content)[:5]:
                 key = (claim, source_name)
                 if key in seen_facts:
                     continue
                 seen_facts.add(key)
+                claim_policy_alignment = align_policy_evidence(
+                    policy_facet,
+                    content=claim,
+                    source_text=source_name,
+                ) if policy_facet else policy_alignment
+                if (
+                    isinstance(policy_alignment, dict)
+                    and str(policy_alignment.get("status") or "") in {"conflict", "weak_conflict"}
+                    and (
+                        not isinstance(claim_policy_alignment, dict)
+                        or str(claim_policy_alignment.get("status") or "") not in {"conflict", "weak_conflict"}
+                    )
+                ):
+                    claim_policy_alignment = policy_alignment
+                value_roles = self._build_fact_value_roles(
+                    claim,
+                    policy_alignment=claim_policy_alignment,
+                )
                 facts.append(
                     {
                         "claim": claim,
                         "source": source_name,
                         "score": score,
                         "support": support[:420],
+                        "source_family": family,
+                        "source_owner": source_owner,
+                        "department": self.department.value,
+                        "specialist": specialist,
+                        "contract_match_reason": contract_match_reason,
+                        "policy_alignment": claim_policy_alignment,
+                        "value_roles": value_roles,
                     }
                 )
                 if len(facts) >= 12:
@@ -508,6 +658,18 @@ class BaseSpecialistAgent:
         limits: list[str] = []
         if not facts and selected_sources:
             limits.append("Kaynaklarda sayi, tarih veya kosul biciminde ayiklanmis net olgu bulunmadi.")
+        required_values: list[str] = []
+        supporting_claims: list[str] = []
+        value_arbitration = self._build_packet_value_arbitration(facts)
+        for fact in facts[:8]:
+            claim = str(fact.get("claim") or "").strip()
+            if claim and claim not in supporting_claims:
+                supporting_claims.append(claim)
+            for value in extract_value_labels(claim):
+                if value not in required_values:
+                    required_values.append(value)
+            if len(required_values) >= 10:
+                break
 
         packet = {
             "version": 1,
@@ -519,14 +681,41 @@ class BaseSpecialistAgent:
             "confidence": confidence,
             "generation_mode": generation_mode,
             "answer_summary": answer[:500],
+            "source_owner": source_owner,
+            "specialist": specialist,
+            "specialist_selection": specialist_selection,
+            "contract_match_reason": contract_match_reason,
             "facts": facts,
+            "required_values": required_values[:10],
+            "value_arbitration": value_arbitration,
+            "supporting_claims": supporting_claims[:8],
+            "source_family": source_families[0] if source_families else None,
             "limits": limits,
             "selected_sources": selected_sources,
         }
         if plan_context:
-            packet["plan_decision"] = plan_context.get("plan_decision")
-            packet["answer_contract"] = plan_context.get("answer_contract") or {}
-            packet["evidence_contract"] = plan_context.get("evidence_contract") or {}
+            if "plan_decision" in plan_context:
+                packet["plan_decision"] = plan_context.get("plan_decision") or {}
+            if "answer_contract" in plan_context:
+                packet["answer_contract"] = plan_context.get("answer_contract") or {}
+            if "evidence_contract" in plan_context:
+                packet["evidence_contract"] = plan_context.get("evidence_contract") or {}
+            if "policy_facet" in plan_context:
+                packet["policy_facet"] = plan_context.get("policy_facet") or {}
+            if "source_owner" in plan_context:
+                packet["source_owner"] = plan_context.get("source_owner") or {}
+            if "specialist_selection" in plan_context:
+                packet["specialist_selection"] = plan_context.get("specialist_selection") or {}
+            if "source_owner_policy" in plan_context:
+                packet["source_owner_policy"] = plan_context.get("source_owner_policy") or {}
+            if "retrieval_execution_policy" in plan_context:
+                packet["retrieval_execution_policy"] = plan_context.get("retrieval_execution_policy") or {}
+            if "retrieval_execution_stats" in plan_context:
+                packet["retrieval_execution_stats"] = plan_context.get("retrieval_execution_stats") or {}
+            if "decision_contract" in plan_context:
+                packet["decision_contract"] = plan_context.get("decision_contract") or {}
+            if "resolved_decision" in plan_context:
+                packet["resolved_decision"] = plan_context.get("resolved_decision") or {}
         return packet
 
     @staticmethod
@@ -560,6 +749,41 @@ class BaseSpecialistAgent:
             "answer_contract": answer_contract if isinstance(answer_contract, dict) else {},
             "evidence_contract": evidence_contract if isinstance(evidence_contract, dict) else {},
         }
+        source_owner = meta.get("source_owner")
+        if isinstance(source_owner, dict):
+            context["source_owner"] = source_owner
+        specialist_selection = meta.get("specialist_selection")
+        if isinstance(specialist_selection, dict):
+            context["specialist_selection"] = specialist_selection
+        decision_contract = meta.get("decision_contract")
+        if isinstance(decision_contract, dict):
+            context["decision_contract"] = decision_contract
+        resolved_decision = meta.get("resolved_decision")
+        if isinstance(resolved_decision, dict):
+            context["resolved_decision"] = resolved_decision
+        policy_facet = meta.get("policy_facet")
+        if not isinstance(policy_facet, dict):
+            capability = str(
+                plan_decision.get("capability")
+                if isinstance(plan_decision, dict)
+                else action_payload.get("capability")
+                or ""
+            ).strip()
+            if capability == "student_affairs.policy_lookup":
+                params = (
+                    plan_decision.get("params")
+                    if isinstance(plan_decision, dict) and isinstance(plan_decision.get("params"), dict)
+                    else action_payload.get("params")
+                    if isinstance(action_payload.get("params"), dict)
+                    else {}
+                )
+                policy_facet = resolve_policy_facet(
+                    query=str(params.get("query") or meta.get("query_text") or ""),
+                    params=params,
+                    answer_contract=answer_contract if isinstance(answer_contract, dict) else {},
+                )
+        if isinstance(policy_facet, dict):
+            context["policy_facet"] = policy_facet
         return {key: value for key, value in context.items() if value}
 
     @staticmethod
@@ -575,6 +799,70 @@ class BaseSpecialistAgent:
         return metadata
 
     @staticmethod
+    def _build_fact_value_roles(
+        claim: str,
+        *,
+        policy_alignment: dict | None = None,
+    ) -> list[dict[str, str]]:
+        alignment_status = (
+            str(policy_alignment.get("status") or "")
+            if isinstance(policy_alignment, dict)
+            else ""
+        )
+        normalized = normalize_text(claim)
+        roles: list[dict[str, str]] = []
+        for value in extract_value_labels(claim):
+            value_norm = normalize_text(value)
+            position = normalized.find(value_norm)
+            if position < 0:
+                position = normalized.find(value_norm.replace(",", "."))
+            window_after = normalized[position: position + 55] if position >= 0 else normalized
+            window = normalized[max(0, position - 55): position + 55] if position >= 0 else normalized
+            role = "supporting_value"
+            if alignment_status == "conflict":
+                role = "conflicting_threshold"
+            elif alignment_status == "weak_conflict":
+                role = "secondary_program_threshold"
+            elif value_norm.startswith("%") or value_norm.startswith("yuzde"):
+                role = "related_condition"
+            elif re.search(r"\b(?:uzerinden|puan\s+uzerinden)\b", window_after[:40]):
+                role = "scale_value"
+            elif any(marker in window for marker in ("en az", "en cok", "asgari", "azami", "minimum", "maksimum")):
+                role = "answer_threshold"
+            roles.append(
+                {
+                    "value": value,
+                    "role": role,
+                    "policy_alignment_status": alignment_status or "unknown",
+                }
+            )
+        return roles
+
+    @staticmethod
+    def _build_packet_value_arbitration(facts: Sequence[dict]) -> dict[str, list[str]]:
+        result = {
+            "primary_values": [],
+            "related_values": [],
+            "secondary_values": [],
+            "conflicting_values": [],
+        }
+        target_by_role = {
+            "answer_threshold": "primary_values",
+            "related_condition": "related_values",
+            "secondary_program_threshold": "secondary_values",
+            "conflicting_threshold": "conflicting_values",
+        }
+        for fact in facts:
+            for item in fact.get("value_roles") or []:
+                if not isinstance(item, dict):
+                    continue
+                target = target_by_role.get(str(item.get("role") or ""))
+                value = str(item.get("value") or "").strip()
+                if target and value and value not in result[target]:
+                    result[target].append(value)
+        return result
+
+    @staticmethod
     def _apply_plan_evidence_source_bias(
         results: Sequence[dict],
         plan_context: dict | None,
@@ -584,7 +872,10 @@ class BaseSpecialistAgent:
             return list(results)
         evidence_contract = plan_context.get("evidence_contract")
         if not isinstance(evidence_contract, dict):
-            return list(results)
+            evidence_contract = {}
+        policy_facet = plan_context.get("policy_facet")
+        if not isinstance(policy_facet, dict):
+            policy_facet = {}
 
         preferred = BaseSpecialistAgent._normalized_contract_markers(
             evidence_contract.get("preferred_sources")
@@ -592,7 +883,8 @@ class BaseSpecialistAgent:
         avoid = BaseSpecialistAgent._normalized_contract_markers(
             evidence_contract.get("avoid_sources")
         )
-        if not preferred and not avoid:
+        has_policy_facet = bool(policy_facet)
+        if not preferred and not avoid and not has_policy_facet:
             return list(results)
 
         adjusted: list[dict] = []
@@ -621,9 +913,28 @@ class BaseSpecialistAgent:
                 updated_score += 0.22
             if avoid and any(marker in haystack for marker in avoid):
                 updated_score *= 0.30
-            if updated_score != score:
+            policy_alignment = align_policy_evidence(
+                policy_facet,
+                content=str(candidate.get("content") or ""),
+                source_text=source_text,
+            )
+            updated_score = (
+                (updated_score + float(policy_alignment.get("score_delta") or 0.0))
+                * float(policy_alignment.get("score_multiplier") or 1.0)
+            )
+            if updated_score != score or has_policy_facet:
                 candidate["score"] = round(updated_score, 6)
-                changed = True
+                candidate_metadata = dict(metadata)
+                if has_policy_facet:
+                    candidate_metadata["policy_facet"] = {
+                        "facet": policy_facet.get("facet"),
+                        "target_program": policy_facet.get("target_program"),
+                        "reason": policy_facet.get("reason"),
+                    }
+                    candidate_metadata["policy_alignment"] = policy_alignment
+                candidate["metadata"] = candidate_metadata
+                if updated_score != score:
+                    changed = True
             adjusted.append(candidate)
 
         if changed:
@@ -667,17 +978,23 @@ class BaseSpecialistAgent:
         agent_id: str | None = None,
         include_generic: bool = True,
     ) -> list[OfficeContactRecord]:
+        fetch_kwargs = {
+            "department": department,
+            "agent_id": agent_id,
+        }
+        if self._contact_fetcher_accepts_include_generic():
+            fetch_kwargs["include_generic"] = include_generic
+        return await self._contact_fetcher(**fetch_kwargs)
+
+    def _contact_fetcher_accepts_include_generic(self) -> bool:
         try:
-            return await self._contact_fetcher(
-                department=department,
-                agent_id=agent_id,
-                include_generic=include_generic,
-            )
-        except TypeError:
-            return await self._contact_fetcher(
-                department=department,
-                agent_id=agent_id,
-            )
+            signature = inspect.signature(self._contact_fetcher)
+        except (TypeError, ValueError):
+            return True
+        parameters = signature.parameters
+        if "include_generic" in parameters:
+            return True
+        return any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values())
 
     async def _handle_contact_request(self) -> DepartmentResponse:
         """Ajanla iliskili ofis iletisim bilgilerini sunar."""
@@ -829,6 +1146,10 @@ class BaseSpecialistAgent:
         source_hints: list[str] | None = None,
         topic_hint: str | None = None,
         student_department: str | None = None,
+        source_owner: str | None = None,
+        policy: RetrievalExecutionPolicy | None = None,
+        skip: bool = False,
+        stats: dict[str, object] | None = None,
     ) -> list[dict]:
         """Search variant queries from MQE and merge into primary results.
 
@@ -836,8 +1157,22 @@ class BaseSpecialistAgent:
         with deduplication (by content prefix) and re-sorted by score.
         The primary query results always take priority.
         """
+        if skip:
+            if stats is not None:
+                stats["multi_query_skipped"] = True
+                stats.setdefault("multi_query_skip_reason", "strong_primary_evidence")
+            return results
+        max_variants = policy.max_multi_query_variants if policy is not None else settings.rag.primary_multi_query_max_variants
+        if max_variants <= 0:
+            if stats is not None:
+                stats["multi_query_skipped"] = True
+                stats.setdefault("multi_query_skip_reason", "policy_disabled")
+            return results
         expanded = _expand_multi_queries(query)
         if not expanded.variants:
+            if stats is not None:
+                stats["multi_query_skipped"] = True
+                stats.setdefault("multi_query_skip_reason", "no_variants")
             return results
 
         seen_prefixes: set[str] = set()
@@ -846,15 +1181,22 @@ class BaseSpecialistAgent:
             seen_prefixes.add(prefix)
 
         merged_new: list[dict] = []
-        for variant in expanded.variants:
+        for variant in expanded.variants[:max_variants]:
             try:
+                if stats is not None:
+                    stats["search_calls"] = int(stats.get("search_calls") or 0) + 1
+                    stats["multi_query_variant_count"] = int(stats.get("multi_query_variant_count") or 0) + 1
                 variant_results = retriever.search(
                     variant,
-                    top_k=max(3, (top_k or 5) // 2),
+                    top_k=policy.variant_top_k if policy is not None else max(3, (top_k or 5) // 2),
                     department=department,
                     source_hints=source_hints,
                     topic_hint=topic_hint,
                     student_department=student_department,
+                    source_owner=source_owner,
+                    reranker_candidate_limit=(
+                        policy.variant_reranker_candidate_limit if policy is not None else None
+                    ),
                 )
             except Exception:
                 logger.debug(
@@ -875,6 +1217,8 @@ class BaseSpecialistAgent:
                 item["metadata"] = item_meta
                 merged_new.append(item)
 
+        if stats is not None:
+            stats["multi_query_added_results"] = int(stats.get("multi_query_added_results") or 0) + len(merged_new)
         if not merged_new:
             return results
 
@@ -1492,10 +1836,15 @@ class BaseSpecialistAgent:
             safe_prompt += f"Veritabani Bilgisi:\n{db_context}\n\n"
         if context_chunks:
             safe_prompt += f"Belge Baglami:\n{chr(10).join(context_chunks)}\n\n"
-        if plan_context:
+        prompt_plan_context = {
+            key: value
+            for key, value in (plan_context or {}).items()
+            if key != "decision_contract"
+        }
+        if prompt_plan_context:
             safe_prompt += (
                 "Plan ve cevap sozlesmesi JSON:\n"
-                f"{json.dumps(plan_context, ensure_ascii=False, default=str)[:1800]}\n\n"
+                f"{json.dumps(prompt_plan_context, ensure_ascii=False, default=str)[:1800]}\n\n"
             )
         safe_prompt += (
             "Yukaridaki verilerden kullaniciya dogrudan cevap yaz. "

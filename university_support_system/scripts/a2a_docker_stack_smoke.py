@@ -130,7 +130,7 @@ async def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             }
             headers = build_a2a_auth_headers(
                 internal_api_key=args.internal_key,
-                caller_id="smoke-client",
+                caller_id=args.caller_id,
                 target_id=MAIN_ORCHESTRATOR_SERVICE_ID,
                 body=jsonrpc_payload,
                 signature_secret=signature_secret,
@@ -210,6 +210,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expect-agent", action="append", default=[])
     parser.add_argument("--context-id", default=None)
     parser.add_argument("--trace-id", default=None)
+    parser.add_argument(
+        "--caller-id",
+        default=MAIN_ORCHESTRATOR_SERVICE_ID,
+        help=(
+            "A2A caller identity for JSON-RPC smoke. Defaults to main_orchestrator "
+            "because Docker overlays allowlist internal service ids by default."
+        ),
+    )
     parser.add_argument("--query", default="ikinci donem dersleri ne")
     parser.add_argument("--jsonrpc-query", default="Bu hafta etkinlik var mi?")
     parser.add_argument("--skip-public-query", action="store_true")

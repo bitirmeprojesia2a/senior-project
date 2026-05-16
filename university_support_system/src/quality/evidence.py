@@ -88,6 +88,14 @@ _GNO_RE = re.compile(
     r"\b(?:gno|genel\s*not\s*ortalamas[iı])\s*[:=]?\s*(?:\w+\s+){0,3}\d+[,.]\d+\b",
     re.IGNORECASE,
 )
+_GPA_THRESHOLD_RE = re.compile(
+    r"\b(?:ana\s+dal\s+)?(?:genel\s+)?not\s+ortalamas\w*"
+    r".{0,120}?4[,.]00\s+uzerinden"
+    r".{0,80}?\d+[,.]\d+"
+    r".{0,220}?"
+    r"(?:gerekir|gereklidir|sarttir|zorunludur|olmalidir)\b",
+    re.IGNORECASE,
+)
 _CONDITION_TAIL_RE = re.compile(
     r"\b(zorunludur|yapilamaz|yapilamayacaktir|yapilmaz"
     r"|gerekir|gereklidir|yapilabilir|odenir|odenmez"
@@ -245,6 +253,50 @@ def _expand_query_terms_for_evidence(query_terms: set[str], normalized_query: st
     return expanded
 
 
+def _looks_like_hard_line_start(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    normalized = normalize_text(stripped)
+    if _LIST_ITEM_RE.match(stripped):
+        return True
+    return normalized.startswith((
+        "madde ",
+        "birinci bolum",
+        "ikinci bolum",
+        "ucuncu bolum",
+        "dorduncu bolum",
+        "besinci bolum",
+        "altinci bolum",
+        "yedinci bolum",
+    ))
+
+
+def _merge_soft_line_breaks(content: str) -> str:
+    """Merge PDF line wraps that split one legal sentence across lines."""
+    lines = [
+        line.strip()
+        for line in content.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    ]
+    merged: list[str] = []
+    for line in lines:
+        if not line:
+            if merged and merged[-1]:
+                merged.append("")
+            continue
+        if not merged or not merged[-1]:
+            merged.append(line)
+            continue
+
+        previous = merged[-1].rstrip()
+        if previous.endswith((".", "?", "!", ":", ";")) or _looks_like_hard_line_start(line):
+            merged.append(line)
+        else:
+            merged[-1] = f"{previous} {line}"
+
+    return "\n".join(part for part in merged if part)
+
+
 # ---------------------------------------------------------------------------
 # EvidenceItem data model
 # ---------------------------------------------------------------------------
@@ -309,13 +361,13 @@ def _source_identity(metadata: dict | None, source_name: str) -> str:
 
 def extract_factual_claims(text: str) -> list[str]:
     """Extract verifiable factual claims (numbers, dates, conditions) from text."""
-    normalized = normalize_text(text)
+    normalized = normalize_text(_merge_soft_line_breaks(text))
     facts: list[str] = []
     seen: set[str] = set()
 
     for pattern in (
         _PERCENTAGE_RE, _DATE_RE, _ACADEMIC_TERM_RE,
-        _NUMERIC_FACT_RE, _GNO_RE,
+        _NUMERIC_FACT_RE, _GNO_RE, _GPA_THRESHOLD_RE,
     ):
         for match in pattern.finditer(normalized):
             value = match.group(0).strip()
@@ -442,13 +494,14 @@ def select_evidence_sentences(
     if not query_terms:
         return content
 
+    normalized_content = _merge_soft_line_breaks(content)
     parts = [
         part.strip()
-        for part in EVIDENCE_SENTENCE_RE.split(content)
+        for part in EVIDENCE_SENTENCE_RE.split(normalized_content)
         if part and part.strip()
     ]
     if len(parts) <= max_sentences:
-        return content
+        return normalized_content
 
     scored: list[tuple[float, int, str]] = []
     for index, part in enumerate(parts):

@@ -429,10 +429,14 @@ async def fetch_relevant_announcements(
     limit: int = 3,
     recent_days: int = 30,
     allow_latest_fallback: bool = True,
+    probe_mode: str | None = None,
+    require_keyword_match: bool = False,
+    minimum_match_score: int | None = None,
 ) -> list[AnnouncementRecord]:
     """Sorgu ile ilgili aktif duyurulari getirir."""
 
     keywords = extract_announcement_keywords(query_text)
+    is_supplemental_probe = normalize_text(probe_mode) == "supplemental"
     recent_cutoff = datetime.now(UTC) - timedelta(days=recent_days)
     resolved_unit_name = unit_name or _detect_unit_scope(query_text)
     resolved_faculty = faculty or _detect_faculty_scope(query_text)
@@ -443,6 +447,11 @@ async def fetch_relevant_announcements(
         unit_name=resolved_unit_name,
     ):
         effective_keywords = []
+    if require_keyword_match and not effective_keywords:
+        return []
+    strict_keyword_score = minimum_match_score
+    if is_supplemental_probe and (strict_keyword_score is None or strict_keyword_score <= 0):
+        strict_keyword_score = 10
 
     async with get_session() as session:
         general_only_base_stmt = (
@@ -485,25 +494,28 @@ async def fetch_relevant_announcements(
                 keywords=effective_keywords,
                 query_text=query_text,
             ):
-                older_exact = await _execute_announcement_query(
-                    session,
-                    stmt=exact_base_stmt,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                    recent_cutoff=recent_cutoff,
-                    limit=limit,
-                    recent_only=False,
-                )
-                if _top_announcement_match_score(
-                    older_exact,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                ) > _top_announcement_match_score(
-                    announcements,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                ):
-                    announcements = older_exact
+                if is_supplemental_probe:
+                    announcements = []
+                else:
+                    older_exact = await _execute_announcement_query(
+                        session,
+                        stmt=exact_base_stmt,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                        recent_cutoff=recent_cutoff,
+                        limit=limit,
+                        recent_only=False,
+                    )
+                    if _top_announcement_match_score(
+                        older_exact,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                    ) > _top_announcement_match_score(
+                        announcements,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                    ):
+                        announcements = older_exact
             if not announcements and allow_latest_fallback:
                 announcements = await _execute_announcement_query(
                     session,
@@ -541,25 +553,28 @@ async def fetch_relevant_announcements(
                 keywords=effective_keywords,
                 query_text=query_text,
             ):
-                older_general = await _execute_announcement_query(
-                    session,
-                    stmt=general_only_base_stmt,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                    recent_cutoff=recent_cutoff,
-                    limit=limit,
-                    recent_only=False,
-                )
-                if _top_announcement_match_score(
-                    older_general,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                ) > _top_announcement_match_score(
-                    announcements,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                ):
-                    announcements = older_general
+                if is_supplemental_probe:
+                    announcements = []
+                else:
+                    older_general = await _execute_announcement_query(
+                        session,
+                        stmt=general_only_base_stmt,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                        recent_cutoff=recent_cutoff,
+                        limit=limit,
+                        recent_only=False,
+                    )
+                    if _top_announcement_match_score(
+                        older_general,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                    ) > _top_announcement_match_score(
+                        announcements,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                    ):
+                        announcements = older_general
             if not announcements and allow_latest_fallback:
                 announcements = await _execute_announcement_query(
                     session,
@@ -597,25 +612,28 @@ async def fetch_relevant_announcements(
                 keywords=effective_keywords,
                 query_text=query_text,
             ):
-                older_inclusive = await _execute_announcement_query(
-                    session,
-                    stmt=inclusive_base_stmt,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                    recent_cutoff=recent_cutoff,
-                    limit=limit,
-                    recent_only=False,
-                )
-                if _top_announcement_match_score(
-                    older_inclusive,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                ) > _top_announcement_match_score(
-                    announcements,
-                    keywords=effective_keywords,
-                    query_text=query_text,
-                ):
-                    announcements = older_inclusive
+                if is_supplemental_probe:
+                    announcements = []
+                else:
+                    older_inclusive = await _execute_announcement_query(
+                        session,
+                        stmt=inclusive_base_stmt,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                        recent_cutoff=recent_cutoff,
+                        limit=limit,
+                        recent_only=False,
+                    )
+                    if _top_announcement_match_score(
+                        older_inclusive,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                    ) > _top_announcement_match_score(
+                        announcements,
+                        keywords=effective_keywords,
+                        query_text=query_text,
+                    ):
+                        announcements = older_inclusive
 
         if not announcements and allow_latest_fallback:
             announcements = await _execute_announcement_query(
@@ -638,6 +656,17 @@ async def fetch_relevant_announcements(
                 recent_only=False,
                 use_keywords=False,
             )
+
+        if announcements and strict_keyword_score is not None and effective_keywords:
+            announcements = [
+                item
+                for item in announcements
+                if _announcement_keyword_match_score(
+                    item,
+                    keywords=effective_keywords,
+                    query_text=query_text,
+                ) >= strict_keyword_score
+            ]
 
         link_map: dict[int, tuple[AnnouncementLinkRecord, ...]] = {}
         if announcements:

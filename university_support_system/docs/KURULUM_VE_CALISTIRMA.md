@@ -31,6 +31,46 @@ Kod degismediyse, sadece servisleri mevcut image ile yeniden kaldirmak icin:
 .\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --skip-build --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --health-timeout-seconds 300
 ```
 
+Slack A2A kalite testi oncesi onerilen temiz rollout sirası:
+
+```powershell
+# 1) Kod veya dependency degistiyse build'li rollout
+.\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --slack-service slack-bot-a2a --health-timeout-seconds 300
+
+# 2) Kod degismediyse mevcut image ile recreate
+.\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --skip-build --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --slack-service slack-bot-a2a --health-timeout-seconds 300
+
+# 3) Slack replay oncesi Redis cache/context temizligi
+docker exec uni_redis redis-cli -n 0 FLUSHDB
+
+# 4) Slack botu temiz baslat
+.\venv\Scripts\python.exe -m scripts.slack_runtime restart --runtime a2a
+```
+
+Rollout sirasinda `retrieval-service` uzun warmup nedeniyle dependency health penceresine yetismeyebilir. BGE embedding, reranker ve BM25 index hazirligi bitince servis sonradan `healthy` olabilir. Bu durumda once durum/log kontrolu yapin:
+
+```powershell
+docker ps -a --filter "name=uni_a2a_retrieval_service" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
+docker logs uni_a2a_retrieval_service --tail 220
+docker inspect uni_a2a_retrieval_service --format "{{json .State.Health}}"
+```
+
+Retrieval sonradan `healthy`, fakat `uni_a2a_api` `Created` durumunda kaldiysa API dependency fail yuzunden start'a gecememis olabilir:
+
+```powershell
+docker start uni_a2a_api
+docker exec uni_a2a_api python -c "import json, urllib.request; print(json.dumps(json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=8)), ensure_ascii=False, indent=2))"
+docker restart uni_slack_bot_a2a
+```
+
+Announcement/event agentlari eski image ile kaldiyse, duyuru/takvim degisiklikleri Slack testine yansimaz. Gerekirse sadece capability agentlarini yenileyin:
+
+```powershell
+docker compose -f docker-compose.a2a-existing-infra.yml -f docker-compose.a2a-existing-infra-capabilities.yml up --no-build --force-recreate -d agent-announcement agent-event
+```
+
+`docker-compose.a2a-app-gpu.yml` ve `docker-compose.a2a-app-gpu-all.yml` standalone compose dosyalari degildir; sadece GPU runtime overlay'idir. Tek basina `docker compose -f docker-compose.a2a-app-gpu-all.yml up ...` calistirilirsa `has neither an image nor a build context specified` hatasi beklenir. Bu dosyalar `scripts.a2a_rollout` veya base compose dosyalari ile birlikte kullanilmalidir.
+
 25 soruluk kalite benchmark'i:
 
 ```powershell
@@ -64,6 +104,7 @@ Notlar:
 - Kod, dependency veya data dosyasi degistiyse `--skip-build` kullanmayin; normal build'li rollout gerekir.
 - RAG belge icerigi degistiyse ilgili koleksiyon yeniden indekslenmelidir. Structured DB seed veya schedule ingest degistiyse yeniden indeks gerekmez, ilgili seed/ingest komutu yeterlidir.
 - Slack'te iki cevap gelirse genellikle iki Socket Mode bot ayni token ile aciktir. `slack-bot-a2a` ve `slack-bot-inprocess` ayni anda calismamali.
+- 15 Mayis 2026 itibariyla `scripts.slack_runtime up/restart` ve Slack dahil `scripts.a2a_rollout`, secilen Slack runtime'i baslatmadan once karsi runtime'i stop eder. Yine de duplicate cevap gorulurse `docker ps -a --filter "name=slack"` ile orphan/eski container kontrol edilir.
 - `LLM_QUERY_NORMALIZATION_ENABLED` varsayilan olarak `true` gelir. Kisa capability ifadeleri (`guncel duyur` gibi) routing oncesi kanoniklestirilir; normal sorgularda canonical query routing LLM'in ayni JSON ciktisindan alinir. Gerekirse `.env` icinde `LLM_QUERY_NORMALIZATION_ENABLED=false` ile kapatilabilir.
 
 ## 1. On Kosullar

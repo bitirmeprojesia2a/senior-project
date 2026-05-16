@@ -25,6 +25,8 @@ class RetrievalSearchRequest(BaseModel):
     source_hints: list[str] = Field(default_factory=list)
     topic_hint: str | None = None
     student_department: str | None = None
+    source_owner: str | None = None
+    reranker_candidate_limit: int | None = Field(default=None, ge=1, le=30)
 
 
 class RetrievalEnrichRequest(BaseModel):
@@ -102,6 +104,8 @@ def create_retrieval_service_app() -> FastAPI:
             source_hints=payload.source_hints,
             topic_hint=payload.topic_hint,
             student_department=payload.student_department,
+            source_owner=payload.source_owner,
+            reranker_candidate_limit=payload.reranker_candidate_limit,
         )
         return RetrievalResultsResponse(results=results)
 

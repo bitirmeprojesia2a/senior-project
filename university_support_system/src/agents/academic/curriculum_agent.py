@@ -53,6 +53,11 @@ from src.db.registration_data import fetch_active_registration_period
 from src.db.schedule_data import (
     fetch_schedule_slots_by_department,
     fetch_schedule_slots_for_course,
+    format_schedule_course_name,
+    format_schedule_day,
+    format_schedule_group,
+    format_schedule_label,
+    normalize_schedule_rows_for_answer,
     schedule_row_sort_key,
 )
 from src.db.schemas import DepartmentResponse
@@ -134,7 +139,11 @@ class CurriculumAgent(BaseSpecialistAgent):
                 )
 
         # "X bölümü var mı?" kalıbı — VT'de bölüm araması yap
-        if is_department_existence_query(lowered) and effective_department:
+        if (
+            is_department_existence_query(lowered)
+            and not is_schedule_query(lowered)
+            and effective_department
+        ):
             dept_exists = await fetch_department_exists(effective_department)
             if not dept_exists:
                 return DepartmentResponse(
@@ -196,6 +205,7 @@ class CurriculumAgent(BaseSpecialistAgent):
                 query_text,
                 lowered,
                 student_department=effective_department or None,
+                metadata=metadata,
             )
             if schedule_response is not None:
                 return schedule_response
@@ -291,6 +301,19 @@ class CurriculumAgent(BaseSpecialistAgent):
             return None
 
         answer = await self._build_capability_answer(query_text, result, metadata)
+        response_metadata = {
+            "capability_planner": {
+                "mode": planner_payload.get("mode"),
+                "capability": result.capability,
+                "confidence": action.confidence,
+                "record_count": len(result.records),
+                "message": result.message,
+            }
+        }
+        if isinstance(metadata.get("answer_contract"), dict):
+            response_metadata["answer_contract"] = metadata["answer_contract"]
+        if isinstance(metadata.get("source_owner"), dict):
+            response_metadata["source_owner"] = metadata["source_owner"]
         return DepartmentResponse(
             department=self.department,
             answer=answer,
@@ -305,15 +328,7 @@ class CurriculumAgent(BaseSpecialistAgent):
             generation_mode="vt",
             include_contact_suggestion=True,
             success=True,
-            metadata={
-                "capability_planner": {
-                    "mode": planner_payload.get("mode"),
-                    "capability": result.capability,
-                    "confidence": action.confidence,
-                    "record_count": len(result.records),
-                    "message": result.message,
-                }
-            },
+            metadata=response_metadata,
         )
 
     async def _build_capability_answer(
@@ -329,6 +344,15 @@ class CurriculumAgent(BaseSpecialistAgent):
             metadata=result.metadata,
             message=result.message,
         )
+        answer_contract = metadata.get("answer_contract") if isinstance(metadata, dict) else None
+        if (
+            result.capability == "schedule.weekly_program"
+            or (
+                isinstance(answer_contract, dict)
+                and str(answer_contract.get("contract_id") or "") == "schedule_full_program"
+            )
+        ):
+            return fallback
         if not settings.capability_planner.synthesize_with_llm:
             return fallback
         if not result.records and result.authoritative_no_records:
@@ -759,6 +783,7 @@ class CurriculumAgent(BaseSpecialistAgent):
         lowered: str,
         *,
         student_department: str | None,
+        metadata: dict[str, Any] | None = None,
     ) -> DepartmentResponse | None:
         day_filter = extract_schedule_day(lowered)
         group_filters = {normalize_text(value) for value in extract_schedule_groups(lowered)}
@@ -782,10 +807,11 @@ class CurriculumAgent(BaseSpecialistAgent):
         if not schedule_rows:
             return None
 
-        filtered_rows, term_context = self._select_schedule_rows_for_term(
-            query_text,
+        filtered_rows, schedule_filter = normalize_schedule_rows_for_answer(
             schedule_rows,
+            query_text=query_text,
         )
+        term_context = schedule_filter.get("term_context")
         if day_filter:
             filtered_rows = [row for row in filtered_rows if row.get("day_of_week") == day_filter]
         if group_filters:
@@ -799,13 +825,13 @@ class CurriculumAgent(BaseSpecialistAgent):
 
         lines: list[str] = []
         if code_match:
-            header = f"{code_match.group(0).upper().replace(' ', '')} dersi icin bulunan ders programi satirlari:"
+            header = f"{code_match.group(0).upper().replace(' ', '')} dersi için bulunan ders programı satırları:"
         elif not day_filter and not group_filters:
             term_suffix = f" ({term_context})" if term_context else ""
-            header = f"{student_department} icin bulunan ders programi satirlari{term_suffix}:"
+            header = f"{format_schedule_label(student_department)} için bulunan ders programı satırları{term_suffix}:"
         else:
             term_suffix = f" ({term_context})" if term_context else ""
-            header = f"Bulunan ders programi satirlari{term_suffix}:"
+            header = f"Bulunan ders programı satırları{term_suffix}:"
         lines.append(header)
 
         if code_match or day_filter or group_filters:
@@ -818,6 +844,11 @@ class CurriculumAgent(BaseSpecialistAgent):
                 )
             )
 
+        response_metadata = {
+            "schedule_filter": schedule_filter,
+        }
+        if isinstance(metadata, dict) and isinstance(metadata.get("answer_contract"), dict):
+            response_metadata["answer_contract"] = metadata["answer_contract"]
         return DepartmentResponse(
             department=self.department,
             answer="\n".join(lines),
@@ -830,6 +861,7 @@ class CurriculumAgent(BaseSpecialistAgent):
             sources=[],
             include_contact_suggestion=True,
             success=True,
+            metadata=response_metadata,
         )
 
     @classmethod
@@ -948,7 +980,7 @@ class CurriculumAgent(BaseSpecialistAgent):
         lines: list[str] = []
         for group_key in sorted(grouped):
             group_rows = grouped[group_key]
-            lines.append(f"\n{group_key[1]}:")
+            lines.append(f"\n{format_schedule_group(group_key[1])}:")
             for row in group_rows[:max_rows_per_group]:
                 lines.append(cls._format_schedule_row(row, include_group=False))
             if len(group_rows) > max_rows_per_group:
@@ -973,15 +1005,17 @@ class CurriculumAgent(BaseSpecialistAgent):
     @staticmethod
     def _format_schedule_row(row: dict[str, Any], *, include_group: bool) -> str:
         group_text = (
-            f" | {row['schedule_group']}"
+            f" | {format_schedule_group(row['schedule_group'])}"
             if include_group and row.get("schedule_group")
             else ""
         )
         classroom_text = f" | Derslik: {row['classroom']}" if row.get("classroom") else ""
-        instructor_text = f" | Ogretim Elemani: {row['instructor']}" if row.get("instructor") else ""
-        course_label = row.get("course_code") or row.get("course_name") or row.get("course_key")
+        instructor_text = f" | Öğretim Elemanı: {row['instructor']}" if row.get("instructor") else ""
+        code = str(row.get("course_code") or "").strip()
+        name = format_schedule_course_name(row.get("course_name"))
+        course_label = " | ".join(part for part in (code, name) if part) or str(row.get("course_key") or "").strip()
         return (
-            f"- {row['day_of_week']} {row['start_time']}-{row['end_time']} | "
+            f"- {format_schedule_day(row['day_of_week'])} {row['start_time']}-{row['end_time']} | "
             f"{course_label}{group_text}{classroom_text}{instructor_text}"
         )
 
@@ -1002,10 +1036,10 @@ class CurriculumAgent(BaseSpecialistAgent):
         )
         for class_no, patterns in class_markers:
             if any(re.search(pattern, normalized) for pattern in patterns):
-                return int(class_no), f"{class_no}. sinif"
+                return int(class_no), f"{class_no}. Sınıf"
         if group_text:
             return 90, group_text
-        return 99, "Sinif/grup belirtilmeyen dersler"
+        return 99, "Sınıf/grup belirtilmeyen dersler"
 
     async def _build_prerequisite_response(
         self,

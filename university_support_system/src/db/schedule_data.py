@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import re
 from typing import Any
 
@@ -29,6 +30,33 @@ _WEEKDAY_ORDER = {
     "cuma": 5,
     "cumartesi": 6,
     "pazar": 7,
+}
+_WEEKDAY_DISPLAY = {
+    "pazartesi": "Pazartesi",
+    "sali": "Salı",
+    "carsamba": "Çarşamba",
+    "persembe": "Perşembe",
+    "cuma": "Cuma",
+    "cumartesi": "Cumartesi",
+    "pazar": "Pazar",
+}
+_SCHEDULE_TEXT_REPLACEMENTS = {
+    "Muhendisligi": "Mühendisliği",
+    "Muh.": "Müh.",
+    "Egitimi": "Eğitimi",
+    "Sinif": "Sınıf",
+    "sinif": "sınıf",
+    "Ogretim Elemani": "Öğretim Elemanı",
+}
+_COURSE_NAME_TRANSLATIONS = {
+    "Computer Programming (Lab)": "Bilgisayar Programlama (Lab)",
+    "Computer Programming": "Bilgisayar Programlama",
+    "Fundamentals of Electrical Engineering (Lab)": "Elektrik Mühendisliği Temelleri (Lab)",
+    "Fundamentals of Electrical Engineering": "Elektrik Mühendisliği Temelleri",
+    "Electronics II A (Lab)": "Elektronik II A (Lab)",
+    "Electronics II B (Lab)": "Elektronik II B (Lab)",
+    "Advanced Programming (Lab)": "İleri Programlama (Lab)",
+    "Advanced Programming": "İleri Programlama",
 }
 
 
@@ -67,6 +95,107 @@ def schedule_row_sort_key(row: dict[str, Any]) -> tuple[int, str, str, str, str]
     )
 
 
+def normalize_schedule_rows_for_answer(
+    rows: list[dict[str, Any]],
+    *,
+    query_text: str | None = None,
+    default_term_key: str | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Normalize schedule rows for deterministic user-facing answers.
+
+    Generic program schedule answers should show the current undergraduate
+    weekly schedule.  Graduate/blank "other" buckets are kept only when the
+    user explicitly asks for them.
+    """
+    if not rows:
+        return [], {
+            "schema": "omu.schedule_filter.v1",
+            "term_context": None,
+            "excluded_rows": 0,
+            "explicit_other_scope": False,
+        }
+
+    query = normalize_text(query_text or "")
+    explicit_other_scope = _explicit_other_schedule_scope(query)
+    term_key = _extract_schedule_term_key(query)
+    if term_key is None and _has_multiple_schedule_terms(rows):
+        term_key = default_term_key or _default_schedule_term_key()
+
+    term_rows = rows
+    if term_key:
+        matching_rows = [
+            row for row in rows
+            if _schedule_term_key(row.get("term")) == term_key
+        ]
+        if matching_rows:
+            term_rows = matching_rows
+
+    normalized_rows = [_normalize_schedule_row(row) for row in term_rows]
+    if not explicit_other_scope:
+        undergrad_rows = [
+            row for row in normalized_rows
+            if _schedule_row_level(row) == "undergraduate"
+        ]
+        if undergrad_rows:
+            normalized_rows = undergrad_rows
+        else:
+            normalized_rows = [
+                row for row in normalized_rows
+                if _schedule_row_level(row) != "graduate"
+            ]
+
+    normalized_rows.sort(key=schedule_row_sort_key)
+    return normalized_rows, {
+        "schema": "omu.schedule_filter.v1",
+        "term_context": _schedule_term_context(normalized_rows),
+        "requested_term": term_key,
+        "excluded_rows": max(0, len(rows) - len(normalized_rows)),
+        "explicit_other_scope": explicit_other_scope,
+    }
+
+
+def schedule_group_sort_key(group: str | None) -> tuple[int, str]:
+    normalized = normalize_text(group or "")
+    match = re.search(r"\b([1-4])\s*\.?\s*sinif\b", normalized)
+    if match:
+        return int(match.group(1)), normalized
+    if "belirtilmeyen" in normalized:
+        return 90, normalized
+    return 80, normalized
+
+
+def format_schedule_day(value: Any) -> str:
+    """Return a Turkish display label for schedule weekday values."""
+    raw = str(value or "").strip()
+    return _WEEKDAY_DISPLAY.get(normalize_text(raw), raw)
+
+
+def format_schedule_group(value: Any) -> str:
+    """Return a Turkish display label for schedule class/group values."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    normalized = normalize_text(text)
+    match = re.search(r"\b([1-4])\s*\.?\s*sinif\b", normalized)
+    if match:
+        return f"{int(match.group(1))}. Sınıf"
+    return format_schedule_label(text)
+
+
+def format_schedule_label(value: Any) -> str:
+    """Naturalize common ASCII schedule labels without changing DB identity."""
+    text = str(value or "").strip()
+    for broken, fixed in _SCHEDULE_TEXT_REPLACEMENTS.items():
+        text = text.replace(broken, fixed)
+    return text
+
+
+def format_schedule_course_name(value: Any) -> str:
+    """Clean and naturalize course names for user-facing schedule answers."""
+    text = _clean_schedule_course_name(str(value or ""))
+    return _COURSE_NAME_TRANSLATIONS.get(text, text)
+
+
 def _slot_to_dict(slot: CourseScheduleSlot) -> dict[str, Any]:
     return {
         "academic_year": slot.academic_year,
@@ -86,6 +215,151 @@ def _slot_to_dict(slot: CourseScheduleSlot) -> dict[str, Any]:
         "source_url": slot.source_url,
         "is_active": slot.is_active,
     }
+
+
+def _normalize_schedule_row(row: dict[str, Any]) -> dict[str, Any]:
+    cleaned = dict(row)
+    derived_group = _derive_schedule_group(cleaned)
+    if derived_group:
+        cleaned["schedule_group"] = derived_group
+    cleaned["course_name"] = _clean_schedule_course_name(
+        str(cleaned.get("course_name") or cleaned.get("name") or "")
+    )
+    return cleaned
+
+
+def _derive_schedule_group(row: dict[str, Any]) -> str | None:
+    raw_group = str(row.get("schedule_group") or "").strip()
+    if raw_group and normalize_text(raw_group) not in {"diger", "other"}:
+        return raw_group
+    section = normalize_text(row.get("section") or "")
+    match = re.search(r"\b(?:fzk|fizik|sinif)?\s*([1-4])\b", section)
+    if match:
+        return f"{int(match.group(1))}. Sinif"
+    code = normalize_text(row.get("course_code") or row.get("course_key") or "")
+    code_match = re.search(r"\b[a-z]{2,6}\s*([1-4])\d{2}\b", code)
+    if code_match:
+        return f"{int(code_match.group(1))}. Sinif"
+    return None
+
+
+def _schedule_row_level(row: dict[str, Any]) -> str:
+    haystack = normalize_text(
+        " ".join(
+            str(row.get(key) or "")
+            for key in (
+                "source_document",
+                "department",
+                "course_name",
+                "course_code",
+                "course_key",
+                "schedule_group",
+                "section",
+            )
+        )
+    )
+    if any(marker in haystack for marker in ("yuksek lisans", "lisansustu", "doktora", "uzmanlik alan dersi")):
+        return "graduate"
+    if schedule_group_sort_key(str(row.get("schedule_group") or ""))[0] in {1, 2, 3, 4}:
+        return "undergraduate"
+    if "lisans" in haystack and "lisansustu" not in haystack:
+        return "undergraduate"
+    return "unknown"
+
+
+def _clean_schedule_course_name(value: str) -> str:
+    text = " ".join(str(value or "").split())
+    if text in _COURSE_NAME_TRANSLATIONS:
+        return _COURSE_NAME_TRANSLATIONS[text]
+    replacements = {
+        "Öğretmen lik": "Öğretmenlik",
+        "Ogretmen lik": "Ogretmenlik",
+        "Uygula ması": "Uygulaması",
+        "Uygula masi": "Uygulamasi",
+        "Kaynaştır ma": "Kaynaştırma",
+        "Kaynastir ma": "Kaynastirma",
+        "Öğretimin de": "Öğretiminde",
+        "Ogretimin de": "Ogretiminde",
+    }
+    for broken, fixed in replacements.items():
+        text = text.replace(broken, fixed)
+    return text
+
+
+def _explicit_other_schedule_scope(normalized_query: str) -> bool:
+    return any(
+        marker in normalized_query
+        for marker in (
+            "lisansustu",
+            "yuksek lisans",
+            "doktora",
+            "uzmanlik",
+            "diger dersler",
+            "tum dersler",
+            "tum gruplar",
+        )
+    )
+
+
+def _has_multiple_schedule_terms(rows: list[dict[str, Any]]) -> bool:
+    terms = {
+        (
+            str(row.get("academic_year") or "").strip(),
+            _schedule_term_key(row.get("term")),
+        )
+        for row in rows
+        if row.get("term") or row.get("academic_year")
+    }
+    return len(terms) > 1
+
+
+def _extract_schedule_term_key(normalized_query: str) -> str | None:
+    semester_match = re.search(r"\b([1-8])\s*\.?\s*(?:yariyil|donem)\b", normalized_query)
+    if semester_match is not None:
+        semester = int(semester_match.group(1))
+        return "guz" if semester % 2 == 1 else "bahar"
+    if any(marker in normalized_query for marker in ("bahar", "ikinci donem", "2 donem", "ikinci yariyil", "2 yariyil")):
+        return "bahar"
+    if any(marker in normalized_query for marker in ("guz", "ilk donem", "birinci donem", "1 donem", "ilk yariyil", "birinci yariyil", "1 yariyil")):
+        return "guz"
+    return None
+
+
+def _default_schedule_term_key() -> str:
+    month = datetime.now().month
+    if 2 <= month <= 7:
+        return "bahar"
+    return "guz"
+
+
+def _schedule_term_key(raw_term: Any) -> str:
+    normalized = normalize_text(raw_term or "")
+    if "bahar" in normalized:
+        return "bahar"
+    if "guz" in normalized:
+        return "guz"
+    return normalized
+
+
+def _schedule_term_context(rows: list[dict[str, Any]]) -> str | None:
+    contexts: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        academic_year = str(row.get("academic_year") or "").strip()
+        term = str(row.get("term") or "").strip()
+        if not academic_year and not term:
+            continue
+        key = (academic_year, term)
+        if key in seen:
+            continue
+        seen.add(key)
+        contexts.append(key)
+    if len(contexts) != 1:
+        return None
+    academic_year, term = contexts[0]
+    if academic_year and term:
+        return f"{academic_year} {term}"
+    return academic_year or term
 
 
 async def fetch_schedule_slots_by_department(

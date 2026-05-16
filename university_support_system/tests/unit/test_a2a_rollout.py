@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from scripts.a2a_rollout import (
@@ -10,9 +12,34 @@ from scripts.a2a_rollout import (
     _health_build_id,
     _health_matches_build,
     _health_targets,
+    _opposite_slack_service_name,
     _select_legacy_image_refs,
     _service_names,
 )
+from scripts import a2a_docker_stack_smoke
+from src.a2a.service_identity import MAIN_ORCHESTRATOR_SERVICE_ID
+
+project_root = Path(__file__).resolve().parents[2]
+
+
+def test_a2a_compose_model_cache_env_points_to_container_mount():
+    compose_files = [
+        "docker-compose.a2a.yml",
+        "docker-compose.a2a-full.yml",
+        "docker-compose.a2a-existing-infra.yml",
+        "docker-compose.a2a-existing-infra-student.yml",
+        "docker-compose.a2a-existing-infra-academic.yml",
+        "docker-compose.a2a-existing-infra-capabilities.yml",
+        "docker-compose.a2a-existing-infra-finance-specialists.yml",
+        "docker-compose.a2a-existing-infra-student-specialists.yml",
+        "docker-compose.a2a-existing-infra-academic-specialists.yml",
+    ]
+
+    for compose_file in compose_files:
+        content = (project_root / compose_file).read_text(encoding="utf-8")
+        assert "MODEL_CACHE_HOST_DIR: /models" in content, compose_file
+        assert "HF_HOME: /models/huggingface" in content, compose_file
+        assert "SENTENCE_TRANSFORMERS_HOME: /models/huggingface/hub" in content, compose_file
 
 
 def test_health_targets_defaults_to_api_and_finance():
@@ -27,6 +54,14 @@ def test_health_targets_defaults_to_api_and_finance():
         ("api", "http://localhost:8000/health"),
         ("agent-finance", "http://localhost:8103/health"),
     ]
+
+
+def test_docker_stack_smoke_default_caller_matches_internal_allowlist(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["a2a_docker_stack_smoke"])
+
+    args = a2a_docker_stack_smoke.parse_args()
+
+    assert args.caller_id == MAIN_ORCHESTRATOR_SERVICE_ID
 
 
 def test_health_targets_include_optional_agents():
@@ -115,6 +150,12 @@ def test_compose_up_args_force_recreates_services_for_fresh_build_metadata():
         "api",
         "agent-finance",
     ]
+
+
+def test_opposite_slack_service_name_prevents_duplicate_socket_mode_runtimes():
+    assert _opposite_slack_service_name("slack-bot-a2a") == "slack-bot-inprocess"
+    assert _opposite_slack_service_name("slack-bot-inprocess") == "slack-bot-a2a"
+    assert _opposite_slack_service_name("unknown") == ""
 
 
 def test_health_targets_include_department_and_specialist_agents():

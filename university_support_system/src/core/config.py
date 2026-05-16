@@ -5,13 +5,14 @@ Bu modul ortam degiskenlerinden gelen ayarlari tek yerde toplar ve
 uygulamanin geri kalani icin `settings` nesnesini saglar.
 """
 
+import os
 from pathlib import Path
 from typing import Literal, Optional
 
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LLMProvider = Literal["openai_compatible", "google_ai"]
+LLMProvider = Literal["openai_compatible", "google_ai", "anthropic"]
 LLMRole = Literal[
     "default",
     "routing",
@@ -24,6 +25,9 @@ LLMRole = Literal[
     "judge",
 ]
 CapabilityPlannerMode = Literal["off", "shadow", "pilot", "on"]
+SourceOwnerPolicyMode = Literal["off", "advisory", "balanced", "strict"]
+AnswerValidationMode = Literal["off", "shadow", "contract_enforce"]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class PostgresSettings(BaseSettings):
@@ -123,6 +127,38 @@ class GoogleAISettings(OpenAISettings):
     provider_name: str = "google_ai"
 
 
+class AnthropicSettings(BaseSettings):
+    """Anthropic Claude Messages API ayarlari."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="ANTHROPIC_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    api_key: Optional[str] = None
+    base_url: str = "https://api.anthropic.com"
+    model: str = "claude-sonnet-4-20250514"
+    secondary_model: Optional[str] = None
+    routing_model: Optional[str] = None
+    conversation_model: Optional[str] = None
+    query_expansion_model: Optional[str] = None
+    evidence_selection_model: Optional[str] = None
+    final_refinement_model: Optional[str] = None
+    specialist_synthesis_model: Optional[str] = None
+    global_synthesis_model: Optional[str] = None
+    max_tokens: int = 4096
+    timeout: int = 60
+    anthropic_version: str = Field(default="2023-06-01", validation_alias="ANTHROPIC_VERSION")
+    temperature: Optional[float] = None
+    provider_name: str = "anthropic"
+
+    @property
+    def is_available(self) -> bool:
+        return bool(self.api_key)
+
+
 class LLMRuntimeSettings(BaseSettings):
     """Uygulama ici LLM cagrilarinin zaman asimi ve davranis ayarlari."""
 
@@ -158,7 +194,7 @@ class LLMRuntimeSettings(BaseSettings):
     specialist_synthesis_timeout_seconds: int = 120
     global_synthesis_timeout_seconds: int = 120
     primary_provider: LLMProvider = "openai_compatible"
-    fallback_provider: Literal["none", "openai_compatible", "google_ai"] = "google_ai"
+    fallback_provider: Literal["none", "openai_compatible", "google_ai", "anthropic"] = "google_ai"
 
 
 class ChromaSettings(BaseSettings):
@@ -218,6 +254,13 @@ class RAGSettings(BaseSettings):
     reranker_candidate_limit_finance: int = 5
     reranker_candidate_limit_student_affairs: int = 10
     reranker_candidate_limit_academic_programs: int = 12
+    primary_reranker_candidate_limit: int = 8
+    support_lite_top_k: int = 4
+    support_lite_reranker_candidate_limit: int = 4
+    primary_multi_query_max_variants: int = 1
+    multi_query_variant_top_k: int = 3
+    multi_query_variant_reranker_candidate_limit: int = 4
+    reranker_concurrency_limit: int = 2
     llm_query_expansion_enabled: bool = False
     llm_query_expansion_timeout_seconds: int = 8
     llm_query_expansion_max_chars: int = 420
@@ -231,6 +274,10 @@ class RAGSettings(BaseSettings):
     education_level_penalty_enabled: bool = True
     finance_source_penalty_enabled: bool = True
     student_affairs_faq_bias_enabled: bool = True
+    source_constrained_recall_enabled: bool = True
+    source_constrained_recall_max_per_collection: int = 10
+    source_constrained_recall_max_total: int = 12
+    source_constrained_reranker_extra: int = 6
 
 
 class RerankerSettings(BaseSettings):
@@ -420,6 +467,40 @@ class CacheSettings(BaseSettings):
     embedding_model_cache_enabled: bool = True
     reranker_model_cache_enabled: bool = True
     bm25_resource_cache_enabled: bool = True
+
+
+class ModelCacheSettings(BaseSettings):
+    """Local Hugging Face model cache settings for scripts and services."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    host_dir: Optional[Path] = Field(default=None, validation_alias="MODEL_CACHE_HOST_DIR")
+    set_hf_env: bool = Field(default=True, validation_alias="MODEL_CACHE_SET_HF_ENV")
+
+    @property
+    def resolved_host_dir(self) -> Optional[Path]:
+        """Return the absolute project model cache root when configured."""
+        if self.host_dir is None:
+            return None
+
+        path = self.host_dir.expanduser()
+        if not path.is_absolute():
+            path = PROJECT_ROOT / path
+        return path.resolve()
+
+    @property
+    def hf_home(self) -> Optional[Path]:
+        root = self.resolved_host_dir
+        return root / "huggingface" if root is not None else None
+
+    @property
+    def hf_hub_cache(self) -> Optional[Path]:
+        hf_home = self.hf_home
+        return hf_home / "hub" if hf_home is not None else None
 
 
 class A2ASettings(BaseSettings):
@@ -628,6 +709,49 @@ class CapabilityPlannerSettings(BaseSettings):
         }
 
 
+class DecisionTraceSettings(BaseSettings):
+    """Default-off JSONL tracing for shadow decision contract audits."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="DECISION_TRACE_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    enabled: bool = False
+    output_path: Path = Path("tmp/decision_traces.jsonl")
+    include_answer_preview: bool = False
+    max_answer_preview_chars: int = Field(default=600, ge=0, le=5000)
+
+
+class SourceOwnerPolicySettings(BaseSettings):
+    """Runtime source-owner evidence policy rollout settings."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="SOURCE_OWNER_POLICY_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    mode: SourceOwnerPolicyMode = "advisory"
+    min_compatible_score: float = Field(default=0.30, ge=0.0, le=1.0)
+
+
+class AnswerValidationSettings(BaseSettings):
+    """Final answer/evidence validation rollout settings."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="ANSWER_VALIDATION_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    mode: AnswerValidationMode = "shadow"
+
+
 class Settings(BaseSettings):
     """Uygulama ayarlarinin kok nesnesi."""
 
@@ -641,6 +765,7 @@ class Settings(BaseSettings):
     redis: RedisSettings = Field(default_factory=RedisSettings)
     openai: OpenAISettings = Field(default_factory=OpenAISettings)
     google_ai: GoogleAISettings = Field(default_factory=GoogleAISettings)
+    anthropic: AnthropicSettings = Field(default_factory=AnthropicSettings)
     llm: LLMRuntimeSettings = Field(default_factory=LLMRuntimeSettings)
     chroma: ChromaSettings = Field(default_factory=ChromaSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
@@ -653,13 +778,21 @@ class Settings(BaseSettings):
     server: ServerSettings = Field(default_factory=ServerSettings)
     conversation: ConversationSettings = Field(default_factory=ConversationSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)
+    model_cache: ModelCacheSettings = Field(default_factory=ModelCacheSettings)
     a2a: A2ASettings = Field(default_factory=A2ASettings)
     agent: AgentServiceSettings = Field(default_factory=AgentServiceSettings)
     capability_planner: CapabilityPlannerSettings = Field(
         default_factory=CapabilityPlannerSettings
     )
+    decision_trace: DecisionTraceSettings = Field(default_factory=DecisionTraceSettings)
+    source_owner_policy: SourceOwnerPolicySettings = Field(
+        default_factory=SourceOwnerPolicySettings
+    )
+    answer_validation: AnswerValidationSettings = Field(
+        default_factory=AnswerValidationSettings
+    )
 
-    base_dir: Path = Path(__file__).parent.parent.parent
+    base_dir: Path = PROJECT_ROOT
     data_dir: Path = base_dir / "data"
     raw_data_dir: Path = data_dir / "raw"
     docs_dir: Path = base_dir / "docs"
@@ -760,6 +893,8 @@ class Settings(BaseSettings):
             provider_settings = self.openai
         elif provider == "google_ai":
             provider_settings = self.google_ai
+        elif provider == "anthropic":
+            provider_settings = self.anthropic
         else:
             return None  # pragma: no cover
 
@@ -784,6 +919,8 @@ class Settings(BaseSettings):
             return self.openai.model
         if provider == "google_ai":
             return self.google_ai.model
+        if provider == "anthropic":
+            return self.anthropic.model
         return self.openai.model  # pragma: no cover
 
     def _resolve_provider_secondary_model(
@@ -795,6 +932,8 @@ class Settings(BaseSettings):
             return self.openai.secondary_model or self.openai.model
         if provider == "google_ai":
             return self.google_ai.secondary_model or self.google_ai.model
+        if provider == "anthropic":
+            return self.anthropic.secondary_model or self.anthropic.model
         return self.openai.secondary_model or self.openai.model  # pragma: no cover
 
     def configured_llm_models(self) -> dict[str, str]:
@@ -840,3 +979,24 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def apply_model_cache_environment() -> dict[str, str]:
+    """Expose the configured project model cache to Hugging Face loaders."""
+    cache = settings.model_cache
+    hf_home = cache.hf_home
+    hf_hub_cache = cache.hf_hub_cache
+    if not cache.set_hf_env or hf_home is None or hf_hub_cache is None:
+        return {}
+
+    desired = {
+        "HF_HOME": str(hf_home),
+        "HF_HUB_CACHE": str(hf_hub_cache),
+        "SENTENCE_TRANSFORMERS_HOME": str(hf_hub_cache),
+    }
+    applied: dict[str, str] = {}
+    for key, value in desired.items():
+        if not os.environ.get(key):
+            os.environ[key] = value
+            applied[key] = value
+    return applied

@@ -14,6 +14,7 @@ from langchain_core.documents import Document
 
 from src.core.config import settings
 from src.core.constants import Department
+from src.core.source_owner_collections import resolve_source_owner_collection_bridge
 from src.rag.candidate_utils import deduplicate_documents, sort_candidates_by_score
 from src.rag.retriever import (
     OFF_TOPIC_PENALTY,
@@ -694,6 +695,192 @@ class TestHybridRetrieverDepartmentSearch:
         assert retriever._search_collection_candidates.call_args_list == [
             call("academic_programs_docs", "Rastgele bir soru")
         ]
+
+    def test_source_constrained_recall_adds_matching_hint_source_chunk(self):
+        retriever = self._make_retriever()
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content=(
+                    "MADDE 5 - CAP basvuru kosullari. Ogrencinin CAP'a "
+                    "basvurabilmesi icin ana dal not ortalamasinin 4,00 "
+                    "uzerinden en az 3,00 olmasi gerekir."
+                ),
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "category": "yonerge",
+                    "chunk_index": 6,
+                },
+            ),
+            Document(
+                page_content="Yatay gecis icin genel not ortalamasi 2.80 olabilir.",
+                metadata={
+                    "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+                    "category": "yonerge",
+                    "chunk_index": 9,
+                },
+            ),
+        ]
+
+        augmented = HybridRetriever._augment_candidates_with_source_constrained_recall(
+            retriever,
+            [self._make_candidate("diger_kaynak.pdf", score=0.7)],
+            query="CAP basvurusu icin not ortalamasi kac olmali?",
+            collection_names=["academic_programs_docs"],
+            source_constraints=("yonerge_cift_anadal_yandal.pdf yonerge cift anadal yandal pdf",),
+            topic_hint="CAP / Cift Anadal",
+        )
+
+        assert any(
+            item["metadata"].get("source_constrained_recall")
+            and item["metadata"].get("chunk_index") == 6
+            for item in augmented
+        )
+        assert not any(
+            item["source"] == "yonerge_onlisans_lisans_yatay_gecis.pdf"
+            for item in augmented
+        )
+
+    def test_search_injects_source_constrained_recall_and_filters_off_source(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = "academic_programs_docs"
+        retriever._cache = _QueryCache(ttl=300, enabled=False)
+        retriever._search_collection_candidates = MagicMock(
+            return_value=[self._make_candidate("diger_kaynak.pdf", score=0.9)]
+        )
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content=(
+                    "MADDE 5 - CAP basvuru kosullari. Ogrencinin CAP'a "
+                    "basvurabilmesi icin ana dal not ortalamasinin 4,00 "
+                    "uzerinden en az 3,00 olmasi gerekir."
+                ),
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "category": "yonerge",
+                    "chunk_index": 6,
+                },
+            ),
+            Document(
+                page_content=(
+                    "MADDE 9 - CAP'tan ilisik kesilme. Ana dal genel not "
+                    "ortalamasi 2,50 altina duserse kaydi silinir."
+                ),
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "category": "yonerge",
+                    "chunk_index": 15,
+                },
+            ),
+        ]
+
+        results = HybridRetriever.search(
+            retriever,
+            "CAP basvurusu icin not ortalamasi kac olmali?",
+            source_hints=["yonerge_cift_anadal_yandal.pdf"],
+            topic_hint="CAP / Cift Anadal",
+        )
+
+        assert any(
+            item["metadata"].get("source_constrained_recall")
+            and "3,00" in item["content"]
+            for item in results
+        )
+        assert any("3,00" in item["content"] for item in results)
+        assert all(item["source"] == "yonerge_cift_anadal_yandal.pdf" for item in results)
+        assert not any("kaydi silinir" in item["content"] for item in results)
+
+    def test_search_returns_empty_when_concrete_source_hint_has_no_collection_match(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = "student_affairs_docs"
+        retriever._cache = _QueryCache(ttl=300, enabled=False)
+        retriever._search_collection_candidates = MagicMock(
+            return_value=[self._make_candidate("yonerge_onlisans_lisans_yatay_gecis.pdf", score=0.9)]
+        )
+        retriever._BM25_DOCUMENT_CACHE["student_affairs_docs"] = [
+            Document(
+                page_content="Yatay gecis icin genel not ortalamasi 2.80 olabilir.",
+                metadata={
+                    "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+                    "category": "yonerge",
+                    "chunk_index": 9,
+                },
+            ),
+        ]
+
+        results = HybridRetriever.search(
+            retriever,
+            "CAP basvurusu icin not ortalamasi kac olmali?",
+            source_hints=["cift_ana_dal_ikinci_lisans_ve_yan_dal_programi.pdf"],
+            topic_hint="CAP / Cift Anadal",
+        )
+
+        assert results == []
+
+    def test_source_owner_bridge_expands_student_policy_search_to_academic_policy_corpus(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._cache = _QueryCache(ttl=300, enabled=False)
+        retriever._search_collection_candidates = MagicMock(
+            side_effect=[
+                [self._make_candidate("yonerge_onlisans_lisans_yatay_gecis.pdf", score=0.82)],
+                [self._make_candidate("diger_akademik_kaynak.pdf", score=0.75)],
+            ]
+        )
+        retriever._BM25_DOCUMENT_CACHE["student_affairs_docs"] = [
+            Document(
+                page_content="Yatay gecis icin genel not ortalamasi 2.80 olabilir.",
+                metadata={
+                    "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+                    "category": "yonerge",
+                    "chunk_index": 9,
+                },
+            ),
+        ]
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content=(
+                    "MADDE 5 - CAP basvuru kosullari. Ogrencinin CAP'a "
+                    "basvurabilmesi icin ana dal not ortalamasinin 4,00 "
+                    "uzerinden en az 3,00 olmasi gerekir."
+                ),
+                metadata={
+                    "source": "yonerge_cift_anadal_yandal.pdf",
+                    "category": "yonerge",
+                    "chunk_index": 6,
+                },
+            ),
+        ]
+
+        results = HybridRetriever.search(
+            retriever,
+            "CAP basvurusu icin not ortalamasi kac olmali?",
+            department=Department.STUDENT_AFFAIRS,
+            source_owner="student_affairs_policy",
+            source_hints=["yonerge_cift_anadal_yandal.pdf"],
+            topic_hint="CAP / Cift Anadal",
+        )
+
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("student_affairs_docs", "CAP basvurusu icin not ortalamasi kac olmali?"),
+            call("academic_programs_docs", "CAP basvurusu icin not ortalamasi kac olmali?"),
+        ]
+        assert any("3,00" in item["content"] for item in results)
+        assert all(item["source"] == "yonerge_cift_anadal_yandal.pdf" for item in results)
+        bridge_meta = results[0]["metadata"]["source_owner_collection_bridge"]
+        assert bridge_meta["source_owner"] == "student_affairs_policy"
+        assert bridge_meta["reason"] == "student_affairs_policy_cross_corpus"
+        assert results[0]["metadata"]["retrieval_collection_role"] == "source_owner_support"
+
+    def test_source_owner_bridge_stays_inactive_for_plain_student_policy_query(self):
+        bridge = resolve_source_owner_collection_bridge(
+            source_owner="student_affairs_policy",
+            query="Ders kaydi ne zaman yapilir?",
+            department=Department.STUDENT_AFFAIRS,
+            source_hints=[],
+            topic_hint=None,
+        )
+
+        assert bridge.active is False
 
     def test_enrich_results_merges_adjacent_sub_chunks_for_same_madde(self):
         retriever = self._make_retriever()

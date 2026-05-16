@@ -1,11 +1,14 @@
 """Main orchestrator query-policy tests."""
 
 from src.orchestrators.query_policy import (
+    build_missing_slot_clarification_message,
+    build_supplemental_announcement_probe_query,
     looks_like_contact_query,
     looks_like_announcement_query,
     should_block_announcement_primary_flow,
     should_fetch_related_announcements,
 )
+from src.db.schemas import IntentAnalysis
 
 
 def test_plain_course_schedule_query_is_not_announcement_short_circuit():
@@ -74,6 +77,27 @@ def test_direct_cap_announcement_lookup_stays_announcement():
 
     assert not should_block_announcement_primary_flow(query)
     assert looks_like_announcement_query(query)
+
+
+def test_general_cap_eligibility_does_not_require_program_slot():
+    intent = IntentAnalysis(
+        primary_intent="application",
+        required_slots=["program"],
+        missing_slots=["program"],
+    )
+
+    assert build_missing_slot_clarification_message(
+        intent=intent,
+        query="Capa basvurabilir miyim?",
+    ) is None
+
+
+def test_supplemental_probe_is_keyword_bearing_for_cap_dates():
+    probe = build_supplemental_announcement_probe_query("CAP basvuru tarihleri ne peki?")
+
+    assert probe is not None
+    assert "CAP" in probe
+    assert "basvuru tarihleri" in probe
 
 
 def test_contact_query_tolerates_small_typo():

@@ -11,7 +11,12 @@ from a2a.types import Task
 from src.agents.base import AgentDefinition, BaseSpecialistAgent
 from src.core.constants import Department, TaskType
 from src.core.text_normalization import contains_any_normalized, normalize_text
-from src.db.announcements import AnnouncementRecord, fetch_relevant_announcements
+from src.db.announcements import (
+    AnnouncementRecord,
+    _detect_faculty_scope,
+    _detect_unit_scope,
+    fetch_relevant_announcements,
+)
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.llm.prompt_templates import ANNOUNCEMENT_AGENT_SYSTEM_PROMPT
 
@@ -56,6 +61,13 @@ _ANNOUNCEMENT_ORDINAL_INDEXES: dict[str, int] = {
     "beşincisi": 4,
     "5": 4,
 }
+
+
+def _as_aware_utc(value: datetime) -> datetime:
+    """Normalize DB/test datetimes before current/stale comparisons."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 class AnnouncementAgent(BaseSpecialistAgent):
@@ -118,17 +130,24 @@ class AnnouncementAgent(BaseSpecialistAgent):
             faculty=self._normalize_optional_text(metadata.get("faculty")),
             unit_name=self._normalize_optional_text(metadata.get("unit_name")),
             limit=self._safe_int(metadata.get("limit"), default=8, minimum=1, maximum=10),
+            recent_days=self._safe_int(metadata.get("recent_days"), default=30, minimum=1, maximum=730),
             allow_latest_fallback=self._safe_bool(
                 metadata.get("allow_latest_fallback"),
-                default=True,
+                default=self._default_allow_latest_fallback(query_text, metadata),
             ),
+            probe_mode=self._normalize_optional_text(metadata.get("probe_mode")),
+            require_keyword_match=self._safe_bool(metadata.get("require_keyword_match"), default=False),
+            minimum_match_score=self._safe_int(metadata.get("minimum_match_score"), default=0, minimum=0, maximum=100),
         )
 
         has_more = len(announcements) > 5
         display_items = announcements[:5]
 
         if not announcements:
-            if self._safe_bool(metadata.get("allow_latest_fallback"), default=True):
+            if self._safe_bool(
+                metadata.get("allow_latest_fallback"),
+                default=self._default_allow_latest_fallback(query_text, metadata),
+            ):
                 answer = (
                     "Şu anda sistemde kayıtlı aktif duyuru bulunmuyor. "
                     "Duyuru verileri yüklendiğinde en güncel duyuruları doğrudan listeleyebilirim."
@@ -170,6 +189,15 @@ class AnnouncementAgent(BaseSpecialistAgent):
 
         return None
 
+    def _default_allow_latest_fallback(self, query_text: str, metadata: dict) -> bool:
+        if self._normalize_optional_text(metadata.get("faculty")):
+            return False
+        if self._normalize_optional_text(metadata.get("unit_name")):
+            return False
+        if _detect_faculty_scope(query_text) or _detect_unit_scope(query_text):
+            return False
+        return True
+
     def _normalize_optional_text(self, value) -> str | None:
         text = str(value).strip() if value is not None else ""
         return text or None
@@ -189,7 +217,7 @@ class AnnouncementAgent(BaseSpecialistAgent):
         text = str(value).strip().lower()
         if text in {"true", "1", "yes", "evet"}:
             return True
-        if text in {"false", "0", "no", "hayir", "hayÄ±r"}:
+        if text in {"false", "0", "no", "hayir", "hayır"}:
             return False
         return default
 
@@ -208,9 +236,10 @@ class AnnouncementAgent(BaseSpecialistAgent):
 
             published = ""
             if item.published_at is not None:
-                published = f" ({item.published_at.date().isoformat()})"
+                published_at = _as_aware_utc(item.published_at)
+                published = f" ({published_at.date().isoformat()})"
                 stale_cutoff = datetime.now(UTC) - timedelta(days=180)
-                if item.published_at < stale_cutoff:
+                if published_at < stale_cutoff:
                     published += " ⚠ eski duyuru"
 
             lines.append(f"{index}. {item.title}{published}")
@@ -238,7 +267,7 @@ class AnnouncementAgent(BaseSpecialistAgent):
 
         lines = [f"Duyuru özeti: {item.title}"]
         if item.published_at is not None:
-            lines.append(f"Tarih: {item.published_at.date().isoformat()}")
+            lines.append(f"Tarih: {_as_aware_utc(item.published_at).date().isoformat()}")
         lines.append(summary)
         if item.source_url:
             lines.append(f"Detay: {item.source_url}")

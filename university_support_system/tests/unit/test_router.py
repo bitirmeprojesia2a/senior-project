@@ -53,6 +53,7 @@ class TestDepartmentRouter:
         assert not looks_like_personal_data_query("Not itirazi nasil yapilir?")
         assert not looks_like_personal_data_query("Sinav notlarimi nereden gorebilirim?")
         assert not looks_like_personal_data_query("Harc borcum olsaydi CAP'a basvurabilir miydim?")
+        assert not looks_like_personal_data_query("Peki not ortalamasi kac olmali?")
         assert looks_like_personal_data_query("Not ortalamam kac?")
         assert looks_like_personal_data_query("Stajim ne durumda?")
 
