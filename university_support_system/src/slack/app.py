@@ -12,7 +12,8 @@ from slack_sdk.web.async_client import AsyncWebClient
 from src.core.config import settings
 from src.db import AuthService, ConversationContextService
 from src.orchestrators.main import MainOrchestrator
-from src.slack.service import SlackBotService, SlackIncomingMessage
+from src.slack.service import SlackBotService, SlackFileAttachment, SlackIncomingMessage, build_welcome_text
+from src.transcripts import TranscriptProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,11 @@ _recent_event_keys: dict[str, float] = {}
 def build_default_slack_service() -> SlackBotService:
     """Prod çalışma için varsayılan Slack servislerini kurar."""
 
+    orchestrator = MainOrchestrator(conversation_service=ConversationContextService())
     return SlackBotService(
-        orchestrator=MainOrchestrator(conversation_service=ConversationContextService()),
+        orchestrator=orchestrator,
         auth_service=AuthService(),
+        transcript_processor=TranscriptProcessor(llm_service=orchestrator.llm_service),
     )
 
 
@@ -61,8 +64,13 @@ def create_slack_app(*, service: SlackBotService | None = None) -> AsyncApp:
             channel_id=str(event.get("channel") or ""),
             ts=event.get("ts"),
             thread_ts=event.get("thread_ts"),
+            files=_extract_file_attachments(event),
         )
-        if not slack_message.text or not slack_message.user_id or not slack_message.channel_id:
+        if (
+            (not slack_message.text and not slack_message.files)
+            or not slack_message.user_id
+            or not slack_message.channel_id
+        ):
             return
 
         reply_thread_ts = slack_message.thread_ts or slack_message.ts
@@ -85,6 +93,19 @@ def create_slack_app(*, service: SlackBotService | None = None) -> AsyncApp:
         if event.get("channel_type") != "im":
             return
         await _reply(event, say)
+
+    @app.event("member_joined_channel")
+    async def handle_member_joined_channel(event, say):
+        user_id = str(event.get("user") or "").strip()
+        channel_id = str(event.get("channel") or "").strip()
+        if not user_id or not channel_id:
+            return
+        await say(
+            channel=channel_id,
+            text=build_welcome_text(user_mention=f"<@{user_id}>"),
+            unfurl_links=False,
+            unfurl_media=False,
+        )
 
     return app
 
@@ -161,7 +182,7 @@ async def _process_and_reply(
         thinking_ts = None
 
     try:
-        replies = await service.handle_message(message)
+        replies = await service.handle_message(message, slack_client=client)
     except Exception:
         logger.exception("slack_message_failed")
         replies = [
@@ -188,3 +209,37 @@ async def _process_and_reply(
             unfurl_links=False,
             unfurl_media=False,
         )
+
+
+def _extract_file_attachments(event: dict) -> tuple[SlackFileAttachment, ...]:
+    files = event.get("files")
+    if not isinstance(files, list):
+        return ()
+    attachments: list[SlackFileAttachment] = []
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        attachments.append(
+            SlackFileAttachment(
+                id=_clean_optional_string(item.get("id")),
+                name=_clean_optional_string(item.get("name") or item.get("title")),
+                mimetype=_clean_optional_string(item.get("mimetype")),
+                filetype=_clean_optional_string(item.get("filetype")),
+                size=_safe_int(item.get("size")),
+                url_private=_clean_optional_string(item.get("url_private")),
+                url_private_download=_clean_optional_string(item.get("url_private_download")),
+            )
+        )
+    return tuple(attachments)
+
+
+def _clean_optional_string(value: object) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def _safe_int(value: object) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None

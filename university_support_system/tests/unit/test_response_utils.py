@@ -87,6 +87,34 @@ def test_append_generation_summary_shows_global_llm_synthesis():
     assert "- RAG" in answer
 
 
+def test_append_generation_summary_explains_parallel_agent_flow():
+    responses = [
+        DepartmentResponse(
+            department=Department.STUDENT_AFFAIRS,
+            answer="Ogrenci isleri cevabi",
+            generation_mode="rag",
+        ),
+        DepartmentResponse(
+            department=Department.ACADEMIC_PROGRAMS,
+            answer="Akademik cevap",
+            generation_mode="vt",
+        ),
+    ]
+
+    answer = append_generation_summary(
+        "Final cevap",
+        responses,
+        used_global_synthesis=True,
+        routing_strategy="parallel",
+        agents_involved=["student_affairs", "academic_programs", "orchestrator"],
+    )
+
+    assert "- Çalışma biçimi: Paralel" in answer
+    assert "- Ajan akışı: student_affairs + academic_programs -> orchestrator" in answer
+    assert "- Pipeline:" not in answer
+    assert "- Routing:" not in answer
+
+
 def test_append_source_summary_counts_duplicate_document_chunks():
     response = DepartmentResponse(
         department=Department.ACADEMIC_PROGRAMS,

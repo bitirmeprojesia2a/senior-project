@@ -248,6 +248,9 @@ class RAGSettings(BaseSettings):
     chunk_size: int = 1024
     chunk_overlap: int = 128
     min_chunk_chars: int = 50
+    parent_child_chunking_enabled: bool = True
+    parent_chunk_size: int = 2400
+    parent_context_max_chars: int = 2600
     top_k: int = 5
     min_similarity: float = 0.02
     reranker_candidate_limit_default: int = 16
@@ -278,6 +281,11 @@ class RAGSettings(BaseSettings):
     source_constrained_recall_max_per_collection: int = 10
     source_constrained_recall_max_total: int = 12
     source_constrained_reranker_extra: int = 6
+    department_scoped_recall_enabled: bool = True
+    department_scoped_recall_max_per_collection: int = 4
+    department_scoped_recall_max_total: int = 6
+    department_scoped_recall_min_lexical_score: float = 2.0
+    fallback_primary_score_threshold: float = 0.2
 
 
 class RerankerSettings(BaseSettings):
@@ -460,13 +468,17 @@ class CacheSettings(BaseSettings):
     enabled: bool = True
     question_cache_enabled: bool = True
     question_cache_ttl_seconds: int = 300
+    question_cache_max_entries: int = 512
     redis_question_cache_enabled: bool = True
     retriever_query_cache_enabled: bool = True
     retriever_query_cache_ttl_seconds: int = 300
+    retriever_query_cache_max_entries: int = 512
     redis_retriever_query_cache_enabled: bool = True
     embedding_model_cache_enabled: bool = True
     reranker_model_cache_enabled: bool = True
     bm25_resource_cache_enabled: bool = True
+    bm25_document_cache_max_collections: int = 6
+    bm25_retriever_cache_max_entries: int = 16
 
 
 class ModelCacheSettings(BaseSettings):

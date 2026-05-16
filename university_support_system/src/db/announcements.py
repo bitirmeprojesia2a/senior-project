@@ -146,6 +146,8 @@ class AnnouncementRecord:
     department: str | None
     published_at: datetime | None
     links: tuple["AnnouncementLinkRecord", ...] = field(default_factory=tuple)
+    content_hash: str | None = None
+    updated_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -155,6 +157,37 @@ class AnnouncementLinkRecord:
     label: str
     url: str
     link_type: str
+
+
+_ANNOUNCEMENT_SOURCE_REF_RE = re.compile(
+    r"^announcement:(?P<id>\d+)(?::(?P<version>[a-zA-Z0-9_-]{6,80}))?$"
+)
+
+
+def build_announcement_source_ref(
+    *,
+    announcement_id: int,
+    content_hash: str | None = None,
+    updated_at: datetime | None = None,
+) -> str:
+    """Build a stable, versioned reference for follow-up/detail requests."""
+
+    version = ""
+    if content_hash:
+        version = content_hash[:12]
+    elif updated_at is not None:
+        version = str(int(updated_at.timestamp()))
+    return f"announcement:{announcement_id}:{version}" if version else f"announcement:{announcement_id}"
+
+
+def parse_announcement_source_ref(value: object | None) -> tuple[int, str | None] | None:
+    """Parse a versioned announcement reference from conversation state."""
+
+    text = str(value or "").strip()
+    match = _ANNOUNCEMENT_SOURCE_REF_RE.match(text)
+    if not match:
+        return None
+    return int(match.group("id")), match.group("version")
 
 
 def extract_announcement_keywords(query_text: str) -> list[str]:
@@ -420,6 +453,103 @@ def _announcement_match_is_weak(
     return _top_announcement_match_score(items, keywords=keywords, query_text=query_text) < 10
 
 
+async def _load_announcement_links(
+    session,
+    announcement_ids: list[int],
+) -> dict[int, tuple[AnnouncementLinkRecord, ...]]:
+    if not announcement_ids:
+        return {}
+
+    link_rows = list(
+        (
+            await session.execute(
+                select(AnnouncementLink)
+                .where(AnnouncementLink.announcement_id.in_(announcement_ids))
+                .order_by(
+                    AnnouncementLink.announcement_id.asc(),
+                    AnnouncementLink.sort_order.asc(),
+                    AnnouncementLink.id.asc(),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    grouped_links: dict[int, list[AnnouncementLinkRecord]] = {}
+    for link in link_rows:
+        normalized_label = normalize_text(link.label)
+        normalized_url = normalize_text(link.url)
+        if normalized_label in _ANNOUNCEMENT_LINK_NOISE_LABELS:
+            continue
+        if any(part in normalized_url for part in _ANNOUNCEMENT_LINK_NOISE_URL_PARTS):
+            continue
+        grouped_links.setdefault(int(link.announcement_id), []).append(
+            AnnouncementLinkRecord(
+                label=link.label,
+                url=link.url,
+                link_type=link.link_type,
+            )
+        )
+    return {
+        announcement_id: tuple(items)
+        for announcement_id, items in grouped_links.items()
+    }
+
+
+def _announcement_to_record(
+    item: Announcement,
+    *,
+    links: tuple[AnnouncementLinkRecord, ...] = (),
+) -> AnnouncementRecord:
+    return AnnouncementRecord(
+        id=int(item.id),
+        title=item.title,
+        display_summary=item.display_summary,
+        summary=item.summary,
+        original_text=item.original_text,
+        source_url=item.source_url,
+        faculty=item.faculty,
+        unit_name=item.unit_name,
+        department=item.department,
+        published_at=item.published_at,
+        links=links,
+        content_hash=item.content_hash,
+        updated_at=item.updated_at,
+    )
+
+
+async def fetch_announcement_by_source_ref(
+    source_ref: str,
+) -> AnnouncementRecord | None:
+    """Fetch a single active announcement by versioned conversation reference.
+
+    If the content hash in the reference no longer matches the row, return None
+    instead of silently serving a stale announcement detail.
+    """
+
+    parsed = parse_announcement_source_ref(source_ref)
+    if parsed is None:
+        return None
+    announcement_id, version = parsed
+    async with get_session() as session:
+        item = await session.get(Announcement, announcement_id)
+        if item is None or not item.is_active:
+            return None
+        if version:
+            current_ref = build_announcement_source_ref(
+                announcement_id=int(item.id),
+                content_hash=item.content_hash,
+                updated_at=item.updated_at,
+            )
+            if current_ref != source_ref:
+                return None
+        link_map = await _load_announcement_links(session, [int(item.id)])
+        return _announcement_to_record(
+            item,
+            links=link_map.get(int(item.id), ()),
+        )
+
+
 async def fetch_relevant_announcements(
     query_text: str,
     *,
@@ -668,57 +798,12 @@ async def fetch_relevant_announcements(
                 ) >= strict_keyword_score
             ]
 
-        link_map: dict[int, tuple[AnnouncementLinkRecord, ...]] = {}
-        if announcements:
-            announcement_ids = [int(item.id) for item in announcements]
-            link_rows = list(
-                (
-                    await session.execute(
-                        select(AnnouncementLink)
-                        .where(AnnouncementLink.announcement_id.in_(announcement_ids))
-                        .order_by(
-                            AnnouncementLink.announcement_id.asc(),
-                            AnnouncementLink.sort_order.asc(),
-                            AnnouncementLink.id.asc(),
-                        )
-                    )
-                )
-                .scalars()
-                .all()
-            )
-            grouped_links: dict[int, list[AnnouncementLinkRecord]] = {}
-            for link in link_rows:
-                normalized_label = normalize_text(link.label)
-                normalized_url = normalize_text(link.url)
-                if normalized_label in _ANNOUNCEMENT_LINK_NOISE_LABELS:
-                    continue
-                if any(part in normalized_url for part in _ANNOUNCEMENT_LINK_NOISE_URL_PARTS):
-                    continue
-                grouped_links.setdefault(int(link.announcement_id), []).append(
-                    AnnouncementLinkRecord(
-                        label=link.label,
-                        url=link.url,
-                        link_type=link.link_type,
-                    )
-                )
-            link_map = {
-                announcement_id: tuple(items)
-                for announcement_id, items in grouped_links.items()
-            }
+        link_map = await _load_announcement_links(
+            session,
+            [int(item.id) for item in announcements],
+        )
 
         return [
-            AnnouncementRecord(
-                id=int(item.id),
-                title=item.title,
-                display_summary=item.display_summary,
-                summary=item.summary,
-                original_text=item.original_text,
-                source_url=item.source_url,
-                faculty=item.faculty,
-                unit_name=item.unit_name,
-                department=item.department,
-                published_at=item.published_at,
-                links=link_map.get(int(item.id), ()),
-            )
+            _announcement_to_record(item, links=link_map.get(int(item.id), ()))
             for item in announcements
         ]

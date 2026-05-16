@@ -221,6 +221,9 @@ def _policy_from_metadata(payload: dict[str, Any]) -> RetrievalExecutionPolicy:
 
 
 def _extract_capability(metadata: dict[str, Any]) -> str | None:
+    authority = metadata.get("runtime_authority") if isinstance(metadata.get("runtime_authority"), dict) else {}
+    if authority.get("capability"):
+        return _none_if_empty(authority.get("capability"))
     planner = metadata.get("capability_planner") if isinstance(metadata.get("capability_planner"), dict) else {}
     action = planner.get("action") if isinstance(planner.get("action"), dict) else {}
     capability = action.get("capability") or planner.get("capability")
@@ -235,6 +238,9 @@ def _extract_capability(metadata: dict[str, Any]) -> str | None:
 
 
 def _extract_source_owner(metadata: dict[str, Any]) -> str | None:
+    authority = metadata.get("runtime_authority") if isinstance(metadata.get("runtime_authority"), dict) else {}
+    if authority.get("source_owner"):
+        return _none_if_empty(authority.get("source_owner"))
     source_owner = metadata.get("source_owner") if isinstance(metadata.get("source_owner"), dict) else {}
     owner = source_owner.get("primary")
     if owner:

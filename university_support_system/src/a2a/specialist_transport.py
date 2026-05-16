@@ -425,6 +425,7 @@ class HttpA2ASpecialistTransport:
             policy_facet=meta.get("policy_facet"),
             decision_contract=meta.get("decision_contract"),
             resolved_decision=meta.get("resolved_decision"),
+            runtime_authority=meta.get("runtime_authority"),
             branch_dispatch_gate=meta.get("branch_dispatch_gate"),
             specialist_selection=meta.get("specialist_selection"),
             branch_role=meta.get("branch_role"),

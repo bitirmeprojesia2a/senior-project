@@ -46,6 +46,7 @@ async def request_announcement_response(
     limit: int | None = None,
     decision_contract: dict | None = None,
     resolved_decision: dict | None = None,
+    runtime_authority: dict | None = None,
     trace_metadata: dict | None = None,
 ):
     """Call the announcement agent and record telemetry for the exchange."""
@@ -60,6 +61,7 @@ async def request_announcement_response(
         conversation_source_refs=conversation_source_refs,
         decision_contract=decision_contract,
         resolved_decision=resolved_decision,
+        runtime_authority=runtime_authority,
         trace_id=announcement_trace.get("trace_id"),
         span_id=announcement_trace.get("span_id"),
         parent_span_id=announcement_trace.get("parent_span_id"),
@@ -99,6 +101,7 @@ async def request_announcement_response(
                 limit=limit or 5,
                 decision_contract=decision_contract,
                 resolved_decision=resolved_decision,
+                runtime_authority=runtime_authority,
                 trace_id=announcement_trace.get("trace_id"),
                 span_id=announcement_trace.get("span_id"),
                 parent_span_id=announcement_trace.get("parent_span_id"),
@@ -149,6 +152,7 @@ async def build_announcement_response(
     limit: int | None = None,
     decision_contract: dict | None = None,
     resolved_decision: dict | None = None,
+    runtime_authority: dict | None = None,
     trace_metadata: dict | None = None,
 ):
     """Build a full user-facing response for announcement-only requests."""
@@ -171,6 +175,7 @@ async def build_announcement_response(
         limit=limit,
         decision_contract=decision_contract,
         resolved_decision=resolved_decision,
+        runtime_authority=runtime_authority,
         trace_metadata=trace_metadata,
     )
     response_time_ms = round((perf_counter() - start_time) * 1000, 2)

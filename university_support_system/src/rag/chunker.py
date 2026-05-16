@@ -17,11 +17,14 @@ Kullanim:
     chunks = chunker.split(document)
 """
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Tuple
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from src.core.config import settings
 
 import structlog
 
@@ -100,10 +103,21 @@ class TextChunker:
         chunk_size: int = 1024,
         chunk_overlap: int = 128,
         min_chunk_chars: int = 1,
+        parent_child_enabled: bool | None = None,
+        parent_chunk_size: int | None = None,
     ):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.min_chunk_chars = max(1, min_chunk_chars)
+        self.parent_child_enabled = (
+            settings.rag.parent_child_chunking_enabled
+            if parent_child_enabled is None
+            else parent_child_enabled
+        )
+        self.parent_chunk_size = max(
+            self.chunk_size,
+            parent_chunk_size or settings.rag.parent_chunk_size,
+        )
 
         self._sub_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
@@ -205,6 +219,79 @@ class TextChunker:
 
         return sections
 
+    @staticmethod
+    def _metadata_identity_key(metadata: Dict[str, Any]) -> str:
+        """Return a stable source identity for parent-child grouping."""
+        return str(
+            metadata.get("relative_path")
+            or metadata.get("file_path")
+            or metadata.get("source")
+            or metadata.get("file_name")
+            or "unknown"
+        )
+
+    @staticmethod
+    def _section_hash(text: str) -> str:
+        """Return a short stable hash for a logical parent section."""
+        normalized = re.sub(r"\s+", " ", text or "").strip()
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
+
+    def _parent_id(
+        self,
+        *,
+        base_metadata: Dict[str, Any],
+        section_text: str,
+        section_index: int,
+        parent_group_index: int,
+    ) -> str:
+        """Build a deterministic parent id stored on every child chunk."""
+        source_key = self._metadata_identity_key(base_metadata)
+        section_hash = self._section_hash(section_text)
+        return f"{source_key}::parent::{section_index}:{parent_group_index}:{section_hash}"
+
+    def _parent_group_indexes(self, child_texts: List[str]) -> List[int]:
+        """Group child chunks into bounded parent context windows."""
+        if not child_texts:
+            return []
+
+        group_indexes: List[int] = []
+        current_group = 0
+        current_size = 0
+        for child_text in child_texts:
+            child_size = len(child_text or "")
+            if current_size and current_size + child_size > self.parent_chunk_size:
+                current_group += 1
+                current_size = 0
+            group_indexes.append(current_group)
+            current_size += child_size
+        return group_indexes
+
+    def _apply_parent_child_metadata(
+        self,
+        metadata: Dict[str, Any],
+        *,
+        base_metadata: Dict[str, Any],
+        section_text: str,
+        section_index: int,
+        parent_group_index: int,
+        parent_child_index: int,
+        parent_child_count: int,
+    ) -> None:
+        """Attach parent-child retrieval metadata to a chunk."""
+        if not self.parent_child_enabled:
+            return
+        metadata["parent_id"] = self._parent_id(
+            base_metadata=base_metadata,
+            section_text=section_text,
+            section_index=section_index,
+            parent_group_index=parent_group_index,
+        )
+        metadata["parent_section_index"] = section_index
+        metadata["parent_group_index"] = parent_group_index
+        metadata["parent_child_index"] = parent_child_index
+        metadata["parent_child_count"] = parent_child_count
+        metadata["chunking_strategy"] = "parent_child_v1"
+
     def split_text(self, text: str, metadata: Dict[str, Any] | None = None) -> List[Chunk]:
         """
         Tek bir metni MADDE-aware chunk'lara boler.
@@ -225,7 +312,7 @@ class TextChunker:
         # 1. MADDE sinirlarina gore bol
         sections = self._split_by_madde(text)
 
-        for section_text, madde_no, bolum in sections:
+        for section_index, (section_text, madde_no, bolum) in enumerate(sections):
             if not section_text.strip():
                 continue
 
@@ -242,19 +329,43 @@ class TextChunker:
                     chunk_meta["madde_no"] = madde_no
                 if bolum:
                     chunk_meta["bolum"] = bolum
+                self._apply_parent_child_metadata(
+                    chunk_meta,
+                    base_metadata=base_metadata,
+                    section_text=section_text,
+                    section_index=section_index,
+                    parent_group_index=0,
+                    parent_child_index=0,
+                    parent_child_count=1,
+                )
 
                 chunks.append(Chunk(content=section_text, metadata=chunk_meta))
             else:
                 # MADDE chunk_size'dan buyuk — alt parcalara bol
                 sub_chunks = self._sub_splitter.split_text(section_text)
+                prepared_sub_chunks: List[str] = []
 
                 for j, sub_text in enumerate(sub_chunks):
                     # Ilk sub-chunk zaten MADDE basligini icerir
                     # Sonraki sub-chunk'lara MADDE basligini ekle
                     if j > 0 and madde_header:
                         sub_text = f"[{madde_header}]\n{sub_text}"
+                    prepared_sub_chunks.append(sub_text)
+
+                parent_group_indexes = self._parent_group_indexes(prepared_sub_chunks)
+                parent_group_counts: Dict[int, int] = {}
+                parent_group_positions: Dict[int, int] = {}
+                for group_index, sub_text in zip(parent_group_indexes, prepared_sub_chunks):
                     if not self._is_informative_chunk(sub_text):
                         continue
+                    parent_group_counts[group_index] = parent_group_counts.get(group_index, 0) + 1
+
+                for j, sub_text in enumerate(prepared_sub_chunks):
+                    if not self._is_informative_chunk(sub_text):
+                        continue
+                    parent_group_index = parent_group_indexes[j] if j < len(parent_group_indexes) else 0
+                    parent_child_index = parent_group_positions.get(parent_group_index, 0)
+                    parent_group_positions[parent_group_index] = parent_child_index + 1
 
                     chunk_meta = {
                         **base_metadata,
@@ -266,6 +377,15 @@ class TextChunker:
                         chunk_meta["bolum"] = bolum
                     if len(sub_chunks) > 1:
                         chunk_meta["sub_chunk"] = f"{j + 1}/{len(sub_chunks)}"
+                    self._apply_parent_child_metadata(
+                        chunk_meta,
+                        base_metadata=base_metadata,
+                        section_text=section_text,
+                        section_index=section_index,
+                        parent_group_index=parent_group_index,
+                        parent_child_index=parent_child_index,
+                        parent_child_count=parent_group_counts.get(parent_group_index, 1),
+                    )
 
                     chunks.append(Chunk(content=sub_text, metadata=chunk_meta))
 

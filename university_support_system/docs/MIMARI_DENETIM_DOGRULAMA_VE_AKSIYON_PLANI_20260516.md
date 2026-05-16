@@ -248,39 +248,40 @@ Plan:
 
 ### P3.1 Parent-child chunking
 
-Durum: Raporun bu onerisi degerli.
+Durum: Ilk faz uygulandi ve reindex sonrasi Chroma metadata ile dogrulandi.
 
 Neden onemli: Mevcut chunker FAQ/MADDE/BOLUM varyantlarinda kirilgan. Kucuk chunk retrieval precision'i artirirken synthesis icin baglam yetersiz kalabilir.
 
-Plan:
+Uygulanan:
 
-1. Child chunk: 256-512 karakter.
-2. Parent chunk: 1500-2500 karakter veya madde/FAQ answer blogu.
-3. Retrieval child skoruyla yapilir, synthesis parent context alir.
-4. Eski index ile A/B benchmark: key fact coverage, source precision, latency.
+1. Chunker parent-child metadata uretiyor (`parent_id`, parent/child indexleri, `chunking_strategy=parent_child_v1`).
+2. Retriever child candidate uzerinden parent context window genisletiyor.
+3. Dedup parent-expanded candidate'lari tek baglam olarak ele aliyor.
+
+Kalan:
+
+1. Eski index ile A/B benchmark: key fact coverage, source precision, latency.
+2. Parent size ve context window degerlerinin benchmark'a gore ayarlanmasi.
 
 ### P3.2 Chunker regex genisletme
 
-Durum: Dogru.
+Durum: Ilk regex/FAQ esik genisletmesi uygulandi.
 
 Plan:
 
-1. MADDE regex: `MADDE 5`, `MADDE 5.`, `MADDE-5`, `Madde 5 -` varyantlari.
-2. BOLUM regex: ASCII Turkish, Roman numeral, numeric section varyantlari.
-3. FAQ regex: 120 karakter limitini kaldir veya 240'a cek; 2 soru varsa da split edebilsin.
-4. Unit test fixture'lari gercek PDF text ciktilarindan olustur.
+1. Unit test fixture'lari gercek PDF text ciktilarindan genisletilsin.
+2. Yeni index uzerinden kisa FAQ ve uzun soru ayrisma kalitesi benchmark'lansin.
 
 ### P3.3 Retrieval fallback threshold
 
-Durum: Dogru/kismi. Fallback collection sadece primary hic aday yoksa calisiyor.
+Durum: Ilk faz uygulandi. Fallback collection artik primary hic aday yoksa veya primary top skor ayarlanabilir esigin altindaysa aday havuzuna ekleniyor.
 
 Neden onemli: Primary aday var ama skor dusuk/off-topic ise fallback denenmiyor. Bu "yanlis ama bos olmayan" retrieval'i final cevaba tasir.
 
-Plan:
+Kalan:
 
-1. Fallback trigger'i `not candidates` yerine `top_score < threshold` veya `evidence_coverage_low` yap.
-2. Source-owner policy ile fallback'in hangi collection'dan gelecegi kaydedilsin.
-3. Golden trace: akademik takvim, kayit, ucret, duyuru blocked query'leri.
+1. Evidence coverage low sinyalini fallback tetigine dahil etmek.
+2. Golden trace: akademik takvim, kayit, ucret, duyuru blocked query'leri.
 
 ### P3.4 Evidence/coverage/judge semantigi
 
@@ -292,6 +293,10 @@ Plan:
 2. `evidence_selector`: fenced JSON + prose icinden JSON extraction ekle.
 3. `insufficient_evidence=True` durumunda bos liste yerine "blocked synthesis" status'u uret; sentez katmani bunu bilsin.
 4. Judge prompt ve truncate limitleri contract metadata kaybetmeyecek sekilde yeniden duzenlensin.
+
+### P3.5 Conversation source hint eslesmesi
+
+Durum: Kisa substring boost riski giderildi. `not` gibi kisa/generic source hint'leri artik `not_ortalamasi` gibi kaynak adlarini yanlis boost'lamiyor; somut kaynak adlari kelime siniri ile eslesiyor.
 
 ## 6. P4: A2A, LLM Service ve Performans
 
@@ -309,25 +314,21 @@ Plan:
 
 ### P4.2 Timeout retry ve circuit breaker
 
-Durum: A2A icin dogru/kismi. Timeout retry loop'u atlayabiliyor; backoff linear ve jitter yok.
+Durum: Timeout retry + exponential backoff/jitter ilk fazi uygulandi. Circuit breaker yapisal isleri bekliyor.
 
 Plan:
 
-1. Timeout'u retryable error olarak ele al.
-2. Exponential backoff + jitter ekle.
-3. Circuit breaker'a HALF_OPEN state ekle.
-4. `_circuit_state` class-level dict icin asyncio lock veya process-wide Redis state dusun.
+1. Circuit breaker'a HALF_OPEN state ekle.
+2. `_circuit_state` class-level dict icin asyncio lock veya process-wide Redis state dusun.
 
 ### P4.3 Cache sinirlari
 
-Durum: Dogru. BM25 resource cache ve query cache max-size konusunda zayif.
+Durum: BM25 resource cache LRU, retriever query cache LRU ve question cache max-entry/LRU uygulandi. Stampede onleme bekliyor.
 
 Plan:
 
-1. BM25 document/retriever cache icin LRU veya collection-count limit.
-2. Query cache icin TTL + max entries.
-3. Cache size telemetry threshold alarmi.
-4. Request coalescing: ayni cache key icin ayni anda gelen LLM/retrieval isteklerini tek coroutine'e indir.
+1. Cache size telemetry threshold alarmi.
+2. Request coalescing: ayni cache key icin ayni anda gelen LLM/retrieval isteklerini tek coroutine'e indir. Bu MainOrchestrator akisini sardigi icin quick-fix degil, ayri refactor olarak ele alinacak.
 
 ## 7. P5: Test ve CI
 

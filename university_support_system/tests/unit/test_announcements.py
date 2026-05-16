@@ -62,6 +62,39 @@ async def test_fetch_relevant_announcements_prefers_exact_faculty_matches(db_ses
 
 
 @pytest.mark.asyncio
+async def test_fetch_announcement_by_source_ref_rejects_stale_hash(db_session, monkeypatch):
+    announcement = Announcement(
+        title="CAP Basvuru Duyurusu",
+        summary="Guncel duyuru ozeti",
+        display_summary="Guncel duyuru ozeti",
+        source_url="https://omu.edu.tr/cap",
+        content_hash="abcdef1234567890",
+        department="academic_programs",
+        published_at=datetime.now(UTC),
+        is_active=True,
+    )
+    db_session.add(announcement)
+    await db_session.flush()
+
+    @asynccontextmanager
+    async def fake_get_session():
+        yield db_session
+
+    monkeypatch.setattr(announcements_module, "get_session", fake_get_session)
+
+    stale = await announcements_module.fetch_announcement_by_source_ref(
+        f"announcement:{announcement.id}:000000abcdef"
+    )
+    fresh = await announcements_module.fetch_announcement_by_source_ref(
+        f"announcement:{announcement.id}:abcdef123456"
+    )
+
+    assert stale is None
+    assert fresh is not None
+    assert fresh.content_hash == "abcdef1234567890"
+
+
+@pytest.mark.asyncio
 async def test_fetch_relevant_announcements_prefers_general_records_for_unscoped_latest_query(
     db_session,
     monkeypatch,

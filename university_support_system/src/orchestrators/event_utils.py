@@ -173,6 +173,7 @@ async def request_event_response(
     limit: int = 5,
     decision_contract: dict | None = None,
     resolved_decision: dict | None = None,
+    runtime_authority: dict | None = None,
     trace_metadata: dict | None = None,
 ):
     """Call the event agent through local or HTTP capability transport."""
@@ -187,6 +188,7 @@ async def request_event_response(
         limit=limit,
         decision_contract=decision_contract,
         resolved_decision=resolved_decision,
+        runtime_authority=runtime_authority,
         trace_id=event_trace.get("trace_id"),
         span_id=event_trace.get("span_id"),
         parent_span_id=event_trace.get("parent_span_id"),
@@ -210,6 +212,7 @@ async def request_event_response(
                 limit=limit,
                 decision_contract=decision_contract,
                 resolved_decision=resolved_decision,
+                runtime_authority=runtime_authority,
                 trace_id=event_trace.get("trace_id"),
                 span_id=event_trace.get("span_id"),
                 parent_span_id=event_trace.get("parent_span_id"),

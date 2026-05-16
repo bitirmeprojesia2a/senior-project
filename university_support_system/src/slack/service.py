@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
+import httpx
+
+from src.core.config import settings
 from src.core.text_normalization import normalize_text
 from src.db.auth import AuthContext, AuthService
 from src.notifications import EmailDeliveryError
 from src.orchestrators.main import MainOrchestrator
 from src.slack.formatting import normalize_slack_text, split_slack_message
+from src.transcripts import TranscriptDocument, TranscriptProcessor, TranscriptSessionStore, is_transcript_followup_query
+from src.transcripts.service import TranscriptProcessingError
 
 
 class SlackCommandKind(str, Enum):
@@ -33,6 +39,20 @@ class SlackCommand:
 
 
 @dataclass(frozen=True)
+class SlackFileAttachment:
+    """Slack file metadata carried into the adapter."""
+
+    id: str | None = None
+    name: str | None = None
+    mimetype: str | None = None
+    filetype: str | None = None
+    size: int | None = None
+    url_private: str | None = None
+    url_private_download: str | None = None
+    content: bytes | None = None
+
+
+@dataclass(frozen=True)
 class SlackIncomingMessage:
     """Slack eventlerinden adapter'a tasinan sade mesaj modeli."""
 
@@ -41,6 +61,7 @@ class SlackIncomingMessage:
     channel_id: str
     ts: str | None = None
     thread_ts: str | None = None
+    files: tuple[SlackFileAttachment, ...] = ()
 
 
 def parse_slack_command(text: str | None) -> SlackCommand:
@@ -85,7 +106,7 @@ def build_slack_context_id(message: SlackIncomingMessage) -> str:
     return f"slack:{message.channel_id}:{thread_key}"
 
 
-def build_help_text() -> str:
+def _legacy_build_help_text() -> str:
     """Slack icin kisa kullanim metni."""
 
     return (
@@ -99,6 +120,31 @@ def build_help_text() -> str:
     )
 
 
+def build_help_text() -> str:
+    """Slack icin kisa kullanim metni."""
+
+    return (
+        "OMÜ Destek Botu ile şunları sorabilirsiniz:\n"
+        "- Öğrenci işleri: ders kaydı, harç borcu, mezuniyet, yaz okulu, staj, yatay geçiş, ÇAP/Yandal\n"
+        "- Akademik programlar: ders programı, müfredat, ön koşul, AKTS, derslik\n"
+        "- Finans: öğrenim ücreti, katkı payı, Türk/uluslararası öğrenci ücretleri\n"
+        "- Duyurular: `güncel duyurular neler?`, `2. duyuruyu özetle`\n"
+        "- Transkript: PDF/metin transkript yükleyip `toplam AKTS'im kaç?`, `kaldığım dersler neler?` diye sorabilirsiniz.\n\n"
+        "Hesap komutları:\n"
+        "- Giriş: `login 20210001`\n"
+        "- OTP doğrulama: `verify 20210001 123456`\n"
+        "- Oturum kapatma: `logout`\n\n"
+        "Giriş yapmadan genel soruları sorabilirsiniz. Kişisel bilgiler için Slack hesabınızı OTP ile doğrulamanız gerekir."
+    )
+
+
+def build_welcome_text(*, user_mention: str | None = None) -> str:
+    """Kanal/DM ilk temasinda gonderilecek kisa onboarding metni."""
+
+    prefix = f"Merhaba {user_mention}, ben OMÜ Destek Botu.\n\n" if user_mention else "Merhaba, ben OMÜ Destek Botu.\n\n"
+    return prefix + build_help_text() + "\n\nYardım menüsünü tekrar görmek için `help` yazabilirsiniz."
+
+
 class SlackBotService:
     """Slack mesajlarini auth ve orchestrator akisina baglar."""
 
@@ -108,13 +154,22 @@ class SlackBotService:
         orchestrator: MainOrchestrator,
         auth_service: AuthService,
         llm_profile: str | None = None,
+        transcript_processor: TranscriptProcessor | None = None,
+        transcript_store: TranscriptSessionStore | None = None,
+        max_file_bytes: int = 8 * 1024 * 1024,
     ) -> None:
         self.orchestrator = orchestrator
         self.auth_service = auth_service
         self.llm_profile = llm_profile
+        self.transcript_processor = transcript_processor
+        self.transcript_store = transcript_store or TranscriptSessionStore()
+        self.max_file_bytes = max_file_bytes
 
-    async def handle_message(self, message: SlackIncomingMessage) -> list[str]:
+    async def handle_message(self, message: SlackIncomingMessage, *, slack_client: Any | None = None) -> list[str]:
         """Slack mesajini isler ve gonderilecek cevap parcalarini dondurur."""
+
+        if message.files:
+            return await self._handle_file_message(message, slack_client=slack_client)
 
         command = parse_slack_command(message.text)
         if command.kind == SlackCommandKind.HELP:
@@ -126,6 +181,96 @@ class SlackBotService:
         if command.kind == SlackCommandKind.LOGOUT:
             return split_slack_message(await self._handle_logout(message.user_id))
         return await self._handle_query(command, message)
+
+    async def _handle_file_message(
+        self,
+        message: SlackIncomingMessage,
+        *,
+        slack_client: Any | None = None,
+    ) -> list[str]:
+        if self.transcript_processor is None:
+            return split_slack_message(
+                "Dosya alındı ancak transkript işleme servisi bu çalışma ortamında etkin değil."
+            )
+
+        context_id = build_slack_context_id(message)
+        processed: list[TranscriptDocument] = []
+        errors: list[str] = []
+        for file in message.files:
+            filename = file.name or file.id or "transkript"
+            try:
+                content = await self._read_file_content(file, slack_client=slack_client)
+                if len(content) > self.max_file_bytes:
+                    errors.append(f"{filename}: dosya boyutu sınırı aşıyor.")
+                    continue
+                processed.append(
+                    self.transcript_processor.process_bytes(
+                        filename=filename,
+                        content=content,
+                        mimetype=file.mimetype,
+                    )
+                )
+            except TranscriptProcessingError as exc:
+                errors.append(f"{filename}: {exc}")
+            except Exception:
+                errors.append(f"{filename}: dosya işlenirken beklenmeyen hata oluştu.")
+
+        if not processed:
+            detail = "\n".join(f"- {error}" for error in errors) if errors else "- Uygun transkript dosyası bulunamadı."
+            return split_slack_message(f"Transkript işlenemedi:\n{detail}")
+
+        document = processed[0]
+        self.transcript_store.put(context_id=context_id, user_id=message.user_id, document=document)
+        query = normalize_slack_text(message.text)
+        if query and is_transcript_followup_query(query) and _looks_like_transcript_question(query):
+            answer = await self.transcript_processor.answer_question(
+                document=document,
+                query=query,
+                llm_profile=self.llm_profile,
+            )
+            return split_slack_message(answer)
+
+        answer = (
+            "Transkript yüklendi ve bu konuşma bağlamına eklendi.\n"
+            f"{_format_transcript_upload_summary(document)}\n"
+            "Transkriptle ilgili `toplam AKTS`, `kaldığım dersler`, `geçtiğim dersler` "
+            "veya `ortalamam nedir` gibi sorular sorabilirsiniz."
+        )
+        if errors:
+            answer += "\n\nDiğer dosyalar işlenemedi:\n" + "\n".join(f"- {error}" for error in errors)
+        return split_slack_message(answer)
+
+    async def _read_file_content(self, file: SlackFileAttachment, *, slack_client: Any | None = None) -> bytes:
+        if file.content is not None:
+            return file.content
+
+        resolved_file = file
+        if not (file.url_private_download or file.url_private) and file.id and slack_client is not None:
+            info = await slack_client.files_info(file=file.id)
+            slack_file = (info or {}).get("file") or {}
+            resolved_file = SlackFileAttachment(
+                id=file.id,
+                name=str(slack_file.get("name") or file.name or file.id),
+                mimetype=str(slack_file.get("mimetype") or file.mimetype or ""),
+                filetype=str(slack_file.get("filetype") or file.filetype or ""),
+                size=_safe_int(slack_file.get("size")) or file.size,
+                url_private=str(slack_file.get("url_private") or file.url_private or ""),
+                url_private_download=str(
+                    slack_file.get("url_private_download") or file.url_private_download or ""
+                ),
+            )
+
+        url = resolved_file.url_private_download or resolved_file.url_private
+        if not url:
+            raise TranscriptProcessingError("Slack dosya bağlantısı bulunamadı.")
+        token = settings.slack.bot_token
+        if not token:
+            raise TranscriptProcessingError("Slack dosyasını indirmek için bot token gerekli.")
+
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+            response.raise_for_status()
+            return response.content
 
     async def _handle_login(self, command: SlackCommand, slack_user_id: str) -> str:
         if not command.student_number:
@@ -178,6 +323,18 @@ class SlackBotService:
 
     async def _handle_query(self, command: SlackCommand, message: SlackIncomingMessage) -> list[str]:
         query = command.query or normalize_slack_text(message.text)
+        if self.transcript_processor is not None and is_transcript_followup_query(query):
+            document = self.transcript_store.get(
+                context_id=build_slack_context_id(message),
+                user_id=message.user_id,
+            )
+            if document is not None:
+                answer = await self.transcript_processor.answer_question(
+                    document=document,
+                    query=query,
+                    llm_profile=self.llm_profile,
+                )
+                return split_slack_message(answer)
         auth_context = await self.auth_service.resolve_auth_context(slack_user_id=message.user_id)
         response = await self.orchestrator.handle_query(
             query,
@@ -208,3 +365,42 @@ def auth_context_to_dict(auth_context: AuthContext | None) -> dict:
         "student_faculty": auth_context.student_faculty,
         "slack_user_id": auth_context.slack_user_id,
     }
+
+
+def _format_transcript_upload_summary(document: TranscriptDocument) -> str:
+    lines = [f"- Dosya: {document.filename}", f"- Tespit edilen ders: {len(document.courses)}"]
+    if document.total_akts is not None:
+        lines.append(f"- Toplam AKTS: {_format_number(document.total_akts)}")
+    if document.total_credit is not None:
+        lines.append(f"- Toplam kredi: {_format_number(document.total_credit)}")
+    if document.gpa is not None:
+        lines.append(f"- GNO/AGNO: {_format_number(document.gpa)}")
+    if document.failed_courses:
+        lines.append(f"- Başarısız görünen ders: {len(document.failed_courses)}")
+    if document.warnings:
+        lines.append("- Not: " + " ".join(document.warnings))
+    return "\n".join(lines)
+
+
+def _format_number(value: float) -> str:
+    if value.is_integer():
+        return str(int(value))
+    return f"{value:.2f}".replace(".", ",").rstrip("0").rstrip(",")
+
+
+def _safe_int(value: object) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _looks_like_transcript_question(query: str) -> bool:
+    normalized = normalize_text(query)
+    if "?" in query:
+        return True
+    if any(marker in normalized for marker in ("kac", "nedir", "neler", "hangileri", "yorum", "ozet", "listele")):
+        return True
+    if any(marker in normalized for marker in ("kaldigim", "gectigim", "basarisiz", "basarili", "ortalama")):
+        return True
+    return False

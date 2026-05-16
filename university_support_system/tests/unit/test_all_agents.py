@@ -675,6 +675,8 @@ class TestLLMFirstSynthesisMechanism:
 
         assert response.success is True
         assert "Program Isleri Ofisi" in response.answer
+        assert "0 (362) 312 19 19" in response.answer
+        assert "Dahili: 7304" in response.answer
         assert "program.isleri@omu.edu.tr" in response.answer
         assert kwargs["contact_fetcher"].await_count == 2
 
@@ -686,7 +688,8 @@ class TestLLMFirstSynthesisMechanism:
 class TestRegistrationAgent:
 
     @pytest.mark.asyncio
-    async def test_timing_query_injects_period_info(self):
+    async def test_timing_query_prefers_academic_calendar_contract(self):
+        fetcher = AsyncMock(return_value=None)
         period = SimpleNamespace(
             semester="2026-Bahar",
             start_date=datetime(2026, 2, 10, tzinfo=timezone.utc),
@@ -694,16 +697,20 @@ class TestRegistrationAgent:
             is_active=True,
             timing_status="active",
         )
+        fetcher.return_value = period
         agent = RegistrationAgent(
-            period_fetcher=AsyncMock(return_value=period),
+            period_fetcher=fetcher,
             **_agent_kwargs(),
         )
 
         response = await agent.handle_task(_task("Ders kaydi ne zaman basliyor?"))
 
         assert response.success is True
-        assert "2026-Bahar" in response.answer
-        assert "10.02.2026" in response.answer
+        normalized_answer = normalize_text(response.answer)
+        assert "guz donemi icin 08-24 eylul 2025" in normalized_answer
+        assert "bahar donemi icin 02-15 subat 2026" in normalized_answer
+        assert response.generation_mode == "vt"
+        fetcher.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_non_timing_query_skips_period_lookup(self):
@@ -781,7 +788,7 @@ class TestRegistrationAgent:
         assert "2026-Guz" in response.answer
 
     @pytest.mark.asyncio
-    async def test_mixed_fee_and_timing_query_still_uses_registration_period_info(self):
+    async def test_mixed_fee_and_timing_query_uses_academic_calendar_contract(self):
         period = SimpleNamespace(
             semester="2026-Bahar",
             start_date=datetime(2026, 2, 10, tzinfo=timezone.utc),
@@ -802,9 +809,10 @@ class TestRegistrationAgent:
         )
 
         assert response.success is True
-        assert "2026-Bahar" in response.answer
-        assert "10.02.2026" in response.answer
-        fetcher.assert_awaited_once()
+        normalized_answer = normalize_text(response.answer)
+        assert "guz donemi icin 08-24 eylul 2025" in normalized_answer
+        assert "bahar donemi icin 02-15 subat 2026" in normalized_answer
+        fetcher.assert_not_awaited()
         llm.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -976,8 +984,10 @@ class TestInternshipAgent:
         )
 
         assert response.success is True
-        assert "net dogrulayamiyorum" in response.answer
-        assert "muhendislik staj belgelerine gore" in response.answer
+        normalized_answer = normalize_text(response.answer)
+        assert "bolum bazinda net dogrulayamiyorum" in normalized_answer
+        assert "ogretmenlik uygulamasi" in normalized_answer
+        assert "muhendislik staj belgelerine gore kesin hukum vermem dogru olmaz" in normalized_answer
         assert response.generation_mode == "kural"
         llm.generate.assert_not_awaited()
 
@@ -1037,7 +1047,7 @@ class TestStudentLifeAgent:
         assert top_k == 12
 
     @pytest.mark.asyncio
-    async def test_lost_identity_card_variants_use_llm_synthesis_with_policy_sources(self):
+    async def test_lost_identity_card_variants_use_policy_sources_without_specialist_llm(self):
         kwargs = _agent_kwargs()
         kwargs["retriever_factory"] = _mock_retriever_factory(
             content=(
@@ -1064,9 +1074,9 @@ class TestStudentLifeAgent:
             assert response.success is True
             assert "PP.4.7.FR.0163" in response.answer
             assert "dekont" in response.answer
-            assert response.generation_mode == "rag+llm"
+            assert response.generation_mode == "rag"
 
-        assert llm.generate.await_count == 3
+        assert llm.generate.await_count == 0
 
 
 # ══════════════════════════════════════════════════════════
@@ -1441,6 +1451,48 @@ class TestCurriculumAgent:
         prerequisite_fetcher.assert_awaited_once_with("BIL203")
 
     @pytest.mark.asyncio
+    async def test_prerequisite_query_accepts_natural_language_dependency_wording(self):
+        course = {
+            "course_code": "BIL203",
+            "course_name": "Veri Yapilari",
+            "credits": 3,
+            "akts": 5,
+            "department": "Bilgisayar Muhendisligi",
+            "curriculum_semester": 3,
+            "course_type": "zorunlu",
+            "elective_group": None,
+        }
+        prereq_data = {
+            "course_code": "BIL203",
+            "course_name": "Veri Yapilari",
+            "credits": 3,
+            "akts": 5,
+            "prerequisites": [
+                {"course_code": "BIL104", "course_name": "Programlamaya Giris II", "group": 1}
+            ],
+            "prerequisite_groups": {
+                1: [{"course_code": "BIL104", "course_name": "Programlamaya Giris II", "group": 1}]
+            },
+            "redirected_from": None,
+        }
+        title_fetcher = AsyncMock(return_value=[course])
+        prerequisite_fetcher = AsyncMock(return_value=prereq_data)
+        agent = CurriculumAgent(
+            course_title_fetcher=title_fetcher,
+            prerequisite_fetcher=prerequisite_fetcher,
+            period_fetcher=AsyncMock(return_value=None),
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(
+            _task("Veri Yapilari dersini alabilmek icin hangi dersi almam gerekiyor?")
+        )
+
+        assert response.success is True
+        assert "BIL104" in response.answer
+        prerequisite_fetcher.assert_awaited_once_with("BIL203")
+
+    @pytest.mark.asyncio
     async def test_course_existence_query_returns_structured_not_found(self):
         kwargs = _agent_kwargs()
         title_fetcher = AsyncMock(return_value=[])
@@ -1715,7 +1767,7 @@ class TestRegulationAgent:
         assert "(Kaynak: yonerge_cift_anadal_yandal.pdf)" in answer
 
     @pytest.mark.asyncio
-    async def test_cap_questions_use_llm_synthesis_not_raw_source_only(self):
+    async def test_cap_questions_use_source_contract_without_specialist_llm(self):
         kwargs = _agent_kwargs()
         kwargs["retriever_factory"] = _mock_retriever_factory(
             content=(
@@ -1732,8 +1784,10 @@ class TestRegulationAgent:
         response = await agent.handle_task(_task("Onlisans ogrencisiyim CAP yapabiliyor muyum?"))
 
         assert response.success is True
-        assert response.answer.startswith("Onlisans ogrencileri")
-        llm.generate.assert_awaited_once()
+        normalized_answer = normalize_text(response.answer)
+        assert "ikinci bir dalda lisans diplomasi" in normalized_answer
+        assert "cap/yap duyurusu" in normalized_answer
+        llm.generate.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_no_results_returns_guidance(self):
@@ -1749,7 +1803,8 @@ class TestRegulationAgent:
         )
 
         assert response.success is True
-        assert "bulunamadi" in response.answer.lower() or "mevzuat" in response.answer.lower()
+        normalized_answer = normalize_text(response.answer)
+        assert "bulunamadi" in normalized_answer or "mevzuat" in normalized_answer
 
 
 # ══════════════════════════════════════════════════════════
@@ -1828,10 +1883,13 @@ class TestInternationalAgent:
         )
 
         assert response.success is True
-        assert response.generation_mode == "rag+llm"
+        assert response.generation_mode == "rag"
         assert retriever.search.call_args.kwargs["top_k"] == 10
-        assert response.answer == "LLM tarafindan uretilen yanit."
-        llm.generate.assert_awaited_once()
+        normalized_answer = normalize_text(response.answer)
+        assert "gelen degisim ogrencileri" in normalized_answer
+        assert "ogrenci numarasi" in normalized_answer
+        assert "kimlik karti" in normalized_answer
+        llm.generate.assert_not_awaited()
 
 
 # ══════════════════════════════════════════════════════════
@@ -1909,17 +1967,15 @@ async def test_international_agent_erasmus_grant_amount_query_prioritizes_grant_
     )
 
     assert response.success is True
-    assert response.generation_mode == "rag+llm"
-    llm.generate.assert_awaited_once()
+    assert response.generation_mode == "rag"
+    llm.generate.assert_not_awaited()
     retriever.search.assert_called_once()
     assert retriever.search.call_args.kwargs["top_k"] == 10
-    prompt = llm.generate.await_args.kwargs["prompt"]
-    assert prompt.index("MADDE 12") > 0
-    assert prompt.index("MADDE 18") > 0
-    assert prompt.index("MADDE 12") > prompt.index("MADDE 8")
-    assert prompt.index("MADDE 12") > prompt.index("MADDE 9")
-    assert "Ulusal Ajans" in prompt
-    assert "%80" in prompt
+    normalized_answer = normalize_text(response.answer)
+    assert "sabit bir tl/euro hibe tutari yer almiyor" in normalized_answer
+    assert "ulusal ajans" in normalized_answer
+    assert "%80" in normalized_answer
+    assert "basvuru bilgileri" in normalized_answer
 
 
 @pytest.mark.asyncio
@@ -1973,10 +2029,11 @@ async def test_international_agent_erasmus_grant_source_only_states_missing_fixe
 
     assert response.success is True
     assert response.generation_mode == "rag"
-    assert "sabit bir TL/Euro hibe tutari yer almiyor" in response.answer
-    assert "Ulusal Ajans" in response.answer
+    normalized_answer = normalize_text(response.answer)
+    assert "sabit bir tl/euro hibe tutari yer almiyor" in normalized_answer
+    assert "ulusal ajans" in normalized_answer
     assert "%80" in response.answer
-    assert "Basvuru bilgileri" in response.answer
+    assert "basvuru bilgileri" in normalized_answer
     llm.generate.assert_not_awaited()
 
 

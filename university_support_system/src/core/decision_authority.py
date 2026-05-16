@@ -14,6 +14,7 @@ from src.core.answer_contracts import should_use_deterministic_final
 from src.core.source_ownership import normalize_source_owner
 
 RESOLVED_DECISION_SCHEMA = "omu.resolved_decision.v1"
+RUNTIME_AUTHORITY_SCHEMA = "omu.runtime_authority.v1"
 
 
 def build_resolved_decision_metadata(
@@ -107,3 +108,68 @@ def build_resolved_decision_metadata(
             "mode": decision_contract_payload.get("mode"),
         } if isinstance(decision_contract_payload, dict) else None,
     }
+
+
+def build_runtime_authority_metadata(
+    *,
+    resolved_decision_payload: dict[str, Any] | None,
+    source_owner_payload: dict[str, Any] | None = None,
+    decision_contract_payload: dict[str, Any] | None = None,
+    branch_dispatch_gate: dict[str, Any] | None = None,
+    specialist_selection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the active runtime authority surface carried across agents.
+
+    ``decision_contract`` remains read-only diagnostic metadata. This payload is
+    the compact active contract downstream components should prefer when they
+    need the effective owner/capability decision.
+    """
+
+    resolved = dict(resolved_decision_payload or {})
+    source_owner = normalize_source_owner(resolved.get("source_owner"))
+    if source_owner is None and isinstance(source_owner_payload, dict):
+        source_owner = normalize_source_owner(source_owner_payload.get("primary"))
+
+    diagnostic_contract = resolved.get("diagnostic_contract")
+    if not isinstance(diagnostic_contract, dict):
+        diagnostic_contract = {}
+    if isinstance(decision_contract_payload, dict):
+        diagnostic_contract = {
+            "schema": decision_contract_payload.get("schema"),
+            "mode": decision_contract_payload.get("mode"),
+        }
+
+    payload: dict[str, Any] = {
+        "schema": RUNTIME_AUTHORITY_SCHEMA,
+        "mode": "active",
+        "stage": resolved.get("stage"),
+        "original_query": resolved.get("original_query"),
+        "effective_query": resolved.get("effective_query"),
+        "conversation": dict(resolved.get("conversation") or {}),
+        "routing": dict(resolved.get("routing") or {}),
+        "contract": dict(resolved.get("contract") or {}),
+        "source_owner": source_owner,
+        "source_owner_payload": (
+            dict(source_owner_payload) if isinstance(source_owner_payload, dict) else None
+        ),
+        "capability": _none_if_empty(resolved.get("capability")),
+        "final_answer_owner": _none_if_empty(resolved.get("final_answer_owner")),
+        "cache": dict(resolved.get("cache") or {}),
+        "branch_dispatch_gate": (
+            dict(branch_dispatch_gate) if isinstance(branch_dispatch_gate, dict) else None
+        ),
+        "specialist_selection": (
+            dict(specialist_selection) if isinstance(specialist_selection, dict) else None
+        ),
+        "diagnostic_contract": diagnostic_contract or None,
+        "compatibility": {
+            "resolved_decision_schema": resolved.get("schema"),
+        },
+        "precedence": list(resolved.get("precedence") or []),
+    }
+    return payload
+
+
+def _none_if_empty(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None

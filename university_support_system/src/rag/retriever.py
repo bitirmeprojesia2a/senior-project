@@ -125,6 +125,31 @@ _CONCRETE_SOURCE_HINT_RE = re.compile(
 _SOURCE_CONSTRAINT_TOKEN_STOPWORDS = frozenset({
     "pdf", "txt", "html", "doc", "docx", "csv", "json", "yonerge", "belge",
 })
+_DEPARTMENT_SCOPED_QUERY_MARKERS = (
+    "staj",
+    "ders",
+    "mufredat",
+    "on kosul",
+    "onkosul",
+    "program",
+    "bitirme",
+    "yaz okulu",
+    "laboratuvar",
+    "uygulama",
+)
+_DEPARTMENT_SCOPE_GENERIC_VALUES = frozenset({"", "genel", "general", "ortak"})
+_DEPARTMENT_SCOPE_SUFFIX_WORDS = frozenset({
+    "bolum",
+    "bolumu",
+    "program",
+    "programi",
+    "fakulte",
+    "fakultesi",
+    "muhendisligi",
+    "ogretmenligi",
+    "egitimi",
+    "lisans",
+})
 
 
 def _strip_augmentation_prefix(query: str) -> str:
@@ -268,6 +293,7 @@ CONVERSATION_SOURCE_HINT_BOOST = 0.08
 CONVERSATION_TOPIC_HINT_BOOST = 0.04
 _DEPARTMENT_METADATA_BOOST = 0.06
 _RERANKER_MIN_SCORE_THRESHOLD = 0.23
+_MIN_CONVERSATION_SOURCE_HINT_CHARS = 4
 _BM25_NORMALIZER = QueryPreprocessor(enable_expansion=False)
 
 
@@ -377,11 +403,7 @@ def _apply_conversation_source_hints(
     topic_hint: str | None,
 ) -> List[Dict[str, Any]]:
     """Boost likely follow-up sources using prior source and topic hints."""
-    normalized_source_hints = [
-        hint.strip().casefold()
-        for hint in (source_hints or [])
-        if hint and hint.strip()
-    ]
+    normalized_source_hints = _conversation_source_hint_variants(source_hints)
     normalized_topic_hint = topic_hint.strip().casefold() if topic_hint else None
     if not normalized_source_hints and not normalized_topic_hint:
         return results
@@ -389,20 +411,25 @@ def _apply_conversation_source_hints(
     adjusted: List[Dict[str, Any]] = []
     for result in results:
         metadata = result.get("metadata") or {}
-        source_text = " ".join(
-            str(value or "").casefold()
-            for value in (
-                metadata.get("file_name"),
-                metadata.get("source"),
-                metadata.get("title"),
-                metadata.get("source_url"),
-                result.get("source"),
+        source_text = _source_constraint_text(
+            *(
+                value
+                for value in (
+                    metadata.get("file_name"),
+                    metadata.get("source"),
+                    metadata.get("title"),
+                    metadata.get("source_url"),
+                    result.get("source"),
+                )
             )
         )
         content_text = str(result.get("content") or "").casefold()
         boosted = float(result.get("score", 0.0))
 
-        if normalized_source_hints and any(hint in source_text for hint in normalized_source_hints):
+        if normalized_source_hints and any(
+            _source_hint_matches(source_text, hint)
+            for hint in normalized_source_hints
+        ):
             boosted += CONVERSATION_SOURCE_HINT_BOOST
 
         if normalized_topic_hint and normalized_topic_hint in content_text:
@@ -415,6 +442,28 @@ def _apply_conversation_source_hints(
             }
         )
     return adjusted
+
+
+def _conversation_source_hint_variants(source_hints: List[str] | None) -> List[str]:
+    """Normalize concrete source hints and drop short generic fragments."""
+    variants: set[str] = set()
+    for hint in source_hints or []:
+        normalized = normalize_text(hint).strip()
+        if not normalized:
+            continue
+        separated = re.sub(r"[_\-.]+", " ", normalized).strip()
+        for variant in (normalized, separated):
+            compact_len = len(re.sub(r"\W+", "", variant))
+            if compact_len >= _MIN_CONVERSATION_SOURCE_HINT_CHARS:
+                variants.add(variant)
+    return sorted(variants, key=len, reverse=True)
+
+
+def _source_hint_matches(source_text: str, hint: str) -> bool:
+    if not source_text or not hint:
+        return False
+    pattern = rf"(?<!\w){re.escape(hint)}(?!\w)"
+    return re.search(pattern, source_text) is not None
 
 
 def _source_constraint_text(*values: Any) -> str:
@@ -763,19 +812,10 @@ def _apply_department_metadata_boost(
     if not student_department:
         return results
 
-    from src.core.text_normalization import normalize_text as _norm
-
-    normalized_dept = _norm(student_department)
     adjusted = False
     for item in results:
         metadata = item.get("metadata") or {}
-        bolum_adi = _norm(metadata.get("bolum_adi", ""))
-        bolum_code = _norm(metadata.get("bolum", ""))
-
-        if not bolum_adi or bolum_adi == "genel" or bolum_code == "genel":
-            continue
-
-        if normalized_dept in bolum_adi or bolum_code in normalized_dept:
+        if _department_metadata_matches(metadata, student_department):
             item["score"] = round(float(item.get("score", 0.0)) + boost, 4)
             adjusted = True
 
@@ -787,6 +827,69 @@ def _apply_department_metadata_boost(
             top_sources=[(r.get("source", ""), r.get("score", 0.0)) for r in results[:3]],
         )
     return results
+
+
+def _normalize_department_scope_text(value: Any) -> str:
+    normalized = normalize_text(str(value or ""))
+    normalized = re.sub(r"[_\-.]+", " ", normalized)
+    return " ".join(normalized.split())
+
+
+def _department_scope_tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in _normalize_department_scope_text(value).split()
+        if len(token) >= 3 and token not in _DEPARTMENT_SCOPE_SUFFIX_WORDS
+    }
+
+
+def _department_metadata_texts(metadata: Dict[str, Any]) -> list[str]:
+    texts: list[str] = []
+    for key in (
+        "bolum_adi",
+        "bolum",
+        "department_name",
+        "program_name",
+        "program",
+        "source",
+        "file_name",
+        "relative_path",
+    ):
+        text = _normalize_department_scope_text(metadata.get(key))
+        if not text or text in _DEPARTMENT_SCOPE_GENERIC_VALUES:
+            continue
+        texts.append(text)
+    return list(dict.fromkeys(texts))
+
+
+def _department_metadata_matches(metadata: Dict[str, Any], student_department: str | None) -> bool:
+    requested = _normalize_department_scope_text(student_department)
+    if not requested or requested in _DEPARTMENT_SCOPE_GENERIC_VALUES:
+        return False
+
+    requested_tokens = _department_scope_tokens(requested)
+    for candidate in _department_metadata_texts(metadata):
+        if candidate in _DEPARTMENT_SCOPE_GENERIC_VALUES:
+            continue
+        if requested == candidate or requested in candidate or candidate in requested:
+            return True
+        candidate_tokens = _department_scope_tokens(candidate)
+        if not requested_tokens or not candidate_tokens:
+            continue
+        overlap = requested_tokens & candidate_tokens
+        required_overlap = 1 if min(len(requested_tokens), len(candidate_tokens)) <= 1 else 2
+        if len(overlap) >= required_overlap:
+            return True
+    return False
+
+
+def _query_may_need_department_scoped_documents(query: str) -> bool:
+    normalized_query = normalize_text(query)
+    return any(marker in normalized_query for marker in _DEPARTMENT_SCOPED_QUERY_MARKERS)
+
+
+def _department_scoped_recall_score(lexical_score: float) -> float:
+    return round(min(0.82, 0.40 + (lexical_score * 0.05)), 6)
 
 
 def _result_score_type(item: Dict[str, Any]) -> str:
@@ -871,6 +974,41 @@ class HybridRetriever:
         """Paylasilan BM25 belge ve retriever cache'lerini temizler."""
         cls._BM25_DOCUMENT_CACHE.clear()
         cls._BM25_RETRIEVER_CACHE.clear()
+
+    @staticmethod
+    def _resource_cache_get(cache: dict, key: Any) -> Any | None:
+        """Return a cached value and mark it as recently used."""
+        if key not in cache:
+            return None
+        value = cache.pop(key)
+        cache[key] = value
+        return value
+
+    @staticmethod
+    def _resource_cache_put(
+        cache: dict,
+        key: Any,
+        value: Any,
+        *,
+        max_entries: int,
+        label: str,
+    ) -> None:
+        """Put a value into a small LRU-style cache."""
+        if max_entries <= 0:
+            cache.clear()
+            return
+        if key in cache:
+            cache.pop(key)
+        cache[key] = value
+        while len(cache) > max_entries:
+            evicted_key = next(iter(cache))
+            cache.pop(evicted_key, None)
+            logger.info(
+                "bm25_resource_cache_evicted",
+                cache=label,
+                key=str(evicted_key),
+                max_entries=max_entries,
+            )
 
     def __init__(
         self,
@@ -1031,9 +1169,15 @@ class HybridRetriever:
         department: Department | str | None = None,
     ) -> str | None:
         """Infer the backing collection for a candidate from explicit or metadata department."""
+        metadata = candidate.get("metadata") or {}
+        for key in ("retrieval_collection", "source_constrained_recall_collection"):
+            collection_name = str(metadata.get(key) or "").strip()
+            if collection_name and collection_name != "__multi__":
+                return collection_name
+
         department_value = department
         if department_value is None:
-            department_value = (candidate.get("metadata") or {}).get("department")
+            department_value = metadata.get("department")
         if not department_value:
             return None
 
@@ -1044,7 +1188,7 @@ class HybridRetriever:
 
     def _load_documents_for_collection(self, collection_name: str) -> List[Document]:
         """Load BM25 cache documents for a collection on demand."""
-        cached_documents = self._BM25_DOCUMENT_CACHE.get(collection_name)
+        cached_documents = self._resource_cache_get(self._BM25_DOCUMENT_CACHE, collection_name)
         if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled and cached_documents is not None:
             return cached_documents
 
@@ -1060,6 +1204,140 @@ class HybridRetriever:
             return position[0], int(metadata.get("chunk_index", position[0]))
         return int(metadata.get("chunk_index", 10**9)), int(metadata.get("chunk_index", 10**9))
 
+    @staticmethod
+    def _metadata_int(value: Any, default: int = 0) -> int:
+        """Best-effort int parser for Chroma metadata values."""
+        try:
+            return int(str(value))
+        except (TypeError, ValueError):
+            return default
+
+    @classmethod
+    def _parent_child_sort_key(cls, candidate: Dict[str, Any]) -> tuple[int, int]:
+        """Order chunks inside a parent-child group."""
+        metadata = candidate.get("metadata") or {}
+        return (
+            cls._metadata_int(metadata.get("parent_child_index"), 10**9),
+            cls._metadata_int(metadata.get("chunk_index"), 10**9),
+        )
+
+    @classmethod
+    def _select_parent_context_window(
+        cls,
+        related_candidates: List[Dict[str, Any]],
+        *,
+        hit_metadata: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Keep a bounded parent context window around the hit child."""
+        max_chars = max(int(settings.rag.parent_context_max_chars or 0), 0)
+        if max_chars <= 0:
+            return related_candidates
+
+        total_chars = sum(len(str(item.get("content") or "")) for item in related_candidates)
+        if total_chars <= max_chars:
+            return related_candidates
+
+        hit_child_index = cls._metadata_int(hit_metadata.get("parent_child_index"), -1)
+        hit_chunk_index = cls._metadata_int(hit_metadata.get("chunk_index"), -1)
+        hit_index = 0
+        for index, item in enumerate(related_candidates):
+            item_metadata = item.get("metadata") or {}
+            if (
+                cls._metadata_int(item_metadata.get("parent_child_index"), -2) == hit_child_index
+                and cls._metadata_int(item_metadata.get("chunk_index"), -2) == hit_chunk_index
+            ):
+                hit_index = index
+                break
+
+        selected = {hit_index}
+        current_chars = len(str(related_candidates[hit_index].get("content") or ""))
+        left = hit_index - 1
+        right = hit_index + 1
+        while left >= 0 or right < len(related_candidates):
+            added = False
+            if right < len(related_candidates):
+                candidate_len = len(str(related_candidates[right].get("content") or ""))
+                if current_chars + candidate_len <= max_chars:
+                    selected.add(right)
+                    current_chars += candidate_len
+                    added = True
+                right += 1
+            if left >= 0:
+                candidate_len = len(str(related_candidates[left].get("content") or ""))
+                if current_chars + candidate_len <= max_chars:
+                    selected.add(left)
+                    current_chars += candidate_len
+                    added = True
+                left -= 1
+            if not added and (right >= len(related_candidates) and left < 0):
+                break
+            if not added and current_chars >= max_chars:
+                break
+        return [item for index, item in enumerate(related_candidates) if index in selected]
+
+    def _expand_parent_child_context(
+        self,
+        candidate: Dict[str, Any],
+        *,
+        department: Department | str | None = None,
+    ) -> Dict[str, Any] | None:
+        """Expand a child hit to its bounded parent context when available."""
+        metadata = dict(candidate.get("metadata") or {})
+        parent_id = str(metadata.get("parent_id") or "").strip()
+        parent_child_count = self._metadata_int(metadata.get("parent_child_count"), 1)
+        if (
+            not settings.rag.parent_child_chunking_enabled
+            or not parent_id
+            or parent_child_count <= 1
+        ):
+            return None
+
+        document_key = _metadata_identity_key(metadata)
+        collection_name = self._resolve_collection_name_for_candidate(candidate, department=department)
+        if not collection_name:
+            return None
+
+        related_candidates: List[Dict[str, Any]] = []
+        for document in self._load_documents_for_collection(collection_name):
+            doc_metadata = dict(document.metadata or {})
+            if _metadata_identity_key(doc_metadata) != document_key:
+                continue
+            if str(doc_metadata.get("parent_id") or "").strip() != parent_id:
+                continue
+            related_candidates.append(
+                {
+                    "content": document.page_content,
+                    "metadata": doc_metadata,
+                }
+            )
+
+        if len(related_candidates) <= 1:
+            return None
+
+        related_candidates.sort(key=self._parent_child_sort_key)
+        related_candidates = self._select_parent_context_window(
+            related_candidates,
+            hit_metadata=metadata,
+        )
+        merged_content = merge_chunk_texts(item["content"] for item in related_candidates)
+        if not merged_content:
+            return None
+
+        metadata["context_expanded"] = True
+        metadata["parent_context_expanded"] = True
+        metadata["merged_chunk_count"] = len(related_candidates)
+        metadata["merged_parent_id"] = parent_id
+        metadata["merged_parent_child_indexes"] = ",".join(
+            str(item["metadata"].get("parent_child_index", ""))
+            for item in related_candidates
+            if item["metadata"].get("parent_child_index") is not None
+        )
+        return {
+            **candidate,
+            "content": merged_content,
+            "metadata": metadata,
+        }
+
     def _expand_candidate_context(
         self,
         candidate: Dict[str, Any],
@@ -1067,6 +1345,10 @@ class HybridRetriever:
         department: Department | str | None = None,
     ) -> Dict[str, Any]:
         """Expand a result to the full MADDE span when the hit is only one sub-chunk."""
+        parent_expanded = self._expand_parent_child_context(candidate, department=department)
+        if parent_expanded is not None:
+            return parent_expanded
+
         metadata = dict(candidate.get("metadata") or {})
         source = metadata.get("source") or candidate.get("source")
         document_key = _metadata_identity_key(metadata)
@@ -1166,10 +1448,20 @@ class HybridRetriever:
                 )
             )
 
-        if candidates or not fallback_collections:
+        if not fallback_collections:
             return candidates
 
-        logger.info("hybrid_search_fallback", query=query, collections=fallback_collections)
+        should_fallback, fallback_reason, primary_top_score = self._should_collect_fallback_candidates(candidates)
+        if not should_fallback:
+            return candidates
+
+        logger.info(
+            "hybrid_search_fallback",
+            query=query,
+            collections=fallback_collections,
+            reason=fallback_reason,
+            primary_top_score=primary_top_score,
+        )
         for collection_name in fallback_collections:
             candidates.extend(
                 self._annotate_collection_candidates(
@@ -1179,6 +1471,23 @@ class HybridRetriever:
                 )
             )
         return candidates
+
+    @staticmethod
+    def _should_collect_fallback_candidates(
+        primary_candidates: List[Dict[str, Any]],
+    ) -> tuple[bool, str, float | None]:
+        """Decide whether fallback collections should augment weak primary hits."""
+        if not primary_candidates:
+            return True, "empty_primary", None
+
+        threshold = float(settings.rag.fallback_primary_score_threshold or 0.0)
+        if threshold <= 0:
+            return False, "disabled", None
+
+        primary_top_score = max(float(candidate.get("score", 0.0)) for candidate in primary_candidates)
+        if primary_top_score < threshold:
+            return True, "weak_primary_score", round(primary_top_score, 6)
+        return False, "primary_score_ok", round(primary_top_score, 6)
 
     @staticmethod
     def _annotate_collection_candidates(
@@ -1209,7 +1518,7 @@ class HybridRetriever:
 
     def _source_documents_for_recall(self, collection_name: str) -> List[Document]:
         """Return collection documents for source-constrained lexical recall."""
-        cached_documents = self._BM25_DOCUMENT_CACHE.get(collection_name)
+        cached_documents = self._resource_cache_get(self._BM25_DOCUMENT_CACHE, collection_name)
         if cached_documents is not None:
             return cached_documents
 
@@ -1309,6 +1618,111 @@ class HybridRetriever:
             query=query,
             added_count=min(len(recalled), max_total),
             constraints=list(source_constraints),
+            collections=collection_names,
+        )
+        return deduplicate_candidate_dicts([*candidates, *recalled[:max_total]])
+
+    def _department_scoped_recall_collections(
+        self,
+        *,
+        query: str,
+        primary_collections: List[str],
+        fallback_collections: List[str],
+        student_department: str | None,
+    ) -> list[str]:
+        """Return collections worth scanning for department-specific documents."""
+        if not student_department or not _query_may_need_department_scoped_documents(query):
+            return []
+
+        collections: list[str] = []
+        for collection_name in [*primary_collections, *fallback_collections]:
+            if collection_name not in collections:
+                collections.append(collection_name)
+
+        academic_collection = collection_name_for_department(Department.ACADEMIC_PROGRAMS)
+        if academic_collection not in collections:
+            collections.append(academic_collection)
+        return collections
+
+    def _augment_candidates_with_department_scoped_recall(
+        self,
+        candidates: List[Dict[str, Any]],
+        *,
+        query: str,
+        collection_names: List[str],
+        student_department: str | None,
+        topic_hint: str | None,
+        source_owner_bridge: SourceOwnerCollectionBridge | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Add relevant department-specific documents when a program is explicitly known."""
+        if (
+            not settings.rag.department_scoped_recall_enabled
+            or not student_department
+            or not collection_names
+            or not _query_may_need_department_scoped_documents(query)
+        ):
+            return candidates
+
+        max_per_collection = max(settings.rag.department_scoped_recall_max_per_collection, 0)
+        max_total = max(settings.rag.department_scoped_recall_max_total, 0)
+        min_lexical_score = float(settings.rag.department_scoped_recall_min_lexical_score)
+        if max_per_collection <= 0 or max_total <= 0:
+            return candidates
+
+        recalled: list[dict[str, Any]] = []
+        support_collections = set(source_owner_bridge.support_collections if source_owner_bridge else ())
+        for collection_name in collection_names:
+            collection_recalled: list[tuple[float, dict[str, Any]]] = []
+            for document in self._source_documents_for_recall(collection_name):
+                metadata = dict(document.metadata or {})
+                if not _department_metadata_matches(metadata, student_department):
+                    continue
+
+                lexical_score = _source_constrained_lexical_score(
+                    query=query,
+                    topic_hint=topic_hint,
+                    content=document.page_content,
+                )
+                if lexical_score < min_lexical_score:
+                    continue
+
+                metadata["department_scoped_recall"] = True
+                metadata["department_scoped_recall_collection"] = collection_name
+                metadata["department_scoped_recall_student_department"] = student_department
+                metadata["department_scoped_lexical_score"] = round(lexical_score, 4)
+                metadata.setdefault("retrieval_collection", collection_name)
+                if source_owner_bridge and collection_name in support_collections:
+                    metadata["retrieval_collection_role"] = "source_owner_support"
+                    metadata["source_owner_collection_bridge"] = source_owner_bridge.as_metadata()
+                metadata.setdefault("score_type", "department_scoped_recall")
+                candidate = {
+                    "content": document.page_content,
+                    "source": metadata.get("source") or metadata.get("file_name") or "bilinmiyor",
+                    "category": metadata.get("category", "genel"),
+                    "score": _department_scoped_recall_score(lexical_score),
+                    "metadata": metadata,
+                }
+                collection_recalled.append((lexical_score, candidate))
+
+            collection_recalled.sort(
+                key=lambda pair: (
+                    pair[0],
+                    float(pair[1].get("score", 0.0)),
+                ),
+                reverse=True,
+            )
+            recalled.extend(candidate for _, candidate in collection_recalled[:max_per_collection])
+            if len(recalled) >= max_total:
+                break
+
+        if not recalled:
+            return candidates
+
+        logger.info(
+            "department_scoped_recall_applied",
+            query=query,
+            student_department=student_department,
+            added_count=min(len(recalled), max_total),
             collections=collection_names,
         )
         return deduplicate_candidate_dicts([*candidates, *recalled[:max_total]])
@@ -1511,7 +1925,7 @@ class HybridRetriever:
         indexer: ChromaIndexer,
     ) -> List[Document]:
         """Load and cache BM25 documents for a collection."""
-        cached_documents = self._BM25_DOCUMENT_CACHE.get(collection_name)
+        cached_documents = self._resource_cache_get(self._BM25_DOCUMENT_CACHE, collection_name)
         if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled and cached_documents is not None:
             logger.info(
                 "bm25_document_cache_hit",
@@ -1532,7 +1946,13 @@ class HybridRetriever:
                 documents.append(Document(page_content=text, metadata=metadata))
 
         if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled:
-            self._BM25_DOCUMENT_CACHE[collection_name] = documents
+            self._resource_cache_put(
+                self._BM25_DOCUMENT_CACHE,
+                collection_name,
+                documents,
+                max_entries=settings.cache.bm25_document_cache_max_collections,
+                label="documents",
+            )
         logger.info(
             "bm25_documents_cached",
             collection=collection_name,
@@ -1548,7 +1968,7 @@ class HybridRetriever:
     ) -> BM25Retriever:
         """Build and cache BM25 retrievers per collection and k."""
         cache_key = (collection_name, internal_k)
-        cached_retriever = self._BM25_RETRIEVER_CACHE.get(cache_key)
+        cached_retriever = self._resource_cache_get(self._BM25_RETRIEVER_CACHE, cache_key)
         if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled and cached_retriever is not None:
             logger.info(
                 "bm25_retriever_cache_hit",
@@ -1569,7 +1989,13 @@ class HybridRetriever:
         )
         bm25_retriever.k = internal_k
         if settings.cache.enabled and settings.cache.bm25_resource_cache_enabled:
-            self._BM25_RETRIEVER_CACHE[cache_key] = bm25_retriever
+            self._resource_cache_put(
+                self._BM25_RETRIEVER_CACHE,
+                cache_key,
+                bm25_retriever,
+                max_entries=settings.cache.bm25_retriever_cache_max_entries,
+                label="retrievers",
+            )
         return bm25_retriever
 
     def _ensure_ensemble(self, collection_name: str) -> EnsembleRetriever:
@@ -1748,6 +2174,21 @@ class HybridRetriever:
                     collections=primary_collections,
                 )
                 return []
+        if not hard_constrain_sources:
+            department_recall_collections = self._department_scoped_recall_collections(
+                query=query,
+                primary_collections=primary_collections,
+                fallback_collections=fallback_collections,
+                student_department=student_department,
+            )
+            candidates = self._augment_candidates_with_department_scoped_recall(
+                candidates,
+                query=query,
+                collection_names=department_recall_collections,
+                student_department=student_department,
+                topic_hint=topic_hint,
+                source_owner_bridge=source_owner_bridge,
+            )
         candidates = _apply_conversation_source_hints(
             candidates,
             source_hints=source_hints,

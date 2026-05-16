@@ -39,6 +39,10 @@ def _candidate_dedup_key(content: str, metadata: Dict[str, Any]) -> str:
     chunk_index = metadata.get("chunk_index")
     sub_chunk = metadata.get("sub_chunk")
     madde_no = metadata.get("madde_no")
+    parent_id = metadata.get("parent_id")
+
+    if metadata.get("context_expanded") and source and parent_id:
+        return f"{source}::{parent_id}::expanded"
 
     if metadata.get("context_expanded") and source and madde_no is not None:
         return f"{source}::{madde_no}::expanded"

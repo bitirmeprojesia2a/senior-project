@@ -161,6 +161,7 @@ def build_dispatch_metadata(
         "policy_facet": getattr(payload, "policy_facet", None),
         "decision_contract": getattr(payload, "decision_contract", None),
         "resolved_decision": getattr(payload, "resolved_decision", None),
+        "runtime_authority": getattr(payload, "runtime_authority", None),
         "branch_dispatch_gate": getattr(payload, "branch_dispatch_gate", None),
         "branch_role": getattr(payload, "branch_role", None),
         "retrieval_execution_policy": getattr(payload, "retrieval_execution_policy", None),

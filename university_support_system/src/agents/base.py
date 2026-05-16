@@ -30,6 +30,7 @@ from src.core.retrieval_execution_policy import (
 )
 from src.core.source_owner_policy import apply_source_owner_policy
 from src.core.text_normalization import normalize_text
+from src.agents.academic.curriculum_utils import infer_department_from_query
 from src.rag.multi_query_expander import expand_query as _expand_multi_queries
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.quality.evidence import (
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
     from src.rag.retriever import HybridRetriever
 
 logger = logging.getLogger(__name__)
+OMU_SWITCHBOARD_PHONE = "0 (362) 312 19 19"
 _EVIDENCE_QUERY_PREPROCESSOR = QueryPreprocessor()
 
 _SHARED_RETRIEVER: HybridRetriever | None = None
@@ -258,6 +260,11 @@ class BaseSpecialistAgent:
             )
             source_owner_primary = str(source_owner_payload.get("primary") or "").strip() or None
             retrieval_query = str(meta.get("retrieval_query") or "").strip() or query_text
+            explicit_department_scope = (
+                infer_department_from_query(retrieval_query)
+                or infer_department_from_query(query_text)
+            )
+            retrieval_department_scope = explicit_department_scope or student_department
             retrieval_policy = resolve_retrieval_execution_policy(
                 department=self.department,
                 branch_role=str(meta.get("branch_role") or "").strip() or None,
@@ -282,7 +289,7 @@ class BaseSpecialistAgent:
                         department=self.department,
                         source_hints=source_hints,
                         topic_hint=topic_hint,
-                        student_department=student_department,
+                        student_department=retrieval_department_scope,
                         source_owner=source_owner_primary,
                         reranker_candidate_limit=retrieval_policy.reranker_candidate_limit,
                     )
@@ -302,7 +309,7 @@ class BaseSpecialistAgent:
                         department=self.department,
                         source_hints=source_hints,
                         topic_hint=topic_hint,
-                        student_department=student_department,
+                        student_department=retrieval_department_scope,
                         source_owner=source_owner_primary,
                         reranker_candidate_limit=retrieval_policy.reranker_candidate_limit,
                     )
@@ -321,7 +328,7 @@ class BaseSpecialistAgent:
                     department=self.department,
                     source_hints=source_hints,
                     topic_hint=topic_hint,
-                    student_department=student_department,
+                    student_department=retrieval_department_scope,
                     source_owner=source_owner_primary,
                     policy=retrieval_policy,
                     skip=strong_evidence,
@@ -454,6 +461,7 @@ class BaseSpecialistAgent:
                 "retrieval_execution_stats",
                 "decision_contract",
                 "resolved_decision",
+                "runtime_authority",
             ):
                 if key in plan_context:
                     response_metadata[key] = plan_context.get(key)
@@ -594,6 +602,10 @@ class BaseSpecialistAgent:
                     content=content,
                     source_text=source_name,
                 )
+            source_diagnostics = self._build_selected_source_diagnostics(
+                metadata=metadata,
+                rank=len(selected_sources) + 1,
+            )
             selected_sources.append(
                 {
                     "source": source_name,
@@ -605,6 +617,7 @@ class BaseSpecialistAgent:
                     "specialist": specialist,
                     "contract_match_reason": contract_match_reason,
                     "policy_alignment": policy_alignment,
+                    "diagnostics": source_diagnostics,
                 }
             )
             if family and family not in source_families:
@@ -716,7 +729,46 @@ class BaseSpecialistAgent:
                 packet["decision_contract"] = plan_context.get("decision_contract") or {}
             if "resolved_decision" in plan_context:
                 packet["resolved_decision"] = plan_context.get("resolved_decision") or {}
+            if "runtime_authority" in plan_context:
+                packet["runtime_authority"] = plan_context.get("runtime_authority") or {}
         return packet
+
+    @staticmethod
+    def _build_selected_source_diagnostics(*, metadata: dict, rank: int) -> dict:
+        """Return compact chunk/retrieval diagnostics for replay triage."""
+        chunk = {
+            key: metadata.get(key)
+            for key in (
+                "chunk_index",
+                "chunk_count",
+                "madde_no",
+                "sub_chunk",
+                "parent_context_expanded",
+                "merged_chunk_count",
+                "merged_parent_id",
+            )
+            if metadata.get(key) not in (None, "")
+        }
+        retrieval = {
+            key: metadata.get(key)
+            for key in (
+                "score_type",
+                "retrieval_collection",
+                "retrieval_collection_role",
+                "source_constrained_recall",
+                "department_scoped_recall",
+                "department_scoped_recall_student_department",
+                "source_owner_compatible",
+                "source_owner_avoid_match",
+                "policy_alignment_score",
+            )
+            if metadata.get(key) not in (None, "")
+        }
+        return {
+            "rank": rank,
+            "chunk": chunk,
+            "retrieval": retrieval,
+        }
 
     @staticmethod
     def _build_plan_context_from_metadata(meta: dict) -> dict:
@@ -761,6 +813,9 @@ class BaseSpecialistAgent:
         resolved_decision = meta.get("resolved_decision")
         if isinstance(resolved_decision, dict):
             context["resolved_decision"] = resolved_decision
+        runtime_authority = meta.get("runtime_authority")
+        if isinstance(runtime_authority, dict):
+            context["runtime_authority"] = runtime_authority
         policy_facet = meta.get("policy_facet")
         if not isinstance(policy_facet, dict):
             capability = str(
@@ -1023,7 +1078,9 @@ class BaseSpecialistAgent:
                 title_str = f" - {contact.title}" if contact.title else ""
                 parts.append(f"  {contact.person_name}{title_str}")
             if contact.phone_ext:
-                parts.append(f"  Dahili: {contact.phone_ext}")
+                parts.append(f"  Telefon: {OMU_SWITCHBOARD_PHONE} / Dahili: {contact.phone_ext}")
+            else:
+                parts.append(f"  Santral: {OMU_SWITCHBOARD_PHONE}")
             if contact.email:
                 parts.append(f"  E-Posta: {contact.email}")
             lines.append("\n".join(parts))

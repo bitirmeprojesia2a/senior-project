@@ -128,3 +128,28 @@ def test_support_policy_disables_multi_query() -> None:
     assert policy.support_lite is True
     assert policy.multi_query_enabled is False
     assert policy.top_k == 4
+
+
+def test_runtime_authority_overrides_legacy_retrieval_contract_values() -> None:
+    metadata = _metadata()
+    metadata["source_owner"] = {"primary": "student_affairs_policy"}
+    metadata["resolved_decision"] = {
+        "schema": "omu.resolved_decision.v1",
+        "source_owner": "student_affairs_policy",
+        "capability": "student_affairs.policy_lookup",
+    }
+    metadata["runtime_authority"] = {
+        "schema": "omu.runtime_authority.v1",
+        "mode": "active",
+        "source_owner": "tuition_fee_catalog",
+        "capability": "finance.tuition_fee",
+    }
+
+    policy = resolve_retrieval_execution_policy(
+        department=Department.FINANCE,
+        branch_role="primary",
+        metadata=metadata,
+    )
+
+    assert policy.source_owner == "tuition_fee_catalog"
+    assert policy.capability == "finance.tuition_fee"

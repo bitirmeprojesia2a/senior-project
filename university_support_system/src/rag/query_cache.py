@@ -21,10 +21,15 @@ class _QueryCache:
 
     _REDIS_KEY_PREFIX = "runtime:retriever:"
 
-    def __init__(self, ttl: int = 300, enabled: bool = True):
+    def __init__(self, ttl: int = 300, enabled: bool = True, max_entries: int | None = None):
         self._store: Dict[str, tuple[float, List[Dict[str, Any]]]] = {}
         self._ttl = ttl
         self._enabled = enabled
+        self._max_entries = (
+            settings.cache.retriever_query_cache_max_entries
+            if max_entries is None
+            else max_entries
+        )
 
     @property
     def enabled(self) -> bool:
@@ -40,22 +45,35 @@ class _QueryCache:
             and settings.redis.enabled
         )
 
-    def configure(self, *, ttl: int | None = None, enabled: bool | None = None) -> None:
+    @property
+    def max_entries(self) -> int:
+        return self._max_entries
+
+    def configure(
+        self,
+        *,
+        ttl: int | None = None,
+        enabled: bool | None = None,
+        max_entries: int | None = None,
+    ) -> None:
         if ttl is not None:
             self._ttl = ttl
         if enabled is not None:
             self._enabled = enabled
+        if max_entries is not None:
+            self._max_entries = max_entries
+            self._evict_lru_if_needed()
 
     def get(self, key: str) -> List[Dict[str, Any]] | None:
         if not self._enabled:
             return None
-        entry = self._store.get(key)
-        if entry is None:
+        try:
+            timestamp, results = self._store.pop(key)
+        except KeyError:
             return self._get_from_redis(key)
-        timestamp, results = entry
         if time.time() - timestamp < self._ttl:
+            self._store[key] = (timestamp, results)
             return deepcopy(results)
-        del self._store[key]
         return self._get_from_redis(key)
 
     def put(self, key: str, results: List[Dict[str, Any]]) -> None:
@@ -63,6 +81,7 @@ class _QueryCache:
             return
         stored = deepcopy(results)
         self._store[key] = (time.time(), stored)
+        self._evict_lru_if_needed()
         if self.redis_enabled and self._ttl > 0:
             redis_set(
                 self._redis_key(key),
@@ -108,7 +127,16 @@ class _QueryCache:
             redis_delete(self._redis_key(key))
             return None
         self._store[key] = (time.time(), deepcopy(results))
+        self._evict_lru_if_needed()
         return deepcopy(results)
+
+    def _evict_lru_if_needed(self) -> None:
+        if self._max_entries <= 0:
+            self._store.clear()
+            return
+        while len(self._store) > self._max_entries:
+            oldest_key = next(iter(self._store))
+            self._store.pop(oldest_key, None)
 
 
 def clear_shared_query_cache() -> None:

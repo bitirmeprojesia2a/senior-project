@@ -3403,7 +3403,8 @@ class ConversationContextService:
         for source in sources:
             metadata = source.metadata or {}
             ref = (
-                metadata.get("title")
+                metadata.get("source_ref")
+                or metadata.get("title")
                 or metadata.get("file_name")
                 or metadata.get("source")
                 or metadata.get("source_url")

@@ -5,7 +5,12 @@ from src.core.answer_contracts import (
     validate_answer_against_contract,
 )
 from src.core.constants import Department
-from src.core.decision_authority import RESOLVED_DECISION_SCHEMA, build_resolved_decision_metadata
+from src.core.decision_authority import (
+    RESOLVED_DECISION_SCHEMA,
+    RUNTIME_AUTHORITY_SCHEMA,
+    build_resolved_decision_metadata,
+    build_runtime_authority_metadata,
+)
 from src.core.source_ownership import (
     OWNER_ANNOUNCEMENT_SEARCH,
     OWNER_WEEKLY_SCHEDULE,
@@ -419,6 +424,34 @@ def test_resolved_decision_metadata_carries_contract_authority() -> None:
     assert payload["contract"]["deterministic_final"] is True
     assert payload["source_owner"] == OWNER_WEEKLY_SCHEDULE
     assert "answer_contract" in payload["precedence"]
+
+
+def test_runtime_authority_metadata_separates_active_and_diagnostic_contract() -> None:
+    resolved = {
+        "schema": RESOLVED_DECISION_SCHEMA,
+        "stage": "unit_test",
+        "original_query": "Ders programi ne?",
+        "effective_query": "Bilgisayar Muhendisligi ders programi ne?",
+        "contract": {"id": "schedule_full_program", "deterministic_final": True},
+        "source_owner": OWNER_WEEKLY_SCHEDULE,
+        "capability": "schedule.weekly_program",
+        "final_answer_owner": "department_orchestrator",
+        "diagnostic_contract": {"schema": "omu.decision_contract.v1", "mode": "read_only"},
+        "precedence": ["conversation_context", "source_owner", "dispatch"],
+    }
+
+    payload = build_runtime_authority_metadata(
+        resolved_decision_payload=resolved,
+        source_owner_payload={"primary": OWNER_WEEKLY_SCHEDULE},
+        decision_contract_payload={"schema": "omu.decision_contract.v1", "mode": "read_only"},
+    )
+
+    assert payload["schema"] == RUNTIME_AUTHORITY_SCHEMA
+    assert payload["mode"] == "active"
+    assert payload["source_owner"] == OWNER_WEEKLY_SCHEDULE
+    assert payload["capability"] == "schedule.weekly_program"
+    assert payload["diagnostic_contract"]["mode"] == "read_only"
+    assert payload["compatibility"]["resolved_decision_schema"] == RESOLVED_DECISION_SCHEMA
 
 
 def test_course_code_schedule_query_is_not_expanded_to_full_program_contract() -> None:

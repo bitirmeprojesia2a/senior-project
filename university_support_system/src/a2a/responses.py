@@ -71,6 +71,7 @@ _TRACE_METADATA_KEYS = frozenset({
     "quality_check",
     "retrieval_execution_policy",
     "retrieval_execution_stats",
+    "runtime_authority",
     "specialist_response_mode",
     "specialist_selection",
     "source_owner",

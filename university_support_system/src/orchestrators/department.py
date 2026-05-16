@@ -730,6 +730,10 @@ def _as_dict(value: Any) -> dict[str, Any]:
 
 def _extract_contract_capability(metadata: dict[str, Any] | None) -> str | None:
     metadata = metadata or {}
+    authority = _as_dict(metadata.get("runtime_authority"))
+    if authority.get("capability"):
+        return _selector_value(authority.get("capability"))
+
     planner = _as_dict(metadata.get("capability_planner"))
     action = _as_dict(planner.get("action"))
     capability = action.get("capability") or planner.get("capability")
@@ -748,6 +752,10 @@ def _extract_contract_capability(metadata: dict[str, Any] | None) -> str | None:
 
 def _extract_contract_source_owner(metadata: dict[str, Any] | None) -> str | None:
     metadata = metadata or {}
+    authority = _as_dict(metadata.get("runtime_authority"))
+    if authority.get("source_owner"):
+        return _selector_value(authority.get("source_owner"))
+
     source_owner = _as_dict(metadata.get("source_owner"))
     owner = source_owner.get("primary")
     if owner:
@@ -778,22 +786,28 @@ def _contract_semantic_text(metadata: dict[str, Any] | None) -> str:
     _collect_selector_decision_values(action.get("answer_contract"), parts)
     _collect_selector_decision_values(planner.get("plan_decision"), parts)
 
-    resolved = _as_dict(metadata.get("resolved_decision"))
-    if resolved:
-        _collect_selector_decision_values(resolved.get("contract"), parts)
-        _collect_selector_decision_values(resolved.get("capability"), parts)
-        _collect_selector_decision_values(resolved.get("source_owner"), parts)
+    authority = _as_dict(metadata.get("runtime_authority"))
+    if authority:
+        _collect_selector_decision_values(authority.get("contract"), parts)
+        _collect_selector_decision_values(authority.get("capability"), parts)
+        _collect_selector_decision_values(authority.get("source_owner"), parts)
     else:
-        contract = _decision_contract_body(metadata)
-        contract_query = _as_dict(contract.get("query"))
-        _collect_semantic_values(contract_query.get("effective"), parts)
-        _collect_semantic_values(contract_query.get("standalone_query"), parts)
-        _collect_selector_decision_values(contract.get("conversation"), parts)
-        _collect_selector_decision_values(contract.get("intent"), parts)
-        _collect_selector_decision_values(contract.get("capabilities"), parts)
-        _collect_selector_decision_values(contract.get("slots"), parts)
-        retrieval = _as_dict(contract.get("retrieval"))
-        _collect_selector_decision_values({"must_answer": retrieval.get("must_answer")}, parts)
+        resolved = _as_dict(metadata.get("resolved_decision"))
+        if resolved:
+            _collect_selector_decision_values(resolved.get("contract"), parts)
+            _collect_selector_decision_values(resolved.get("capability"), parts)
+            _collect_selector_decision_values(resolved.get("source_owner"), parts)
+        else:
+            contract = _decision_contract_body(metadata)
+            contract_query = _as_dict(contract.get("query"))
+            _collect_semantic_values(contract_query.get("effective"), parts)
+            _collect_semantic_values(contract_query.get("standalone_query"), parts)
+            _collect_selector_decision_values(contract.get("conversation"), parts)
+            _collect_selector_decision_values(contract.get("intent"), parts)
+            _collect_selector_decision_values(contract.get("capabilities"), parts)
+            _collect_selector_decision_values(contract.get("slots"), parts)
+            retrieval = _as_dict(contract.get("retrieval"))
+            _collect_selector_decision_values({"must_answer": retrieval.get("must_answer")}, parts)
     return _normalize_text(" ".join(parts))
 
 

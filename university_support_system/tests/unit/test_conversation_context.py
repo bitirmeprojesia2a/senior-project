@@ -18,6 +18,7 @@ from src.db.conversation_context import (
     ConversationTurnData,
     _filter_source_refs_for_topic,
 )
+from src.db.schemas import RAGSource
 
 pytestmark = pytest.mark.followup
 
@@ -97,6 +98,24 @@ def test_source_hint_filter_preserves_unknown_topic_refs():
     refs = ["fakulte_duyuru_2026.pdf", "bolum_web_sayfasi.html"]
 
     assert _filter_source_refs_for_topic(refs, topic="Duyurular") == refs
+
+
+def test_extract_source_refs_prefers_versioned_announcement_reference():
+    refs = ConversationContextService._extract_source_refs(
+        [
+            RAGSource(
+                content="Duyuru icerigi",
+                score=1.0,
+                metadata={
+                    "record_type": "announcement",
+                    "source_ref": "announcement:42:abcdef123456",
+                    "title": "CAP Basvuru Duyurusu",
+                },
+            )
+        ]
+    )
+
+    assert refs == ["announcement:42:abcdef123456"]
 
 
 @pytest.mark.asyncio

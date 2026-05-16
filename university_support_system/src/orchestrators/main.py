@@ -32,7 +32,10 @@ from src.core.contract_answer_policy import build_contract_answer_plan, render_c
 from src.core.messages import CONTACT_SUGGESTION
 from src.core.profiling import get_current_profiler, profile_stage
 from src.core.constants import ConfidenceLevel, Department, RoutingStrategy, TaskType
-from src.core.decision_authority import build_resolved_decision_metadata
+from src.core.decision_authority import (
+    build_resolved_decision_metadata,
+    build_runtime_authority_metadata,
+)
 from src.core.source_ownership import (
     OWNER_ACADEMIC_CALENDAR,
     OWNER_INTERNATIONAL_POLICY,
@@ -797,6 +800,11 @@ class MainOrchestrator:
                         decision_contract_payload=decision_contract_payload,
                         stage="announcement_short_circuit",
                     )
+                    runtime_authority_payload = build_runtime_authority_metadata(
+                        resolved_decision_payload=resolved_decision_payload,
+                        source_owner_payload=source_owner_payload,
+                        decision_contract_payload=decision_contract_payload,
+                    )
                     with profile_stage("main.announcement_short_circuit"):
                         with profile_stage("main.telemetry.create_query_log"):
                             query_log_id = await self.telemetry_service.create_query_log(
@@ -824,6 +832,7 @@ class MainOrchestrator:
                             limit=planner_limit,
                             decision_contract=decision_contract_payload,
                             resolved_decision=resolved_decision_payload,
+                            runtime_authority=runtime_authority_payload,
                             trace_metadata=trace,
                         )
                     if announcement_user_response.answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:
@@ -955,6 +964,11 @@ class MainOrchestrator:
                         decision_contract_payload=decision_contract_payload,
                         stage="announcement_short_circuit",
                     )
+                    runtime_authority_payload = build_runtime_authority_metadata(
+                        resolved_decision_payload=resolved_decision_payload,
+                        source_owner_payload=source_owner_payload,
+                        decision_contract_payload=decision_contract_payload,
+                    )
                     with profile_stage("main.announcement_short_circuit"):
                         announcement_user_response = await build_announcement_response(
                             announcement_agent=self.announcement_agent,
@@ -976,6 +990,7 @@ class MainOrchestrator:
                             ),
                             decision_contract=decision_contract_payload,
                             resolved_decision=resolved_decision_payload,
+                            runtime_authority=runtime_authority_payload,
                             trace_metadata=trace,
                         )
                     if announcement_user_response.answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:
@@ -1294,8 +1309,15 @@ class MainOrchestrator:
                     stage="department_dispatch",
                 )
                 metadata["resolved_decision"] = resolved_decision_payload
+                runtime_authority_payload = build_runtime_authority_metadata(
+                    resolved_decision_payload=resolved_decision_payload,
+                    source_owner_payload=source_owner_payload,
+                    decision_contract_payload=decision_contract_payload,
+                )
+                metadata["runtime_authority"] = runtime_authority_payload
                 if profiler is not None:
                     profiler.set_attribute("resolved_decision", resolved_decision_payload)
+                    profiler.set_attribute("runtime_authority", runtime_authority_payload)
 
                 with profile_stage("main.dispatch_departments"):
                     department_responses = await dispatch_to_departments(
@@ -2822,6 +2844,11 @@ class MainOrchestrator:
             decision_contract_payload=decision_contract_payload,
             stage="event_short_circuit",
         )
+        runtime_authority_payload = build_runtime_authority_metadata(
+            resolved_decision_payload=resolved_decision_payload,
+            source_owner_payload=source_owner_payload,
+            decision_contract_payload=decision_contract_payload,
+        )
         planner_faculty = self._capability_param_text(capability_params, "faculty")
         planner_unit_name = self._capability_param_text(capability_params, "unit_name")
         planner_limit = self._capability_param_int(
@@ -2858,6 +2885,7 @@ class MainOrchestrator:
                 limit=planner_limit or 5,
                 decision_contract=decision_contract_payload,
                 resolved_decision=resolved_decision_payload,
+                runtime_authority=runtime_authority_payload,
                 trace_metadata=trace_metadata,
             )
             event_user_response = await build_event_response(
@@ -2946,6 +2974,11 @@ class MainOrchestrator:
             decision_contract_payload=decision_contract_payload,
             stage="announcement_short_circuit",
         )
+        runtime_authority_payload = build_runtime_authority_metadata(
+            resolved_decision_payload=resolved_decision_payload,
+            source_owner_payload=source_owner_payload,
+            decision_contract_payload=decision_contract_payload,
+        )
         planner_faculty = self._capability_param_text(capability_params, "faculty")
         planner_unit_name = self._capability_param_text(capability_params, "unit_name")
         planner_limit = self._capability_param_int(
@@ -2988,6 +3021,7 @@ class MainOrchestrator:
                 limit=planner_limit,
                 decision_contract=decision_contract_payload,
                 resolved_decision=resolved_decision_payload,
+                runtime_authority=runtime_authority_payload,
                 trace_metadata=trace_metadata,
             )
         if announcement_user_response.answer == TEMPORARY_SYNTHESIS_FAILURE_ANSWER:

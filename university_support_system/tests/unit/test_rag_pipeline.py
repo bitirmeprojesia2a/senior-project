@@ -339,6 +339,27 @@ class TestTextChunker:
         assert "CAP basvurusu" in chunks[0].content
         assert "Yandal basvurusunda" in chunks[1].content
 
+    def test_parent_child_metadata_groups_long_logical_section(self):
+        chunker = TextChunker(
+            chunk_size=90,
+            chunk_overlap=0,
+            parent_child_enabled=True,
+            parent_chunk_size=1000,
+        )
+        text = (
+            "MADDE 7 - Basvuru kosullari.\n"
+            + "Basvuru sartlari, belgeler ve teslim sureci bu maddede aciklanir. " * 8
+        )
+
+        chunks = chunker.split_text(text, metadata={"source": "yonerge.txt"})
+
+        assert len(chunks) > 1
+        parent_ids = {chunk.metadata.get("parent_id") for chunk in chunks}
+        assert len(parent_ids) == 1
+        assert all(chunk.metadata["chunking_strategy"] == "parent_child_v1" for chunk in chunks)
+        assert [chunk.metadata["parent_child_index"] for chunk in chunks] == list(range(len(chunks)))
+        assert all(chunk.metadata["parent_child_count"] == len(chunks) for chunk in chunks)
+
     def test_get_stats(self):
         """Chunk istatistikleri doğru hesaplanır."""
         chunker = TextChunker(chunk_size=100, chunk_overlap=10)

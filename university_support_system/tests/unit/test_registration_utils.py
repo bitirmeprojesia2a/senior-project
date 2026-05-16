@@ -4,6 +4,7 @@ from src.agents.student.registration_utils import (
     filter_registration_answer_results,
     is_payment_debt_course_registration_query,
 )
+from src.core.text_normalization import normalize_text
 
 
 def test_payment_debt_course_registration_typo_is_normalized():
@@ -13,10 +14,27 @@ def test_payment_debt_course_registration_typo_is_normalized():
     answer = build_payment_debt_course_registration_answer(query)
 
     assert answer is not None
-    assert answer.startswith("Hayir.")
-    assert "ders kaydi" in answer
-    assert "yaptiramaz" in answer
-    assert "Turk ogrenci misiniz" not in answer
+    normalized_answer = normalize_text(answer)
+    assert normalized_answer.startswith("hayir.")
+    assert "ders kaydi" in normalized_answer
+    assert "yaptiramaz" in normalized_answer
+    assert "turk ogrenci misiniz" not in normalized_answer
+
+
+def test_payment_debt_rule_does_not_catch_after_payment_process_query():
+    query = (
+        "Kayit yenileme doneminde harc ucretimi yatirdiktan sonra "
+        "ders kaydini nasil yapacagim, danisman onay sureci nasil isliyor?"
+    )
+
+    assert is_payment_debt_course_registration_query(query) is False
+    assert build_payment_debt_course_registration_answer(query) is None
+
+
+def test_payment_debt_rule_handles_unpaid_fee_without_borc_word():
+    query = "Katki payini odemeden ders kaydi yapabilir miyim?"
+
+    assert is_payment_debt_course_registration_query(query) is True
 
 
 def test_summer_school_filter_drops_unrelated_dental_sources_when_policy_source_exists():

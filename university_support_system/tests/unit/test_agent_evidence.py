@@ -194,7 +194,7 @@ def test_specialist_agent_builds_evidence_packet_from_results():
                 "content": "MADDE 17 - Devam kosulu teorik derslerde yuzde 70, uygulamalarda yuzde 80 olarak uygulanir.",
                 "source": "yonetmelik.pdf",
                 "score": 0.88,
-                "metadata": {"score_type": "reranker"},
+                "metadata": {"score_type": "reranker", "chunk_index": 4},
             }
         ],
         generation_mode="rag+llm",
@@ -211,6 +211,9 @@ def test_specialist_agent_builds_evidence_packet_from_results():
     assert response.metadata["final_answer_owner"] == "main_orchestrator"
     assert packet["confidence"] == "high"
     assert packet["selected_sources"][0]["source"] == "yonetmelik.pdf"
+    assert packet["selected_sources"][0]["diagnostics"]["rank"] == 1
+    assert packet["selected_sources"][0]["diagnostics"]["chunk"]["chunk_index"] == 4
+    assert packet["selected_sources"][0]["diagnostics"]["retrieval"]["score_type"] == "reranker"
     assert packet["facts"]
 
 
@@ -261,6 +264,15 @@ class _FakeRetriever:
         ]
 
 
+class _CapturingRetriever(_FakeRetriever):
+    def __init__(self):
+        self.calls = []
+
+    def search(self, *args, **kwargs):
+        self.calls.append({"args": args, "kwargs": kwargs})
+        return super().search(*args, **kwargs)
+
+
 @pytest.mark.asyncio
 async def test_specialist_agent_evidence_packet_mode_skips_llm_generation():
     llm_service = AsyncMock()
@@ -294,6 +306,37 @@ async def test_specialist_agent_evidence_packet_mode_skips_llm_generation():
     assert response.metadata["final_answer_owner"] == "main_orchestrator"
     assert response.metadata["specialist_response_mode"] == "evidence_packet"
     assert response.metadata["evidence_packet"]["selected_sources"]
+
+
+@pytest.mark.asyncio
+async def test_specialist_agent_uses_explicit_department_as_retrieval_scope():
+    retriever = _CapturingRetriever()
+    agent = BaseSpecialistAgent(
+        AgentDefinition(
+            agent_id="test_agent",
+            name="Test Agent",
+            department=Department.STUDENT_AFFAIRS,
+            description="test",
+            task_types=(TaskType.PROCEDURE_QUERY,),
+            examples=(),
+            tags=(),
+        ),
+        llm_service=AsyncMock(),
+    )
+    agent._get_retriever = lambda: retriever  # type: ignore[method-assign]
+
+    await agent.handle_department_task(
+        SimpleNamespace(
+            metadata={
+                "query_text": "Bilgisayar Muhendisligi staj belgesi nasil teslim edilir?",
+                "final_answer_owner": "main_orchestrator",
+                "specialist_response_mode": "evidence_packet",
+            }
+        )
+    )
+
+    assert retriever.calls
+    assert retriever.calls[0]["kwargs"]["student_department"] == "Bilgisayar Muhendisligi"
 
 
 @pytest.mark.asyncio

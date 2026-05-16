@@ -82,6 +82,34 @@ def test_question_cache_invalidate_single_key():
     assert cache.get("q2").answer == "B"
 
 
+def test_question_cache_evicts_oldest_when_max_entries_exceeded(monkeypatch):
+    monkeypatch.setattr(settings.cache, "redis_question_cache_enabled", False)
+    cache = QuestionCache(ttl_seconds=300, enabled=True, max_entries=2)
+
+    cache.put("q1", _response("A"))
+    cache.put("q2", _response("B"))
+    cache.put("q3", _response("C"))
+
+    assert cache.get("q1") is None
+    assert cache.get("q2").answer == "B"
+    assert cache.get("q3").answer == "C"
+    assert cache.size == 2
+
+
+def test_question_cache_get_marks_entry_recently_used(monkeypatch):
+    monkeypatch.setattr(settings.cache, "redis_question_cache_enabled", False)
+    cache = QuestionCache(ttl_seconds=300, enabled=True, max_entries=2)
+    cache.put("q1", _response("A"))
+    cache.put("q2", _response("B"))
+
+    assert cache.get("q1").answer == "A"
+    cache.put("q3", _response("C"))
+
+    assert cache.get("q1").answer == "A"
+    assert cache.get("q2") is None
+    assert cache.get("q3").answer == "C"
+
+
 def test_build_question_cache_key_includes_context_dimensions():
     key1 = build_question_cache_key(
         query="Ders kaydi ne zaman basliyor?",

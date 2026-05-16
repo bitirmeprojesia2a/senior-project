@@ -408,3 +408,34 @@ def test_source_owner_overrides_task_type_and_keyword_for_finance():
     assert metadata["task_type"]["agent_id"] == "scholarship_agent"
     assert metadata["legacy_keyword"]["agent_id"] == "scholarship_agent"
     assert metadata["legacy_keyword"]["matches_selected"] is False
+
+
+def test_runtime_authority_overrides_legacy_source_owner_shadow_for_finance():
+    orchestrator = _finance_orchestrator()
+
+    decision = orchestrator._select_agent_decision(
+        TaskType.SCHOLARSHIP_QUERY,
+        "Burs uygunluk bilgisini ogrenebilir miyim?",
+        metadata={
+            "source_owner": {"primary": "student_affairs_policy"},
+            "decision_contract": {
+                "contract": {
+                    "source_owner": {"primary": "student_affairs_policy"},
+                    "capabilities": {"selected": "student_affairs.policy_lookup"},
+                }
+            },
+            "runtime_authority": {
+                "schema": "omu.runtime_authority.v1",
+                "mode": "active",
+                "source_owner": "tuition_fee_catalog",
+                "capability": "finance.tuition_fee",
+            },
+        },
+    )
+
+    metadata = decision.to_metadata()
+    assert decision.agent.agent_id == "tuition_agent"
+    assert metadata["selected_by"] == "contract"
+    assert metadata["task_type"]["agent_id"] == "scholarship_agent"
+    assert metadata["legacy_keyword"]["agent_id"] == "scholarship_agent"
+    assert metadata["legacy_keyword"]["matches_selected"] is False

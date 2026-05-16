@@ -9,6 +9,7 @@ from src.db.announcements import (
     AnnouncementRecord,
     _detect_faculty_scope,
     _detect_unit_scope,
+    build_announcement_source_ref,
     fetch_relevant_announcements,
 )
 
@@ -62,17 +63,26 @@ async def search(params: dict[str, Any]) -> ExecutionResult:
 
 
 def _record_to_dict(item: AnnouncementRecord) -> dict[str, Any]:
+    source_ref = build_announcement_source_ref(
+        announcement_id=item.id,
+        content_hash=item.content_hash,
+        updated_at=item.updated_at,
+    )
     return {
         "id": item.id,
+        "source_ref": source_ref,
+        "cache_version": source_ref,
         "title": item.title,
         "display_summary": item.display_summary,
         "summary": item.summary,
         "original_text": item.original_text,
+        "content_hash": item.content_hash,
         "source_url": item.source_url,
         "faculty": item.faculty,
         "unit_name": item.unit_name,
         "department": item.department,
         "published_at": item.published_at.isoformat() if item.published_at else None,
+        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         "links": [
             {"label": link.label, "url": link.url, "link_type": link.link_type}
             for link in item.links

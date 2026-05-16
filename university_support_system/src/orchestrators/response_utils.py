@@ -974,14 +974,36 @@ def append_generation_summary(
     if not lines:
         return answer
         
-    # Append agent pipeline tracking
+    # Append agent execution tracking. This is display-only metadata.
     if routing_strategy:
-        lines.append(f"- Routing: {routing_strategy}")
+        lines.append(f"- Çalışma biçimi: {_format_routing_strategy_label(routing_strategy)}")
     if agents_involved:
-        agents_str = " -> ".join(agents_involved)
-        lines.append(f"- Pipeline: {agents_str}")
+        lines.append(f"- Ajan akışı: {_format_agent_flow(routing_strategy, agents_involved)}")
 
     return f"{answer.rstrip()}\n\nÜretim Türü:\n{chr(10).join(lines)}"
+
+
+def _format_routing_strategy_label(routing_strategy: str | None) -> str:
+    normalized = str(routing_strategy or "").strip().lower()
+    labels = {
+        "parallel": "Paralel",
+        "direct": "Doğrudan",
+        "clarification": "Netleştirme",
+        "fallback": "Geri dönüş",
+    }
+    return labels.get(normalized, str(routing_strategy or "").strip() or "Bilinmiyor")
+
+
+def _format_agent_flow(routing_strategy: str | None, agents_involved: list[str]) -> str:
+    agents = [str(agent).strip() for agent in agents_involved if str(agent).strip()]
+    if not agents:
+        return "Bilinmiyor"
+    normalized_strategy = str(routing_strategy or "").strip().lower()
+    if normalized_strategy == "parallel" and len(agents) > 1:
+        if agents[-1] == "orchestrator":
+            return f"{' + '.join(agents[:-1])} -> orchestrator"
+        return " + ".join(agents)
+    return " -> ".join(agents)
 
 
 def append_source_summary_for_sources(answer: str, sources: list[RAGSource]) -> str:

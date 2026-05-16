@@ -20,7 +20,9 @@ from src.rag.retriever import (
     OFF_TOPIC_PENALTY,
     HybridRetriever,
     _QueryCache,
+    _apply_department_metadata_boost,
     _extract_relevant_faq_block,
+    _apply_conversation_source_hints,
     _apply_source_relevance,
     _detect_query_topic,
     _select_reranker_query,
@@ -519,6 +521,32 @@ class TestQueryCache:
         assert cache.get("q1::5")[0]["score"] == 0.9
         assert cache.get("q2::5")[0]["score"] == 0.7
 
+    def test_evicts_oldest_entry_when_max_entries_exceeded(self, monkeypatch):
+        monkeypatch.setattr(settings.cache, "redis_retriever_query_cache_enabled", False)
+        cache = _QueryCache(ttl=300, max_entries=2)
+
+        cache.put("q1", [{"score": 0.9}])
+        cache.put("q2", [{"score": 0.7}])
+        cache.put("q3", [{"score": 0.5}])
+
+        assert cache.get("q1") is None
+        assert cache.get("q2")[0]["score"] == 0.7
+        assert cache.get("q3")[0]["score"] == 0.5
+        assert cache.size == 2
+
+    def test_get_marks_entry_recently_used(self, monkeypatch):
+        monkeypatch.setattr(settings.cache, "redis_retriever_query_cache_enabled", False)
+        cache = _QueryCache(ttl=300, max_entries=2)
+        cache.put("q1", [{"score": 0.9}])
+        cache.put("q2", [{"score": 0.7}])
+
+        assert cache.get("q1")[0]["score"] == 0.9
+        cache.put("q3", [{"score": 0.5}])
+
+        assert cache.get("q1")[0]["score"] == 0.9
+        assert cache.get("q2") is None
+        assert cache.get("q3")[0]["score"] == 0.5
+
     def test_disabled_cache_is_noop(self):
         cache = _QueryCache(ttl=300, enabled=False)
         cache.put("q1", [{"score": 0.9}])
@@ -604,9 +632,26 @@ class TestHybridRetrieverDepartmentSearch:
         retriever.query_preprocessor.detect_query_type.return_value = "general"
         retriever.reranker = MagicMock()
         retriever.reranker.rerank.side_effect = lambda query, candidates, top_k: candidates[:top_k]
-        retriever._cache = _QueryCache(ttl=300)
+        retriever._cache = _QueryCache(ttl=300, enabled=False)
         retriever._BM25_DOCUMENT_CACHE = {}
         return retriever
+
+    def test_bm25_resource_cache_put_evicts_oldest_entry(self):
+        cache = {}
+
+        HybridRetriever._resource_cache_put(cache, "a", [Document(page_content="a")], max_entries=2, label="documents")
+        HybridRetriever._resource_cache_put(cache, "b", [Document(page_content="b")], max_entries=2, label="documents")
+        HybridRetriever._resource_cache_put(cache, "c", [Document(page_content="c")], max_entries=2, label="documents")
+
+        assert list(cache) == ["b", "c"]
+
+    def test_bm25_resource_cache_get_marks_entry_recently_used(self):
+        cache = {"a": 1, "b": 2}
+
+        assert HybridRetriever._resource_cache_get(cache, "a") == 1
+        HybridRetriever._resource_cache_put(cache, "c", 3, max_entries=2, label="retrievers")
+
+        assert list(cache) == ["a", "c"]
 
     def test_search_uses_only_explicit_department_collection(self):
         retriever = self._make_retriever()
@@ -652,6 +697,152 @@ class TestHybridRetrieverDepartmentSearch:
             call("student_affairs_docs", "Belirsiz bir sorgu"),
             call("academic_programs_docs", "Belirsiz bir sorgu"),
             call("finance_docs", "Belirsiz bir sorgu"),
+        ]
+
+    def test_conversation_source_hint_ignores_short_substring_match(self):
+        results = [
+            self._make_candidate("not_ortalamasi_yonergesi.pdf", score=0.5),
+            self._make_candidate("harc_bilgisi.pdf", score=0.49),
+        ]
+
+        adjusted = _apply_conversation_source_hints(
+            results,
+            source_hints=["not"],
+            topic_hint=None,
+        )
+
+        assert [item["score"] for item in adjusted] == [0.5, 0.49]
+
+    def test_conversation_source_hint_boosts_concrete_source_name(self):
+        results = [
+            self._make_candidate("yonerge_cift_anadal_yandal.pdf", score=0.5),
+            self._make_candidate("harc_bilgisi.pdf", score=0.49),
+        ]
+
+        adjusted = _apply_conversation_source_hints(
+            results,
+            source_hints=["yonerge_cift_anadal_yandal.pdf"],
+            topic_hint=None,
+        )
+
+        assert adjusted[0]["score"] == 0.58
+        assert adjusted[1]["score"] == 0.49
+
+    def test_department_metadata_boost_matches_underscored_department_code(self):
+        results = [
+            {
+                **self._make_candidate("bilgisayar_staj_esaslari.pdf", score=0.41),
+                "metadata": {
+                    "source": "bilgisayar_staj_esaslari.pdf",
+                    "bolum": "bilgisayar_muhendisligi",
+                    "bolum_adi": "Bilgisayar Muhendisligi",
+                },
+            },
+            {
+                **self._make_candidate("genel_staj_yonergesi.pdf", score=0.42),
+                "metadata": {
+                    "source": "genel_staj_yonergesi.pdf",
+                    "bolum": "genel",
+                    "bolum_adi": "Genel",
+                },
+            },
+        ]
+
+        adjusted = _apply_department_metadata_boost(results, "Bilgisayar Muhendisligi")
+
+        assert adjusted[0]["source"] == "bilgisayar_staj_esaslari.pdf"
+        assert adjusted[0]["score"] > adjusted[1]["score"]
+
+    def test_search_adds_department_scoped_recall_from_academic_documents(self):
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._search_collection_candidates = MagicMock(
+            return_value=[self._make_candidate("genel_staj_yonergesi.pdf", score=0.65)]
+        )
+        retriever._BM25_DOCUMENT_CACHE["student_affairs_docs"] = []
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content=(
+                    "Bilgisayar Muhendisligi staj basvuru belgeleri staj komisyonuna "
+                    "teslim edilir. Staj defteri ve zorunlu staj formu gerekir."
+                ),
+                metadata={
+                    "source": "bilgisayar_staj_esaslari.pdf",
+                    "category": "staj",
+                    "bolum": "bilgisayar_muhendisligi",
+                    "bolum_adi": "Bilgisayar Muhendisligi",
+                    "chunk_index": 2,
+                },
+            )
+        ]
+
+        results = HybridRetriever.search(
+            retriever,
+            "Bilgisayar Muhendisligi staj belgeleri nasil teslim edilir?",
+            department=Department.STUDENT_AFFAIRS,
+            student_department="Bilgisayar Muhendisligi",
+        )
+
+        recalled = [
+            item for item in results
+            if item["source"] == "bilgisayar_staj_esaslari.pdf"
+        ]
+        assert recalled
+        assert recalled[0]["metadata"]["department_scoped_recall"] is True
+        assert recalled[0]["metadata"]["department_scoped_recall_student_department"] == "Bilgisayar Muhendisligi"
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("student_affairs_docs", "Bilgisayar Muhendisligi staj belgeleri nasil teslim edilir?")
+        ]
+
+    def test_search_uses_fallback_collections_when_primary_score_is_weak(self, monkeypatch):
+        monkeypatch.setattr(settings.rag, "fallback_primary_score_threshold", 0.2)
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._search_collection_candidates = MagicMock(
+            side_effect=[
+                [self._make_candidate("zayif_ogrenci_isleri.pdf", score=0.08)],
+                [self._make_candidate("guclu_finans_kaynagi.pdf", score=0.72)],
+            ]
+        )
+
+        with patch(
+            "src.rag.retriever._plan_search_departments",
+            return_value=(
+                [Department.STUDENT_AFFAIRS],
+                [Department.FINANCE],
+            ),
+        ):
+            results = HybridRetriever.search(retriever, "Belirsiz dusuk skor sorgu")
+
+        assert [result["source"] for result in results] == [
+            "guclu_finans_kaynagi.pdf",
+            "zayif_ogrenci_isleri.pdf",
+        ]
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("student_affairs_docs", "Belirsiz dusuk skor sorgu"),
+            call("finance_docs", "Belirsiz dusuk skor sorgu"),
+        ]
+
+    def test_search_skips_fallback_collections_when_primary_score_is_strong(self, monkeypatch):
+        monkeypatch.setattr(settings.rag, "fallback_primary_score_threshold", 0.2)
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        retriever._search_collection_candidates = MagicMock(
+            return_value=[self._make_candidate("guclu_ogrenci_isleri.pdf", score=0.65)]
+        )
+
+        with patch(
+            "src.rag.retriever._plan_search_departments",
+            return_value=(
+                [Department.STUDENT_AFFAIRS],
+                [Department.FINANCE],
+            ),
+        ):
+            results = HybridRetriever.search(retriever, "Belirsiz guclu skor sorgu")
+
+        assert [result["source"] for result in results] == ["guclu_ogrenci_isleri.pdf"]
+        assert retriever._search_collection_candidates.call_args_list == [
+            call("student_affairs_docs", "Belirsiz guclu skor sorgu"),
         ]
 
     def test_search_cache_key_depends_on_department_plan(self):
@@ -1027,6 +1218,59 @@ class TestHybridRetrieverDepartmentSearch:
         assert "B klasoru ikinci parca" in enriched[0]["content"]
         assert "A klasoru" not in enriched[0]["content"]
         assert enriched[0]["metadata"]["merged_chunk_count"] == 2
+
+    def test_enrich_results_expands_parent_child_context_and_deduplicates(self, monkeypatch):
+        monkeypatch.setattr(settings.rag, "parent_child_chunking_enabled", True)
+        monkeypatch.setattr(settings.rag, "parent_context_max_chars", 1000)
+        retriever = self._make_retriever()
+        retriever.collection_name = None
+        base_metadata = {
+            "source": "yonerge_parent.pdf",
+            "department": "academic_programs",
+            "parent_id": "yonerge_parent.pdf::parent::0:0:abc123",
+            "parent_child_count": 3,
+        }
+        retriever._BM25_DOCUMENT_CACHE["academic_programs_docs"] = [
+            Document(
+                page_content="Parent ilk parca basvuru kosullarini aciklar.",
+                metadata={**base_metadata, "chunk_index": 1, "parent_child_index": 0},
+            ),
+            Document(
+                page_content="Parent ikinci parca not ortalamasi en az 3,00 der.",
+                metadata={**base_metadata, "chunk_index": 2, "parent_child_index": 1},
+            ),
+            Document(
+                page_content="Parent ucuncu parca ilk yuzde 20 kosulunu anlatir.",
+                metadata={**base_metadata, "chunk_index": 3, "parent_child_index": 2},
+            ),
+        ]
+
+        enriched = HybridRetriever.enrich_results(
+            retriever,
+            [
+                {
+                    "content": "Parent ikinci parca not ortalamasi en az 3,00 der.",
+                    "source": "yonerge_parent.pdf",
+                    "score": 0.71,
+                    "metadata": {**base_metadata, "chunk_index": 2, "parent_child_index": 1},
+                },
+                {
+                    "content": "Parent ucuncu parca ilk yuzde 20 kosulunu anlatir.",
+                    "source": "yonerge_parent.pdf",
+                    "score": 0.84,
+                    "metadata": {**base_metadata, "chunk_index": 3, "parent_child_index": 2},
+                },
+            ],
+            department=Department.ACADEMIC_PROGRAMS,
+        )
+
+        assert len(enriched) == 1
+        assert enriched[0]["score"] == 0.84
+        assert "Parent ilk parca" in enriched[0]["content"]
+        assert "en az 3,00" in enriched[0]["content"]
+        assert "ilk yuzde 20" in enriched[0]["content"]
+        assert enriched[0]["metadata"]["parent_context_expanded"] is True
+        assert enriched[0]["metadata"]["merged_parent_child_indexes"] == "0,1,2"
 
     def test_enrich_results_deduplicates_repeated_expanded_rows(self):
         retriever = self._make_retriever()

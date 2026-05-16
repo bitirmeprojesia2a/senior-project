@@ -15,10 +15,16 @@ from src.db.announcements import (
     AnnouncementRecord,
     _detect_faculty_scope,
     _detect_unit_scope,
+    build_announcement_source_ref,
+    fetch_announcement_by_source_ref,
     fetch_relevant_announcements,
+    parse_announcement_source_ref,
 )
 from src.db.schemas import DepartmentResponse, RAGSource
-from src.llm.prompt_templates import ANNOUNCEMENT_AGENT_SYSTEM_PROMPT
+from src.llm.prompt_templates import (
+    ANNOUNCEMENT_AGENT_SYSTEM_PROMPT,
+    ANNOUNCEMENT_SUMMARY_REFINER_SYSTEM_PROMPT,
+)
 
 
 _ANNOUNCEMENT_SUMMARY_FOLLOW_UP_MARKERS: tuple[str, ...] = (
@@ -101,24 +107,55 @@ class AnnouncementAgent(BaseSpecialistAgent):
             query_text = self._extract_query_from_task(task)
 
         source_refs = self._normalize_source_refs(metadata.get("conversation_source_refs"))
+        summary_requested = self._is_summary_follow_up(query_text)
         summary_source_ref = self._select_source_ref_for_summary_follow_up(
             query_text,
             source_refs,
         )
-        if summary_source_ref:
-            selected_announcements = await self._announcement_fetcher(
-                summary_source_ref,
-                department=self._resolve_department_filter(metadata),
-                faculty=self._normalize_optional_text(metadata.get("faculty")),
-                unit_name=self._normalize_optional_text(metadata.get("unit_name")),
-                limit=1,
-                allow_latest_fallback=False,
-            )
-            if selected_announcements:
-                selected_item = selected_announcements[0]
+        if summary_requested:
+            selected_item: AnnouncementRecord | None = None
+            if summary_source_ref and parse_announcement_source_ref(summary_source_ref) is not None:
+                selected_item = await fetch_announcement_by_source_ref(summary_source_ref)
+                if selected_item is None:
+                    return DepartmentResponse(
+                        department=self.department,
+                        answer=(
+                            "Listedeki duyuru guncellenmis veya artik aktif olmayabilir. "
+                            "Guncel listeyi yenilemek icin 'guncel duyurular neler?' diye sorabilirsiniz."
+                        ),
+                        sources=[],
+                        generation_mode="vt",
+                        success=True,
+                    )
+            elif summary_source_ref:
+                selected_announcements = await self._announcement_fetcher(
+                    summary_source_ref,
+                    department=self._resolve_department_filter(metadata),
+                    faculty=self._normalize_optional_text(metadata.get("faculty")),
+                    unit_name=self._normalize_optional_text(metadata.get("unit_name")),
+                    limit=1,
+                    allow_latest_fallback=False,
+                )
+                if selected_announcements:
+                    selected_item = selected_announcements[0]
+            elif self._looks_like_title_summary_request(query_text):
+                selected_announcements = await self._announcement_fetcher(
+                    query_text,
+                    department=self._resolve_department_filter(metadata),
+                    faculty=self._normalize_optional_text(metadata.get("faculty")),
+                    unit_name=self._normalize_optional_text(metadata.get("unit_name")),
+                    limit=1,
+                    allow_latest_fallback=False,
+                )
+                if selected_announcements:
+                    selected_item = selected_announcements[0]
+            if selected_item is not None:
                 return DepartmentResponse(
                     department=self.department,
-                    answer=self._format_single_announcement_summary(selected_item),
+                    answer=await self._format_single_announcement_summary(
+                        selected_item,
+                        llm_profile=self._normalize_optional_text(metadata.get("llm_profile")),
+                    ),
                     sources=[self._build_source(selected_item)],
                     generation_mode="vt",
                     success=True,
@@ -251,12 +288,22 @@ class AnnouncementAgent(BaseSpecialistAgent):
 
         if has_more:
             lines.append("   ... ve daha fazla duyuru var. Tümünü görmek için ilgili birim sayfasını ziyaret edin.")
-        lines.append('Listedeki bir duyuru için "2. duyuruyu özetle" gibi yazabilirsiniz.')
+        lines.append(
+            'Bir duyurunun ozetini almak icin numarasini ya da basligini yazabilirsiniz: '
+            '"2. duyuruyu ozetle" veya "CAP basvuru duyurusunu ozetle".'
+        )
         return "\n".join(lines)
 
-    def _format_single_announcement_summary(self, item: AnnouncementRecord) -> str:
+    async def _format_single_announcement_summary(
+        self,
+        item: AnnouncementRecord,
+        *,
+        llm_profile: str | None = None,
+    ) -> str:
+        llm_summary = await self._try_generate_llm_summary(item, llm_profile=llm_profile)
         summary = (
-            item.display_summary
+            llm_summary
+            or item.display_summary
             or item.summary
             or item.original_text
             or "Özet bilgisi bulunmuyor."
@@ -275,6 +322,62 @@ class AnnouncementAgent(BaseSpecialistAgent):
             lines.append(f"Ek bağlantı: {link.label} - {link.url}")
         return "\n".join(lines)
 
+    async def _try_generate_llm_summary(
+        self,
+        item: AnnouncementRecord,
+        *,
+        llm_profile: str | None = None,
+    ) -> str | None:
+        if not self._should_use_llm_summary(item):
+            return None
+        generator = getattr(self.llm_service, "generate", None)
+        if generator is None:
+            return None
+
+        body = (item.original_text or item.summary or item.display_summary or "").strip()
+        if len(body) > 3500:
+            body = f"{body[:3500].rstrip()}..."
+        prompt = "\n".join(
+            [
+                f"Duyuru basligi: {item.title}",
+                f"Yayin tarihi: {_as_aware_utc(item.published_at).date().isoformat() if item.published_at else 'Belirtilmemis'}",
+                "Duyuru metni:",
+                body,
+            ]
+        )
+        try:
+            generated = await generator(
+                prompt,
+                system=ANNOUNCEMENT_SUMMARY_REFINER_SYSTEM_PROMPT,
+                model_role="final_refinement",
+                llm_profile=llm_profile,
+            )
+        except Exception:
+            return None
+
+        cleaned = " ".join(str(generated or "").split()).strip()
+        if not cleaned:
+            return None
+        if len(cleaned) > 1000:
+            cleaned = f"{cleaned[:997].rstrip()}..."
+        return cleaned
+
+    def _should_use_llm_summary(self, item: AnnouncementRecord) -> bool:
+        original = " ".join(str(item.original_text or "").split())
+        if len(original) < 320:
+            return False
+        existing = " ".join(str(item.display_summary or item.summary or "").split())
+        if not existing:
+            return True
+        return normalize_text(original) != normalize_text(existing)
+
+    def _is_summary_follow_up(self, query_text: str) -> bool:
+        normalized_query = normalize_text(query_text)
+        return contains_any_normalized(
+            normalized_query,
+            _ANNOUNCEMENT_SUMMARY_FOLLOW_UP_MARKERS,
+        )
+
     def _select_source_ref_for_summary_follow_up(
         self,
         query_text: str,
@@ -289,10 +392,58 @@ class AnnouncementAgent(BaseSpecialistAgent):
 
         selected_index = self._extract_ordinal_index(normalized_query)
         if selected_index is None:
+            if self._looks_like_title_summary_request(normalized_query):
+                return None
             selected_index = 0
         if selected_index < 0 or selected_index >= len(source_refs):
             return None
         return source_refs[selected_index]
+
+    def _looks_like_title_summary_request(self, query_text: str) -> bool:
+        normalized_query = normalize_text(query_text)
+        if not contains_any_normalized(
+            normalized_query,
+            _ANNOUNCEMENT_SUMMARY_FOLLOW_UP_MARKERS,
+        ):
+            return False
+        tokens = {
+            token.rstrip(".")
+            for token in re.findall(
+                r"\b\d+\.?\b|[a-zçğıöşü]+",
+                normalized_query,
+                flags=re.IGNORECASE,
+            )
+        }
+        ignored = set(_ANNOUNCEMENT_ORDINAL_INDEXES)
+        ignored.update(
+            {
+                "baslik",
+                "basligi",
+                "detay",
+                "detayi",
+                "devami",
+                "duyuru",
+                "duyurular",
+                "duyurulari",
+                "duyurunun",
+                "duyurusu",
+                "duyurusunu",
+                "duyuruyu",
+                "haber",
+                "haberi",
+                "icerik",
+                "ilan",
+                "ilani",
+                "link",
+                "linki",
+                "numara",
+                "numarasi",
+                "ozet",
+                "ozeti",
+                "ozetle",
+            }
+        )
+        return bool(tokens - ignored)
 
     def _extract_ordinal_index(self, normalized_query: str) -> int | None:
         for token in re.findall(r"\b\d+\.?\b|[a-zçğıöşü]+", normalized_query, flags=re.IGNORECASE):
@@ -312,12 +463,22 @@ class AnnouncementAgent(BaseSpecialistAgent):
         return refs[:5]
 
     def _build_source(self, item: AnnouncementRecord) -> RAGSource:
+        content_hash = getattr(item, "content_hash", None)
+        updated_at = getattr(item, "updated_at", None)
+        source_ref = build_announcement_source_ref(
+            announcement_id=item.id,
+            content_hash=content_hash,
+            updated_at=updated_at,
+        )
         return RAGSource(
             content=item.summary or item.original_text or item.title,
             score=1.0,
             metadata={
                 "record_type": "announcement",
                 "announcement_id": item.id,
+                "source_ref": source_ref,
+                "cache_version": source_ref,
+                "content_hash": content_hash,
                 "title": item.title,
                 "display_summary": item.display_summary,
                 "source_url": item.source_url,
@@ -333,5 +494,6 @@ class AnnouncementAgent(BaseSpecialistAgent):
                 "faculty": item.faculty,
                 "department": item.department,
                 "published_at": item.published_at.isoformat() if item.published_at else None,
+                "updated_at": updated_at.isoformat() if updated_at else None,
             },
         )

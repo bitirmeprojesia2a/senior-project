@@ -5,6 +5,7 @@ from src.agents.academic.curriculum_utils import (
     extract_curriculum_semester,
     infer_department_from_query,
     is_course_list_query,
+    is_prerequisite_query,
 )
 from src.core.text_normalization import normalize_text
 
@@ -58,3 +59,10 @@ def test_extract_schedule_groups_maps_curriculum_semester_to_class_group():
 
     assert "4. SINIF" in groups
     assert "IV" in groups
+
+
+def test_prerequisite_query_accepts_natural_language_course_dependency_question():
+    assert is_prerequisite_query(
+        normalize_text("Veri Yapilari dersini alabilmek icin hangi dersi almam gerekiyor?")
+    )
+    assert not is_prerequisite_query(normalize_text("Yaz okulunda ders alabilmek icin sartlar nelerdir?"))

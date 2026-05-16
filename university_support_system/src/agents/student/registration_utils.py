@@ -171,9 +171,26 @@ _PAYMENT_DEBT_MARKERS: tuple[str, ...] = (
     "borcum",
     "borcu",
     "borclu",
+    "harc borc",
+    "katki payi borc",
+    "ogrenim ucreti borc",
+)
+_PAYMENT_FEE_TERMS: tuple[str, ...] = (
     "harc",
     "katki payi",
     "ogrenim ucreti",
+)
+_PAYMENT_UNPAID_MARKERS: tuple[str, ...] = (
+    "odemedim",
+    "odemediysem",
+    "odemeden",
+    "odemezsem",
+    "odenmemis",
+    "odememis",
+    "yatirmadim",
+    "yatirmadiysam",
+    "yatirmadan",
+    "yatirmazsam",
 )
 
 _COURSE_REGISTRATION_ELIGIBILITY_MARKERS: tuple[str, ...] = (
@@ -181,7 +198,6 @@ _COURSE_REGISTRATION_ELIGIBILITY_MARKERS: tuple[str, ...] = (
     "yaptirabilir",
     "olur mu",
     "miyim",
-    "mi",
     "mumkun mu",
 )
 
@@ -570,13 +586,27 @@ def is_course_registration_process_query(query_text: str) -> bool:
     return has_course_registration and has_process_signal
 
 
+def _has_payment_debt_signal(lowered_query: str) -> bool:
+    if any(marker in lowered_query for marker in _PAYMENT_DEBT_MARKERS):
+        return True
+    has_fee_term = any(marker in lowered_query for marker in _PAYMENT_FEE_TERMS)
+    has_unpaid_signal = any(marker in lowered_query for marker in _PAYMENT_UNPAID_MARKERS)
+    return has_fee_term and has_unpaid_signal
+
+
+def _has_course_registration_eligibility_signal(lowered_query: str) -> bool:
+    if any(marker in lowered_query for marker in _COURSE_REGISTRATION_ELIGIBILITY_MARKERS):
+        return True
+    return re.search(r"\bmi\b|\bmu\b|\bmiyim\b|\bmuyum\b|\bmuyuz\b|\bmiyiz\b", lowered_query) is not None
+
+
 def is_payment_debt_course_registration_query(query_text: str) -> bool:
     lowered = normalize_registration_text(query_text)
     # Common typo in Slack messages: "borcum bar" should still behave as "borcum var".
     lowered = lowered.replace("borcum bar", "borcum var")
-    has_debt = any(marker in lowered for marker in _PAYMENT_DEBT_MARKERS)
+    has_debt = _has_payment_debt_signal(lowered)
     has_course_registration = any(marker in lowered for marker in _COURSE_REGISTRATION_QUERY_MARKERS)
-    has_eligibility = any(marker in lowered for marker in _COURSE_REGISTRATION_ELIGIBILITY_MARKERS)
+    has_eligibility = _has_course_registration_eligibility_signal(lowered)
     return has_debt and has_course_registration and has_eligibility
 
 
@@ -584,10 +614,10 @@ def build_payment_debt_course_registration_answer(query_text: str) -> str | None
     if not is_payment_debt_course_registration_query(query_text):
         return None
     return (
-        "Hayir. Katki payi veya ogrenim ucretini odemeyen ogrenciler ders kaydi/"
-        "kayit yenileme yaptiramaz ve ogrencilik haklarindan yararlanamaz. "
-        "Bu nedenle UBYS'de harc/katki payi borcu gorunuyorsa once odeme islemini "
-        "tamamlayip ardindan ders kaydinizi danisman onayina gondermeniz gerekir."
+        "Hayır. Katkı payı veya öğrenim ücretini ödemeyen öğrenciler ders kaydı/"
+        "kayıt yenileme yaptıramaz ve öğrencilik haklarından yararlanamaz. "
+        "Bu nedenle UBYS'de harç/katkı payı borcu görünüyorsa önce ödeme işlemini "
+        "tamamlayıp ardından ders kaydınızı danışman onayına göndermeniz gerekir."
     )
 
 

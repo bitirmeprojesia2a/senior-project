@@ -733,7 +733,9 @@ async def test_student_affairs_factory_prefers_registration_agent_for_admin_work
 
 
 @pytest.mark.asyncio
-async def test_main_orchestrator_combines_parallel_department_responses():
+async def test_main_orchestrator_combines_parallel_department_responses(monkeypatch):
+    monkeypatch.setattr(settings.capability_planner, "mode", "off")
+
     router = AsyncMock()
     router.route = AsyncMock(
         return_value=RoutingResult(
@@ -3189,6 +3191,7 @@ async def test_main_orchestrator_normalizes_short_announcement_before_routing(mo
 
 @pytest.mark.asyncio
 async def test_main_orchestrator_short_circuits_event_queries(monkeypatch):
+    monkeypatch.setattr(settings.capability_planner, "mode", "off")
     question_cache.clear()
     question_cache.configure(ttl_seconds=300, enabled=True)
     monkeypatch.setattr(settings.cache, "enabled", True)
@@ -3338,6 +3341,7 @@ async def test_event_gate_params_are_passed_to_existing_agent(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_main_orchestrator_explicit_event_query_uses_conversation_then_llm_route(monkeypatch):
+    monkeypatch.setattr(settings.capability_planner, "mode", "off")
     router = AsyncMock()
     router.route = AsyncMock(
         return_value=RoutingResult(
@@ -3513,6 +3517,7 @@ async def test_main_orchestrator_does_not_store_question_cache_for_parallel_quer
     question_cache.configure(ttl_seconds=300, enabled=True)
     monkeypatch.setattr(settings.cache, "enabled", True)
     monkeypatch.setattr(settings.cache, "question_cache_enabled", True)
+    monkeypatch.setattr(settings.capability_planner, "mode", "off")
 
     router = AsyncMock()
     router.route = AsyncMock(

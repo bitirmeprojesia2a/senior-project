@@ -49,6 +49,24 @@ PREREQUISITE_KEYWORDS = (
     "onsart", "önşart",
 )
 COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
+PREREQUISITE_INTENT_PATTERNS = (
+    "alabilmek icin hangi ders",
+    "almak icin hangi ders",
+    "hangi dersi almam gerek",
+    "hangi dersi almam lazim",
+    "once hangi dersi",
+    "dersten once hangi",
+    "dersi almadan once",
+)
+PREREQUISITE_INTENT_BLOCKERS = (
+    "yaz okulu",
+    "staj",
+    "cap",
+    "cift anadal",
+    "yandal",
+    "basvuru",
+    "kayit",
+)
 DEPARTMENT_CONTEXT_MARKERS = (
     "mufredat",
     "müfredat",
@@ -489,7 +507,11 @@ def wants_specific_schedule_lookup(lowered: str, query_text: str) -> bool:
 
 def is_prerequisite_query(lowered: str) -> bool:
     """Return whether the query asks about prerequisites."""
-    return any(keyword in lowered for keyword in PREREQUISITE_KEYWORDS)
+    if any(keyword in lowered for keyword in PREREQUISITE_KEYWORDS):
+        return True
+    if any(blocker in lowered for blocker in PREREQUISITE_INTENT_BLOCKERS):
+        return False
+    return any(pattern in lowered for pattern in PREREQUISITE_INTENT_PATTERNS)
 
 
 def extract_curriculum_semester(query_text: str) -> int | None:

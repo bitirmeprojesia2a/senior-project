@@ -11,10 +11,14 @@ from src.db.schemas import UserQueryResponse
 from src.slack.service import (
     SlackBotService,
     SlackCommandKind,
+    SlackFileAttachment,
     SlackIncomingMessage,
+    build_help_text,
     build_slack_context_id,
+    build_welcome_text,
     parse_slack_command,
 )
+from src.transcripts import TranscriptProcessor, TranscriptSessionStore
 
 
 def test_parse_slack_command_recognizes_login_verify_logout_and_query():
@@ -27,6 +31,19 @@ def test_parse_slack_command_recognizes_login_verify_logout_and_query():
     query = parse_slack_command("<@U999> EEM214 on kosulu nedir?")
     assert query.kind == SlackCommandKind.QUERY
     assert query.query == "EEM214 on kosulu nedir?"
+
+
+def test_slack_help_and_welcome_text_cover_core_commands_and_transcript():
+    help_text = build_help_text()
+    welcome_text = build_welcome_text(user_mention="<@U123>")
+
+    assert "login 20210001" in help_text
+    assert "verify 20210001 123456" in help_text
+    assert "logout" in help_text
+    assert "Transkript" in help_text
+    assert "güncel duyurular" in help_text
+    assert "<@U123>" in welcome_text
+    assert "help" in welcome_text
 
 
 def test_build_slack_context_id_prefers_thread_ts():
@@ -173,6 +190,49 @@ async def test_slack_service_query_passes_auth_context_to_orchestrator():
     assert orchestrator.last_call["student_department"] == "Bilgisayar Muhendisligi"
     assert orchestrator.last_call["student_type"] == "domestic"
     assert orchestrator.last_call["is_authenticated"] is True
+
+
+@pytest.mark.asyncio
+async def test_slack_service_processes_transcript_upload_and_answers_followup():
+    auth_service = _FakeAuthService()
+    orchestrator = _FakeOrchestrator()
+    service = SlackBotService(
+        orchestrator=orchestrator,
+        auth_service=auth_service,
+        transcript_processor=TranscriptProcessor(),
+        transcript_store=TranscriptSessionStore(),
+    )
+    transcript_text = (
+        "Genel Not Ortalaması 3,12\n"
+        "Toplam AKTS 90\n"
+        "Toplam Kredi 60\n"
+        "BIL101 Programlamaya Giriş 3 5 AA\n"
+        "MAT101 Matematik I 4 6 FF\n"
+    )
+
+    upload_reply = await service.handle_message(
+        SlackIncomingMessage(
+            text="transkriptimi yükledim",
+            user_id="U123",
+            channel_id="D1",
+            ts="100.1",
+            files=(
+                SlackFileAttachment(
+                    name="transkript.txt",
+                    mimetype="text/plain",
+                    content=transcript_text.encode("utf-8"),
+                ),
+            ),
+        )
+    )
+    failed_reply = await service.handle_message(
+        SlackIncomingMessage(text="kaldığım dersler neler?", user_id="U123", channel_id="D1", ts="100.2")
+    )
+
+    assert "Transkript yüklendi" in upload_reply[0]
+    assert "Toplam AKTS: 90" in upload_reply[0]
+    assert "MAT101 Matematik I" in failed_reply[0]
+    assert orchestrator.last_call is None
 
 
 @pytest.mark.asyncio

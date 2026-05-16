@@ -105,6 +105,12 @@ def test_agent_response_to_department_response_preserves_architectural_trace_met
                 "source_owner": "student_affairs_policy",
                 "contract": {"id": "cap_eligibility"},
             },
+            "runtime_authority": {
+                "schema": "omu.runtime_authority.v1",
+                "mode": "active",
+                "source_owner": "student_affairs_policy",
+                "capability": "student_affairs.policy_lookup",
+            },
             "branch_dispatch_gate": {"restored_primary_department": "student_affairs"},
             "specialist_selection": {"selected_agent_id": "registration_agent"},
             "capability_planner": {"action": {"capability": "student_affairs.policy_lookup"}},
@@ -130,6 +136,8 @@ def test_agent_response_to_department_response_preserves_architectural_trace_met
     assert mapped.metadata["source_owner"]["primary"] == "student_affairs_policy"
     assert mapped.metadata["decision_contract"]["contract"]["source_owner"]["primary"] == "student_affairs_policy"
     assert mapped.metadata["resolved_decision"]["source_owner"] == "student_affairs_policy"
+    assert mapped.metadata["runtime_authority"]["mode"] == "active"
+    assert mapped.metadata["runtime_authority"]["source_owner"] == "student_affairs_policy"
     assert mapped.metadata["branch_dispatch_gate"]["restored_primary_department"] == "student_affairs"
     assert mapped.metadata["specialist_selection"]["selected_agent_id"] == "registration_agent"
     assert mapped.metadata["evidence_packet"]["value_arbitration"]["answer_threshold"] == ["3,00"]
@@ -146,6 +154,11 @@ def test_agent_response_task_roundtrip_preserves_evidence_contract_metadata():
             source_owner={"primary": "student_affairs_policy"},
             decision_contract={"contract": {"source_owner": {"primary": "student_affairs_policy"}}},
             resolved_decision={"schema": "omu.resolved_decision.v1", "source_owner": "student_affairs_policy"},
+            runtime_authority={
+                "schema": "omu.runtime_authority.v1",
+                "mode": "active",
+                "source_owner": "student_affairs_policy",
+            },
             branch_dispatch_gate={"kept_departments": ["student_affairs", "academic_programs"]},
             specialist_selection={"selected_agent_id": "registration_agent"},
         )
@@ -179,6 +192,11 @@ def test_agent_response_task_roundtrip_preserves_evidence_contract_metadata():
             "source_owner": {"primary": "student_affairs_policy"},
             "decision_contract": {"contract": {"source_owner": {"primary": "student_affairs_policy"}}},
             "resolved_decision": {"schema": "omu.resolved_decision.v1", "source_owner": "student_affairs_policy"},
+            "runtime_authority": {
+                "schema": "omu.runtime_authority.v1",
+                "mode": "active",
+                "source_owner": "student_affairs_policy",
+            },
             "branch_dispatch_gate": {"restored_primary_department": "student_affairs"},
             "specialist_selection": {"selected_agent_id": "registration_agent"},
         },
@@ -189,6 +207,7 @@ def test_agent_response_task_roundtrip_preserves_evidence_contract_metadata():
     assert extracted is not None
     assert extracted.metadata["source_owner"]["primary"] == "student_affairs_policy"
     assert extracted.metadata["resolved_decision"]["source_owner"] == "student_affairs_policy"
+    assert extracted.metadata["runtime_authority"]["source_owner"] == "student_affairs_policy"
     assert extracted.metadata["specialist_selection"]["selected_agent_id"] == "registration_agent"
     assert extracted.metadata["evidence_packet"]["value_arbitration"]["answer_threshold"] == ["3,00"]
     assert extracted.metadata["answer_validation"]["status"] == "pass"
@@ -415,6 +434,12 @@ def test_http_transport_payload_keeps_a2a_metadata_without_session_secret():
                     "source_owner": {"primary": "student_affairs_policy"},
                 },
             },
+            "runtime_authority": {
+                "schema": "omu.runtime_authority.v1",
+                "mode": "active",
+                "source_owner": "student_affairs_policy",
+                "capability": "student_affairs.policy_lookup",
+            },
             "branch_dispatch_gate": {
                 "schema": "omu.branch_dispatch_gate.v1",
                 "restored_primary_department": "student_affairs",
@@ -433,6 +458,8 @@ def test_http_transport_payload_keeps_a2a_metadata_without_session_secret():
     assert payload["source_owner"]["primary"] == "student_affairs_policy"
     assert payload["decision_contract"]["mode"] == "read_only"
     assert payload["decision_contract"]["contract"]["source_owner"]["primary"] == "student_affairs_policy"
+    assert payload["runtime_authority"]["mode"] == "active"
+    assert payload["runtime_authority"]["source_owner"] == "student_affairs_policy"
     assert payload["branch_dispatch_gate"]["restored_primary_department"] == "student_affairs"
     assert payload["trace_id"] == "trace-http-1"
     assert payload["span_id"] == "span-http-1"
@@ -472,6 +499,12 @@ def test_specialist_transport_payload_keeps_specialist_metadata():
                     "source_owner": {"primary": "tuition_fee_catalog"},
                 },
             },
+            runtime_authority={
+                "schema": "omu.runtime_authority.v1",
+                "mode": "active",
+                "source_owner": "tuition_fee_catalog",
+                "capability": "finance.tuition_fee",
+            },
             branch_dispatch_gate={
                 "schema": "omu.branch_dispatch_gate.v1",
                 "restored_primary_department": "finance",
@@ -504,6 +537,8 @@ def test_specialist_transport_payload_keeps_specialist_metadata():
     assert payload["capability_planner"]["action"]["capability"] == "finance.tuition_fee"
     assert payload["source_owner"]["primary"] == "tuition_fee_catalog"
     assert payload["decision_contract"]["contract"]["capabilities"]["selected"] == "finance.tuition_fee"
+    assert payload["runtime_authority"]["source_owner"] == "tuition_fee_catalog"
+    assert payload["runtime_authority"]["capability"] == "finance.tuition_fee"
     assert payload["branch_dispatch_gate"]["restored_primary_department"] == "finance"
     assert payload["specialist_selection"]["selected_agent_id"] == "tuition_agent"
     assert payload["trace_id"] == "trace-specialist-1"

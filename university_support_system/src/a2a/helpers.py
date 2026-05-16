@@ -70,6 +70,7 @@ class A2AQueryPayload:
     answer_contract: dict[str, Any] | None = None
     decision_contract: dict[str, Any] | None = None
     resolved_decision: dict[str, Any] | None = None
+    runtime_authority: dict[str, Any] | None = None
     branch_dispatch_gate: dict[str, Any] | None = None
     specialist_selection: dict[str, Any] | None = None
     branch_role: str | None = None
@@ -107,6 +108,9 @@ class A2AQueryPayload:
             "answer_contract": dict(self.answer_contract) if self.answer_contract else None,
             "decision_contract": dict(self.decision_contract) if self.decision_contract else None,
             "resolved_decision": dict(self.resolved_decision) if self.resolved_decision else None,
+            "runtime_authority": (
+                dict(self.runtime_authority) if self.runtime_authority else None
+            ),
             "branch_dispatch_gate": (
                 dict(self.branch_dispatch_gate) if self.branch_dispatch_gate else None
             ),

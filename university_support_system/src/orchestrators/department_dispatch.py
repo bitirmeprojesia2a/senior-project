@@ -388,14 +388,19 @@ def _branch_semantic_text(query: str, metadata: dict) -> str:
     action = _as_dict(planner.get("action"))
     for key in ("capability", "intent", "params", "answer_contract", "evidence_contract"):
         _collect_semantic_values(action.get(key), parts)
-    resolved = _as_dict(metadata.get("resolved_decision"))
-    if resolved:
+    authority = _as_dict(metadata.get("runtime_authority"))
+    if authority:
         for key in ("contract", "capability", "source_owner"):
-            _collect_semantic_values(resolved.get(key), parts)
+            _collect_semantic_values(authority.get(key), parts)
     else:
-        contract = _as_dict(_as_dict(metadata.get("decision_contract")).get("contract"))
-        for key in ("intent", "capabilities", "source_owner", "retrieval", "evidence"):
-            _collect_semantic_values(contract.get(key), parts)
+        resolved = _as_dict(metadata.get("resolved_decision"))
+        if resolved:
+            for key in ("contract", "capability", "source_owner"):
+                _collect_semantic_values(resolved.get(key), parts)
+        else:
+            contract = _as_dict(_as_dict(metadata.get("decision_contract")).get("contract"))
+            for key in ("intent", "capabilities", "source_owner", "retrieval", "evidence"):
+                _collect_semantic_values(contract.get(key), parts)
     source_owner = _as_dict(metadata.get("source_owner"))
     _collect_semantic_values(source_owner.get("primary"), parts)
     _collect_semantic_values(metadata.get("policy_facet"), parts)
@@ -403,6 +408,9 @@ def _branch_semantic_text(query: str, metadata: dict) -> str:
 
 
 def _extract_capability(metadata: dict) -> str | None:
+    authority = _as_dict(metadata.get("runtime_authority"))
+    if authority.get("capability"):
+        return _selector_value(authority.get("capability"))
     planner = _as_dict(metadata.get("capability_planner"))
     action = _as_dict(planner.get("action"))
     capability = action.get("capability") or planner.get("capability")
@@ -416,6 +424,9 @@ def _extract_capability(metadata: dict) -> str | None:
 
 
 def _extract_source_owner(metadata: dict) -> str | None:
+    authority = _as_dict(metadata.get("runtime_authority"))
+    if authority.get("source_owner"):
+        return _selector_value(authority.get("source_owner"))
     source_owner = _as_dict(metadata.get("source_owner"))
     owner = source_owner.get("primary")
     if owner:

@@ -535,6 +535,12 @@ def test_agent_service_jsonrpc_message_send_returns_a2a_task(monkeypatch):
             "capability_planner": {"action": {"capability": "finance.tuition_fee"}},
             "source_owner": {"primary": "tuition_fee_catalog"},
             "decision_contract": {"contract": {"source_owner": {"primary": "tuition_fee_catalog"}}},
+            "runtime_authority": {
+                "schema": "omu.runtime_authority.v1",
+                "mode": "active",
+                "source_owner": "tuition_fee_catalog",
+                "capability": "finance.tuition_fee",
+            },
             "branch_dispatch_gate": {"restored_primary_department": "finance"},
         },
     )
@@ -569,6 +575,8 @@ def test_agent_service_jsonrpc_message_send_returns_a2a_task(monkeypatch):
     assert metadata["capability_planner"]["action"]["capability"] == "finance.tuition_fee"
     assert metadata["source_owner"]["primary"] == "tuition_fee_catalog"
     assert metadata["decision_contract"]["contract"]["source_owner"]["primary"] == "tuition_fee_catalog"
+    assert metadata["runtime_authority"]["source_owner"] == "tuition_fee_catalog"
+    assert metadata["runtime_authority"]["capability"] == "finance.tuition_fee"
     assert metadata["branch_dispatch_gate"]["restored_primary_department"] == "finance"
 
 

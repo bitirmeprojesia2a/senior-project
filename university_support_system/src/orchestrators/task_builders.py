@@ -45,6 +45,7 @@ def build_department_request_task(
         policy_facet=metadata.get("policy_facet"),
         decision_contract=metadata.get("decision_contract"),
         resolved_decision=metadata.get("resolved_decision"),
+        runtime_authority=metadata.get("runtime_authority"),
         branch_role=metadata.get("branch_role"),
         retrieval_execution_policy=metadata.get("retrieval_execution_policy"),
         trace_id=metadata.get("trace_id"),
@@ -67,6 +68,7 @@ def build_department_request_task(
         "policy_facet",
         "decision_contract",
         "resolved_decision",
+        "runtime_authority",
         "branch_dispatch_gate",
         "branch_role",
         "retrieval_execution_policy",
@@ -93,6 +95,7 @@ def build_announcement_request_task(
     conversation_source_refs: list[str] | None = None,
     decision_contract: dict | None = None,
     resolved_decision: dict | None = None,
+    runtime_authority: dict | None = None,
     trace_id: str | None = None,
     span_id: str | None = None,
     parent_span_id: str | None = None,
@@ -104,6 +107,7 @@ def build_announcement_request_task(
             routing_reason=routing_reason,
             decision_contract=decision_contract,
             resolved_decision=resolved_decision,
+            runtime_authority=runtime_authority,
             trace_id=trace_id,
             span_id=span_id,
             parent_span_id=parent_span_id,
@@ -121,6 +125,8 @@ def build_announcement_request_task(
         task.metadata["decision_contract"] = dict(decision_contract)
     if resolved_decision:
         task.metadata["resolved_decision"] = dict(resolved_decision)
+    if runtime_authority:
+        task.metadata["runtime_authority"] = dict(runtime_authority)
     return task
 
 
@@ -135,6 +141,7 @@ def build_event_request_task(
     limit: int | None = None,
     decision_contract: dict | None = None,
     resolved_decision: dict | None = None,
+    runtime_authority: dict | None = None,
     trace_id: str | None = None,
     span_id: str | None = None,
     parent_span_id: str | None = None,
@@ -146,6 +153,7 @@ def build_event_request_task(
             routing_reason=routing_reason,
             decision_contract=decision_contract,
             resolved_decision=resolved_decision,
+            runtime_authority=runtime_authority,
             trace_id=trace_id,
             span_id=span_id,
             parent_span_id=parent_span_id,
@@ -163,4 +171,6 @@ def build_event_request_task(
         task.metadata["decision_contract"] = dict(decision_contract)
     if resolved_decision:
         task.metadata["resolved_decision"] = dict(resolved_decision)
+    if runtime_authority:
+        task.metadata["runtime_authority"] = dict(runtime_authority)
     return task

@@ -5,6 +5,7 @@ import logging
 
 from src.core.config import settings
 from src.slack.app import (
+    _extract_file_attachments,
     _is_duplicate_event,
     _log_background_task_result,
     _process_and_reply,
@@ -16,7 +17,11 @@ from src.slack.service import SlackIncomingMessage
 
 
 class _FakeSlackService:
-    async def handle_message(self, message):
+    def __init__(self):
+        self.last_slack_client = None
+
+    async def handle_message(self, message, *, slack_client=None):
+        self.last_slack_client = slack_client
         return [f"ok: {message.text}"]
 
 
@@ -39,7 +44,29 @@ def test_create_slack_app_registers_with_configured_tokens():
 def test_should_ignore_bot_events():
     assert _should_ignore_event({"bot_id": "B123"}) is True
     assert _should_ignore_event({"subtype": "message_changed"}) is True
+    assert _should_ignore_event({"subtype": "file_share"}) is False
     assert _should_ignore_event({"text": "hello"}) is False
+
+
+def test_extract_file_attachments_from_file_share_event():
+    attachments = _extract_file_attachments(
+        {
+            "files": [
+                {
+                    "id": "F1",
+                    "name": "transkript.pdf",
+                    "mimetype": "application/pdf",
+                    "size": "123",
+                    "url_private_download": "https://files.slack.test/F1",
+                }
+            ]
+        }
+    )
+
+    assert len(attachments) == 1
+    assert attachments[0].id == "F1"
+    assert attachments[0].name == "transkript.pdf"
+    assert attachments[0].size == 123
 
 
 def test_duplicate_slack_event_is_ignored_once_seen():
@@ -72,10 +99,11 @@ class _FakeSlackClient:
 
 def test_process_and_reply_posts_generated_messages():
     client = _FakeSlackClient()
+    service = _FakeSlackService()
 
     asyncio.run(
         _process_and_reply(
-            service=_FakeSlackService(),
+            service=service,
             message=SlackIncomingMessage(
                 text="help",
                 user_id="U123",
@@ -103,6 +131,7 @@ def test_process_and_reply_posts_generated_messages():
             "text": "ok: help",
         }
     ]
+    assert service.last_slack_client is client
 
 
 def test_background_task_result_logs_exceptions(caplog):
