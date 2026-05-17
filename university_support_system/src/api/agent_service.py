@@ -177,7 +177,7 @@ def create_agent_service_app(
         await resolved_telemetry_service.ensure_agent(identity)
 
     app = FastAPI(
-        title=f"OMU {resolved_target.display_name} Agent Service",
+        title=f"{settings.institution.short_name_ascii} {resolved_target.display_name} Agent Service",
         version=settings.server.app_version,
         description="Standalone agent service for HTTP A2A dispatch.",
         lifespan=_agent_lifespan,

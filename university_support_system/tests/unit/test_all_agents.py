@@ -39,6 +39,7 @@ from src.agents.student.agents import (
     RegistrationAgent,
     StudentLifeAgent,
 )
+from src.core.answer_contracts import resolve_answer_contract
 from src.core.constants import Department
 from src.core.text_normalization import normalize_text
 
@@ -80,6 +81,26 @@ def test_graduation_akts_evidence_prefers_general_graduation_sources():
     )
 
     assert boosted[1]["score"] > boosted[0]["score"]
+
+
+def test_base_agent_card_uses_institution_homepage(monkeypatch):
+    monkeypatch.setattr(base_module.settings.institution, "homepage_url", "https://abc.example.edu/")
+    agent = BaseSpecialistAgent(
+        base_module.AgentDefinition(
+            agent_id="test_agent",
+            name="Test Agent",
+            department=Department.STUDENT_AFFAIRS,
+            description="Test ajani",
+            task_types=(),
+            examples=(),
+            tags=(),
+        ),
+        llm_service=SimpleNamespace(),
+    )
+
+    card = agent.build_card()
+
+    assert card.url == "https://abc.example.edu/agents/test_agent"
 
 
 # ──────────────────────────────────────────────────────────
@@ -710,6 +731,113 @@ class TestRegistrationAgent:
         assert "guz donemi icin 08-24 eylul 2025" in normalized_answer
         assert "bahar donemi icin 02-15 subat 2026" in normalized_answer
         assert response.generation_mode == "vt"
+        fetcher.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_cap_date_follow_up_uses_contract_calendar_lookup(self):
+        fetcher = AsyncMock(return_value=None)
+        agent = RegistrationAgent(
+            period_fetcher=fetcher,
+            **_agent_kwargs(),
+        )
+        contract = resolve_answer_contract(
+            "Basvuru tarihleri ne peki?",
+            conversation_frame={"policy_facet": "cap"},
+        )
+        assert contract is not None
+
+        response = await agent.handle_task(
+            _task(
+                "Basvuru tarihleri ne peki?",
+                answer_contract=contract.to_metadata(),
+            )
+        )
+
+        assert response.success is True
+        assert response.generation_mode == "vt"
+        normalized_answer = normalize_text(response.answer)
+        assert "01-05 eylul 2025" in normalized_answer
+        assert "08-10 eylul 2025" in normalized_answer
+        fetcher.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_calendar_follow_up_uses_generic_contract_lookup_hint(self):
+        fetcher = AsyncMock(return_value=None)
+        agent = RegistrationAgent(
+            period_fetcher=fetcher,
+            **_agent_kwargs(),
+        )
+
+        response = await agent.handle_task(
+            _task(
+                "Tarihleri ne peki?",
+                answer_contract={
+                    "contract_id": "course_registration_dates",
+                    "calendar_query_prefix": "ders kayit",
+                },
+            )
+        )
+
+        assert response.success is True
+        assert response.generation_mode == "vt"
+        normalized_answer = normalize_text(response.answer)
+        assert "08-24 eylul 2025" in normalized_answer
+        assert "02-15 subat 2026" in normalized_answer
+        fetcher.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_horizontal_transfer_date_follow_up_uses_calendar_contract(self):
+        fetcher = AsyncMock(return_value=None)
+        agent = RegistrationAgent(
+            period_fetcher=fetcher,
+            **_agent_kwargs(),
+        )
+        contract = resolve_answer_contract(
+            "Basvuru tarihleri ne peki?",
+            conversation_frame={"policy_facet": "yatay_gecis"},
+        )
+        assert contract is not None
+
+        response = await agent.handle_task(
+            _task(
+                "Basvuru tarihleri ne peki?",
+                answer_contract=contract.to_metadata(),
+            )
+        )
+
+        assert response.success is True
+        assert response.generation_mode == "vt"
+        normalized_answer = normalize_text(response.answer)
+        assert "01.08.2025" in normalized_answer
+        assert "26.01.2026" in normalized_answer
+        fetcher.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_horizontal_transfer_registration_date_follow_up_uses_calendar_contract(self):
+        fetcher = AsyncMock(return_value=None)
+        agent = RegistrationAgent(
+            period_fetcher=fetcher,
+            **_agent_kwargs(),
+        )
+        contract = resolve_answer_contract(
+            "Kesin kayit tarihleri ne peki?",
+            conversation_frame={"policy_facet": "yatay_gecis"},
+        )
+        assert contract is not None
+
+        response = await agent.handle_task(
+            _task(
+                "Kesin kayit tarihleri ne peki?",
+                answer_contract=contract.to_metadata(),
+            )
+        )
+
+        assert response.success is True
+        assert response.generation_mode == "vt"
+        normalized_answer = normalize_text(response.answer)
+        assert "18.08.2025" in normalized_answer
+        assert "09.02.2026" in normalized_answer
+        assert "01.08.2025" not in normalized_answer
         fetcher.assert_not_awaited()
 
     @pytest.mark.asyncio

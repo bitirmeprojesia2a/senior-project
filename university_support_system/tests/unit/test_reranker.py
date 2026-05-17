@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 import numpy as np
 
 import pytest
+import torch
 
 from src.core.config import settings
 from src.rag.reranker import (
@@ -185,6 +186,18 @@ class TestRerankerInit:
         assert reranker.device == "cpu"
         assert reranker.resolved_device == "cpu"
 
+    def test_bge_calibration_profile_is_registered(self):
+        reranker = CrossEncoderReranker(model_name="BAAI/bge-reranker-v2-m3")
+
+        assert reranker.calibration_shift == 0.0652
+        assert reranker.calibration_scale == 0.5
+
+    def test_turkish_bge_calibration_profile_is_registered(self):
+        reranker = CrossEncoderReranker(model_name="seroe/bge-reranker-v2-m3-turkish-triplet")
+
+        assert reranker.calibration_shift == 0.0405
+        assert reranker.calibration_scale == 0.5
+
     def test_model_loader_passes_resolved_device(self):
         with patch("src.rag.reranker.CrossEncoder") as mock_cross_encoder:
             mock_cross_encoder.return_value = MagicMock()
@@ -192,9 +205,49 @@ class TestRerankerInit:
             reranker = CrossEncoderReranker(model_name="custom/model", max_length=256, device="cpu")
             _ = reranker.model
 
-        mock_cross_encoder.assert_called_once_with(
-            "custom/model",
-            max_length=256,
-            device="cpu",
-            local_files_only=True,
-        )
+        mock_cross_encoder.assert_called_once()
+        assert mock_cross_encoder.call_args.args == ("custom/model",)
+        kwargs = mock_cross_encoder.call_args.kwargs
+        assert kwargs["max_length"] == 256
+        assert kwargs["device"] == "cpu"
+        assert kwargs["local_files_only"] is True
+
+    def test_model_loader_passes_fp16_on_cuda(self, monkeypatch):
+        monkeypatch.setattr(settings.reranker, "torch_dtype", "float16")
+
+        with patch("src.rag.reranker.torch.cuda.is_available", return_value=True), patch(
+            "src.rag.reranker.CrossEncoder"
+        ) as mock_cross_encoder:
+            mock_cross_encoder.return_value = MagicMock()
+
+            reranker = CrossEncoderReranker(model_name="custom/model", max_length=256, device="auto")
+            _ = reranker.model
+
+        mock_cross_encoder.assert_called_once()
+        assert mock_cross_encoder.call_args.args == ("custom/model",)
+        kwargs = mock_cross_encoder.call_args.kwargs
+        assert kwargs["max_length"] == 256
+        assert kwargs["device"] == "cuda"
+        assert kwargs["local_files_only"] is True
+        assert kwargs["automodel_args"] == {"torch_dtype": torch.float16}
+
+    def test_constructor_torch_dtype_override_does_not_mutate_settings(self, monkeypatch):
+        monkeypatch.setattr(settings.reranker, "torch_dtype", "auto")
+
+        with patch("src.rag.reranker.torch.cuda.is_available", return_value=True), patch(
+            "src.rag.reranker.CrossEncoder"
+        ) as mock_cross_encoder:
+            mock_cross_encoder.return_value = MagicMock()
+
+            reranker = CrossEncoderReranker(
+                model_name="seroe/bge-reranker-v2-m3-turkish-triplet",
+                device="auto",
+                torch_dtype="float16",
+            )
+            _ = reranker.model
+
+        assert settings.reranker.torch_dtype == "auto"
+        assert reranker.torch_dtype_name == "float16"
+        assert reranker.resolved_device == "cuda"
+        kwargs = mock_cross_encoder.call_args.kwargs
+        assert kwargs["automodel_args"] == {"torch_dtype": torch.float16}

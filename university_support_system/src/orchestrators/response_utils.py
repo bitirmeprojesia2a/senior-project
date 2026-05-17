@@ -994,14 +994,47 @@ def _format_routing_strategy_label(routing_strategy: str | None) -> str:
     return labels.get(normalized, str(routing_strategy or "").strip() or "Bilinmiyor")
 
 
+_AGENT_FLOW_LABELS = {
+    "student_affairs": "Öğrenci İşleri",
+    "academic_programs": "Akademik Programlar",
+    "finance": "Finans",
+    "announcement": "Duyuru",
+    "event": "Etkinlik",
+    "student_affairs_agent": "Öğrenci İşleri",
+    "academic_programs_agent": "Akademik Programlar",
+    "finance_agent": "Finans",
+    "announcement_agent": "Duyuru",
+    "event_agent": "Etkinlik",
+    "registration_agent": "Kayıt İşleri",
+    "graduation_agent": "Mezuniyet",
+    "internship_agent": "Staj",
+    "student_life_agent": "Öğrenci Yaşamı",
+    "curriculum_agent": "Müfredat",
+    "regulation_agent": "Mevzuat",
+    "international_agent": "Uluslararası",
+    "tuition_agent": "Öğrenim Ücreti",
+    "scholarship_agent": "Burs",
+    "orchestrator": "Orkestratör",
+    "main_orchestrator": "Orkestratör",
+}
+
+
+def _format_agent_label(agent: str) -> str:
+    normalized = str(agent or "").strip().lower().replace("-", "_")
+    if not normalized:
+        return ""
+    return _AGENT_FLOW_LABELS.get(normalized, str(agent).strip())
+
+
 def _format_agent_flow(routing_strategy: str | None, agents_involved: list[str]) -> str:
-    agents = [str(agent).strip() for agent in agents_involved if str(agent).strip()]
+    agents = [_format_agent_label(agent) for agent in agents_involved if str(agent).strip()]
+    agents = [agent for agent in agents if agent]
     if not agents:
         return "Bilinmiyor"
     normalized_strategy = str(routing_strategy or "").strip().lower()
     if normalized_strategy == "parallel" and len(agents) > 1:
-        if agents[-1] == "orchestrator":
-            return f"{' + '.join(agents[:-1])} -> orchestrator"
+        if agents[-1] == "Orkestratör":
+            return f"Paralel: {' + '.join(agents[:-1])}; Son: Orkestratör"
         return " + ".join(agents)
     return " -> ".join(agents)
 

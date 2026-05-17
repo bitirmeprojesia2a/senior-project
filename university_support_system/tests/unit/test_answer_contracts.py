@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.core.answer_contracts import (
+    answer_contract_policy_facet,
     resolve_answer_contract,
     validate_answer_against_contract,
 )
@@ -12,10 +13,12 @@ from src.core.decision_authority import (
     build_runtime_authority_metadata,
 )
 from src.core.source_ownership import (
+    OWNER_ACADEMIC_CALENDAR,
     OWNER_ANNOUNCEMENT_SEARCH,
     OWNER_WEEKLY_SCHEDULE,
     source_owner_from_capability,
 )
+from src.core.policy_facets import align_policy_evidence
 from src.core.specialist_ownership import resolve_specialist_owner
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.orchestrators.query_policy import should_use_global_synthesis
@@ -155,6 +158,41 @@ def test_cap_debt_contract_rejects_unrelated_transfer_leak() -> None:
     )
 
 
+def test_cap_payment_process_query_does_not_use_debt_eligibility_contract() -> None:
+    contract = resolve_answer_contract(
+        "CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?"
+    )
+
+    assert contract is not None
+    assert contract.contract_id == "cap_eligibility"
+
+
+def test_cap_debt_policy_facet_demotes_completion_evidence() -> None:
+    contract = resolve_answer_contract("Harc borcum olsaydi CAP'a basvurabilir miydim?")
+
+    assert contract is not None
+    facet = answer_contract_policy_facet(contract)
+    completion_alignment = align_policy_evidence(
+        facet,
+        content=(
+            "CAP programinin tamamlanmasi icin ana dal genel not ortalamasinin "
+            "4,00 uzerinden en az 2,75 olmasi gerekir."
+        ),
+        source_text="yonerge_cift_anadal_yandal.pdf",
+    )
+    application_alignment = align_policy_evidence(
+        facet,
+        content=(
+            "CAP'a basvurabilmesi icin ana dal not ortalamasinin 4,00 uzerinden "
+            "en az 3,00 olmasi ve ilk %20 icinde bulunmasi gerekir."
+        ),
+        source_text="yonerge_cift_anadal_yandal.pdf",
+    )
+
+    assert completion_alignment["status"] == "conflict"
+    assert completion_alignment["score_multiplier"] < application_alignment["score_multiplier"]
+
+
 def test_graduation_contract_rejects_bachelor_120() -> None:
     contract = resolve_answer_contract(
         "Normal lisans programindan mezun olmak icin toplam kac AKTS tamamlamaliyim?"
@@ -275,6 +313,9 @@ def test_cap_date_contract_blocks_graduation_conditions() -> None:
 
     assert contract is not None
     assert contract.contract_id == "cap_application_dates"
+    assert contract.source_owner == OWNER_ACADEMIC_CALENDAR
+    assert contract.capability == "calendar.academic_date"
+    assert contract.metadata["calendar_query_prefix"] == "CAP basvuru"
 
     result = validate_answer_against_contract(
         query="Basvuru tarihleri ne peki?",
@@ -283,6 +324,45 @@ def test_cap_date_contract_blocks_graduation_conditions() -> None:
     )
 
     assert result["status"] == "fail"
+
+
+def test_horizontal_transfer_date_contract_uses_calendar_owner() -> None:
+    contract = resolve_answer_contract("Yatay gecis basvuru tarihleri ne zaman?")
+
+    assert contract is not None
+    assert contract.contract_id == "horizontal_transfer_application_dates"
+    assert contract.source_owner == OWNER_ACADEMIC_CALENDAR
+    assert contract.capability == "calendar.academic_date"
+    assert contract.metadata["calendar_query_prefix"] == "yatay gecis basvuru"
+
+
+def test_horizontal_transfer_date_follow_up_uses_frame_facet() -> None:
+    contract = resolve_answer_contract(
+        "Basvuru tarihleri ne peki?",
+        conversation_frame={"policy_facet": "yatay_gecis"},
+    )
+
+    assert contract is not None
+    assert contract.contract_id == "horizontal_transfer_application_dates"
+
+
+def test_horizontal_transfer_registration_date_contract_uses_matching_calendar_hint() -> None:
+    contract = resolve_answer_contract("Yatay gecis kesin kayit tarihleri ne zaman?")
+
+    assert contract is not None
+    assert contract.contract_id == "horizontal_transfer_registration_dates"
+    assert contract.metadata["calendar_query_prefix"] == "yatay gecis kesin kayit"
+
+
+def test_horizontal_transfer_registration_date_follow_up_uses_frame_facet() -> None:
+    contract = resolve_answer_contract(
+        "Kesin kayit tarihleri ne peki?",
+        conversation_frame={"policy_facet": "yatay_gecis"},
+    )
+
+    assert contract is not None
+    assert contract.contract_id == "horizontal_transfer_registration_dates"
+    assert contract.metadata["calendar_query_prefix"] == "yatay gecis kesin kayit"
 
 
 def test_payment_debt_course_registration_contract_blocks_fee_slot() -> None:

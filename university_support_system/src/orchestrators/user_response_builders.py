@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from src.core.config import settings
 from src.core.profiling import get_current_profiler
 from src.db.schemas import DepartmentResponse, QueryDiagnostics, UserQueryResponse
@@ -17,6 +19,7 @@ from src.orchestrators.response_utils import (
     collect_generation_modes,
     split_answer_and_contact_flag,
 )
+from src.quality.answer_style import record_answer_length_telemetry
 
 
 def _collect_remote_llm_usage(responses: list[DepartmentResponse] | None) -> list[dict]:
@@ -87,6 +90,123 @@ def _collect_remote_profiles(responses: list[DepartmentResponse] | None) -> list
     return collected
 
 
+def _selected_agent_id(response: DepartmentResponse) -> str:
+    metadata = response.metadata or {}
+    selection = metadata.get("specialist_selection")
+    selection_agent_id = (
+        selection.get("selected_agent_id")
+        if isinstance(selection, dict)
+        else None
+    )
+    return str(
+        selection_agent_id
+        or metadata.get("selected_agent_id")
+        or metadata.get("agent_id")
+        or response.department.value
+    )
+
+
+def _compact_source(source, *, response: DepartmentResponse) -> dict[str, Any]:
+    metadata = source.metadata or {}
+    return {
+        "department": response.department.value,
+        "agent": _selected_agent_id(response),
+        "source": metadata.get("source") or metadata.get("file_name") or metadata.get("title"),
+        "record_type": metadata.get("record_type"),
+        "score": source.score,
+        "score_type": metadata.get("score_type"),
+        "source_owner": metadata.get("source_owner"),
+        "chunk_index": metadata.get("chunk_index"),
+        "bolum": metadata.get("bolum"),
+        "bolum_adi": metadata.get("bolum_adi"),
+        "source_ref": metadata.get("source_ref"),
+        "cache_version": metadata.get("cache_version"),
+    }
+
+
+def _compact_contract(response: DepartmentResponse) -> dict[str, Any] | None:
+    metadata = response.metadata or {}
+    keys = (
+        "answer_contract",
+        "source_owner",
+        "policy_facet",
+        "capability",
+        "capability_planner",
+        "source_owner_primary",
+        "final_answer_owner",
+    )
+    contract = {
+        key: metadata.get(key)
+        for key in keys
+        if metadata.get(key) is not None
+    }
+    if not contract:
+        return None
+    contract["department"] = response.department.value
+    contract["agent"] = _selected_agent_id(response)
+    return contract
+
+
+def _build_answer_debug_report(
+    responses: list[DepartmentResponse] | None,
+    *,
+    local_profile: dict[str, Any] | None,
+    remote_profiles: list[dict],
+) -> dict[str, Any] | None:
+    """Return a compact root-cause map for bad-answer triage."""
+
+    responses = list(responses or [])
+    if not responses and not local_profile and not remote_profiles:
+        return None
+
+    routes = [
+        {
+            "department": response.department.value,
+            "agent": _selected_agent_id(response),
+            "generation_mode": response.generation_mode,
+            "success": response.success,
+            "error": response.error,
+            "source_count": len(response.sources),
+        }
+        for response in responses
+    ]
+    sources = [
+        _compact_source(source, response=response)
+        for response in responses
+        for source in response.sources[:3]
+    ][:12]
+    contracts = [
+        contract
+        for response in responses
+        for contract in [_compact_contract(response)]
+        if contract is not None
+    ]
+
+    attributes = local_profile.get("attributes") if isinstance(local_profile, dict) else {}
+    if not isinstance(attributes, dict):
+        attributes = {}
+
+    report: dict[str, Any] = {
+        "schema": "omu.answer_debug_report.v1",
+        "routes": routes,
+        "sources": sources,
+        "contracts": contracts,
+    }
+    for key in (
+        "response_filter",
+        "evidence_answer_validator",
+        "answer_contract_validation",
+        "branch_dispatch_gate",
+        "specialist_selector",
+        "answer_length",
+    ):
+        if attributes.get(key) is not None:
+            report[key] = attributes.get(key)
+    if remote_profiles:
+        report["remote_profile_count"] = len(remote_profiles)
+    return report
+
+
 def _build_query_diagnostics(
     responses: list[DepartmentResponse] | None = None,
 ) -> QueryDiagnostics | None:
@@ -99,12 +219,18 @@ def _build_query_diagnostics(
     sanitized = [dict(item) for item in llm_usage if isinstance(item, dict)]
     sanitized.extend(_collect_remote_llm_usage(responses))
     remote_profiles = _collect_remote_profiles(responses)
-    if not sanitized and not remote_profiles and not local_profile:
+    answer_debug_report = _build_answer_debug_report(
+        responses,
+        local_profile=local_profile,
+        remote_profiles=remote_profiles,
+    )
+    if not sanitized and not remote_profiles and not local_profile and not answer_debug_report:
         return None
     return QueryDiagnostics(
         llm_usage=sanitized,
         local_profile=local_profile,
         remote_profiles=remote_profiles,
+        answer_debug_report=answer_debug_report,
     )
 
 
@@ -116,6 +242,7 @@ def build_clarification_user_response(
     full_name: str | None = None,
 ) -> UserQueryResponse:
     personalized_message = personalize_answer(message, full_name)
+    record_answer_length_telemetry(answer=personalized_message)
     return UserQueryResponse(
         answer=personalized_message,
         departments_involved=[],
@@ -158,6 +285,7 @@ def build_final_user_response(
         )
         cleaned_answer = append_source_summary(cleaned_answer, responses)
     personalized_answer = personalize_answer(cleaned_answer, student_full_name)
+    record_answer_length_telemetry(answer=personalized_answer)
     sources = [source for response in responses for source in response.sources]
     generation_modes = collect_generation_modes(responses)
     if used_global_synthesis and "llm" not in generation_modes:
@@ -197,6 +325,7 @@ def build_announcement_user_response(
     answer = clean_final_answer(answer)
     if settings.server.response_debug_enabled:
         answer = append_source_summary_for_sources(answer, sources)
+    record_answer_length_telemetry(answer=answer)
     return UserQueryResponse(
         answer=answer,
         departments_involved=departments_involved,
@@ -227,6 +356,7 @@ def build_event_user_response(
             "Kaynak Özeti:\n"
             "- Veritabanı kaydı: etkinlik araması (uygun kayıt bulunamadı)"
         )
+    record_answer_length_telemetry(answer=answer)
     return UserQueryResponse(
         answer=answer,
         departments_involved=departments_involved,

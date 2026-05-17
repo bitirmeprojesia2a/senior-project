@@ -127,6 +127,7 @@ async def test_llm_generate_records_primary_provider_usage(llm_service):
             "system_chars": len("Sen asistansin."),
             "estimated_input_tokens": 5,
             "llm_profile": "fast",
+            "llm_operating_profile": "standard",
         }
     ]
 

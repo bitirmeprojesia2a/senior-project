@@ -1,10 +1,19 @@
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
+import src.agents.announcement.agent as announcement_agent_module
+from src.agents.announcement.agent import AnnouncementAgent
 import src.db.announcements as announcements_module
+from src.db.announcements import AnnouncementRecord
 from src.db.support_models import Announcement, AnnouncementLink
+
+
+class _FakeSummaryLLM:
+    async def generate(self, prompt, **kwargs):
+        return "LLM duyuru ozeti: secilen ikinci duyurunun kritik tarihleri ve basvuru adimlari."
 
 
 @pytest.mark.asyncio
@@ -92,6 +101,63 @@ async def test_fetch_announcement_by_source_ref_rejects_stale_hash(db_session, m
     assert stale is None
     assert fresh is not None
     assert fresh.content_hash == "abcdef1234567890"
+
+
+@pytest.mark.asyncio
+async def test_announcement_summary_follow_up_uses_second_versioned_ref_and_llm(monkeypatch):
+    first = AnnouncementRecord(
+        id=11,
+        title="Birinci Duyuru",
+        display_summary="Kisa birinci duyuru",
+        summary="Kisa birinci duyuru",
+        original_text="Kisa birinci duyuru",
+        source_url="https://omu.edu.tr/duyuru/1",
+        faculty=None,
+        unit_name=None,
+        department="student_affairs",
+        published_at=datetime(2026, 5, 1, tzinfo=UTC),
+        content_hash="111111111111abcdef",
+    )
+    second = AnnouncementRecord(
+        id=22,
+        title="Ikinci Duyuru",
+        display_summary="Kisa ikinci duyuru",
+        summary="Kisa ikinci duyuru",
+        original_text=("Ikinci duyuru uzun metni. " * 40).strip(),
+        source_url="https://omu.edu.tr/duyuru/2",
+        faculty=None,
+        unit_name=None,
+        department="student_affairs",
+        published_at=datetime(2026, 5, 2, tzinfo=UTC),
+        content_hash="222222222222abcdef",
+    )
+    agent = AnnouncementAgent(
+        announcement_fetcher=lambda *args, **kwargs: None,
+        llm_service=_FakeSummaryLLM(),
+    )
+    source_refs = [
+        agent._build_source(first).metadata["source_ref"],
+        agent._build_source(second).metadata["source_ref"],
+    ]
+
+    async def fake_fetch_by_ref(source_ref):
+        assert source_ref == source_refs[1]
+        return second
+
+    monkeypatch.setattr(announcement_agent_module, "fetch_announcement_by_source_ref", fake_fetch_by_ref)
+
+    response = await agent.handle_department_task(
+        SimpleNamespace(
+            metadata={
+                "query_text": "2. duyuruyu ozetle",
+                "conversation_source_refs": source_refs,
+            }
+        )
+    )
+
+    assert response.sources[0].metadata["source_ref"] == source_refs[1]
+    assert "Ikinci Duyuru" in response.answer
+    assert "LLM duyuru ozeti" in response.answer
 
 
 @pytest.mark.asyncio

@@ -27,6 +27,9 @@ _TEXT_EXTENSIONS = {".txt", ".csv"}
 _PDF_EXTENSIONS = {".pdf"}
 _DOCX_EXTENSIONS = {".docx"}
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
+_MIN_PDF_TEXT_CHARS = 80
+_OCR_PDF_MAX_PAGES = 8
+_OCR_PDF_DPI = 220
 _EXPLICIT_TRANSCRIPT_MARKERS = (
     "transkript",
     "not dokumu",
@@ -229,7 +232,23 @@ class TranscriptProcessor:
         warnings: list[str] = []
         normalized_mimetype = (mimetype or "").lower()
         if extension in _PDF_EXTENSIONS or "pdf" in normalized_mimetype:
-            return _extract_pdf_text(content), "pdf_text", warnings
+            try:
+                text = _extract_pdf_text(content)
+            except TranscriptProcessingError:
+                text = ""
+                warnings.append("PDF metin katmanı okunamadı; OCR denenmiştir.")
+            if len(text.strip()) >= _MIN_PDF_TEXT_CHARS:
+                return text, "pdf_text", warnings
+            warnings.append("PDF metin katmanı zayıf görünüyor; OCR denenmiştir.")
+            ocr_text = _extract_pdf_ocr_text(content)
+            if ocr_text.strip():
+                return ocr_text, "pdf_ocr", warnings
+            if text.strip():
+                warnings.append("OCR metin çıkaramadı; PDF metin katmanındaki sınırlı içerik kullanıldı.")
+                return text, "pdf_text_partial", warnings
+            raise TranscriptProcessingError(
+                "PDF transkriptten metin çıkarılamadı. Taranmış PDF için OCR motoru hazır değil veya sonuç boş."
+            )
         if extension in _DOCX_EXTENSIONS:
             return _extract_docx_text(content), "docx_text", warnings
         if extension in _TEXT_EXTENSIONS or normalized_mimetype.startswith("text/"):
@@ -289,6 +308,30 @@ def _extract_pdf_text(content: bytes) -> str:
         raise TranscriptProcessingError("PDF dosyası okunamadı.") from exc
 
 
+def _extract_pdf_ocr_text(content: bytes) -> str:
+    try:
+        from pdf2image import convert_from_bytes
+    except Exception:
+        return ""
+    try:
+        pages = convert_from_bytes(
+            content,
+            dpi=_OCR_PDF_DPI,
+            first_page=1,
+            last_page=_OCR_PDF_MAX_PAGES,
+            thread_count=1,
+        )
+    except Exception:
+        return ""
+
+    extracted: list[str] = []
+    for page in pages[:_OCR_PDF_MAX_PAGES]:
+        text = _extract_pil_image_ocr_text(page)
+        if text.strip():
+            extracted.append(text)
+    return "\n".join(extracted)
+
+
 def _extract_docx_text(content: bytes) -> str:
     try:
         from docx import Document
@@ -304,14 +347,27 @@ def _extract_docx_text(content: bytes) -> str:
 def _extract_image_ocr_text(content: bytes) -> str:
     try:
         from PIL import Image
-        import pytesseract
     except Exception:
         return ""
     try:
         image = Image.open(io.BytesIO(content))
-        return str(pytesseract.image_to_string(image, lang="tur+eng") or "")
+        return _extract_pil_image_ocr_text(image)
     except Exception:
         return ""
+
+
+def _extract_pil_image_ocr_text(image) -> str:
+    try:
+        import pytesseract
+    except Exception:
+        return ""
+    try:
+        return str(pytesseract.image_to_string(image, lang="tur+eng") or "")
+    except Exception:
+        try:
+            return str(pytesseract.image_to_string(image, lang="eng") or "")
+        except Exception:
+            return ""
 
 
 def _parse_courses(text: str) -> list[TranscriptCourse]:

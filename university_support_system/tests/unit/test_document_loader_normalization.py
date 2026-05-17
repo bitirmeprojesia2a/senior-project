@@ -1,5 +1,3 @@
-import shutil
-import tempfile
 import unicodedata
 from pathlib import Path
 
@@ -9,14 +7,8 @@ from src.rag.document_loader import Document, DocumentLoader
 
 
 @pytest.fixture
-def local_tmp_path():
-    base_dir = Path(".codex_pytest_tmp")
-    base_dir.mkdir(exist_ok=True)
-    temp_dir = Path(tempfile.mkdtemp(prefix="doc-loader-", dir=base_dir))
-    try:
-        yield temp_dir
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
+def local_tmp_path(tmp_path_factory):
+    return tmp_path_factory.mktemp("doc-loader")
 
 
 def test_loader_normalizes_source_name_to_nfc(local_tmp_path):

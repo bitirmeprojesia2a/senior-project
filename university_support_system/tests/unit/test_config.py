@@ -146,6 +146,8 @@ class TestLLMModelResolution:
         monkeypatch.setenv("LLM_QUERY_EXPANSION_MODEL", "llama-3.3-70b-versatile")
         monkeypatch.setenv("LLM_SPECIALIST_SYNTHESIS_MODEL", "")
         monkeypatch.setenv("LLM_GLOBAL_SYNTHESIS_MODEL", "")
+        monkeypatch.setenv("OPENAI_ROUTING_MODEL", "")
+        monkeypatch.setenv("OPENAI_CONVERSATION_MODEL", "")
 
         test_settings = Settings()
 
@@ -164,7 +166,9 @@ class TestLLMModelResolution:
         monkeypatch.setenv("OPENAI_SECONDARY_MODEL", "llama-3.1-8b-instant")
         monkeypatch.setenv("GOOGLE_AI_MODEL", "gemini-2.5-flash")
         monkeypatch.setenv("GOOGLE_AI_SECONDARY_MODEL", "gemini-2.5-flash-lite")
-        monkeypatch.delenv("GOOGLE_AI_ROUTING_MODEL", raising=False)
+        monkeypatch.setenv("GOOGLE_AI_ROUTING_MODEL", "")
+        monkeypatch.setenv("GOOGLE_AI_GLOBAL_SYNTHESIS_MODEL", "")
+        monkeypatch.setenv("OPENAI_ROUTING_MODEL", "")
 
         test_settings = Settings()
 
@@ -232,6 +236,69 @@ class TestLLMModelResolution:
         )
         assert test_settings.configured_llm_models()["global_synthesis_provider"] == "google_ai"
 
+    def test_high_value_provider_lane_applies_only_to_configured_roles(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_HIGH_VALUE_PROVIDER", "anthropic")
+        monkeypatch.setenv("LLM_HIGH_VALUE_ROLES", "global_synthesis,specialist_synthesis")
+
+        test_settings = Settings()
+
+        assert test_settings.resolve_llm_provider(role="routing") == "openai_compatible"
+        assert test_settings.resolve_llm_provider(role="final_refinement") == "openai_compatible"
+        assert test_settings.resolve_llm_provider(role="global_synthesis") == "anthropic"
+        assert test_settings.resolve_llm_provider(role="specialist_synthesis") == "anthropic"
+        assert test_settings.configured_llm_models()["high_value_provider"] == "anthropic"
+        assert test_settings.configured_llm_models()["high_value_roles"] == "global_synthesis,specialist_synthesis"
+
+    def test_groq_only_profile_keeps_primary_provider_even_with_high_value_lane(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "groq_only")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_HIGH_VALUE_PROVIDER", "anthropic")
+        monkeypatch.setenv("LLM_HIGH_VALUE_ROLES", "global_synthesis,specialist_synthesis")
+
+        test_settings = Settings()
+
+        assert test_settings.normalize_llm_profile(test_settings.llm.profile) == "balanced"
+        assert test_settings.normalize_llm_operating_profile(test_settings.llm.profile) == "groq_only"
+        assert test_settings.resolve_llm_provider(role="global_synthesis") == "openai_compatible"
+        assert test_settings.configured_llm_models()["operating_profile"] == "groq_only"
+
+    def test_hybrid_quality_profile_uses_high_value_lane_when_configured(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "hybrid_quality")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_HIGH_VALUE_PROVIDER", "anthropic")
+        monkeypatch.setenv("LLM_HIGH_VALUE_ROLES", "global_synthesis")
+
+        test_settings = Settings()
+
+        assert test_settings.normalize_llm_profile(test_settings.llm.profile) == "quality"
+        assert test_settings.normalize_llm_operating_profile(test_settings.llm.profile) == "hybrid_quality"
+        assert test_settings.resolve_llm_provider(role="routing") == "openai_compatible"
+        assert test_settings.resolve_llm_provider(role="global_synthesis") == "anthropic"
+
+    def test_hybrid_shadow_profile_does_not_change_answer_provider(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "hybrid_shadow")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_HIGH_VALUE_PROVIDER", "anthropic")
+        monkeypatch.setenv("LLM_HIGH_VALUE_ROLES", "global_synthesis")
+
+        test_settings = Settings()
+
+        assert test_settings.normalize_llm_operating_profile(test_settings.llm.profile) == "hybrid_shadow"
+        assert test_settings.resolve_llm_provider(role="global_synthesis") == "openai_compatible"
+
+    def test_role_specific_provider_override_wins_over_high_value_lane(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROFILE", "balanced")
+        monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "openai_compatible")
+        monkeypatch.setenv("LLM_HIGH_VALUE_PROVIDER", "anthropic")
+        monkeypatch.setenv("LLM_HIGH_VALUE_ROLES", "global_synthesis")
+        monkeypatch.setenv("LLM_GLOBAL_SYNTHESIS_PROVIDER", "google_ai")
+
+        test_settings = Settings()
+
+        assert test_settings.resolve_llm_provider(role="global_synthesis") == "google_ai"
+
     def test_anthropic_provider_model_resolution(self, monkeypatch):
         monkeypatch.setenv("LLM_PROFILE", "balanced")
         monkeypatch.setenv("LLM_PRIMARY_PROVIDER", "anthropic")
@@ -248,6 +315,32 @@ class TestLLMModelResolution:
         assert test_settings.resolve_llm_model(role="routing", provider="anthropic") == "claude-3-5-haiku-20241022"
         assert test_settings.resolve_llm_model(role="global_synthesis", provider="anthropic") == "claude-sonnet-4-20250514"
         assert test_settings.configured_llm_models()["provider"] == "anthropic"
+
+
+class TestInstitutionSettings:
+    """Kurum kimligi ayarlari."""
+
+    def test_institution_defaults_are_omu(self):
+        test_settings = Settings()
+
+        assert test_settings.institution.short_name_ascii == "OMU"
+        assert test_settings.institution.homepage_url == "https://www.omu.edu.tr"
+        assert test_settings.institution.switchboard_phone == "0 (362) 312 19 19"
+
+    def test_institution_can_be_overridden(self, monkeypatch):
+        monkeypatch.setenv("INSTITUTION_SHORT_NAME_ASCII", "ABC")
+        monkeypatch.setenv("INSTITUTION_NAME_ASCII", "ABC University")
+        monkeypatch.setenv("INSTITUTION_HOMEPAGE_URL", "https://abc.example.edu")
+        monkeypatch.setenv("INSTITUTION_SUPPORT_BOT_NAME", "ABC Destek Botu")
+        monkeypatch.setenv("INSTITUTION_SWITCHBOARD_PHONE", "0 (555) 000 00 00")
+
+        test_settings = Settings()
+
+        assert test_settings.institution.short_name_ascii == "ABC"
+        assert test_settings.institution.name_ascii == "ABC University"
+        assert test_settings.institution.homepage_url == "https://abc.example.edu"
+        assert test_settings.institution.support_bot_name == "ABC Destek Botu"
+        assert test_settings.institution.switchboard_phone == "0 (555) 000 00 00"
 
 
 class TestModelCacheSettings:
@@ -331,7 +424,7 @@ class TestA2ASettings:
 
     def test_a2a_department_timeout_falls_back_to_generic_timeout(self, monkeypatch):
         monkeypatch.setenv("A2A_TIMEOUT_SECONDS", "12")
-        monkeypatch.delenv("A2A_DEPARTMENT_TIMEOUT_SECONDS", raising=False)
+        monkeypatch.setenv("A2A_DEPARTMENT_TIMEOUT_SECONDS", "")
 
         test_settings = Settings()
 

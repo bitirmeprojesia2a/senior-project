@@ -69,6 +69,43 @@ def test_cap_application_dates_use_general_academic_calendar():
     assert metadata["label"] == "Cift Anadal ve Yandal Basvurulari"
 
 
+def test_horizontal_transfer_application_dates_use_official_transfer_calendars():
+    result = build_general_exam_calendar_answer("Yatay gecis basvuru tarihleri ne zaman?")
+
+    assert result is not None
+    answer, metadata = result
+    normalized = normalize_text(answer)
+    assert "01.08.2025" in normalized
+    assert "15.08.2025" in normalized
+    assert "26.01.2026" in normalized
+    assert "01.02.2026" in normalized
+    assert metadata["label"] == "horizontal_transfer_application_dates"
+
+
+def test_horizontal_transfer_term_specific_application_dates_use_matching_calendar():
+    fall = build_general_exam_calendar_answer("Guz yatay gecis basvuru tarihleri ne zaman?")
+    spring = build_general_exam_calendar_answer("Bahar on lisans yatay gecis basvuru tarihleri ne zaman?")
+
+    assert fall is not None
+    assert "01.08.2025" in normalize_text(fall[0])
+    assert "26.01.2026" not in normalize_text(fall[0])
+    assert spring is not None
+    assert "26.01.2026" in normalize_text(spring[0])
+    assert "01.08.2025" not in normalize_text(spring[0])
+
+
+def test_horizontal_transfer_registration_dates_are_calendar_backed():
+    result = build_general_exam_calendar_answer("Yatay gecis kesin kayit tarihleri ne zaman?")
+
+    assert result is not None
+    answer, metadata = result
+    normalized = normalize_text(answer)
+    assert "18.08.2025" in normalized
+    assert "29.08.2025" in normalized
+    assert "09.02.2026" in normalized
+    assert metadata["label"] == "horizontal_transfer_registration_dates"
+
+
 def test_course_registration_dates_use_general_academic_calendar():
     result = build_general_exam_calendar_answer("Ders kayitlari ne zaman?")
 

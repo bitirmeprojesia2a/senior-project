@@ -35,7 +35,7 @@ def _unique_service_agents(service_handler: Any) -> list[Any]:
 
 def _target_agent_name(target_display_name: str) -> str:
     suffix = "" if target_display_name.casefold().endswith("agent") else " Agent"
-    return f"OMU {target_display_name}{suffix}"
+    return f"{settings.institution.short_name_ascii} {target_display_name}{suffix}"
 
 
 def build_agent_card_payload(
@@ -126,8 +126,8 @@ def build_standard_agent_card(
         url=f"{settings.agent.public_url.rstrip('/')}/a2a",
         version=settings.server.app_version,
         provider=AgentProvider(
-            organization="Ondokuz Mayis Universitesi",
-            url="https://www.omu.edu.tr",
+            organization=settings.institution.name_ascii,
+            url=settings.institution.homepage_url,
         ),
         capabilities=AgentCapabilities(
             streaming=False,

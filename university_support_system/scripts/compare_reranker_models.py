@@ -1,13 +1,19 @@
 """
-Reranker Model Karsilastirma Testi
+Reranker model comparison utility.
 
-Sorunlu sorgularda mevcut Turkish fine-tune model ile base modeli
-kafa kafaya karsilastirir. Ayrica sorgu prefix etkisini olcer.
+This script is a shadow benchmark helper. It compares the configured runtime
+reranker with a candidate model without changing production defaults.
 
-Kullanim:
+Usage:
     python scripts/compare_reranker_models.py
+    python scripts/compare_reranker_models.py --compare
+    python scripts/compare_reranker_models.py --compare --fp16
+    python scripts/compare_reranker_models.py --compare --turkish-finetune
 """
 
+from __future__ import annotations
+
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -22,16 +28,17 @@ from src.core.config import apply_model_cache_environment, settings
 configure_utf8_stdio()
 apply_model_cache_environment()
 
+import torch  # noqa: E402
 from sentence_transformers import CrossEncoder  # noqa: E402
 
-from src.rag.retriever import HybridRetriever
-from src.rag.candidate_utils import deduplicate_candidate_dicts
+from src.rag.candidate_utils import deduplicate_candidate_dicts  # noqa: E402
+from src.rag.retriever import HybridRetriever  # noqa: E402
 
-CURRENT_MODEL = "seroe/bge-reranker-v2-m3-turkish-triplet"
-BASE_MODEL = "BAAI/bge-reranker-v2-m3"
-
-CURRENT_MAX_LENGTH = 512
-BASE_MAX_LENGTH = 1024
+DEFAULT_BASELINE_MODEL = settings.reranker.model
+DEFAULT_CANDIDATE_MODEL = "BAAI/bge-reranker-v2-m3"
+DEFAULT_TURKISH_FINE_TUNE_MODEL = "seroe/bge-reranker-v2-m3-turkish-triplet"
+DEFAULT_BASELINE_MAX_LENGTH = settings.reranker.max_length
+DEFAULT_CANDIDATE_MAX_LENGTH = 1024
 
 DIAGNOSTIC_QUERIES = [
     {
@@ -87,28 +94,44 @@ DIAGNOSTIC_QUERIES = [
 PREFIX_TEMPLATE = "Muhendislik Fakultesi / Bilgisayar Muhendisligi bolumu/programi icin: "
 
 
-def load_model(model_name: str, max_length: int) -> CrossEncoder:
-    """CrossEncoder modelini yukler."""
-    import torch
+def _resolve_torch_dtype(*, use_fp16: bool) -> torch.dtype | None:
+    """Return FP16 dtype only when CUDA is available."""
+    if not use_fp16:
+        return None
+    if not torch.cuda.is_available():
+        print("  FP16 istendi ama CUDA yok; model varsayilan dtype ile yuklenecek.", flush=True)
+        return None
+    return torch.float16
+
+
+def load_model(model_name: str, max_length: int, *, use_fp16: bool = False) -> CrossEncoder:
+    """Load a CrossEncoder model with the same cache/local-files policy as runtime."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"  Model yukleniyor: {model_name} (max_length={max_length}, device={device})")
-    t0 = time.perf_counter()
-    model = CrossEncoder(
-        model_name,
-        max_length=max_length,
-        device=device,
-        cache_dir=str(settings.model_cache.hf_hub_cache)
-        if settings.model_cache.hf_hub_cache is not None
-        else None,
-        local_files_only=settings.reranker.local_files_only,
+    torch_dtype = _resolve_torch_dtype(use_fp16=use_fp16)
+    dtype_label = str(torch_dtype) if torch_dtype is not None else "default"
+    print(
+        f"  Model yukleniyor: {model_name} "
+        f"(max_length={max_length}, device={device}, dtype={dtype_label})",
+        flush=True,
     )
+    t0 = time.perf_counter()
+    kwargs: dict[str, Any] = {
+        "max_length": max_length,
+        "device": device,
+        "local_files_only": settings.reranker.local_files_only,
+    }
+    if settings.model_cache.hf_hub_cache is not None:
+        kwargs["cache_dir"] = str(settings.model_cache.hf_hub_cache)
+    if torch_dtype is not None:
+        kwargs["automodel_args"] = {"torch_dtype": torch_dtype}
+    model = CrossEncoder(model_name, **kwargs)
     elapsed = time.perf_counter() - t0
-    print(f"  Yuklendi: {elapsed:.1f}s")
+    print(f"  Yuklendi: {elapsed:.1f}s", flush=True)
     return model
 
 
 def get_candidates(retriever: HybridRetriever, query: str, department: str) -> list[dict[str, Any]]:
-    """Reranker oncesi ham adaylari toplar."""
+    """Collect raw pre-reranker candidates for a department."""
     from src.core.constants import Department, collection_name_for_department
 
     dept = Department(department)
@@ -116,7 +139,7 @@ def get_candidates(retriever: HybridRetriever, query: str, department: str) -> l
     expanded_query = retriever.query_preprocessor.preprocess(query)
     retriever._ensure_ensemble(collection)
     raw_docs = retriever._ensembles[collection].invoke(expanded_query)
-    candidates = deduplicate_candidate_dicts(
+    return deduplicate_candidate_dicts(
         [
             {
                 "content": doc.page_content,
@@ -127,174 +150,203 @@ def get_candidates(retriever: HybridRetriever, query: str, department: str) -> l
             for doc in raw_docs
         ]
     )
-    return candidates
 
 
-def score_with_model(model: CrossEncoder, query: str, candidates: list[dict]) -> list[tuple[float, str, str]]:
-    """Model ile adaylari skorlar, (skor, kaynak, icerik_preview) dondurur."""
+def score_with_model(model: CrossEncoder, query: str, candidates: list[dict[str, Any]]) -> list[tuple[float, str, str]]:
+    """Score candidates and return sorted tuples of score/source/preview."""
     if not candidates:
         return []
     pairs = [(query, c["content"]) for c in candidates]
-    scores = model.predict(pairs, batch_size=16, show_progress_bar=False)
+    scores = model.predict(pairs, batch_size=settings.reranker.batch_size, show_progress_bar=False)
     results = []
-    for c, s in zip(candidates, scores):
-        source = c.get("source", c.get("metadata", {}).get("source", "?"))
-        preview = c["content"][:80].replace("\n", " ")
-        results.append((round(float(s), 4), source, preview))
-    results.sort(key=lambda x: x[0], reverse=True)
+    for candidate, score in zip(candidates, scores):
+        source = candidate.get("source", candidate.get("metadata", {}).get("source", "?"))
+        preview = candidate["content"][:80].replace("\n", " ")
+        results.append((round(float(score), 4), source, preview))
+    results.sort(key=lambda item: item[0], reverse=True)
     return results
 
 
 def source_matches_expected(source: str, keywords: list[str]) -> bool:
-    """Kaynak adinin beklenen anahtar kelimelerden birini icerip icerdigini kontrol eder."""
+    """Check whether the source name contains one of the expected keywords."""
     source_lower = source.lower().replace(" ", "_")
-    return any(kw.lower() in source_lower for kw in keywords)
+    return any(keyword.lower() in source_lower for keyword in keywords)
+
+
+def _best_expected_score(results: list[tuple[float, str, str]], keywords: list[str]) -> float | None:
+    scores = [score for score, source, _ in results if source_matches_expected(source, keywords)]
+    return max(scores) if scores else None
+
+
+def print_block(label: str, results: list[tuple[float, str, str]], expected_keywords: list[str]) -> None:
+    """Print top reranker results for one model."""
+    print(f"\n  {label}:")
+    print(f"  {'Rank':<5} {'Score':<10} {'Hit?':<6} {'Source':<50} Preview")
+    print("  " + "-" * 90)
+    for rank, (score, source, preview) in enumerate(results[:5], 1):
+        match = "yes" if source_matches_expected(source, expected_keywords) else ""
+        print(f"  {rank:<5} {score:<10.4f} {match:<6} {source[:50]:<50} {preview[:40]}")
+
+    best = _best_expected_score(results, expected_keywords)
+    if best is None:
+        print("  >> Beklenen belge adaylar arasinda bulunamadi")
+        return
+    rank = next(
+        idx
+        for idx, (score, source, _preview) in enumerate(results, 1)
+        if score == best and source_matches_expected(source, expected_keywords)
+    )
+    print(f"  >> Beklenen belge en iyi skoru: {best:.4f} (sira: {rank})")
 
 
 def print_comparison(
     query: str,
     expected_keywords: list[str],
-    current_results: list[tuple[float, str, str]],
-    base_results: list[tuple[float, str, str]],
-    prefixed_current: list[tuple[float, str, str]] | None = None,
-    prefixed_base: list[tuple[float, str, str]] | None = None,
-):
-    """Karsilastirma tablosunu yazdirir."""
-    top_n = 5
-
-    print(f"\n  {'─' * 90}")
+    baseline_results: list[tuple[float, str, str]],
+    candidate_results: list[tuple[float, str, str]],
+    prefixed_baseline: list[tuple[float, str, str]] | None = None,
+    prefixed_candidate: list[tuple[float, str, str]] | None = None,
+) -> None:
+    """Print per-query comparison."""
+    print("\n  " + "-" * 90)
     print(f"  SORGU: {query}")
     print(f"  Beklenen kaynak anahtar kelimeleri: {expected_keywords}")
-
-    def _print_block(label: str, results: list[tuple[float, str, str]]):
-        print(f"\n  {label}:")
-        print(f"  {'Sira':<5} {'Skor':<10} {'Ilgili?':<9} {'Kaynak':<50} {'Icerik'}")
-        print(f"  {'─' * 90}")
-        for i, (score, source, preview) in enumerate(results[:top_n], 1):
-            match = "***" if source_matches_expected(source, expected_keywords) else ""
-            print(f"  {i:<5} {score:<10.4f} {match:<9} {source[:50]:<50} {preview[:40]}")
-
-        expected_scores = [s for s, src, _ in results if source_matches_expected(src, expected_keywords)]
-        if expected_scores:
-            best = max(expected_scores)
-            rank = next(i for i, (s, _, _) in enumerate(results, 1) if s == best and source_matches_expected(results[i-1][1], expected_keywords))
-            print(f"  >> Beklenen belge en iyi skoru: {best:.4f} (sira: {rank})")
-        else:
-            print(f"  >> Beklenen belge BULUNAMADI adaylar arasinda")
-
-    _print_block(f"[A] {CURRENT_MODEL} (max_len={CURRENT_MAX_LENGTH})", current_results)
-    _print_block(f"[B] {BASE_MODEL} (max_len={BASE_MAX_LENGTH})", base_results)
-
-    if prefixed_current and prefixed_base:
-        print(f"\n  --- PREFIX ETKISI (sorguya '{PREFIX_TEMPLATE[:30]}...' eklendi) ---")
-        _print_block(f"[A+prefix] {CURRENT_MODEL}", prefixed_current)
-        _print_block(f"[B+prefix] {BASE_MODEL}", prefixed_base)
+    print_block("[A] baseline", baseline_results, expected_keywords)
+    print_block("[B] candidate", candidate_results, expected_keywords)
+    if prefixed_baseline and prefixed_candidate:
+        print(f"\n  --- PREFIX ETKISI ({PREFIX_TEMPLATE[:30]}...) ---")
+        print_block("[A+prefix] baseline", prefixed_baseline, expected_keywords)
+        print_block("[B+prefix] candidate", prefixed_candidate, expected_keywords)
 
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--compare", action="store_true", help="Base model ile karsilastir (indirilmesi gerekir)")
-    args = parser.parse_args()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Compare runtime reranker with a candidate model.")
+    parser.add_argument("--compare", action="store_true", help="Load and compare the candidate model too.")
+    parser.add_argument("--fp16", action="store_true", help="Use FP16 on CUDA for loaded models.")
+    parser.add_argument("--baseline-model", default=DEFAULT_BASELINE_MODEL)
+    parser.add_argument("--candidate-model", default=DEFAULT_CANDIDATE_MODEL)
+    parser.add_argument("--baseline-max-length", type=int, default=DEFAULT_BASELINE_MAX_LENGTH)
+    parser.add_argument("--candidate-max-length", type=int, default=DEFAULT_CANDIDATE_MAX_LENGTH)
+    parser.add_argument(
+        "--turkish-finetune",
+        action="store_true",
+        help="Use seroe/bge-reranker-v2-m3-turkish-triplet as candidate.",
+    )
+    return parser.parse_args()
 
-    run_comparison = args.compare
+
+def main() -> None:
+    args = parse_args()
+    candidate_model_name = DEFAULT_TURKISH_FINE_TUNE_MODEL if args.turkish_finetune else args.candidate_model
 
     print("=" * 95, flush=True)
     print("RERANKER TANI TESTI", flush=True)
     print("=" * 95, flush=True)
-    print(f"\nMevcut model: {CURRENT_MODEL} (max_length={CURRENT_MAX_LENGTH})", flush=True)
-    if run_comparison:
-        print(f"Base model:   {BASE_MODEL} (max_length={BASE_MAX_LENGTH})", flush=True)
+    print(f"\nBaseline model: {args.baseline_model} (max_length={args.baseline_max_length})", flush=True)
+    if args.compare:
+        print(f"Candidate model: {candidate_model_name} (max_length={args.candidate_max_length})", flush=True)
+    print(f"FP16: {'acik' if args.fp16 else 'kapali'}", flush=True)
     print(f"Tani sorgusu sayisi: {len(DIAGNOSTIC_QUERIES)}", flush=True)
 
     print("\n--- Model Yukleme ---", flush=True)
-    current_model = load_model(CURRENT_MODEL, CURRENT_MAX_LENGTH)
-    base_model = None
-    if run_comparison:
-        base_model = load_model(BASE_MODEL, BASE_MAX_LENGTH)
+    baseline_model = load_model(args.baseline_model, args.baseline_max_length, use_fp16=args.fp16)
+    candidate_model = (
+        load_model(candidate_model_name, args.candidate_max_length, use_fp16=args.fp16)
+        if args.compare
+        else None
+    )
 
     print("\n--- Retriever Hazirlama ---", flush=True)
     retriever = HybridRetriever()
+    summary_rows: list[dict[str, Any]] = []
 
-    summary_rows: list[dict] = []
-
-    for idx, test_case in enumerate(DIAGNOSTIC_QUERIES, 1):
+    for index, test_case in enumerate(DIAGNOSTIC_QUERIES, 1):
         query = test_case["query"]
         department = test_case["department"]
-        expected_kw = test_case["expected_source_keywords"]
+        expected_keywords = test_case["expected_source_keywords"]
         note = test_case["note"]
 
-        print(f"\n{'═' * 95}", flush=True)
-        print(f"SORGU {idx}/{len(DIAGNOSTIC_QUERIES)}: {query}", flush=True)
+        print(f"\n{'=' * 95}", flush=True)
+        print(f"SORGU {index}/{len(DIAGNOSTIC_QUERIES)}: {query}", flush=True)
         print(f"Departman: {department} | Not: {note}", flush=True)
 
         candidates = get_candidates(retriever, query, department)
         if not candidates:
             print("  ADAY BULUNAMADI - atlaniyor", flush=True)
             continue
-
         print(f"  Aday sayisi: {len(candidates)}", flush=True)
 
-        current_results = score_with_model(current_model, query, candidates)
-        base_results = score_with_model(base_model, query, candidates) if base_model else []
+        baseline_results = score_with_model(baseline_model, query, candidates)
+        candidate_results = score_with_model(candidate_model, query, candidates) if candidate_model else baseline_results
 
         prefixed_query = PREFIX_TEMPLATE + query
-        prefixed_current = score_with_model(current_model, prefixed_query, candidates)
-        prefixed_base = score_with_model(base_model, prefixed_query, candidates) if base_model else []
+        prefixed_baseline = score_with_model(baseline_model, prefixed_query, candidates)
+        prefixed_candidate = score_with_model(candidate_model, prefixed_query, candidates) if candidate_model else prefixed_baseline
 
-        if run_comparison and base_results:
-            print_comparison(query, expected_kw, current_results, base_results, prefixed_current, prefixed_base)
-        else:
-            print_comparison(query, expected_kw, current_results, current_results, prefixed_current, prefixed_current)
+        print_comparison(
+            query,
+            expected_keywords,
+            baseline_results,
+            candidate_results,
+            prefixed_baseline,
+            prefixed_candidate,
+        )
 
-        def _best_expected_score(results):
-            scores = [s for s, src, _ in results if source_matches_expected(src, expected_kw)]
-            return max(scores) if scores else None
+        summary_rows.append(
+            {
+                "query": query,
+                "baseline_best": _best_expected_score(baseline_results, expected_keywords),
+                "candidate_best": _best_expected_score(candidate_results, expected_keywords) if candidate_model else None,
+                "prefix_baseline_best": _best_expected_score(prefixed_baseline, expected_keywords),
+                "prefix_candidate_best": (
+                    _best_expected_score(prefixed_candidate, expected_keywords) if candidate_model else None
+                ),
+                "candidate_count": len(candidates),
+            }
+        )
 
-        summary_rows.append({
-            "query": query,
-            "current_best": _best_expected_score(current_results),
-            "base_best": _best_expected_score(base_results) if base_results else None,
-            "prefix_current_best": _best_expected_score(prefixed_current),
-            "prefix_base_best": _best_expected_score(prefixed_base) if prefixed_base else None,
-            "candidate_count": len(candidates),
-        })
-
-    print(f"\n\n{'═' * 95}", flush=True)
+    print(f"\n\n{'=' * 95}", flush=True)
     print("GENEL OZET", flush=True)
-    print(f"{'═' * 95}", flush=True)
+    print(f"{'=' * 95}", flush=True)
 
-    if run_comparison:
-        print(f"\n{'Sorgu':<55} {'TR-FT':<10} {'Base':<10} {'TR+Pfx':<10} {'Base+Pfx':<10}", flush=True)
+    if args.compare:
+        print(f"\n{'Sorgu':<55} {'Base':<10} {'Aday':<10} {'Base+Pfx':<10} {'Aday+Pfx':<10}", flush=True)
     else:
         print(f"\n{'Sorgu':<55} {'Skor':<10} {'Prefix+Skor':<12}", flush=True)
-    print(f"{'─' * 95}", flush=True)
+    print("-" * 95, flush=True)
 
-    current_wins = 0
-    base_wins = 0
+    baseline_wins = 0
+    candidate_wins = 0
     for row in summary_rows:
-        q = row["query"][:53]
-        c = f"{row['current_best']:.4f}" if row["current_best"] is not None else "N/A"
-        pc = f"{row['prefix_current_best']:.4f}" if row["prefix_current_best"] is not None else "N/A"
+        query_label = row["query"][:53]
+        base = f"{row['baseline_best']:.4f}" if row["baseline_best"] is not None else "N/A"
+        prefix_base = (
+            f"{row['prefix_baseline_best']:.4f}" if row["prefix_baseline_best"] is not None else "N/A"
+        )
 
-        if run_comparison:
-            b = f"{row['base_best']:.4f}" if row["base_best"] is not None else "N/A"
-            pb = f"{row['prefix_base_best']:.4f}" if row["prefix_base_best"] is not None else "N/A"
-            print(f"{q:<55} {c:<10} {b:<10} {pc:<10} {pb:<10}", flush=True)
-            cs = row["current_best"] or 0
-            bs = row["base_best"] or 0
-            if cs > bs:
-                current_wins += 1
-            elif bs > cs:
-                base_wins += 1
+        if args.compare:
+            candidate = f"{row['candidate_best']:.4f}" if row["candidate_best"] is not None else "N/A"
+            prefix_candidate = (
+                f"{row['prefix_candidate_best']:.4f}" if row["prefix_candidate_best"] is not None else "N/A"
+            )
+            print(
+                f"{query_label:<55} {base:<10} {candidate:<10} {prefix_base:<10} {prefix_candidate:<10}",
+                flush=True,
+            )
+            base_score = row["baseline_best"] or 0.0
+            candidate_score = row["candidate_best"] or 0.0
+            if base_score > candidate_score:
+                baseline_wins += 1
+            elif candidate_score > base_score:
+                candidate_wins += 1
         else:
-            print(f"{q:<55} {c:<10} {pc:<12}", flush=True)
+            print(f"{query_label:<55} {base:<10} {prefix_base:<12}", flush=True)
 
-    if run_comparison:
-        print(f"\n{'─' * 95}", flush=True)
-        print(f"Turkish fine-tune daha iyi: {current_wins} sorgu", flush=True)
-        print(f"Base model daha iyi:        {base_wins} sorgu", flush=True)
-        print(f"Esit/N/A:                   {len(summary_rows) - current_wins - base_wins} sorgu", flush=True)
+    if args.compare:
+        print(f"\n{'-' * 95}", flush=True)
+        print(f"Baseline daha iyi: {baseline_wins} sorgu", flush=True)
+        print(f"Aday daha iyi:     {candidate_wins} sorgu", flush=True)
+        print(f"Esit/N/A:          {len(summary_rows) - baseline_wins - candidate_wins} sorgu", flush=True)
 
     retriever.close()
     print("\nBitti.", flush=True)

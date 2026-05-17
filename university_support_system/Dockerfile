@@ -9,13 +9,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 ARG INSTALL_BUILD_TOOLS=false
+ARG INSTALL_OCR_TOOLS=true
 ARG TORCH_VARIANT=cpu
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     mkdir -p /models/huggingface/hub \
-    && if [ "$INSTALL_BUILD_TOOLS" = "true" ]; then \
+    && packages="" \
+    && if [ "$INSTALL_BUILD_TOOLS" = "true" ]; then packages="$packages build-essential curl"; fi \
+    && if [ "$INSTALL_OCR_TOOLS" = "true" ]; then packages="$packages tesseract-ocr tesseract-ocr-tur poppler-utils"; fi \
+    && if [ -n "$packages" ]; then \
         apt-get update \
-        && apt-get install -y --no-install-recommends build-essential curl \
+        && apt-get install -y --no-install-recommends $packages \
         && rm -rf /var/lib/apt/lists/*; \
     fi
 

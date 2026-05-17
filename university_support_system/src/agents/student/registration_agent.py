@@ -28,6 +28,7 @@ from src.capabilities.models import CapabilityAction
 from src.core.config import settings
 from src.core.constants import Department, TaskType
 from src.core.policy_facets import resolve_policy_facet
+from src.core.text_normalization import normalize_text
 from src.db.registration_data import RegistrationPeriodInfo, fetch_preferred_registration_period
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.llm.prompt_templates import REGISTRATION_AGENT_SYSTEM_PROMPT
@@ -97,9 +98,21 @@ class RegistrationAgent(BaseSpecialistAgent):
             return capability_response
         task = self._prepare_policy_lookup_task(task, query_text, metadata)
 
-        exam_calendar = build_general_exam_calendar_answer(query_text)
+        calendar_lookup_query = self._calendar_lookup_query(query_text, metadata)
+        exam_calendar = build_general_exam_calendar_answer(calendar_lookup_query)
         if exam_calendar is not None:
             answer, calendar_data = exam_calendar
+            calendar_dates = [
+                str(value)
+                for value in (
+                    calendar_data.get("fall"),
+                    calendar_data.get("spring"),
+                    calendar_data.get("extra_exam"),
+                )
+                if value
+            ]
+            if not calendar_dates:
+                calendar_dates = [str(value) for value in calendar_data.get("dates") or [] if value]
             return DepartmentResponse(
                 department=self.department,
                 answer=answer,
@@ -107,7 +120,7 @@ class RegistrationAgent(BaseSpecialistAgent):
                 generation_mode="vt",
                 sources=[
                     RAGSource(
-                        content=f"{calendar_data['label']}: {calendar_data['fall']} / {calendar_data['spring']}",
+                        content=f"{calendar_data['label']}: {' / '.join(calendar_dates)}",
                         score=1.0,
                         metadata={
                             "source": "2025_2026_genel_akademik_takvim.pdf",
@@ -166,6 +179,68 @@ class RegistrationAgent(BaseSpecialistAgent):
             )
 
         return await super().handle_department_task(task)
+
+    @staticmethod
+    def _calendar_lookup_query(query_text: str, metadata: dict) -> str:
+        """Preserve context-resolved calendar facets for short follow-up turns."""
+        hint = RegistrationAgent._calendar_context_hint(metadata)
+        if not hint:
+            return query_text
+        if RegistrationAgent._query_contains_calendar_hint(query_text, hint):
+            return query_text
+        return f"{hint} {query_text}"
+
+    @staticmethod
+    def _calendar_context_hint(metadata: dict) -> str:
+        """Return a canonical calendar lookup hint from contract/facet metadata.
+
+        This keeps the agent generic: adding a new calendar-backed date facet
+        should only require metadata such as ``calendar_query_prefix`` on the
+        contract, not another per-topic branch in the agent.
+        """
+        for key in ("answer_contract", "policy_facet"):
+            payload = metadata.get(key)
+            if not isinstance(payload, dict):
+                continue
+            for hint_key in ("calendar_query_prefix", "calendar_query_hint", "calendar_subject"):
+                hint = str(payload.get(hint_key) or "").strip()
+                if hint:
+                    return hint
+            terms = payload.get("calendar_query_terms")
+            if isinstance(terms, (list, tuple)):
+                hint = " ".join(str(term).strip() for term in terms if str(term).strip())
+                if hint:
+                    return hint
+        return ""
+
+    @staticmethod
+    def _query_contains_calendar_hint(query_text: str, hint: str) -> bool:
+        normalized_query = normalize_text(query_text)
+        normalized_hint = normalize_text(hint)
+        filler_tokens = {
+            "basvuru",
+            "basvurulari",
+            "degerlendirme",
+            "ilan",
+            "kaydi",
+            "kayit",
+            "kayitlari",
+            "kesin",
+            "tarih",
+            "tarihleri",
+            "takvim",
+            "ne",
+            "son",
+            "sonuc",
+            "sonuclari",
+            "zaman",
+        }
+        hint_tokens = [
+            token
+            for token in normalized_hint.split()
+            if len(token) > 2 and token not in filler_tokens
+        ]
+        return any(token in normalized_query for token in hint_tokens)
 
     async def _try_handle_capability_plan(
         self,

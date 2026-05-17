@@ -26,9 +26,11 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.core.console import configure_utf8_stdio
+from src.core.text_normalization import normalize_text
 from src.rag.retriever import HybridRetriever
-from src.rag.reranker import CrossEncoderReranker, _CALIBRATION_SHIFT, _CALIBRATION_SCALE
+from src.rag.reranker import CrossEncoderReranker
 from src.rag.candidate_utils import deduplicate_candidate_dicts
+from src.quality.evidence_answer_validator import infer_source_family
 
 configure_utf8_stdio()
 
@@ -44,6 +46,84 @@ EXPLORE_PROFILES = [
     "explore_graduation_gpa_turk",
     "explore_internship_project_turk",
 ]
+
+_BENCHMARK_SOURCE_OWNER_MARKERS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "tuition_fee_catalog",
+        ("katki_payi", "katkı_payı", "ogrenim_ucreti", "öğrenim_ücreti", "harc", "ücretleri"),
+    ),
+    (
+        "international_policy",
+        ("uluslararasi", "uluslararası", "yabanci", "yabancı", "yos", "yös", "tomer", "tömer", "ikamet"),
+    ),
+    (
+        "curriculum_catalog",
+        ("mufredat", "müfredat", "ders_plani", "ders_planı", "akts", "curriculum"),
+    ),
+    (
+        "student_affairs_policy",
+        (
+            "sik_sorulan_sorular",
+            "sık_sorulan_sorular",
+            "ogrenci_isleri",
+            "öğrenci_işleri",
+            "yonerge",
+            "yönerge",
+            "yonetmelik",
+            "yönetmelik",
+            "on_lisans",
+            "ön_lisans",
+            "onlisans",
+            "önlisans",
+            "yatay_gecis",
+            "yatay_geçiş",
+            "cift_anadal",
+            "çift_anadal",
+            "cift_ana_dal",
+            "çift_ana_dal",
+            "yandal",
+            "yan_dal",
+            "staj",
+            "yaz_okulu",
+            "muafiyet",
+            "intibak",
+            "kimlik_karti",
+            "kimlik_kartı",
+            "bagil_degerlendirme",
+            "bağıl_değerlendirme",
+        ),
+    ),
+)
+
+_EXPECTED_DEPARTMENT_OWNER_MAP: dict[str, set[str]] = {
+    "student_affairs": {"student_affairs_policy", "academic_calendar"},
+    "finance": {"tuition_fee_catalog", "student_affairs_policy"},
+    "academic_programs": {"curriculum_catalog", "international_policy", "student_affairs_policy"},
+}
+
+
+def infer_benchmark_source_owner(*, source: str | None = None, claim: str | None = None) -> str | None:
+    """Infer a lightweight source owner for benchmark reports only."""
+    haystack = normalize_text(f"{source or ''} {claim or ''}")
+    for owner, markers in _BENCHMARK_SOURCE_OWNER_MARKERS:
+        if any(marker in haystack for marker in markers):
+            return owner
+    return infer_source_family(source=source) or infer_source_family(claim=claim)
+
+
+def expected_department_matches_owner(expected_department: str, owner: str | None) -> bool:
+    """Map benchmark department labels to compatible source-owner families."""
+    owner = (owner or "").strip()
+    if not owner:
+        return False
+    expected_parts = [
+        part.strip()
+        for part in expected_department.split(",")
+        if part.strip() and part.strip() not in {"?", "clarification", "announcement"}
+    ]
+    if not expected_parts:
+        return False
+    return any(owner in _EXPECTED_DEPARTMENT_OWNER_MAP.get(part, set()) for part in expected_parts)
 
 
 def load_benchmark_questions(profile_name: str | None) -> list[dict[str, Any]]:
@@ -82,9 +162,9 @@ def sigmoid(x: float) -> float:
     return ez / (1.0 + ez)
 
 
-def calibrated_sigmoid(raw_logit: float) -> float:
+def calibrated_sigmoid(raw_logit: float, *, shift: float, scale: float) -> float:
     """reranker.py ile ayni kalibre sigmoid: sigmoid((logit - shift) / scale)."""
-    adjusted = (raw_logit - _CALIBRATION_SHIFT) / _CALIBRATION_SCALE
+    adjusted = (raw_logit - shift) / scale
     return sigmoid(adjusted)
 
 
@@ -145,15 +225,28 @@ def analyze_single_query(
     for candidate, raw_score in zip(candidates, raw_scores):
         raw_float = round(float(raw_score), 6)
         sig_score = round(sigmoid(raw_float), 6)
-        cal_score = round(calibrated_sigmoid(raw_float), 6)
+        source = candidate.get("source", "?")
+        content = candidate.get("content", "")
+        source_family = infer_benchmark_source_owner(source=source, claim=content[:420])
         results.append({
-            "source": candidate.get("source", "?"),
-            "content_preview": candidate.get("content", "")[:120].replace("\n", " "),
+            "source": source,
+            "collection": candidate.get("collection") or candidate.get("metadata", {}).get("collection"),
+            "source_owner": candidate.get("metadata", {}).get("source_owner") or source_family,
+            "source_family": source_family,
+            "score_type": candidate.get("metadata", {}).get("score_type"),
+            "content_preview": content[:120].replace("\n", " "),
             "pre_rerank_score": float(candidate.get("metadata", {}).get("pre_rerank_score", 0.0)),
             "raw_reranker_score": raw_float,
             "sigmoid_score": sig_score,
-            "calibrated_score": cal_score,
-            "content_length": len(candidate.get("content", "")),
+            "calibrated_score": round(
+                calibrated_sigmoid(
+                    raw_float,
+                    shift=reranker.calibration_shift,
+                    scale=reranker.calibration_scale,
+                ),
+                6,
+            ),
+            "content_length": len(content),
         })
 
     results.sort(key=lambda r: r["raw_reranker_score"], reverse=True)
@@ -181,6 +274,32 @@ def compute_statistics(all_scores: list[float]) -> dict[str, float]:
         "p25": round(percentile(all_scores, 25), 4),
         "p75": round(percentile(all_scores, 75), 4),
         "p90": round(percentile(all_scores, 90), 4),
+    }
+
+
+def compute_top1_source_owner_summary(query_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return lightweight top-1 source-owner distribution and expected dept match."""
+    counts: dict[str, int] = {}
+    checked = 0
+    matched = 0
+    for item in query_results:
+        results = item.get("results") or []
+        if not results:
+            continue
+        top1 = results[0]
+        owner = str(top1.get("source_owner") or top1.get("collection") or "-")
+        counts[owner] = counts.get(owner, 0) + 1
+        expected = str(item.get("department") or "").strip().lower()
+        if not expected or expected in {"?", "clarification", "announcement"}:
+            continue
+        checked += 1
+        owner = str(top1.get("source_owner") or top1.get("source_family") or "").strip()
+        if expected_department_matches_owner(expected, owner):
+            matched += 1
+    return {
+        "top1_source_owner_counts": counts,
+        "expected_department_checked": checked,
+        "expected_department_matched": matched,
     }
 
 
@@ -248,6 +367,11 @@ def generate_markdown_report(
     top1_sigmoid_scores: list[float],
     top1_calibrated_scores: list[float],
     reranker_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    reranker_device: str = "?",
+    reranker_torch_dtype: str = "?",
+    calibration_shift: float = 0.0,
+    calibration_scale: float = 1.0,
+    elapsed_seconds: float = 0.0,
 ) -> str:
     """Markdown formatinda rapor uretir."""
     raw_stats = compute_statistics(all_raw_scores)
@@ -256,6 +380,7 @@ def generate_markdown_report(
     top1_raw_stats = compute_statistics(top1_raw_scores)
     top1_sig_stats = compute_statistics(top1_sigmoid_scores)
     top1_cal_stats = compute_statistics(top1_calibrated_scores)
+    source_owner_summary = compute_top1_source_owner_summary(query_results)
     suggestion = suggest_sigmoid_params(raw_stats)
 
     lines = [
@@ -263,10 +388,27 @@ def generate_markdown_report(
         "",
         f"**Tarih:** {time.strftime('%Y-%m-%d %H:%M')}",
         f"**Model:** {reranker_model_name}",
-        f"**Kalibrasyon:** shift={_CALIBRATION_SHIFT}, scale={_CALIBRATION_SCALE}",
+        f"**Device:** {reranker_device}",
+        f"**Torch dtype:** {reranker_torch_dtype}",
+        f"**Kalibrasyon:** shift={calibration_shift}, scale={calibration_scale}",
         f"**Toplam Soru:** {len(query_results)}",
         f"**Toplam Skor Ornegi:** {len(all_raw_scores)}",
+        f"**Toplam sure:** {elapsed_seconds:.1f}s",
         "**Kapsam:** Candidate pool + reranker analizi; final threshold/filtering adimlari buna dahil degildir.",
+        "",
+        "---",
+        "",
+        "## Top-1 Source Owner Ozeti",
+        "",
+        f"- Expected department match: {source_owner_summary['expected_department_matched']}/{source_owner_summary['expected_department_checked']}",
+        "- Top-1 source owner dagilimi: "
+        + (
+            ", ".join(
+                f"{owner}={count}"
+                for owner, count in sorted(source_owner_summary["top1_source_owner_counts"].items())
+            )
+            or "-"
+        ),
         "",
         "---",
         "",
@@ -364,12 +506,12 @@ def generate_markdown_report(
             lines.append("")
             continue
         lines.append("")
-        lines.append("| # | Ham Skor | Kalibre | Sigmoid | Kaynak |")
-        lines.append("|:-:|:--------:|:-------:|:-------:|--------|")
+        lines.append("| # | Ham Skor | Kalibre | Sigmoid | Source Owner | Kaynak |")
+        lines.append("|:-:|:--------:|:-------:|:-------:|--------------|--------|")
         for i, r in enumerate(results, 1):
             lines.append(
                 f"| {i} | {r['raw_reranker_score']:.4f} | {r['calibrated_score']:.4f} | "
-                f"{r['sigmoid_score']:.4f} | {r['source']} |"
+                f"{r['sigmoid_score']:.4f} | {r.get('source_owner') or '-'} | {r['source']} |"
             )
         lines.append("")
 
@@ -409,10 +551,37 @@ def main() -> None:
         help="Her sorgu icin kaydedilecek aday sayisi (varsayilan: 10)",
     )
     parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help=(
+            "Reranker modeli. Bos birakilirsa RERANKER_MODEL kullanilir; "
+            "Turkish shadow icin: seroe/bge-reranker-v2-m3-turkish-triplet"
+        ),
+    )
+    parser.add_argument(
+        "--device",
+        choices=["auto", "cpu", "cuda"],
+        default=None,
+        help="Reranker cihazi. Bos birakilirsa RERANKER_DEVICE kullanilir.",
+    )
+    parser.add_argument(
+        "--torch-dtype",
+        choices=["auto", "float32", "float16", "bfloat16"],
+        default=None,
+        help="Model agirlik dtype'i. float16 yalniz CUDA'da uygulanir; CPU'da FP32 varsayilir.",
+    )
+    parser.add_argument(
         "--output",
         type=str,
         default=None,
         help="Markdown rapor cikti dosyasi (ornegin: docs/archive/benchmarks/reranker_score_analysis.md)",
+    )
+    parser.add_argument(
+        "--calibration-output",
+        type=str,
+        default=None,
+        help="Sadece model ve onerilen kalibrasyon ozeti icin JSON cikti dosyasi.",
     )
     args = parser.parse_args()
 
@@ -422,11 +591,17 @@ def main() -> None:
 
     print("\nModeller yukleniyor...")
     retriever = HybridRetriever(cache_ttl=0)
-    reranker = CrossEncoderReranker()
+    reranker = CrossEncoderReranker(
+        model_name=args.model,
+        device=args.device,
+        torch_dtype=args.torch_dtype,
+    )
     _ = reranker.model
     print(f"  Reranker: {reranker.model_name}")
     print(f"  Max Length: {reranker.max_length}")
     print(f"  Device: {reranker.resolved_device}")
+    print(f"  Torch dtype: {reranker.torch_dtype_name} -> {reranker.torch_dtype}")
+    print(f"  Calibration: shift={reranker.calibration_shift} scale={reranker.calibration_scale}")
 
     queries: list[dict[str, Any]] = []
     if args.query:
@@ -498,6 +673,7 @@ def main() -> None:
     top1_raw_stats = compute_statistics(top1_raw_scores)
     top1_sig_stats = compute_statistics(top1_sigmoid_scores)
     top1_cal_stats = compute_statistics(top1_calibrated_scores)
+    source_owner_summary = compute_top1_source_owner_summary(query_results)
 
     print_statistics(raw_stats, "Ham Reranker Skorlari (tum adaylar):")
     print_statistics(sig_stats, "Sigmoid Skorlar (tum adaylar):")
@@ -505,6 +681,14 @@ def main() -> None:
     print_statistics(top1_raw_stats, "Ham Top-1 Skorlar (her sorunun en iyisi):")
     print_statistics(top1_sig_stats, "Sigmoid Top-1 Skorlar (her sorunun en iyisi):")
     print_statistics(top1_cal_stats, "Kalibre Top-1 Skorlar (her sorunun en iyisi):")
+    print("\nTop-1 Source Owner Dagilimi:")
+    for owner, count in sorted(source_owner_summary["top1_source_owner_counts"].items()):
+        print(f"  {owner}: {count}")
+    print(
+        "Expected department match: "
+        f"{source_owner_summary['expected_department_matched']}/"
+        f"{source_owner_summary['expected_department_checked']}"
+    )
 
     suggestion = suggest_sigmoid_params(raw_stats)
     if suggestion:
@@ -525,6 +709,11 @@ def main() -> None:
             all_calibrated_scores,
             top1_raw_scores, top1_sigmoid_scores, top1_calibrated_scores,
             reranker_model_name=reranker.model_name,
+            reranker_device=reranker.resolved_device,
+            reranker_torch_dtype=f"{reranker.torch_dtype_name}->{reranker.torch_dtype}",
+            calibration_shift=reranker.calibration_shift,
+            calibration_scale=reranker.calibration_scale,
+            elapsed_seconds=elapsed,
         )
         output_path = project_root / args.output
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -534,9 +723,18 @@ def main() -> None:
         json_path = output_path.with_suffix(".json")
         json_data = {
             "model": reranker.model_name,
+            "device": {
+                "requested": reranker.device,
+                "resolved": reranker.resolved_device,
+            },
+            "torch_dtype": {
+                "requested": reranker.torch_dtype_name,
+                "resolved": str(reranker.torch_dtype),
+            },
+            "elapsed_seconds": round(elapsed, 3),
             "calibration": {
-                "shift": _CALIBRATION_SHIFT,
-                "scale": _CALIBRATION_SCALE,
+                "shift": reranker.calibration_shift,
+                "scale": reranker.calibration_scale,
             },
             "raw_stats": raw_stats,
             "sigmoid_stats": sig_stats,
@@ -544,6 +742,7 @@ def main() -> None:
             "top1_raw_stats": top1_raw_stats,
             "top1_sigmoid_stats": top1_sig_stats,
             "top1_calibrated_stats": top1_cal_stats,
+            "source_owner_summary": source_owner_summary,
             "suggestion": suggestion,
             "queries": query_results,
         }
@@ -552,6 +751,32 @@ def main() -> None:
             encoding="utf-8",
         )
         print(f"JSON rapor: {json_path}")
+
+    if args.calibration_output:
+        calibration_path = project_root / args.calibration_output
+        calibration_path.parent.mkdir(parents=True, exist_ok=True)
+        calibration_payload = {
+            "model": reranker.model_name,
+            "device": reranker.resolved_device,
+            "torch_dtype": {
+                "requested": reranker.torch_dtype_name,
+                "resolved": str(reranker.torch_dtype),
+            },
+            "runtime_calibration": {
+                "shift": reranker.calibration_shift,
+                "scale": reranker.calibration_scale,
+            },
+            "suggested_calibration": suggestion,
+            "raw_stats": raw_stats,
+            "top1_raw_stats": top1_raw_stats,
+            "source_owner_summary": source_owner_summary,
+            "elapsed_seconds": round(elapsed, 3),
+        }
+        calibration_path.write_text(
+            json.dumps(calibration_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"Kalibrasyon ozeti: {calibration_path}")
 
     retriever.close()
 

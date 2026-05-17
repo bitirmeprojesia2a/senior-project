@@ -109,5 +109,54 @@
     "expected": {
       "answer_forbidden": ["necessary", "necessarytir", "necessaire", "sorumlusanz", "hanrmlar"]
     }
+  },
+  {
+    "id": "SLACK_ANNOUNCEMENT_SECOND_SUMMARY_REF",
+    "query": "2. duyuruyu ozetle",
+    "effective_query": "2. duyuruyu ozetle",
+    "answer": "Duyuru ozeti: Ikinci Duyuru\nLLM duyuru ozeti secilen ikinci duyurudan uretilir.",
+    "departments": ["announcement"],
+    "sources": ["announcement:22:222222222222", "cache_version"],
+    "expected": {
+      "answer_contains": ["Ikinci Duyuru", "ozeti"],
+      "source_contains": ["announcement:22"],
+      "answer_forbidden": ["Birinci Duyuru"]
+    }
+  },
+  {
+    "id": "SLACK_SCHEDULE_OWNER_COMPUTER_ENGINEERING",
+    "query": "Ders programi ne peki",
+    "effective_query": "Bilgisayar Muhendisligi ders programi ne peki",
+    "answer": "Bilgisayar Muhendisligi icin bulunan ders programi satirlari:\n1. Sinif:\n- Pazartesi 08:15-09:00 | Matematik-II\n2. Sinif:\n- Sali 13:00-13:45 | Nesne Yonelimli Programlama\n3. Sinif:\n- Persembe 09:15-10:00 | Isletim Sistemleri\n4. Sinif:\n- Carsamba 08:15-09:00 | Bitirme Projesi",
+    "departments": ["academic_programs"],
+    "sources": ["weekly_schedule"],
+    "expected": {
+      "answer_contains": ["1. Sinif", "2. Sinif", "3. Sinif", "4. Sinif"],
+      "answer_forbidden": ["Diger dersler", "Uzmanlik Alan Dersi", "bulunamadi"]
+    }
+  },
+  {
+    "id": "SLACK_TRANSCRIPT_PUBLIC_PRIVACY",
+    "query": "toplam AKTS'im kac?",
+    "effective_query": "toplam AKTS'im kac?",
+    "answer": "Toplam AKTS: 90\n\nNot: Transkript kisisel veri icerir. Bu belge ve cevap yalnizca bu Slack thread'i baglaminda tutulur; mumkunse transkriptleri DM uzerinden paylasin.",
+    "departments": ["transcript"],
+    "sources": ["uploaded_transcript"],
+    "expected": {
+      "answer_contains": ["Toplam AKTS: 90", "kisisel veri", "DM"],
+      "answer_forbidden": ["Kurumsal kaynak", "yonerge"]
+    }
+  },
+  {
+    "id": "SLACK_CONTACT_SWITCHBOARD_EXTENSION",
+    "query": "Ogrenci isleri iletisim bilgisi nedir?",
+    "effective_query": "Ogrenci isleri iletisim bilgisi nedir?",
+    "answer": "Ilgili birim iletisim bilgileri:\n- Ogrenci Isleri\n  Telefon: 0 (362) 312 19 19 / Dahili: 7304",
+    "departments": ["student_affairs"],
+    "sources": ["office_contacts"],
+    "expected": {
+      "answer_contains": ["0 (362) 312 19 19", "Dahili"],
+      "answer_forbidden": ["iletisim bilgisi yazarak"]
+    }
   }
 ]

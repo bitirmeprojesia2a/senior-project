@@ -691,8 +691,20 @@ _ACADEMIC_CALENDAR_PDF = (
     / "takvimler"
     / "2025_2026_genel_akademik_takvim.pdf"
 )
+_STUDENT_AFFAIRS_LISTS_DIR = (
+    Path(__file__).resolve().parents[3]
+    / "data"
+    / "raw"
+    / "student_affairs"
+    / "listeler"
+)
+_HORIZONTAL_TRANSFER_FALL_CALENDAR_PDF = _STUDENT_AFFAIRS_LISTS_DIR / "2025_2026_güz_yatay_geçiş_takvimi.pdf"
+_HORIZONTAL_TRANSFER_SPRING_CALENDAR_PDF = _STUDENT_AFFAIRS_LISTS_DIR / "2025_2026_bahar_yatay_geçiş_takvimi.pdf"
 
 _CALENDAR_DATE_RE = re.compile(
+    r"\d{2}\.\d{2}\.\d{4}\s*[–-]\s*\d{2}\.\d{2}\.\d{4}"
+    r"|\d{2}\.\d{2}\.\d{4}"
+    r"|"
     r"\d{2}\s+[^\W\d_]+-\d{2}\s+[^\W\d_]+\s+\d{4}"
     r"|\d{2}-\d{2}\s+[^\W\d_]+\s+\d{4}"
     r"|\d{2}\s+[^\W\d_]+\s+\d{4}"
@@ -712,8 +724,9 @@ def _extract_pdf_text(path: Path) -> str:
         return ""
 
 
-def _extract_calendar_row_dates(label: str) -> list[str]:
-    text = _extract_pdf_text(_ACADEMIC_CALENDAR_PDF)
+def _extract_calendar_row_dates(label: str, source_path: Path | None = None) -> list[str]:
+    source_path = source_path or _ACADEMIC_CALENDAR_PDF
+    text = _extract_pdf_text(source_path)
     if not text:
         return []
     normalized_label = normalize_registration_text(label)
@@ -828,9 +841,94 @@ class AcademicCalendarFacet:
     markers: tuple[str, ...]
     term_labels: tuple[str, ...] = ("güz dönemi", "bahar dönemi", "ek sınav")
     requires_application: bool = False
+    related_rows: tuple[tuple[str, str], ...] = ()
+    required_markers: tuple[str, ...] = ()
+    source_path: Path = _ACADEMIC_CALENDAR_PDF
+    group: str = ""
+    term_markers: tuple[str, ...] = ()
 
 
 _ACADEMIC_CALENDAR_FACETS: tuple[AcademicCalendarFacet, ...] = (
+    AcademicCalendarFacet(
+        row_label="Cift Anadal ve Yandal Basvurulari",
+        display_label="cift anadal ve yandal basvurulari",
+        markers=(
+            "cap",
+            "capa",
+            "cift anadal",
+            "cift ana dal",
+            "ikinci ana dal",
+            "yandal",
+            "yan dal",
+        ),
+        term_labels=("basvuru",),
+        related_rows=(
+            (
+                "Cift Anadal ve Yandal Basvurularinin Birimlerce Degerlendirilmesi ve Ilani",
+                "Basvurularin birimlerce degerlendirilmesi ve ilani",
+            ),
+        ),
+    ),
+    AcademicCalendarFacet(
+        row_label="Basvuru Tarihleri",
+        display_label="2025-2026 guz yariyili yatay gecis basvuru tarihleri",
+        markers=("basvuru", "basvuru tarih", "son basvuru"),
+        required_markers=("yatay gecis",),
+        term_labels=("merkezi yerlestirme puani (Ek Madde-1)", "kurumlar arasi/kurum ici"),
+        source_path=_HORIZONTAL_TRANSFER_FALL_CALENDAR_PDF,
+        group="horizontal_transfer_application_dates",
+        term_markers=("guz", "güz", "ek madde", "merkezi yerlestirme"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Basvuru Tarihleri",
+        display_label="2025-2026 bahar yariyili on lisans yatay gecis basvuru tarihleri",
+        markers=("basvuru", "basvuru tarih", "son basvuru"),
+        required_markers=("yatay gecis",),
+        term_labels=("on lisans bahar",),
+        source_path=_HORIZONTAL_TRANSFER_SPRING_CALENDAR_PDF,
+        group="horizontal_transfer_application_dates",
+        term_markers=("bahar", "on lisans", "ön lisans", "onlisans", "önlisans"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Degerlendirme Tarihleri",
+        display_label="2025-2026 guz yariyili yatay gecis degerlendirme tarihleri",
+        markers=("degerlendirme", "degerlendirme tarih"),
+        required_markers=("yatay gecis",),
+        term_labels=("merkezi yerlestirme puani (Ek Madde-1)", "kurumlar arasi/kurum ici"),
+        source_path=_HORIZONTAL_TRANSFER_FALL_CALENDAR_PDF,
+        group="horizontal_transfer_evaluation_dates",
+        term_markers=("guz", "güz", "ek madde", "merkezi yerlestirme"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Degerlendirme Tarihleri",
+        display_label="2025-2026 bahar yariyili on lisans yatay gecis degerlendirme tarihleri",
+        markers=("degerlendirme", "degerlendirme tarih"),
+        required_markers=("yatay gecis",),
+        term_labels=("on lisans bahar",),
+        source_path=_HORIZONTAL_TRANSFER_SPRING_CALENDAR_PDF,
+        group="horizontal_transfer_evaluation_dates",
+        term_markers=("bahar", "on lisans", "ön lisans", "onlisans", "önlisans"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Kesin Kayit Tarihleri",
+        display_label="2025-2026 guz yariyili yatay gecis kesin kayit tarihleri",
+        markers=("kesin kayit", "kayit tarih"),
+        required_markers=("yatay gecis",),
+        term_labels=("merkezi yerlestirme puani (Ek Madde-1)", "kurumlar arasi/kurum ici"),
+        source_path=_HORIZONTAL_TRANSFER_FALL_CALENDAR_PDF,
+        group="horizontal_transfer_registration_dates",
+        term_markers=("guz", "güz", "ek madde", "merkezi yerlestirme"),
+    ),
+    AcademicCalendarFacet(
+        row_label="Kesin Kayit Tarihleri",
+        display_label="2025-2026 bahar yariyili on lisans yatay gecis kesin kayit tarihleri",
+        markers=("kesin kayit", "kayit tarih"),
+        required_markers=("yatay gecis",),
+        term_labels=("on lisans bahar",),
+        source_path=_HORIZONTAL_TRANSFER_SPRING_CALENDAR_PDF,
+        group="horizontal_transfer_registration_dates",
+        term_markers=("bahar", "on lisans", "ön lisans", "onlisans", "önlisans"),
+    ),
     AcademicCalendarFacet(
         row_label="Ders Kayitlari ve Katki Payi",
         display_label="ders kayıtları ve katkı payı/öğrenim ücreti ödemeleri",
@@ -960,10 +1058,11 @@ def _requested_calendar_term(lowered_query: str, term_labels: tuple[str, ...]) -
 
 
 def _format_calendar_facet_answer(facet: AcademicCalendarFacet, lowered_query: str) -> tuple[str, dict] | None:
-    dates = _extract_calendar_row_dates(facet.row_label)
+    dates = _extract_calendar_row_dates(facet.row_label, facet.source_path)
     if not dates:
         return None
     pairs = list(zip(facet.term_labels, dates))
+    metadata = _calendar_facet_metadata(facet, dates)
     requested_term = _requested_calendar_term(lowered_query, facet.term_labels)
     if requested_term:
         requested_dates = dict(pairs).get(requested_term)
@@ -973,7 +1072,7 @@ def _format_calendar_facet_answer(facet: AcademicCalendarFacet, lowered_query: s
                 answer = f"Genel akademik takvime göre {facet.display_label} {requested_dates} {suffix}."
             else:
                 answer = f"Genel akademik takvime göre {facet.display_label} {requested_term} için {requested_dates} {suffix}."
-            return answer, _calendar_facet_metadata(facet, dates)
+            return _append_related_calendar_rows(answer, metadata, facet)
     if len(pairs) == 1:
         date_text = pairs[0][1]
         suffix = "tarihleri arasındadır" if "-" in date_text else "tarihidir"
@@ -981,15 +1080,36 @@ def _format_calendar_facet_answer(facet: AcademicCalendarFacet, lowered_query: s
     else:
         joined = ", ".join(f"{label} için {date}" for label, date in pairs)
         answer = f"Genel akademik takvime göre {facet.display_label}: {joined}."
-    return answer, _calendar_facet_metadata(facet, dates)
+    return _append_related_calendar_rows(answer, metadata, facet)
+
+
+def _append_related_calendar_rows(
+    answer: str,
+    metadata: dict,
+    facet: AcademicCalendarFacet,
+) -> tuple[str, dict]:
+    related: list[dict[str, str]] = []
+    for row_label, display_label in facet.related_rows:
+        dates = _extract_calendar_row_dates(row_label, facet.source_path)
+        if not dates:
+            continue
+        date_text = dates[0]
+        suffix = "tarihleri arasindadir" if "-" in date_text else "tarihidir"
+        answer += f" {display_label} {date_text} {suffix}."
+        related.append({"label": row_label, "display_label": display_label, "date": date_text})
+    if related:
+        metadata["related_rows"] = related
+    return answer, metadata
 
 
 def _calendar_facet_metadata(facet: AcademicCalendarFacet, dates: list[str]) -> dict:
     metadata = {
-        "source": str(_ACADEMIC_CALENDAR_PDF),
+        "source": str(facet.source_path),
         "label": facet.row_label,
         "dates": dates,
     }
+    if facet.group:
+        metadata["group"] = facet.group
     if dates:
         metadata["fall"] = dates[0]
     if len(dates) > 1:
@@ -999,13 +1119,63 @@ def _calendar_facet_metadata(facet: AcademicCalendarFacet, dates: list[str]) -> 
     return metadata
 
 
+def _calendar_facet_matches(facet: AcademicCalendarFacet, lowered_query: str) -> bool:
+    if facet.required_markers and not all(marker in lowered_query for marker in facet.required_markers):
+        return False
+    return any(marker in lowered_query for marker in facet.markers)
+
+
+def _calendar_facet_score(facet: AcademicCalendarFacet, lowered_query: str) -> int:
+    marker_score = max((len(marker) for marker in facet.markers if marker in lowered_query), default=0)
+    required_score = sum(len(marker) for marker in facet.required_markers if marker in lowered_query)
+    term_score = 0
+    if facet.term_markers and any(marker in lowered_query for marker in facet.term_markers):
+        term_score = 100
+    return marker_score + required_score + term_score
+
+
+def _calendar_group_term_requested(facet: AcademicCalendarFacet, lowered_query: str) -> bool:
+    return bool(facet.term_markers and any(marker in lowered_query for marker in facet.term_markers))
+
+
 def _build_registry_calendar_answer(lowered_query: str) -> tuple[str, dict] | None:
     matches = [
-        (max(len(marker) for marker in facet.markers if marker in lowered_query), facet)
+        (_calendar_facet_score(facet, lowered_query), facet)
         for facet in _ACADEMIC_CALENDAR_FACETS
-        if any(marker in lowered_query for marker in facet.markers)
+        if _calendar_facet_matches(facet, lowered_query)
     ]
-    for _score, facet in sorted(matches, key=lambda item: item[0], reverse=True):
+    sorted_matches = sorted(matches, key=lambda item: item[0], reverse=True)
+    if sorted_matches:
+        _top_score, top_facet = sorted_matches[0]
+        if top_facet.group and not _calendar_group_term_requested(top_facet, lowered_query):
+            group_facets = [
+                facet
+                for _score, facet in sorted_matches
+                if facet.group == top_facet.group and not _calendar_group_term_requested(facet, lowered_query)
+            ]
+            rendered = [
+                _format_calendar_facet_answer(facet, lowered_query)
+                for facet in group_facets
+            ]
+            rendered = [item for item in rendered if item is not None]
+            if rendered:
+                answers = [answer for answer, _metadata in rendered]
+                metadata_items = [metadata for _answer, metadata in rendered]
+                return (
+                    " ".join(answers),
+                    {
+                        "source": "; ".join(str(item.get("source") or "") for item in metadata_items),
+                        "label": top_facet.group,
+                        "group": top_facet.group,
+                        "items": metadata_items,
+                        "dates": [
+                            date
+                            for item in metadata_items
+                            for date in (item.get("dates") or [])
+                        ],
+                    },
+                )
+    for _score, facet in sorted_matches:
         answer = _format_calendar_facet_answer(facet, lowered_query)
         if answer is not None:
             return answer
@@ -1023,32 +1193,6 @@ def build_general_exam_calendar_answer(query_text: str) -> tuple[str, dict] | No
     wants_date = any(marker in lowered for marker in ("ne zaman", "tarih", "takvim"))
     if not wants_date:
         return None
-
-    if (
-        any(marker in lowered for marker in ("cap", "capa", "cift anadal", "cift ana dal", "yandal", "yan dal"))
-        and "basvuru" in lowered
-    ):
-        application_dates = _extract_calendar_row_dates("Cift Anadal ve Yandal Basvurulari")
-        evaluation_dates = _extract_calendar_row_dates(
-            "Cift Anadal ve Yandal Basvurularinin Birimlerce Degerlendirilmesi ve Ilani"
-        )
-        if application_dates:
-            application = application_dates[0]
-            evaluation = evaluation_dates[0] if evaluation_dates else None
-            answer = f"Genel akademik takvime göre çift anadal ve yandal başvuruları {application} tarihleri arasındadır."
-            if evaluation:
-                answer += f" Başvuruların birimlerce değerlendirilmesi ve ilanı {evaluation} tarihleri arasında yapılır."
-            return (
-                answer,
-                {
-                    "source": str(_ACADEMIC_CALENDAR_PDF),
-                    "label": "Cift Anadal ve Yandal Basvurulari",
-                    "fall": application,
-                    "spring": evaluation or "",
-                    "application_dates": application,
-                    "evaluation_dates": evaluation,
-                },
-            )
 
     registry_calendar_answer = _build_registry_calendar_answer(lowered)
     if registry_calendar_answer is not None:

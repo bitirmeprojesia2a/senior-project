@@ -30,7 +30,10 @@ class A2ADispatchRequest(BaseModel):
     student_department: str | None = Field(default=None, description="Ogrencinin bolum veya program bilgisi")
     student_faculty: str | None = Field(default=None, description="Ogrencinin fakulte bilgisi")
     student_type: str | None = Field(default=None, description="Ogrenci tipi veya uyruk bilgisi")
-    llm_profile: str | None = Field(default=None, description="LLM profil tercihi: fast, balanced veya quality")
+    llm_profile: str | None = Field(
+        default=None,
+        description="LLM profil tercihi: fast, balanced, quality, groq_only, hybrid_shadow veya hybrid_quality",
+    )
     is_authenticated: bool = Field(default=False, description="Kimlik dogrulama durumu")
     session_token: str | None = Field(default=None, description="Dogrulama oturum anahtari")
     slack_user_id: str | None = Field(default=None, description="Slack kullanici kimligi")

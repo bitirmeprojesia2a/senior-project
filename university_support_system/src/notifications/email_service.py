@@ -37,14 +37,15 @@ class EmailService:
                 "SMTP ayarlari eksik. EMAIL_FROM_EMAIL ve baglanti ayarlari tanimli olmali."
             )
 
-        subject = "OMU Destek Sistemi Dogrulama Kodu"
+        display_name = self._display_name()
+        subject = f"{display_name} Dogrulama Kodu"
         body = (
             f"Merhaba {full_name},\n\n"
             "Kisisel ogrenci bilgilerine dayali sorunuza yanit verebilmek icin kimlik dogrulamasi gerekiyor.\n"
             f"Tek kullanimlik dogrulama kodunuz: {otp_code}\n"
             f"Bu kod {expires_in_minutes} dakika boyunca gecerlidir.\n\n"
             "Bu islemi siz baslatmadiysaniz bu e-postayi dikkate almayabilirsiniz.\n\n"
-            "OMU Destek Sistemi"
+            f"{display_name}"
         )
         await asyncio.to_thread(
             self._send_email_sync,
@@ -79,7 +80,13 @@ class EmailService:
         if from_email is None:
             raise EmailDeliveryError("EMAIL_FROM_EMAIL ayari eksik.")
 
-        from_name: Optional[str] = self._settings.from_name
+        from_name: Optional[str] = self._display_name()
         if from_name:
             return f"{from_name} <{from_email}>"
         return from_email
+
+    def _display_name(self) -> str:
+        configured = (self._settings.from_name or "").strip()
+        if configured and configured not in {"OMU Destek Sistemi", "OMÜ Destek Sistemi"}:
+            return configured
+        return settings.institution.support_bot_name

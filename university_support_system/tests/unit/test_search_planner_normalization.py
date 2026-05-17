@@ -346,3 +346,35 @@ def test_select_reranker_query_uses_expanded_text_for_withdrawal_profile():
     )
 
     assert selected.endswith("kayit sildirme ilisik kesme")
+
+
+def test_query_preprocessor_does_not_turn_cap_debt_eligibility_into_fee_lookup():
+    expanded = QueryPreprocessor().preprocess(
+        "Harc borcum olsaydi CAP'a basvurabilir miydim?"
+    )
+    normalized = expanded.lower()
+
+    assert "cift ana dal" in normalized or "çift ana dal" in normalized
+    assert "ogrenim ucreti" not in normalized
+    assert "öğrenim ücreti" not in normalized
+    assert "katki payi" not in normalized
+    assert "katkı payı" not in normalized
+    assert "harç ücreti" not in normalized
+
+
+def test_query_preprocessor_keeps_fee_expansion_for_explicit_payment_question():
+    expanded = QueryPreprocessor().preprocess(
+        "CAP basvurusu icin harc borcumu nasil odeyebilirim?"
+    )
+    normalized = expanded.lower()
+
+    assert "ogrenim ucreti" in normalized or "öğrenim ücreti" in normalized
+
+
+def test_select_reranker_query_uses_clean_cap_debt_eligibility_query():
+    selected = _select_reranker_query(
+        "Harc borcum olsaydi CAP'a basvurabilir miydim?",
+        "Harc borcum olsaydi CAP'a basvurabilir miydim? cift ana dal harc ucreti ogrenim ucreti",
+    )
+
+    assert selected == "Harc borcum olsaydi CAP'a basvurabilir miydim?"

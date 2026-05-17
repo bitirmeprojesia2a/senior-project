@@ -753,6 +753,32 @@ class TestHybridRetrieverDepartmentSearch:
         assert adjusted[0]["source"] == "bilgisayar_staj_esaslari.pdf"
         assert adjusted[0]["score"] > adjusted[1]["score"]
 
+    def test_department_metadata_boost_does_not_override_stronger_general_policy(self):
+        results = [
+            {
+                **self._make_candidate("genel_yonetmelik.pdf", score=0.82),
+                "metadata": {
+                    "source": "genel_yonetmelik.pdf",
+                    "bolum": "genel",
+                    "bolum_adi": "Genel",
+                },
+            },
+            {
+                **self._make_candidate("bilgisayar_staj_esaslari.pdf", score=0.70),
+                "metadata": {
+                    "source": "bilgisayar_staj_esaslari.pdf",
+                    "bolum": "bilgisayar_muhendisligi",
+                    "bolum_adi": "Bilgisayar Muhendisligi",
+                },
+            },
+        ]
+
+        adjusted = _apply_department_metadata_boost(results, "Bilgisayar Muhendisligi")
+
+        assert adjusted[0]["source"] == "genel_yonetmelik.pdf"
+        assert adjusted[1]["source"] == "bilgisayar_staj_esaslari.pdf"
+        assert adjusted[1]["score"] == 0.76
+
     def test_search_adds_department_scoped_recall_from_academic_documents(self):
         retriever = self._make_retriever()
         retriever.collection_name = None

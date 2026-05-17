@@ -1,0 +1,4838 @@
+{
+  "run_id": "shadow_golden_turkish_fp16_critical_sleep12_20260517",
+  "created_at": "2026-05-17T18:01:17",
+  "trace_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\tmp\\shadow_golden_turkish_fp16_critical_sleep12_20260517.jsonl",
+  "report_path": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\docs\\archive\\benchmarks\\shadow_decision_trace_golden_shadow_golden_turkish_fp16_critical_sleep12_20260517.md",
+  "a2a_mode": "inprocess",
+  "llm_provider": {
+    "primary": "openai_compatible",
+    "fallback": "google_ai"
+  },
+  "capability_planner": {
+    "mode": "on",
+    "scope": "academic_programs,student_affairs,finance,announcement,event"
+  },
+  "llm_profile": "groq_only",
+  "question_cache": "bypass",
+  "answer_preview_chars": 700,
+  "warmup_summary": {
+    "mode": "none",
+    "elapsed_ms": 0.0,
+    "retrieval": {
+      "enabled": false,
+      "status": "skipped"
+    },
+    "llm": {
+      "enabled": false,
+      "status": "skipped"
+    }
+  },
+  "provider_retry": {
+    "count": 1,
+    "backoff_seconds": 8.0
+  },
+  "provider_error_stats": {
+    "total": 17,
+    "by_provider": {
+      "groq": 11,
+      "google_ai": 6
+    },
+    "by_reason": {
+      "rate_limit": 11,
+      "other": 6
+    },
+    "retryable": 15
+  },
+  "final_attempt_provider_error_stats": {
+    "total": 5,
+    "by_provider": {
+      "groq": 3,
+      "google_ai": 2
+    },
+    "by_reason": {
+      "rate_limit": 3,
+      "other": 2
+    },
+    "retryable": 3
+  },
+  "retry_history_provider_error_stats": {
+    "total": 12,
+    "by_provider": {
+      "groq": 8,
+      "google_ai": 4
+    },
+    "by_reason": {
+      "rate_limit": 8,
+      "other": 4
+    },
+    "retryable": 12
+  },
+  "llm_key_distribution": {
+    "by_provider": {
+      "groq": {
+        "calls": 27,
+        "key_count": 53,
+        "by_fingerprint": {
+          "24b9652705b1": 2,
+          "d427d6dcc70e": 1,
+          "5636cc6375b7": 1,
+          "18694d48e7d3": 1,
+          "897ea1ca897e": 1,
+          "051f59a11b93": 1,
+          "c6e82d5f9ef2": 1,
+          "a3e421be002a": 2,
+          "2eb4f14b6ad5": 2,
+          "fba5c0f29033": 2,
+          "26a01be4304a": 1,
+          "fcb1af18c173": 1,
+          "64ee113faff7": 2,
+          "775f860f28a7": 2,
+          "98aa7a677e13": 1,
+          "1d6935952e9a": 1,
+          "2ba462e17db4": 1,
+          "1f75827ea381": 1,
+          "eb9aad1d76ad": 1,
+          "2075f8b244dc": 1,
+          "5150f63f1a64": 1
+        }
+      },
+      "google_ai": {
+        "calls": 3,
+        "key_count": 16,
+        "by_fingerprint": {
+          "aac8ead26ad8": 1,
+          "79cca093f2c6": 1,
+          "1d5cad59f0ab": 1
+        }
+      }
+    },
+    "provider_org_fingerprints": {
+      "36ac290f66aa": 1,
+      "59386eb18df7": 1,
+      "9670657e8ae2": 1
+    },
+    "missing_fingerprint_calls": 0
+  },
+  "timeout_stats": {
+    "capability_planner_timeout_suspected": 0,
+    "routing_timeout_suspected": 0,
+    "first_case_latency_ms": 3589.77
+  },
+  "answer_validation_stats": {
+    "total": 6,
+    "pass": 5,
+    "check": 0,
+    "fail": 1,
+    "requires_judge": 1,
+    "enforceable_by_contract": 4,
+    "by_reason": {
+      "no_evidence_claims": 1,
+      "required_values_preserved": 1,
+      "no_query_relevant_required_values": 2,
+      "query_does_not_require_value_check": 1,
+      "answer_conflicts_with_evidence_values": 1
+    }
+  },
+  "answer_value_conflict_stats": {
+    "total": 6,
+    "pass": 0,
+    "check": 1,
+    "skipped": 5,
+    "by_reason": {
+      "not_applicable": 5,
+      "answer_primary_value_conflicts_with_evidence": 1
+    }
+  },
+  "results": [
+    {
+      "id": "GT03",
+      "family": "finance",
+      "query": "Bilgisayar Muhendisligi ikinci ogretim harc ucreti ne kadar?",
+      "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT03-retry1",
+      "expected_owner": "tuition_fee_catalog",
+      "expected_capability": "finance.tuition_fee",
+      "expected_primary_department": "finance",
+      "expected_primary_specialist": "tuition_agent",
+      "departments": [
+        "finance"
+      ],
+      "generation_modes": [
+        "vt"
+      ],
+      "source_count": 0,
+      "elapsed_ms": 3636.9,
+      "response_time_ms": 3589.77,
+      "answer_preview": "Benchmark, Öğrenim ücreti için Türk öğrenci / Mühendislik Fakültesi bilgisi veritabanında kayıtlı. Yıllık ücret: 2.397,00 TL. Dönemlik ücret: 1.198,50 TL.\n\n(Kaynak: 2025_2026_yılı_türk_öğrenci_katkı_payı_öğrenim_ücretleri.pdf)\n\nÜretim Türü:\n- VT\n- Çalışma biçimi: Doğrudan\n- Ajan akışı: Öğrenim Ücreti\n\nKaynak Özeti:\n- Veritabani kaydi: ogrenim ucreti tablosu",
+      "error": null,
+      "note": "Ucret rakami structured finance katalogundan gelmeli.",
+      "trace_owner": "tuition_fee_catalog",
+      "trace_capability": "finance.tuition_fee",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "finance"
+      ],
+      "trace_selected_specialists": [
+        "tuition_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "finance",
+          "selected_agent_id": "tuition_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:finance.tuition_fee,source_owner:tuition_fee_catalog",
+          "signals": {
+            "capability": "finance.tuition_fee",
+            "source_owner": "tuition_fee_catalog",
+            "task_type": "tuition_query"
+          },
+          "contract": {
+            "agent_id": "tuition_agent",
+            "reason": "registry:capability:finance.tuition_fee,source_owner:tuition_fee_catalog"
+          },
+          "registry": {
+            "department": "finance",
+            "agent_id": "tuition_agent",
+            "reason": "registry:capability:finance.tuition_fee,source_owner:tuition_fee_catalog",
+            "topic": "finance_tuition_fee",
+            "allowed_specialists": [
+              "tuition_agent"
+            ],
+            "matched_markers": [],
+            "conflict_markers": [],
+            "fallback_agent_id": "tuition_agent"
+          },
+          "task_type": {
+            "agent_id": "tuition_agent",
+            "reason": "task_type:tuition_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "tuition_agent",
+            "reason": "keyword:harc",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "tuition_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "finance:tuition_agent/contract, legacy=tuition_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": false,
+        "original_departments": [
+          "finance"
+        ],
+        "restored_departments": [],
+        "owner_routing_policy": {
+          "source_owner": "tuition_fee_catalog",
+          "capability": "finance.tuition_fee",
+          "primary_department": "finance",
+          "support_departments": [],
+          "reason": "finance_tuition_owner_primary"
+        },
+        "router_departments": [
+          "finance"
+        ],
+        "restored_primary_department": "finance",
+        "support_departments": [],
+        "reason": "single_branch",
+        "kept_departments": [
+          "finance"
+        ],
+        "pruned_departments": []
+      },
+      "trace_branch_gate_summary": "observed: kept=finance; pruned=-; reason=single_branch",
+      "trace_response_filter": {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": "tuition_fee_catalog",
+        "primary_department": "finance",
+        "original_count": 1,
+        "kept_count": 1,
+        "dropped_count": 0,
+        "kept": [
+          {
+            "department": "finance",
+            "agent_id": "tuition_agent",
+            "source_count": 0,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": true,
+            "has_source_owner_evidence": false
+          }
+        ],
+        "dropped": []
+      },
+      "trace_response_filter_summary": "kept=1; dropped=0 (-); primary=finance",
+      "trace_response_time_ms": 3589.77,
+      "judge_result": {},
+      "judge_repair_summary": "-",
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "no_evidence_claims",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": false,
+        "evidence_claim_count": 0,
+        "required_claims": [],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": [],
+        "value_arbitration": {}
+      },
+      "answer_validation_summary": "shadow/pass:no_evidence_claims",
+      "answer_coverage": {
+        "mode": "shadow",
+        "status": "skipped",
+        "expected_facet": null,
+        "reason": "not_applicable",
+        "positive_markers": [],
+        "drift_markers": []
+      },
+      "answer_coverage_summary": "shadow/skipped:-:not_applicable",
+      "answer_value_conflict": {
+        "mode": "shadow",
+        "status": "skipped",
+        "reason": "not_applicable",
+        "aspect": null,
+        "primary_answer_value": null,
+        "competing_values": [],
+        "value_roles": []
+      },
+      "answer_value_conflict_summary": "shadow/skipped:not_applicable; primary=-; competing=-",
+      "retrieval_execution": [],
+      "retrieval_execution_summary": "-",
+      "answer_length": {
+        "schema": "omu.answer_length.v1",
+        "policy": "normal",
+        "char_count": 359,
+        "sentence_count": 4,
+        "bullet_count": 4,
+        "warning": false,
+        "warnings": []
+      },
+      "answer_length_summary": "normal/ok; chars=359; sent=4; bullets=4",
+      "answer_quality": {
+        "mode": "shadow",
+        "status": "pass",
+        "reason": "clean",
+        "issues": [],
+        "bad_tokens": [],
+        "foreign_token_shadow": false,
+        "encoding_noise_shadow": false,
+        "boilerplate_shadow": false
+      },
+      "answer_quality_summary": "shadow/pass:clean; tokens=-",
+      "llm_call_count": 2,
+      "llm_roles_used": [
+        "routing"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 105,
+          "system_chars": 16983,
+          "estimated_input_tokens": 4272,
+          "api_key_fingerprint": "24b9652705b1",
+          "api_key_index": 5,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "llm_operating_profile": "standard",
+          "prompt_chars": 1754,
+          "system_chars": 7349,
+          "estimated_input_tokens": 2275,
+          "api_key_fingerprint": "d427d6dcc70e",
+          "api_key_index": 6,
+          "api_key_count": 53
+        }
+      ],
+      "timeout_signals": {
+        "capability_planner_ms": 1473.505,
+        "capability_planner_timeout_suspected": false,
+        "routing_ms": 1981.609,
+        "routing_timeout_suspected": false,
+        "conversation_ms": 6.64,
+        "final_synthesis_ms": null
+      },
+      "trace_recorded": true,
+      "attempt": 2,
+      "provider_retry_attempts": [
+        {
+          "attempt": 1,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT03",
+          "status": "CHECK",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "routing",
+              "reason": "rate_limit"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT03-retry1",
+          "status": "OK",
+          "retryable_provider_error": false,
+          "provider_errors": []
+        }
+      ],
+      "provider_retry_count": 1,
+      "provider_retryable_error_seen": true,
+      "provider_warning_summary": "retry_history=1",
+      "structural_issues": [],
+      "structural_summary": "-",
+      "status": "OK"
+    },
+    {
+      "id": "GT04",
+      "family": "student_affairs_policy",
+      "query": "Yatay gecisle gelen ogrenci muafiyet basvurusunu ne zaman yapmali?",
+      "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT04-retry1",
+      "expected_owner": "student_affairs_policy",
+      "expected_capability": "student_affairs.policy_lookup",
+      "expected_primary_department": "student_affairs",
+      "expected_primary_specialist": "registration_agent",
+      "departments": [
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "llm",
+        "vt"
+      ],
+      "source_count": 1,
+      "elapsed_ms": 16921.3,
+      "response_time_ms": 16863.54,
+      "answer_preview": "Benchmark, Yatay geçiş ile gelen öğrenciler, muafiyet başvurularını akademik takvimde belirtilen tarihlerde yapmalıdır. \n• Merkezi yerleştirme puanı (Ek Madde-1) için 01.08.2025 – 06.08.2025, \n• Kurumlar arası/kurum içi için 01.08.2025 – 15.08.2025, \n• Bahar yarıyılı için 26.01.2026 – 01.02.2026 tarihleri arasında başvurular yapılacaktır. \nBu başvurular için gerekli belgelerin tam listesi öğrenci işleri biriminden öğrenilebilecektir.\n\nÜretim Türü:\n- Final Sentez: LLM\n- VT\n- Çalışma biçimi: Paralel\n- Ajan akışı: Paralel: Kayıt İşleri; Son: Orkestratör\n\nKaynak Özeti:\n- Belge: C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_...",
+      "error": null,
+      "note": "Policy RAG + sure/slot sinyali.",
+      "trace_owner": "academic_calendar",
+      "trace_capability": "calendar.academic_date",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs"
+      ],
+      "trace_selected_specialists": [
+        "registration_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "student_affairs",
+          "selected_agent_id": "registration_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:calendar.academic_date,source_owner:academic_calendar",
+          "signals": {
+            "capability": "calendar.academic_date",
+            "source_owner": "academic_calendar",
+            "task_type": "registration_query"
+          },
+          "contract": {
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:calendar.academic_date,source_owner:academic_calendar"
+          },
+          "registry": {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:calendar.academic_date,source_owner:academic_calendar",
+            "topic": "academic_calendar",
+            "allowed_specialists": [
+              "registration_agent"
+            ],
+            "matched_markers": [],
+            "conflict_markers": [],
+            "fallback_agent_id": "registration_agent"
+          },
+          "task_type": {
+            "agent_id": "registration_agent",
+            "reason": "task_type:registration_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "registration_agent",
+            "reason": "keyword:muafiyet",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "registration_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "student_affairs:registration_agent/contract, legacy=registration_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": true,
+        "original_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_departments": [],
+        "owner_routing_policy": {
+          "source_owner": "academic_calendar",
+          "capability": "calendar.academic_date",
+          "primary_department": "student_affairs",
+          "support_departments": [],
+          "reason": "academic_calendar_owner_primary"
+        },
+        "router_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_primary_department": "student_affairs",
+        "support_departments": [],
+        "capability": "calendar.academic_date",
+        "source_owner": "academic_calendar",
+        "reason": "calendar_owner_single_branch",
+        "task_type_overrides": {},
+        "kept_departments": [
+          "student_affairs"
+        ],
+        "pruned_departments": [
+          "academic_programs"
+        ]
+      },
+      "trace_branch_gate_summary": "applied: kept=student_affairs; pruned=academic_programs; reason=calendar_owner_single_branch",
+      "trace_response_filter": {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": "academic_calendar",
+        "primary_department": "student_affairs",
+        "original_count": 1,
+        "kept_count": 1,
+        "dropped_count": 0,
+        "kept": [
+          {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "source_count": 1,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": true,
+            "has_source_owner_evidence": true
+          }
+        ],
+        "dropped": []
+      },
+      "trace_response_filter_summary": "kept=1; dropped=0 (-); primary=student_affairs",
+      "trace_response_time_ms": 16863.54,
+      "judge_result": {
+        "approved": false,
+        "action": "rewrite_only",
+        "failure_reason": "missing required documents information",
+        "plan_decision": null,
+        "answer_contract": null,
+        "evidence_contract": null,
+        "triggered_by_validator": false,
+        "answer_validation": {
+          "status": "pass",
+          "risk_level": "none",
+          "reason": "required_values_preserved",
+          "requires_judge": false,
+          "mode": "shadow",
+          "enforceable_by_contract": false,
+          "evidence_claim_count": 8,
+          "required_claims": [
+            {
+              "claim": "2025-2026",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "2025",
+                "2026"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "01.08.2025",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "01.08",
+                "2025"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "06.08.2025",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "06.08",
+                "2025"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "15.08.2025",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "15.08",
+                "2025"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "26.01.2026",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "26.01",
+                "2026"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            }
+          ],
+          "missing_values": [],
+          "conflicting_values": [],
+          "answer_values": [
+            "1",
+            "01.08",
+            "2025",
+            "06.08",
+            "15.08",
+            "26.01",
+            "2026",
+            "01.02"
+          ],
+          "value_arbitration": {
+            "primary_values": [
+              "2025",
+              "2026",
+              "01.08",
+              "06.08",
+              "15.08",
+              "26.01",
+              "01.02"
+            ],
+            "related_values": [],
+            "secondary_values": [],
+            "conflicting_values": []
+          }
+        },
+        "repair": {
+          "accepted": true,
+          "outcome": "accepted_neutral",
+          "rejection_reason": "repair_not_worse",
+          "pre_repair_validation": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "required_values_preserved",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": false,
+            "evidence_claim_count": 8,
+            "required_claims": [
+              {
+                "claim": "2025-2026",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "2025",
+                  "2026"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "01.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "01.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "06.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "06.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "15.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "15.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "26.01.2026",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "26.01",
+                  "2026"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [
+              "1",
+              "01.08",
+              "2025",
+              "06.08",
+              "15.08",
+              "26.01",
+              "2026",
+              "01.02"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "2025",
+                "2026",
+                "01.08",
+                "06.08",
+                "15.08",
+                "26.01",
+                "01.02"
+              ],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "post_repair_validation": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "required_values_preserved",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": false,
+            "evidence_claim_count": 8,
+            "required_claims": [
+              {
+                "claim": "2025-2026",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "2025",
+                  "2026"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "01.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "01.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "06.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "06.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "15.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "15.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "26.01.2026",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "26.01",
+                  "2026"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [
+              "1",
+              "01.08",
+              "2025",
+              "06.08",
+              "15.08",
+              "26.01",
+              "2026",
+              "01.02"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "2025",
+                "2026",
+                "01.08",
+                "06.08",
+                "15.08",
+                "26.01",
+                "01.02"
+              ],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "pre_repair_coverage": {
+            "mode": "shadow",
+            "status": "skipped",
+            "expected_facet": null,
+            "reason": "not_applicable",
+            "positive_markers": [],
+            "drift_markers": []
+          },
+          "post_repair_coverage": {
+            "mode": "shadow",
+            "status": "skipped",
+            "expected_facet": null,
+            "reason": "not_applicable",
+            "positive_markers": [],
+            "drift_markers": []
+          },
+          "pre_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          },
+          "post_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          }
+        }
+      },
+      "judge_repair_summary": "repair:accepted_neutral:repair_not_worse",
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "required_values_preserved",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": false,
+        "evidence_claim_count": 8,
+        "required_claims": [
+          {
+            "claim": "2025-2026",
+            "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+            "required_values": [
+              "2025",
+              "2026"
+            ],
+            "reason": "date_or_time_value",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": null,
+            "policy_target_program": null,
+            "policy_matched_programs": [],
+            "arbitration_score": 0
+          },
+          {
+            "claim": "01.08.2025",
+            "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+            "required_values": [
+              "01.08",
+              "2025"
+            ],
+            "reason": "date_or_time_value",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": null,
+            "policy_target_program": null,
+            "policy_matched_programs": [],
+            "arbitration_score": 0
+          },
+          {
+            "claim": "06.08.2025",
+            "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+            "required_values": [
+              "06.08",
+              "2025"
+            ],
+            "reason": "date_or_time_value",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": null,
+            "policy_target_program": null,
+            "policy_matched_programs": [],
+            "arbitration_score": 0
+          },
+          {
+            "claim": "15.08.2025",
+            "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+            "required_values": [
+              "15.08",
+              "2025"
+            ],
+            "reason": "date_or_time_value",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": null,
+            "policy_target_program": null,
+            "policy_matched_programs": [],
+            "arbitration_score": 0
+          },
+          {
+            "claim": "26.01.2026",
+            "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+            "required_values": [
+              "26.01",
+              "2026"
+            ],
+            "reason": "date_or_time_value",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": null,
+            "policy_target_program": null,
+            "policy_matched_programs": [],
+            "arbitration_score": 0
+          }
+        ],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": [
+          "1",
+          "01.08",
+          "2025",
+          "06.08",
+          "15.08",
+          "26.01",
+          "2026",
+          "01.02"
+        ],
+        "value_arbitration": {
+          "primary_values": [
+            "2025",
+            "2026",
+            "01.08",
+            "06.08",
+            "15.08",
+            "26.01",
+            "01.02"
+          ],
+          "related_values": [],
+          "secondary_values": [],
+          "conflicting_values": []
+        },
+        "pre_final_snapshot": {
+          "status": "pass",
+          "risk_level": "none",
+          "reason": "required_values_preserved",
+          "requires_judge": false,
+          "mode": "shadow",
+          "enforceable_by_contract": false,
+          "evidence_claim_count": 8,
+          "required_claims": [
+            {
+              "claim": "2025-2026",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "2025",
+                "2026"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "01.08.2025",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "01.08",
+                "2025"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "06.08.2025",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "06.08",
+                "2025"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "15.08.2025",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "15.08",
+                "2025"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            },
+            {
+              "claim": "26.01.2026",
+              "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+              "required_values": [
+                "26.01",
+                "2026"
+              ],
+              "reason": "date_or_time_value",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": null,
+              "policy_target_program": null,
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            }
+          ],
+          "missing_values": [],
+          "conflicting_values": [],
+          "answer_values": [
+            "1",
+            "01.08",
+            "2025",
+            "06.08",
+            "15.08",
+            "26.01",
+            "2026",
+            "01.02"
+          ],
+          "value_arbitration": {
+            "primary_values": [
+              "2025",
+              "2026",
+              "01.08",
+              "06.08",
+              "15.08",
+              "26.01",
+              "01.02"
+            ],
+            "related_values": [],
+            "secondary_values": [],
+            "conflicting_values": []
+          },
+          "pre_judge": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "required_values_preserved",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": false,
+            "evidence_claim_count": 8,
+            "required_claims": [
+              {
+                "claim": "2025-2026",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "2025",
+                  "2026"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "01.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "01.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "06.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "06.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "15.08.2025",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "15.08",
+                  "2025"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              },
+              {
+                "claim": "26.01.2026",
+                "source": "C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_güz_yatay_geçiş_takvimi.pdf; C:\\Users\\ÖMER FARUK DERİN\\Desktop\\bitirme projesi\\university_support_system\\university_support_system\\data\\raw\\student_affairs\\listeler\\2025_2026_bahar_yatay_geçiş_takvimi.pdf",
+                "required_values": [
+                  "26.01",
+                  "2026"
+                ],
+                "reason": "date_or_time_value",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": null,
+                "policy_target_program": null,
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [
+              "1",
+              "01.08",
+              "2025",
+              "06.08",
+              "15.08",
+              "26.01",
+              "2026",
+              "01.02"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "2025",
+                "2026",
+                "01.08",
+                "06.08",
+                "15.08",
+                "26.01",
+                "01.02"
+              ],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "judge_escalated": true,
+          "repair_neutral": true,
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_validation_summary": "shadow/pass:required_values_preserved",
+      "answer_coverage": {
+        "mode": "shadow",
+        "status": "skipped",
+        "expected_facet": null,
+        "reason": "not_applicable",
+        "positive_markers": [],
+        "drift_markers": [],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "skipped",
+          "expected_facet": null,
+          "reason": "not_applicable",
+          "positive_markers": [],
+          "drift_markers": [],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "skipped",
+            "expected_facet": null,
+            "reason": "not_applicable",
+            "positive_markers": [],
+            "drift_markers": []
+          },
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_coverage_summary": "shadow/skipped:-:not_applicable",
+      "answer_value_conflict": {
+        "mode": "shadow",
+        "status": "skipped",
+        "reason": "not_applicable",
+        "aspect": null,
+        "primary_answer_value": null,
+        "competing_values": [],
+        "value_roles": [],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "skipped",
+          "reason": "not_applicable",
+          "aspect": null,
+          "primary_answer_value": null,
+          "competing_values": [],
+          "value_roles": [],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          },
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_value_conflict_summary": "shadow/skipped:not_applicable; primary=-; competing=-",
+      "retrieval_execution": [],
+      "retrieval_execution_summary": "-",
+      "answer_length": {
+        "schema": "omu.answer_length.v1",
+        "policy": "normal",
+        "char_count": 931,
+        "sentence_count": 4,
+        "bullet_count": 8,
+        "warning": true,
+        "warnings": [
+          "normal_answer_bullet_count_high"
+        ]
+      },
+      "answer_length_summary": "normal/warn; chars=931; sent=4; bullets=8",
+      "answer_quality": {
+        "mode": "shadow",
+        "status": "pass",
+        "reason": "clean",
+        "issues": [],
+        "bad_tokens": [],
+        "foreign_token_shadow": false,
+        "encoding_noise_shadow": false,
+        "boilerplate_shadow": false
+      },
+      "answer_quality_summary": "shadow/pass:clean; tokens=-",
+      "llm_call_count": 6,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 111,
+          "system_chars": 16983,
+          "estimated_input_tokens": 4273,
+          "api_key_fingerprint": "5636cc6375b7",
+          "api_key_index": 15,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "llm_operating_profile": "standard",
+          "prompt_chars": 5114,
+          "system_chars": 7349,
+          "estimated_input_tokens": 3115,
+          "api_key_fingerprint": "18694d48e7d3",
+          "api_key_index": 18,
+          "api_key_count": 53,
+          "provider_org_fingerprint": "36ac290f66aa",
+          "error_type": "OpenAIClientError",
+          "error_message": "groq HTTP hatasi (429): {\"error\":{\"message\":\"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kr6qdwy4fs9ssz22xxnt9zcg` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 96649, Requested 3546. Please try again in 2m48.48s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "google_ai",
+          "provider_label": "google_ai",
+          "display_name": "google_ai",
+          "model": "gemini-3-flash-preview",
+          "path": "fallback",
+          "status": "error",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "llm_operating_profile": "standard",
+          "fallback_from": "openai_compatible",
+          "fallback_from_label": "groq",
+          "fallback_from_model": "llama-3.3-70b-versatile",
+          "prompt_chars": 5114,
+          "system_chars": 7349,
+          "estimated_input_tokens": 3115,
+          "api_key_fingerprint": "aac8ead26ad8",
+          "api_key_index": 2,
+          "api_key_count": 16,
+          "error_type": "OpenAIClientError",
+          "error_message": "google_ai HTTP hatasi (403): [{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Your project has been denied access. Please contact support.\",\n    \"status\": \"PERMISSION_DENIED\"\n  }\n}\n]"
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 6122,
+          "system_chars": 2398,
+          "estimated_input_tokens": 2130,
+          "api_key_fingerprint": "897ea1ca897e",
+          "api_key_index": 19,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 6211,
+          "system_chars": 1513,
+          "estimated_input_tokens": 1931,
+          "api_key_fingerprint": "051f59a11b93",
+          "api_key_index": 20,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 1911,
+          "system_chars": 2398,
+          "estimated_input_tokens": 1077,
+          "api_key_fingerprint": "c6e82d5f9ef2",
+          "api_key_index": 21,
+          "api_key_count": 53
+        }
+      ],
+      "timeout_signals": {
+        "capability_planner_ms": 9149.739,
+        "capability_planner_timeout_suspected": false,
+        "routing_ms": 2004.016,
+        "routing_timeout_suspected": false,
+        "conversation_ms": 29.056,
+        "final_synthesis_ms": 1663.819
+      },
+      "trace_recorded": true,
+      "attempt": 2,
+      "provider_retry_attempts": [
+        {
+          "attempt": 1,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT04",
+          "status": "CHECK",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "routing",
+              "reason": "rate_limit"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT04-retry1",
+          "status": "CHECK",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "routing",
+              "reason": "rate_limit"
+            },
+            {
+              "provider": "google_ai",
+              "role": "routing",
+              "reason": "other"
+            }
+          ]
+        }
+      ],
+      "provider_retry_count": 1,
+      "provider_retryable_error_seen": true,
+      "provider_warning_summary": "final_retryable=1; retry_history=3",
+      "structural_issues": [
+        "capability expected=student_affairs.policy_lookup actual=calendar.academic_date",
+        "provider_retryable_error_seen",
+        "provider_error_seen"
+      ],
+      "structural_summary": "capability expected=student_affairs.policy_lookup actual=calendar.academic_date; provider_retryable_error_seen; provider_error_seen",
+      "status": "CHECK"
+    },
+    {
+      "id": "GT05",
+      "family": "cross_department",
+      "query": "CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+      "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT05-retry1",
+      "expected_owner": null,
+      "expected_capability": null,
+      "expected_primary_department": null,
+      "expected_primary_specialist": null,
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 9,
+      "elapsed_ms": 14079.0,
+      "response_time_ms": 14018.88,
+      "answer_preview": "Benchmark, ÇAP başvuruları için ana dal programında mezuniyet hakkını elde eden ve ÇAP’ı başarıyla tamamlayan öğrenciye ayrıca ikinci ana dalı yaptığı bölümün lisans diploması verilir. Öğrencinin ÇAP’tan mezun olabilmesi için ana dal genel not ortalamasının 4,00 üzerinden en az 2,75 olması ve önlisans için 120 AKTS, lisans için 240 AKTS şartını yerine getirmesi gerekir. \nHarc borcu ödeme koşullarıyla ilgili olarak kaynaklarda net bilgi bulunamadığından bu konuda yardım alabilmek için ilgili sekreterin iletişim bilgilerini paylaşabilirim.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Ogrenci Isleri: RAG\n- Akademik Programlar: RAG\n- Çalışma biçimi: Paralel\n- Ajan akışı: Paralel: Kayıt İşleri + Mevzuat; ...",
+      "error": null,
+      "note": "Academic + finance parallel karar ve final owner.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": "student_affairs.policy_lookup",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_selected_specialists": [
+        "registration_agent",
+        "regulation_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "student_affairs",
+          "selected_agent_id": "registration_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy",
+          "signals": {
+            "capability": "student_affairs.policy_lookup",
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy"
+          },
+          "registry": {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy",
+            "topic": "student_affairs_registration_policy",
+            "allowed_specialists": [
+              "registration_agent",
+              "graduation_agent",
+              "internship_agent",
+              "student_life_agent"
+            ],
+            "matched_markers": [
+              "basvuru",
+              "cap"
+            ],
+            "conflict_markers": [],
+            "fallback_agent_id": "registration_agent"
+          },
+          "task_type": {
+            "agent_id": "registration_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "registration_agent",
+            "reason": "keyword:cap",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "registration_agent"
+        },
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "academic_programs",
+          "selected_agent_id": "regulation_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+          "signals": {
+            "capability": "student_affairs.policy_lookup",
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy"
+          },
+          "registry": {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+            "topic": "academic_policy_support",
+            "allowed_specialists": [
+              "regulation_agent"
+            ],
+            "matched_markers": [],
+            "conflict_markers": [],
+            "fallback_agent_id": "regulation_agent"
+          },
+          "task_type": {
+            "agent_id": "regulation_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "regulation_agent",
+            "reason": "keyword:cap",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "international_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "student_affairs:registration_agent/contract, legacy=registration_agent:match; academic_programs:regulation_agent/contract, legacy=regulation_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": true,
+        "original_departments": [
+          "academic_programs",
+          "finance"
+        ],
+        "restored_departments": [
+          "student_affairs"
+        ],
+        "owner_routing_policy": {
+          "source_owner": "student_affairs_policy",
+          "capability": "student_affairs.policy_lookup",
+          "primary_department": "student_affairs",
+          "support_departments": [
+            "academic_programs",
+            "finance"
+          ],
+          "reason": "student_affairs_policy_primary"
+        },
+        "router_departments": [
+          "academic_programs",
+          "finance"
+        ],
+        "restored_primary_department": "student_affairs",
+        "support_departments": [
+          "academic_programs",
+          "finance"
+        ],
+        "capability": "student_affairs.policy_lookup",
+        "source_owner": "student_affairs_policy",
+        "reason": "answer_contract_cap_debt_policy_gate",
+        "task_type_overrides": {
+          "academic_programs": "procedure_query"
+        },
+        "kept_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "pruned_departments": [
+          "finance"
+        ]
+      },
+      "trace_branch_gate_summary": "applied: kept=student_affairs, academic_programs; pruned=finance; reason=answer_contract_cap_debt_policy_gate",
+      "trace_response_filter": {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": "student_affairs_policy",
+        "primary_department": "student_affairs",
+        "original_count": 2,
+        "kept_count": 2,
+        "dropped_count": 0,
+        "kept": [
+          {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "source_count": 5,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": true,
+            "has_source_owner_evidence": true
+          },
+          {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "source_count": 4,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": false,
+            "has_source_owner_evidence": true
+          }
+        ],
+        "dropped": []
+      },
+      "trace_response_filter_summary": "kept=2; dropped=0 (-); primary=student_affairs",
+      "trace_response_time_ms": 14018.88,
+      "judge_result": {
+        "approved": false,
+        "action": "rewrite_only",
+        "failure_reason": "Harc borcu ödeme koşullarıyla ilgili olarak kaynaklarda net bilgi bulunamadı.",
+        "plan_decision": {
+          "intent": "cap_debt_eligibility",
+          "capability": "student_affairs.policy_lookup",
+          "departments": [],
+          "params": {
+            "query": "CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+            "topic": "CAP",
+            "question_type": "eligibility",
+            "must_answer": [
+              "CAP basvuru sartlari",
+              "harc borcu odeme kosullari"
+            ],
+            "policy_facet": "cap_debt_eligibility",
+            "answer_contract": {
+              "schema": "omu.answer_contract.v1",
+              "contract_id": "cap_debt_eligibility",
+              "facet": "cap_debt_eligibility",
+              "source_owner": "student_affairs_policy",
+              "capability": "student_affairs.policy_lookup",
+              "final_owner": "main_orchestrator",
+              "synthesis_policy": "llm_with_contract",
+              "allowed_departments": [
+                "student_affairs",
+                "academic_programs"
+              ],
+              "forbidden_source_families": [],
+              "forbidden_answer_markers": [
+                "harc borcu olan ogrenciler basvurabilir",
+                "harc borcu olanlar basvurabilir",
+                "dolayisiyla harc borcu olan ogrenciler basvurabilir",
+                "baska bir programa gecmek mumkundur",
+                "baska programa gecmek mumkundur",
+                "programa gecmek mumkundur",
+                "baska bir programa gecis"
+              ],
+              "required_answer_markers": [],
+              "negative_evidence_policy": "absence_is_not_permission",
+              "target_program": "double_major"
+            }
+          },
+          "missing_slots": [],
+          "answer_contract": {
+            "schema": "omu.answer_contract.v1",
+            "contract_id": "cap_debt_eligibility",
+            "facet": "cap_debt_eligibility",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "final_owner": "main_orchestrator",
+            "synthesis_policy": "llm_with_contract",
+            "allowed_departments": [
+              "student_affairs",
+              "academic_programs"
+            ],
+            "forbidden_source_families": [],
+            "forbidden_answer_markers": [
+              "harc borcu olan ogrenciler basvurabilir",
+              "harc borcu olanlar basvurabilir",
+              "dolayisiyla harc borcu olan ogrenciler basvurabilir",
+              "baska bir programa gecmek mumkundur",
+              "baska programa gecmek mumkundur",
+              "programa gecmek mumkundur",
+              "baska bir programa gecis"
+            ],
+            "required_answer_markers": [],
+            "negative_evidence_policy": "absence_is_not_permission",
+            "target_program": "double_major"
+          },
+          "evidence_contract": {
+            "source_owner": "student_affairs_policy",
+            "forbidden_source_families": []
+          },
+          "fallback_route": null,
+          "confidence": 1.0,
+          "reasoning": "answer_contract:cap_debt_eligibility"
+        },
+        "answer_contract": {
+          "schema": "omu.answer_contract.v1",
+          "contract_id": "cap_debt_eligibility",
+          "facet": "cap_debt_eligibility",
+          "source_owner": "student_affairs_policy",
+          "capability": "student_affairs.policy_lookup",
+          "final_owner": "main_orchestrator",
+          "synthesis_policy": "llm_with_contract",
+          "allowed_departments": [
+            "student_affairs",
+            "academic_programs"
+          ],
+          "forbidden_source_families": [],
+          "forbidden_answer_markers": [
+            "harc borcu olan ogrenciler basvurabilir",
+            "harc borcu olanlar basvurabilir",
+            "dolayisiyla harc borcu olan ogrenciler basvurabilir",
+            "baska bir programa gecmek mumkundur",
+            "baska programa gecmek mumkundur",
+            "programa gecmek mumkundur",
+            "baska bir programa gecis"
+          ],
+          "required_answer_markers": [],
+          "negative_evidence_policy": "absence_is_not_permission",
+          "target_program": "double_major",
+          "must_answer": [
+            "CAP basvuru sartlari",
+            "harc borcu odeme kosullari"
+          ]
+        },
+        "evidence_contract": {
+          "source_owner": "student_affairs_policy",
+          "forbidden_source_families": []
+        },
+        "triggered_by_validator": false,
+        "answer_validation": {
+          "status": "pass",
+          "risk_level": "none",
+          "reason": "no_query_relevant_required_values",
+          "requires_judge": false,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 19,
+          "required_claims": [],
+          "missing_values": [],
+          "conflicting_values": [],
+          "answer_values": [],
+          "value_arbitration": {
+            "primary_values": [],
+            "related_values": [],
+            "secondary_values": [],
+            "conflicting_values": []
+          }
+        },
+        "repair": {
+          "accepted": true,
+          "outcome": "accepted_neutral",
+          "rejection_reason": "repair_not_worse",
+          "pre_repair_validation": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "no_query_relevant_required_values",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 19,
+            "required_claims": [],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [],
+            "value_arbitration": {
+              "primary_values": [],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "post_repair_validation": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "no_query_relevant_required_values",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 19,
+            "required_claims": [],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [],
+            "value_arbitration": {
+              "primary_values": [],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "pre_repair_coverage": {
+            "mode": "shadow",
+            "status": "skipped",
+            "expected_facet": null,
+            "reason": "not_applicable",
+            "positive_markers": [],
+            "drift_markers": []
+          },
+          "post_repair_coverage": {
+            "mode": "shadow",
+            "status": "skipped",
+            "expected_facet": null,
+            "reason": "not_applicable",
+            "positive_markers": [],
+            "drift_markers": []
+          },
+          "pre_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          },
+          "post_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          }
+        }
+      },
+      "judge_repair_summary": "repair:accepted_neutral:repair_not_worse",
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "no_query_relevant_required_values",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": true,
+        "evidence_claim_count": 19,
+        "required_claims": [],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": [],
+        "value_arbitration": {
+          "primary_values": [],
+          "related_values": [],
+          "secondary_values": [],
+          "conflicting_values": []
+        },
+        "pre_final_snapshot": {
+          "status": "pass",
+          "risk_level": "none",
+          "reason": "no_query_relevant_required_values",
+          "requires_judge": false,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 19,
+          "required_claims": [],
+          "missing_values": [],
+          "conflicting_values": [],
+          "answer_values": [],
+          "value_arbitration": {
+            "primary_values": [],
+            "related_values": [],
+            "secondary_values": [],
+            "conflicting_values": []
+          },
+          "pre_judge": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "no_query_relevant_required_values",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 19,
+            "required_claims": [],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [],
+            "value_arbitration": {
+              "primary_values": [],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "judge_escalated": true,
+          "repair_neutral": true,
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_validation_summary": "shadow/pass:no_query_relevant_required_values",
+      "answer_coverage": {
+        "mode": "shadow",
+        "status": "skipped",
+        "expected_facet": null,
+        "reason": "not_applicable",
+        "positive_markers": [],
+        "drift_markers": [],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "skipped",
+          "expected_facet": null,
+          "reason": "not_applicable",
+          "positive_markers": [],
+          "drift_markers": [],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "skipped",
+            "expected_facet": null,
+            "reason": "not_applicable",
+            "positive_markers": [],
+            "drift_markers": []
+          },
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_coverage_summary": "shadow/skipped:-:not_applicable",
+      "answer_value_conflict": {
+        "mode": "shadow",
+        "status": "skipped",
+        "reason": "not_applicable",
+        "aspect": null,
+        "primary_answer_value": null,
+        "competing_values": [],
+        "value_roles": [],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "skipped",
+          "reason": "not_applicable",
+          "aspect": null,
+          "primary_answer_value": null,
+          "competing_values": [],
+          "value_roles": [],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          },
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_value_conflict_summary": "shadow/skipped:not_applicable; primary=-; competing=-",
+      "retrieval_execution": [
+        {
+          "schema": "omu.retrieval_execution_stats.v1",
+          "policy": {
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "primary",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "policy_facet": "cap_debt_eligibility",
+            "preferred_specialist": null,
+            "top_k": null,
+            "reranker_candidate_limit": 8,
+            "multi_query_enabled": true,
+            "max_multi_query_variants": 1,
+            "variant_top_k": 3,
+            "variant_reranker_candidate_limit": 4,
+            "support_lite": false,
+            "reason": "primary_branch_budget"
+          },
+          "search_calls": 1,
+          "multi_query_variant_count": 0,
+          "multi_query_added_results": 0,
+          "early_stop_reason": "strong_primary_evidence",
+          "support_lite_applied": false,
+          "multi_query_skipped": true,
+          "multi_query_skip_reason": "strong_primary_evidence",
+          "department": "student_affairs",
+          "specialist": "registration_agent"
+        },
+        {
+          "schema": "omu.retrieval_execution_stats.v1",
+          "policy": {
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "support",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "policy_facet": "cap_debt_eligibility",
+            "preferred_specialist": null,
+            "top_k": 4,
+            "reranker_candidate_limit": 4,
+            "multi_query_enabled": false,
+            "max_multi_query_variants": 0,
+            "variant_top_k": 3,
+            "variant_reranker_candidate_limit": 4,
+            "support_lite": true,
+            "reason": "support_branch_lite_budget"
+          },
+          "search_calls": 1,
+          "multi_query_variant_count": 0,
+          "multi_query_added_results": 0,
+          "early_stop_reason": "not_primary_or_empty",
+          "support_lite_applied": true,
+          "multi_query_skipped": true,
+          "multi_query_skip_reason": "policy_disabled",
+          "department": "academic_programs",
+          "specialist": "regulation_agent"
+        }
+      ],
+      "retrieval_execution_summary": "primary:registration_agent:full; searches=1; mqe=0; early=strong_primary_evidence; support:regulation_agent:lite; searches=1; mqe=0; early=not_primary_or_empty",
+      "answer_length": {
+        "schema": "omu.answer_length.v1",
+        "policy": "normal",
+        "char_count": 916,
+        "sentence_count": 4,
+        "bullet_count": 8,
+        "warning": true,
+        "warnings": [
+          "normal_answer_bullet_count_high"
+        ]
+      },
+      "answer_length_summary": "normal/warn; chars=916; sent=4; bullets=8",
+      "answer_quality": {
+        "mode": "shadow",
+        "status": "pass",
+        "reason": "clean",
+        "issues": [],
+        "bad_tokens": [],
+        "foreign_token_shadow": false,
+        "encoding_noise_shadow": false,
+        "boilerplate_shadow": false
+      },
+      "answer_quality_summary": "shadow/pass:clean; tokens=-",
+      "llm_call_count": 5,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 107,
+          "system_chars": 16983,
+          "estimated_input_tokens": 4272,
+          "api_key_fingerprint": "a3e421be002a",
+          "api_key_index": 29,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "llm_operating_profile": "standard",
+          "prompt_chars": 4317,
+          "system_chars": 7349,
+          "estimated_input_tokens": 2916,
+          "api_key_fingerprint": "2eb4f14b6ad5",
+          "api_key_index": 30,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 43622,
+          "system_chars": 2398,
+          "estimated_input_tokens": 11505,
+          "api_key_fingerprint": "fba5c0f29033",
+          "api_key_index": 31,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 5941,
+          "system_chars": 1513,
+          "estimated_input_tokens": 1863,
+          "api_key_fingerprint": "26a01be4304a",
+          "api_key_index": 33,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 3083,
+          "system_chars": 2398,
+          "estimated_input_tokens": 1370,
+          "api_key_fingerprint": "fcb1af18c173",
+          "api_key_index": 34,
+          "api_key_count": 53
+        }
+      ],
+      "timeout_signals": {
+        "capability_planner_ms": 1849.888,
+        "capability_planner_timeout_suspected": false,
+        "routing_ms": 1927.734,
+        "routing_timeout_suspected": false,
+        "conversation_ms": 16.353,
+        "final_synthesis_ms": 2257.251
+      },
+      "trace_recorded": true,
+      "attempt": 2,
+      "provider_retry_attempts": [
+        {
+          "attempt": 1,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT05",
+          "status": "CHECK",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "global_synthesis",
+              "reason": "rate_limit"
+            },
+            {
+              "provider": "google_ai",
+              "role": "global_synthesis",
+              "reason": "other"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT05-retry1",
+          "status": "OK",
+          "retryable_provider_error": false,
+          "provider_errors": []
+        }
+      ],
+      "provider_retry_count": 1,
+      "provider_retryable_error_seen": true,
+      "provider_warning_summary": "retry_history=2",
+      "structural_issues": [],
+      "structural_summary": "-",
+      "status": "OK"
+    },
+    {
+      "id": "GT06",
+      "family": "international_policy",
+      "query": "Yabanci ogrenci kayit belgeleri ve ikamet izni icin neler gerekir?",
+      "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT06",
+      "expected_owner": "international_policy",
+      "expected_capability": "international.policy_lookup",
+      "expected_primary_department": "academic_programs",
+      "expected_primary_specialist": "international_agent",
+      "departments": [
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 3,
+      "elapsed_ms": 11430.5,
+      "response_time_ms": 11379.12,
+      "answer_preview": "Benchmark, Yabancı öğrenci olarak kayıt için Senato tarafından belirlenen kesin kayıt belgelerini teslim etmeniz ve ön kayıtlarınızı kesin kayda dönüştürmeniz zorunludur. İkamet izni başvuru süreci ile ilgili olarak, Türkiye'de geçireceğiniz öğrencilik sürecinde Türkiye Cumhuriyeti Devleti tarafından Türkiye'de ikamet eden yabancılar için belirlenmiş yasalara ve Ondokuz Mayıs Üniversitesinin kurallarına uymayı taahhüt etmeniz gerekmektedir. \n• Öğrenci işleri daire başkanlığına şahsen başvurmanız,\n• Senato tarafından belirlenen kayıt belgelerini teslim etmeniz,\n• Ön kayıtlarınızı kesin kayda dönüştürmeniz gerekmektedir. \n\nKayıt belgelerinin teslim edilmesi ve ön kayıtların kesin kayda dönüştü...",
+      "error": null,
+      "note": "International policy lookup ve kaynak secimi.",
+      "trace_owner": "international_policy",
+      "trace_capability": "international.policy_lookup",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs"
+      ],
+      "trace_selected_specialists": [
+        "international_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "academic_programs",
+          "selected_agent_id": "international_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:international.policy_lookup,source_owner:international_policy",
+          "signals": {
+            "capability": "international.policy_lookup",
+            "source_owner": "international_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "international_agent",
+            "reason": "registry:capability:international.policy_lookup,source_owner:international_policy"
+          },
+          "registry": {
+            "department": "academic_programs",
+            "agent_id": "international_agent",
+            "reason": "registry:capability:international.policy_lookup,source_owner:international_policy",
+            "topic": "international_policy",
+            "allowed_specialists": [
+              "international_agent"
+            ],
+            "matched_markers": [],
+            "conflict_markers": [],
+            "fallback_agent_id": "international_agent"
+          },
+          "task_type": {
+            "agent_id": "regulation_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "international_agent",
+            "reason": "keyword:yabanci",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "international_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "academic_programs:international_agent/contract, legacy=international_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": true,
+        "original_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_departments": [],
+        "owner_routing_policy": {
+          "source_owner": "international_policy",
+          "capability": "international.policy_lookup",
+          "primary_department": "academic_programs",
+          "support_departments": [],
+          "reason": "international_policy_owner_primary"
+        },
+        "router_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_primary_department": "academic_programs",
+        "support_departments": [],
+        "capability": "international.policy_lookup",
+        "source_owner": "international_policy",
+        "reason": "international_policy_single_branch",
+        "task_type_overrides": {},
+        "kept_departments": [
+          "academic_programs"
+        ],
+        "pruned_departments": [
+          "student_affairs"
+        ]
+      },
+      "trace_branch_gate_summary": "applied: kept=academic_programs; pruned=student_affairs; reason=international_policy_single_branch",
+      "trace_response_filter": {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": "international_policy",
+        "primary_department": "academic_programs",
+        "original_count": 1,
+        "kept_count": 1,
+        "dropped_count": 0,
+        "kept": [
+          {
+            "department": "academic_programs",
+            "agent_id": "international_agent",
+            "source_count": 3,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": true,
+            "has_source_owner_evidence": true
+          }
+        ],
+        "dropped": []
+      },
+      "trace_response_filter_summary": "kept=1; dropped=0 (-); primary=academic_programs",
+      "trace_response_time_ms": 11379.12,
+      "judge_result": {
+        "approved": false,
+        "action": "rewrite_only",
+        "failure_reason": "Gerekli bilgiler tam olarak предоставlenmedi",
+        "plan_decision": {
+          "intent": "international_registration_documents",
+          "capability": "international.policy_lookup",
+          "departments": [],
+          "params": {
+            "query": "Yabanci ogrenci olarak kayit icin hangi belgeler gerekli ve ikamet izni basvuru sureci nasil isliyor?",
+            "topic": "uluslararasi kayit",
+            "question_type": "required_documents",
+            "must_answer": [
+              "gerekli belgeler",
+              "basvuru/kesin kayit ayrimi",
+              "ikamet/evrak teslim siniri varsa",
+              "kaynakta yoksa eksik oldugunu belirtme"
+            ],
+            "preferred_sources": [
+              "uluslararasi ogrenci kayit",
+              "evrak teslim",
+              "uluslararasi ogrenci yonergesi",
+              "uluslararasi ogrenci basvuru",
+              "uluslararasi ogrenci kabul"
+            ],
+            "avoid_sources": [
+              "konukevi",
+              "ozel ogrenci",
+              "yemek bursu",
+              "pedagojik formasyon"
+            ]
+          },
+          "missing_slots": [],
+          "answer_contract": {
+            "must_answer": [
+              "kayit icin gerekli belgeler",
+              "basvuru/kesin kayit ayrimi",
+              "varsa asil/onayli belge sartlari",
+              "eksik bilgi varsa net sinir"
+            ]
+          },
+          "evidence_contract": {
+            "preferred_sources": [
+              "uluslararasi ogrenci kayit",
+              "evrak teslim",
+              "uluslararasi ogrenci yonergesi",
+              "uluslararasi ogrenci basvuru",
+              "uluslararasi ogrenci kabul"
+            ],
+            "avoid_sources": [
+              "konukevi",
+              "ozel ogrenci",
+              "yemek bursu",
+              "pedagojik formasyon",
+              "konu disi fakulte yonergeleri"
+            ]
+          },
+          "fallback_route": null,
+          "confidence": 0.9,
+          "reasoning": "Sorusu international policy_lookupcapability ile ilgilidir."
+        },
+        "answer_contract": {
+          "must_answer": [
+            "kayit icin gerekli belgeler",
+            "basvuru/kesin kayit ayrimi",
+            "varsa asil/onayli belge sartlari",
+            "eksik bilgi varsa net sinir"
+          ]
+        },
+        "evidence_contract": {
+          "preferred_sources": [
+            "uluslararasi ogrenci kayit",
+            "evrak teslim",
+            "uluslararasi ogrenci yonergesi",
+            "uluslararasi ogrenci basvuru",
+            "uluslararasi ogrenci kabul"
+          ],
+          "avoid_sources": [
+            "konukevi",
+            "ozel ogrenci",
+            "yemek bursu",
+            "pedagojik formasyon",
+            "konu disi fakulte yonergeleri"
+          ]
+        },
+        "triggered_by_validator": false,
+        "answer_validation": {
+          "status": "pass",
+          "risk_level": "none",
+          "reason": "no_query_relevant_required_values",
+          "requires_judge": false,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 14,
+          "required_claims": [],
+          "missing_values": [],
+          "conflicting_values": [],
+          "answer_values": [],
+          "value_arbitration": {
+            "primary_values": [],
+            "related_values": [],
+            "secondary_values": [],
+            "conflicting_values": []
+          }
+        },
+        "repair": {
+          "accepted": true,
+          "outcome": "accepted_neutral",
+          "rejection_reason": "repair_not_worse",
+          "pre_repair_validation": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "no_query_relevant_required_values",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 14,
+            "required_claims": [],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [],
+            "value_arbitration": {
+              "primary_values": [],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "post_repair_validation": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "no_query_relevant_required_values",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 14,
+            "required_claims": [],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [],
+            "value_arbitration": {
+              "primary_values": [],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "pre_repair_coverage": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "application_process",
+            "reason": "answer_contains_process_markers",
+            "positive_markers": [
+              "basvur",
+              "basvuru",
+              "belge"
+            ],
+            "drift_markers": []
+          },
+          "post_repair_coverage": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "application_process",
+            "reason": "answer_contains_process_markers",
+            "positive_markers": [
+              "basvur",
+              "basvuru",
+              "belge",
+              "ogrenci isleri",
+              "tarih"
+            ],
+            "drift_markers": []
+          },
+          "pre_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          },
+          "post_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          }
+        }
+      },
+      "judge_repair_summary": "repair:accepted_neutral:repair_not_worse",
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "no_query_relevant_required_values",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": true,
+        "evidence_claim_count": 14,
+        "required_claims": [],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": [],
+        "value_arbitration": {
+          "primary_values": [],
+          "related_values": [],
+          "secondary_values": [],
+          "conflicting_values": []
+        },
+        "pre_final_snapshot": {
+          "status": "pass",
+          "risk_level": "none",
+          "reason": "no_query_relevant_required_values",
+          "requires_judge": false,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 14,
+          "required_claims": [],
+          "missing_values": [],
+          "conflicting_values": [],
+          "answer_values": [],
+          "value_arbitration": {
+            "primary_values": [],
+            "related_values": [],
+            "secondary_values": [],
+            "conflicting_values": []
+          },
+          "pre_judge": {
+            "status": "pass",
+            "risk_level": "none",
+            "reason": "no_query_relevant_required_values",
+            "requires_judge": false,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 14,
+            "required_claims": [],
+            "missing_values": [],
+            "conflicting_values": [],
+            "answer_values": [],
+            "value_arbitration": {
+              "primary_values": [],
+              "related_values": [],
+              "secondary_values": [],
+              "conflicting_values": []
+            }
+          },
+          "judge_escalated": true,
+          "repair_neutral": true,
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_validation_summary": "shadow/pass:no_query_relevant_required_values",
+      "answer_coverage": {
+        "mode": "shadow",
+        "status": "pass",
+        "expected_facet": "application_process",
+        "reason": "answer_contains_process_markers",
+        "positive_markers": [
+          "basvur",
+          "basvuru",
+          "belge",
+          "ogrenci isleri",
+          "tarih"
+        ],
+        "drift_markers": [],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "pass",
+          "expected_facet": "application_process",
+          "reason": "answer_contains_process_markers",
+          "positive_markers": [
+            "basvur",
+            "basvuru",
+            "belge",
+            "ogrenci isleri",
+            "tarih"
+          ],
+          "drift_markers": [],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "application_process",
+            "reason": "answer_contains_process_markers",
+            "positive_markers": [
+              "basvur",
+              "basvuru",
+              "belge"
+            ],
+            "drift_markers": []
+          },
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_coverage_summary": "shadow/pass:application_process:answer_contains_process_markers",
+      "answer_value_conflict": {
+        "mode": "shadow",
+        "status": "skipped",
+        "reason": "not_applicable",
+        "aspect": null,
+        "primary_answer_value": null,
+        "competing_values": [],
+        "value_roles": [],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "skipped",
+          "reason": "not_applicable",
+          "aspect": null,
+          "primary_answer_value": null,
+          "competing_values": [],
+          "value_roles": [],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "skipped",
+            "reason": "not_applicable",
+            "aspect": null,
+            "primary_answer_value": null,
+            "competing_values": [],
+            "value_roles": []
+          },
+          "repair_outcome": "accepted_neutral"
+        }
+      },
+      "answer_value_conflict_summary": "shadow/skipped:not_applicable; primary=-; competing=-",
+      "retrieval_execution": [
+        {
+          "schema": "omu.retrieval_execution_stats.v1",
+          "policy": {
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "primary",
+            "source_owner": "international_policy",
+            "capability": "international.policy_lookup",
+            "policy_facet": null,
+            "preferred_specialist": null,
+            "top_k": null,
+            "reranker_candidate_limit": 8,
+            "multi_query_enabled": true,
+            "max_multi_query_variants": 1,
+            "variant_top_k": 3,
+            "variant_reranker_candidate_limit": 4,
+            "support_lite": false,
+            "reason": "primary_branch_budget"
+          },
+          "search_calls": 1,
+          "multi_query_variant_count": 0,
+          "multi_query_added_results": 0,
+          "early_stop_reason": "strong_primary_evidence",
+          "support_lite_applied": false,
+          "multi_query_skipped": true,
+          "multi_query_skip_reason": "strong_primary_evidence",
+          "department": "academic_programs",
+          "specialist": "international_agent"
+        }
+      ],
+      "retrieval_execution_summary": "primary:international_agent:full; searches=1; mqe=0; early=strong_primary_evidence",
+      "answer_length": {
+        "schema": "omu.answer_length.v1",
+        "policy": "normal",
+        "char_count": 1165,
+        "sentence_count": 5,
+        "bullet_count": 10,
+        "warning": true,
+        "warnings": [
+          "normal_answer_bullet_count_high"
+        ]
+      },
+      "answer_length_summary": "normal/warn; chars=1165; sent=5; bullets=10",
+      "answer_quality": {
+        "mode": "shadow",
+        "status": "pass",
+        "reason": "clean",
+        "issues": [],
+        "bad_tokens": [],
+        "foreign_token_shadow": false,
+        "encoding_noise_shadow": false,
+        "boilerplate_shadow": false
+      },
+      "answer_quality_summary": "shadow/pass:clean; tokens=-",
+      "llm_call_count": 5,
+      "llm_roles_used": [
+        "routing",
+        "final_refinement",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 111,
+          "system_chars": 16983,
+          "estimated_input_tokens": 4273,
+          "api_key_fingerprint": "64ee113faff7",
+          "api_key_index": 35,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "llm_operating_profile": "standard",
+          "prompt_chars": 5117,
+          "system_chars": 7349,
+          "estimated_input_tokens": 3116,
+          "api_key_fingerprint": "775f860f28a7",
+          "api_key_index": 36,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 17026,
+          "system_chars": 2398,
+          "estimated_input_tokens": 4856,
+          "api_key_fingerprint": "98aa7a677e13",
+          "api_key_index": 37,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 4241,
+          "system_chars": 1513,
+          "estimated_input_tokens": 1438,
+          "api_key_fingerprint": "1d6935952e9a",
+          "api_key_index": 38,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "final_refinement",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 2747,
+          "system_chars": 2398,
+          "estimated_input_tokens": 1286,
+          "api_key_fingerprint": "2ba462e17db4",
+          "api_key_index": 39,
+          "api_key_count": 53
+        }
+      ],
+      "timeout_signals": {
+        "capability_planner_ms": 2356.531,
+        "capability_planner_timeout_suspected": false,
+        "routing_ms": 1837.895,
+        "routing_timeout_suspected": false,
+        "conversation_ms": 18.001,
+        "final_synthesis_ms": 1658.329
+      },
+      "trace_recorded": true,
+      "attempt": 1,
+      "provider_retry_attempts": [
+        {
+          "attempt": 1,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-GT06",
+          "status": "OK",
+          "retryable_provider_error": false,
+          "provider_errors": []
+        }
+      ],
+      "provider_retry_count": 0,
+      "provider_retryable_error_seen": false,
+      "provider_warning_summary": "-",
+      "structural_issues": [],
+      "structural_summary": "-",
+      "status": "OK"
+    },
+    {
+      "id": "GT11",
+      "family": "follow_up_seed",
+      "query": "CAP basvurusu nasil yapilir?",
+      "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-cap-followup-retry1",
+      "expected_owner": "student_affairs_policy",
+      "expected_capability": "student_affairs.policy_lookup",
+      "expected_primary_department": "student_affairs",
+      "expected_primary_specialist": "registration_agent",
+      "departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "generation_modes": [
+        "llm",
+        "rag"
+      ],
+      "source_count": 9,
+      "elapsed_ms": 29823.8,
+      "response_time_ms": 29776.78,
+      "answer_preview": "Benchmark, ÇAP başvurusu için genel koşullar: ana dal not ortalamasının 4,00 üzerinden en az 3,00 olması ve ana dal diploma programının ilgili sınıfında başarı sıralaması itibarıyla en az ilk %20 içinde bulunmak gerekir. Kontenjan ve başvuru takvimi ilgili birim/ÖİDB duyuruları ile ilan edilir.\n\nÜretim Türü:\n- Final Sentez: LLM\n- Ogrenci Isleri: RAG\n- Akademik Programlar: RAG\n- Çalışma biçimi: Paralel\n- Ajan akışı: Paralel: Kayıt İşleri + Mevzuat; Son: Orkestratör\n\nKaynak Özeti:\n- Belge: yonerge_cift_anadal_yandal.pdf (4 parça)\n- Belge: yonerge_onlisans_lisans_yatay_gecis.pdf\n- Belge: bilgisayar_derslerinin_muafiyeti_sınav_yönergesi.pdf (2 parça)\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_da...",
+      "error": null,
+      "note": "Follow-up icin seed soru.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": "student_affairs.policy_lookup",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "student_affairs",
+        "academic_programs"
+      ],
+      "trace_selected_specialists": [
+        "registration_agent",
+        "regulation_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "student_affairs",
+          "selected_agent_id": "registration_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy",
+          "signals": {
+            "capability": "student_affairs.policy_lookup",
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy"
+          },
+          "registry": {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy",
+            "topic": "student_affairs_registration_policy",
+            "allowed_specialists": [
+              "registration_agent",
+              "graduation_agent",
+              "internship_agent",
+              "student_life_agent"
+            ],
+            "matched_markers": [
+              "basvuru",
+              "cap",
+              "cift anadal"
+            ],
+            "conflict_markers": [],
+            "fallback_agent_id": "registration_agent"
+          },
+          "task_type": {
+            "agent_id": "registration_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "registration_agent",
+            "reason": "keyword:cift anadal",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "registration_agent"
+        },
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "academic_programs",
+          "selected_agent_id": "regulation_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+          "signals": {
+            "capability": "student_affairs.policy_lookup",
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy"
+          },
+          "registry": {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+            "topic": "academic_policy_support",
+            "allowed_specialists": [
+              "regulation_agent"
+            ],
+            "matched_markers": [],
+            "conflict_markers": [],
+            "fallback_agent_id": "regulation_agent"
+          },
+          "task_type": {
+            "agent_id": "regulation_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "regulation_agent",
+            "reason": "keyword:cift anadal",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "international_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "student_affairs:registration_agent/contract, legacy=registration_agent:match; academic_programs:regulation_agent/contract, legacy=regulation_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": false,
+        "original_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_departments": [],
+        "owner_routing_policy": {
+          "source_owner": "student_affairs_policy",
+          "capability": "student_affairs.policy_lookup",
+          "primary_department": "student_affairs",
+          "support_departments": [
+            "academic_programs",
+            "finance"
+          ],
+          "reason": "student_affairs_policy_primary"
+        },
+        "router_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "restored_primary_department": "student_affairs",
+        "support_departments": [
+          "academic_programs",
+          "finance"
+        ],
+        "capability": "student_affairs.policy_lookup",
+        "source_owner": "student_affairs_policy",
+        "reason": "student_affairs_policy_contract_gate",
+        "task_type_overrides": {
+          "academic_programs": "procedure_query"
+        },
+        "kept_departments": [
+          "student_affairs",
+          "academic_programs"
+        ],
+        "pruned_departments": []
+      },
+      "trace_branch_gate_summary": "observed: kept=student_affairs, academic_programs; pruned=-; reason=student_affairs_policy_contract_gate",
+      "trace_response_filter": {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": "student_affairs_policy",
+        "primary_department": "student_affairs",
+        "original_count": 2,
+        "kept_count": 2,
+        "dropped_count": 0,
+        "kept": [
+          {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "source_count": 5,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": true,
+            "has_source_owner_evidence": true
+          },
+          {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "source_count": 4,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": false,
+            "has_source_owner_evidence": true
+          }
+        ],
+        "dropped": []
+      },
+      "trace_response_filter_summary": "kept=2; dropped=0 (-); primary=student_affairs",
+      "trace_response_time_ms": 29776.78,
+      "judge_result": {
+        "approved": true,
+        "action": "accept",
+        "failure_reason": null,
+        "plan_decision": {
+          "intent": "cap_eligibility",
+          "capability": "student_affairs.policy_lookup",
+          "departments": [],
+          "params": {
+            "query": "Cift anadal programi basvurusu nasil yapilir?",
+            "topic": "cift anadal programi",
+            "question_type": "application_process",
+            "must_answer": [
+              "basvuru sureci",
+              "gerekli belgeler",
+              "basvuru tarihleri",
+              "degerlendirme kriterleri"
+            ],
+            "preferred_sources": [
+              "cift anadal programi basvuru klavuzu",
+              "ogrenci isleri mudurlugu",
+              "universite web sitesi"
+            ],
+            "avoid_sources": [
+              "tek anadal programi",
+              "yabanci ogrenci basvuru",
+              "masters veya doktora programlari"
+            ],
+            "policy_facet": "cap_eligibility",
+            "answer_contract": {
+              "schema": "omu.answer_contract.v1",
+              "contract_id": "cap_eligibility",
+              "facet": "cap_eligibility",
+              "source_owner": "student_affairs_policy",
+              "capability": "student_affairs.policy_lookup",
+              "final_owner": "main_orchestrator",
+              "synthesis_policy": "llm_with_contract",
+              "allowed_departments": [
+                "student_affairs",
+                "academic_programs"
+              ],
+              "forbidden_source_families": [],
+              "forbidden_answer_markers": [
+                "120 akts",
+                "240 akts",
+                "2,75",
+                "2.75",
+                "mezuniyet hakk",
+                "diplomasi verilir"
+              ],
+              "required_answer_markers": [
+                "3,00",
+                "ilk %20"
+              ],
+              "target_program": "double_major"
+            }
+          },
+          "missing_slots": [],
+          "answer_contract": {
+            "schema": "omu.answer_contract.v1",
+            "contract_id": "cap_eligibility",
+            "facet": "cap_eligibility",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "final_owner": "main_orchestrator",
+            "synthesis_policy": "llm_with_contract",
+            "allowed_departments": [
+              "student_affairs",
+              "academic_programs"
+            ],
+            "forbidden_source_families": [],
+            "forbidden_answer_markers": [
+              "120 akts",
+              "240 akts",
+              "2,75",
+              "2.75",
+              "mezuniyet hakk",
+              "diplomasi verilir"
+            ],
+            "required_answer_markers": [
+              "3,00",
+              "ilk %20"
+            ],
+            "target_program": "double_major"
+          },
+          "evidence_contract": {
+            "source_owner": "student_affairs_policy",
+            "forbidden_source_families": []
+          },
+          "fallback_route": null,
+          "confidence": 1.0,
+          "reasoning": "answer_contract:cap_eligibility"
+        },
+        "answer_contract": {
+          "schema": "omu.answer_contract.v1",
+          "contract_id": "cap_eligibility",
+          "facet": "cap_eligibility",
+          "source_owner": "student_affairs_policy",
+          "capability": "student_affairs.policy_lookup",
+          "final_owner": "main_orchestrator",
+          "synthesis_policy": "llm_with_contract",
+          "allowed_departments": [
+            "student_affairs",
+            "academic_programs"
+          ],
+          "forbidden_source_families": [],
+          "forbidden_answer_markers": [
+            "120 akts",
+            "240 akts",
+            "2,75",
+            "2.75",
+            "mezuniyet hakk",
+            "diplomasi verilir"
+          ],
+          "required_answer_markers": [
+            "3,00",
+            "ilk %20"
+          ],
+          "target_program": "double_major",
+          "must_answer": [
+            "basvuru sureci",
+            "gerekli belgeler",
+            "basvuru tarihleri",
+            "degerlendirme kriterleri"
+          ]
+        },
+        "evidence_contract": {
+          "source_owner": "student_affairs_policy",
+          "forbidden_source_families": [],
+          "preferred_sources": [
+            "cift anadal programi basvuru klavuzu",
+            "ogrenci isleri mudurlugu",
+            "universite web sitesi"
+          ]
+        },
+        "triggered_by_validator": false,
+        "answer_validation": {
+          "status": "pass",
+          "risk_level": "none",
+          "reason": "query_does_not_require_value_check",
+          "requires_judge": false,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 0,
+          "required_claims": [],
+          "missing_values": [],
+          "conflicting_values": [],
+          "answer_values": [],
+          "value_arbitration": {}
+        }
+      },
+      "judge_repair_summary": "judge:accept; approved=True",
+      "answer_validation": {
+        "status": "pass",
+        "risk_level": "none",
+        "reason": "query_does_not_require_value_check",
+        "requires_judge": false,
+        "mode": "shadow",
+        "enforceable_by_contract": true,
+        "evidence_claim_count": 0,
+        "required_claims": [],
+        "missing_values": [],
+        "conflicting_values": [],
+        "answer_values": [],
+        "value_arbitration": {}
+      },
+      "answer_validation_summary": "shadow/pass:query_does_not_require_value_check",
+      "answer_coverage": {
+        "mode": "shadow",
+        "status": "pass",
+        "expected_facet": "application_process",
+        "reason": "answer_contains_process_markers",
+        "positive_markers": [
+          "basvur",
+          "basvuru",
+          "duyuru",
+          "takvim"
+        ],
+        "drift_markers": [
+          "not ortalamasi",
+          "ortalama",
+          "3,00",
+          "kosul"
+        ],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "pass",
+          "expected_facet": "application_process",
+          "reason": "answer_contains_process_markers",
+          "positive_markers": [
+            "basvur",
+            "basvuru",
+            "tarih"
+          ],
+          "drift_markers": [
+            "gno",
+            "ortalama",
+            "3,00",
+            "kredi",
+            "sart",
+            "kosul"
+          ]
+        }
+      },
+      "answer_coverage_summary": "shadow/pass:application_process:answer_contains_process_markers",
+      "answer_value_conflict": {
+        "mode": "shadow",
+        "status": "skipped",
+        "reason": "not_applicable",
+        "aspect": null,
+        "primary_answer_value": null,
+        "competing_values": [],
+        "value_roles": []
+      },
+      "answer_value_conflict_summary": "shadow/skipped:not_applicable; primary=-; competing=-",
+      "retrieval_execution": [
+        {
+          "schema": "omu.retrieval_execution_stats.v1",
+          "policy": {
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "primary",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "policy_facet": "cap_eligibility",
+            "preferred_specialist": null,
+            "top_k": null,
+            "reranker_candidate_limit": 8,
+            "multi_query_enabled": true,
+            "max_multi_query_variants": 1,
+            "variant_top_k": 3,
+            "variant_reranker_candidate_limit": 4,
+            "support_lite": false,
+            "reason": "primary_branch_budget"
+          },
+          "search_calls": 1,
+          "multi_query_variant_count": 0,
+          "multi_query_added_results": 0,
+          "early_stop_reason": "strong_primary_evidence",
+          "support_lite_applied": false,
+          "multi_query_skipped": true,
+          "multi_query_skip_reason": "strong_primary_evidence",
+          "department": "student_affairs",
+          "specialist": "registration_agent"
+        },
+        {
+          "schema": "omu.retrieval_execution_stats.v1",
+          "policy": {
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "support",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "policy_facet": "cap_eligibility",
+            "preferred_specialist": null,
+            "top_k": 4,
+            "reranker_candidate_limit": 4,
+            "multi_query_enabled": false,
+            "max_multi_query_variants": 0,
+            "variant_top_k": 3,
+            "variant_reranker_candidate_limit": 4,
+            "support_lite": true,
+            "reason": "support_branch_lite_budget"
+          },
+          "search_calls": 1,
+          "multi_query_variant_count": 0,
+          "multi_query_added_results": 0,
+          "early_stop_reason": "not_primary_or_empty",
+          "support_lite_applied": true,
+          "multi_query_skipped": true,
+          "multi_query_skip_reason": "policy_disabled",
+          "department": "academic_programs",
+          "specialist": "regulation_agent"
+        }
+      ],
+      "retrieval_execution_summary": "primary:registration_agent:full; searches=1; mqe=0; early=strong_primary_evidence; support:regulation_agent:lite; searches=1; mqe=0; early=not_primary_or_empty",
+      "answer_length": {
+        "schema": "omu.answer_length.v1",
+        "policy": "normal",
+        "char_count": 724,
+        "sentence_count": 3,
+        "bullet_count": 9,
+        "warning": true,
+        "warnings": [
+          "normal_answer_bullet_count_high"
+        ]
+      },
+      "answer_length_summary": "normal/warn; chars=724; sent=3; bullets=9",
+      "answer_quality": {
+        "mode": "shadow",
+        "status": "pass",
+        "reason": "clean",
+        "issues": [],
+        "bad_tokens": [],
+        "foreign_token_shadow": false,
+        "encoding_noise_shadow": false,
+        "boilerplate_shadow": false
+      },
+      "answer_quality_summary": "shadow/pass:clean; tokens=-",
+      "llm_call_count": 5,
+      "llm_roles_used": [
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 73,
+          "system_chars": 16983,
+          "estimated_input_tokens": 4264,
+          "api_key_fingerprint": "1f75827ea381",
+          "api_key_index": 49,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "llm_operating_profile": "standard",
+          "prompt_chars": 4893,
+          "system_chars": 7349,
+          "estimated_input_tokens": 3060,
+          "api_key_fingerprint": "eb9aad1d76ad",
+          "api_key_index": 51,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 38196,
+          "system_chars": 2398,
+          "estimated_input_tokens": 10148,
+          "api_key_fingerprint": "24b9652705b1",
+          "api_key_index": 5,
+          "api_key_count": 53,
+          "provider_org_fingerprint": "59386eb18df7",
+          "error_type": "OpenAIClientError",
+          "error_message": "groq HTTP hatasi (429): {\"error\":{\"message\":\"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kp3vngerfk7aztkgydg6xd76` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99021, Requested 10105. Please try again in 2h11m24.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "google_ai",
+          "provider_label": "google_ai",
+          "display_name": "google_ai",
+          "model": "gemini-3-flash-preview",
+          "path": "fallback",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "fallback_from": "openai_compatible",
+          "fallback_from_label": "groq",
+          "fallback_from_model": "llama-3.3-70b-versatile",
+          "prompt_chars": 38196,
+          "system_chars": 2398,
+          "estimated_input_tokens": 10148,
+          "api_key_fingerprint": "79cca093f2c6",
+          "api_key_index": 5,
+          "api_key_count": 16
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 5807,
+          "system_chars": 1513,
+          "estimated_input_tokens": 1830,
+          "api_key_fingerprint": "2075f8b244dc",
+          "api_key_index": 12,
+          "api_key_count": 53
+        }
+      ],
+      "timeout_signals": {
+        "capability_planner_ms": 5672.409,
+        "capability_planner_timeout_suspected": false,
+        "routing_ms": 4752.992,
+        "routing_timeout_suspected": false,
+        "conversation_ms": 10.477,
+        "final_synthesis_ms": 10873.523
+      },
+      "trace_recorded": true,
+      "attempt": 2,
+      "provider_retry_attempts": [
+        {
+          "attempt": 1,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-cap-followup",
+          "status": "CHECK",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "judge",
+              "reason": "rate_limit"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-cap-followup-retry1",
+          "status": "CHECK",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "global_synthesis",
+              "reason": "rate_limit"
+            }
+          ]
+        }
+      ],
+      "provider_retry_count": 1,
+      "provider_retryable_error_seen": true,
+      "provider_warning_summary": "final_retryable=1; retry_history=2",
+      "structural_issues": [
+        "provider_retryable_error_seen"
+      ],
+      "structural_summary": "provider_retryable_error_seen",
+      "status": "CHECK"
+    },
+    {
+      "id": "GT12",
+      "family": "follow_up_resolution",
+      "query": "Peki not ortalamasi kac olmali?",
+      "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-cap-followup-retry1",
+      "expected_owner": "student_affairs_policy",
+      "expected_capability": "student_affairs.policy_lookup",
+      "expected_primary_department": "student_affairs",
+      "expected_primary_specialist": "registration_agent",
+      "departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "generation_modes": [
+        "rag"
+      ],
+      "source_count": 9,
+      "elapsed_ms": 23144.4,
+      "response_time_ms": 23088.8,
+      "answer_preview": "Benchmark, ÇAP başvurusu için genel koşullar: ana dal not ortalamasının 4,00 üzerinden en az 3,00 olması ve ana dal diploma programının ilgili sınıfında başarı sıralaması itibarıyla en az ilk %20 içinde bulunmak gerekir. Kontenjan ve başvuru takvimi ilgili birim/ÖİDB duyuruları ile ilan edilir.\n\nÜretim Türü:\n- Akademik Programlar: RAG\n- Ogrenci Isleri: RAG\n- Çalışma biçimi: Paralel\n- Ajan akışı: Mevzuat + Kayıt İşleri\n\nKaynak Özeti:\n- Belge: yonerge_cift_anadal_yandal.pdf (4 parça)\n- Belge: çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf (5 parça)",
+      "error": null,
+      "note": "Onceki CAP baglamina baglanmali.",
+      "trace_owner": "student_affairs_policy",
+      "trace_capability": "student_affairs.policy_lookup",
+      "trace_final_owner": "main_orchestrator",
+      "trace_departments": [
+        "academic_programs",
+        "student_affairs"
+      ],
+      "trace_selected_specialists": [
+        "regulation_agent",
+        "registration_agent"
+      ],
+      "trace_specialist_selections": [
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "academic_programs",
+          "selected_agent_id": "regulation_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+          "signals": {
+            "capability": "student_affairs.policy_lookup",
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy"
+          },
+          "registry": {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy",
+            "topic": "academic_policy_support",
+            "allowed_specialists": [
+              "regulation_agent"
+            ],
+            "matched_markers": [],
+            "conflict_markers": [],
+            "fallback_agent_id": "regulation_agent"
+          },
+          "task_type": {
+            "agent_id": "regulation_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "regulation_agent",
+            "reason": "keyword:cap",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "international_agent"
+        },
+        {
+          "schema": "omu.specialist_selection.v1",
+          "mode": "contract_registry_keyword_fallback",
+          "department": "student_affairs",
+          "selected_agent_id": "registration_agent",
+          "selected_by": "contract",
+          "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy",
+          "signals": {
+            "capability": "student_affairs.policy_lookup",
+            "source_owner": "student_affairs_policy",
+            "task_type": "procedure_query"
+          },
+          "contract": {
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy"
+          },
+          "registry": {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "reason": "registry:capability:student_affairs.policy_lookup,source_owner:student_affairs_policy,topic:student_affairs_registration_policy",
+            "topic": "student_affairs_registration_policy",
+            "allowed_specialists": [
+              "registration_agent",
+              "graduation_agent",
+              "internship_agent",
+              "student_life_agent"
+            ],
+            "matched_markers": [
+              "basvuru",
+              "cap",
+              "cift anadal",
+              "not ortalamasi",
+              "ortalama"
+            ],
+            "conflict_markers": [],
+            "fallback_agent_id": "registration_agent"
+          },
+          "task_type": {
+            "agent_id": "registration_agent",
+            "reason": "task_type:procedure_query"
+          },
+          "legacy_keyword": {
+            "agent_id": "registration_agent",
+            "reason": "keyword:cap",
+            "matches_selected": true,
+            "used_as_fallback": false
+          },
+          "fallback_agent_id": "registration_agent"
+        }
+      ],
+      "trace_specialist_selection_summary": "academic_programs:regulation_agent/contract, legacy=regulation_agent:match; student_affairs:registration_agent/contract, legacy=registration_agent:match",
+      "trace_specialist_selector_mismatches": 0,
+      "trace_branch_gate": {
+        "schema": "omu.branch_dispatch_gate.v1",
+        "mode": "contract_branch_gate",
+        "applied": false,
+        "original_departments": [
+          "academic_programs",
+          "student_affairs"
+        ],
+        "restored_departments": [],
+        "owner_routing_policy": {
+          "source_owner": "student_affairs_policy",
+          "capability": "student_affairs.policy_lookup",
+          "primary_department": "student_affairs",
+          "support_departments": [
+            "academic_programs",
+            "finance"
+          ],
+          "reason": "student_affairs_policy_primary"
+        },
+        "router_departments": [
+          "academic_programs",
+          "student_affairs"
+        ],
+        "restored_primary_department": "student_affairs",
+        "support_departments": [
+          "academic_programs",
+          "finance"
+        ],
+        "capability": "student_affairs.policy_lookup",
+        "source_owner": "student_affairs_policy",
+        "reason": "student_affairs_policy_contract_gate",
+        "task_type_overrides": {
+          "academic_programs": "procedure_query"
+        },
+        "kept_departments": [
+          "academic_programs",
+          "student_affairs"
+        ],
+        "pruned_departments": []
+      },
+      "trace_branch_gate_summary": "observed: kept=academic_programs, student_affairs; pruned=-; reason=student_affairs_policy_contract_gate",
+      "trace_response_filter": {
+        "schema": "omu.response_filter.v1",
+        "mode": "ownership_aware_low_confidence_filter",
+        "source_owner": "student_affairs_policy",
+        "primary_department": "student_affairs",
+        "original_count": 2,
+        "kept_count": 2,
+        "dropped_count": 0,
+        "kept": [
+          {
+            "department": "academic_programs",
+            "agent_id": "regulation_agent",
+            "source_count": 4,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": false,
+            "has_source_owner_evidence": true
+          },
+          {
+            "department": "student_affairs",
+            "agent_id": "registration_agent",
+            "source_count": 5,
+            "success": true,
+            "error": null,
+            "low_confidence": false,
+            "no_info": false,
+            "announcement": false,
+            "source_owner_primary": true,
+            "has_source_owner_evidence": true
+          }
+        ],
+        "dropped": []
+      },
+      "trace_response_filter_summary": "kept=2; dropped=0 (-); primary=student_affairs",
+      "trace_response_time_ms": 23088.8,
+      "judge_result": {
+        "approved": false,
+        "action": "rewrite_only",
+        "failure_reason": "answer_conflicts_with_evidence_values",
+        "plan_decision": {
+          "intent": "cap_eligibility",
+          "capability": "student_affairs.policy_lookup",
+          "params": {
+            "query": "CAP basvurusu icin not ortalamasi kac olmali?",
+            "topic": "CAP / Cift Anadal",
+            "question_type": "eligibility",
+            "must_answer": [
+              "not ortalamasi",
+              "basvuru kosullari",
+              "mezuniyet icin not"
+            ],
+            "preferred_sources": [
+              "yonerge_cift_anadal_yandal.pdf",
+              "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf"
+            ],
+            "policy_facet": "cap_eligibility",
+            "answer_contract": {
+              "schema": "omu.answer_contract.v1",
+              "contract_id": "cap_eligibility",
+              "facet": "cap_eligibility",
+              "source_owner": "student_affairs_policy",
+              "capability": "student_affairs.policy_lookup",
+              "final_owner": "main_orchestrator",
+              "synthesis_policy": "llm_with_contract",
+              "allowed_departments": [
+                "student_affairs",
+                "academic_programs"
+              ],
+              "forbidden_source_families": [],
+              "forbidden_answer_markers": [
+                "120 akts",
+                "240 akts",
+                "2,75",
+                "2.75",
+                "mezuniyet hakk",
+                "diplomasi verilir"
+              ],
+              "required_answer_markers": [
+                "3,00",
+                "ilk %20"
+              ],
+              "target_program": "double_major"
+            }
+          },
+          "missing_slots": [],
+          "answer_contract": {
+            "schema": "omu.answer_contract.v1",
+            "contract_id": "cap_eligibility",
+            "facet": "cap_eligibility",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "final_owner": "main_orchestrator",
+            "synthesis_policy": "llm_with_contract",
+            "allowed_departments": [
+              "student_affairs",
+              "academic_programs"
+            ],
+            "forbidden_source_families": [],
+            "forbidden_answer_markers": [
+              "120 akts",
+              "240 akts",
+              "2,75",
+              "2.75",
+              "mezuniyet hakk",
+              "diplomasi verilir"
+            ],
+            "required_answer_markers": [
+              "3,00",
+              "ilk %20"
+            ],
+            "target_program": "double_major"
+          },
+          "evidence_contract": {
+            "source_owner": "student_affairs_policy",
+            "forbidden_source_families": []
+          },
+          "fallback_route": null,
+          "confidence": 1.0,
+          "reasoning": "answer_contract:cap_eligibility"
+        },
+        "answer_contract": {
+          "schema": "omu.answer_contract.v1",
+          "contract_id": "cap_eligibility",
+          "facet": "cap_eligibility",
+          "source_owner": "student_affairs_policy",
+          "capability": "student_affairs.policy_lookup",
+          "final_owner": "main_orchestrator",
+          "synthesis_policy": "llm_with_contract",
+          "allowed_departments": [
+            "student_affairs",
+            "academic_programs"
+          ],
+          "forbidden_source_families": [],
+          "forbidden_answer_markers": [
+            "120 akts",
+            "240 akts",
+            "2,75",
+            "2.75",
+            "mezuniyet hakk",
+            "diplomasi verilir"
+          ],
+          "required_answer_markers": [
+            "3,00",
+            "ilk %20"
+          ],
+          "target_program": "double_major"
+        },
+        "evidence_contract": {
+          "source_owner": "student_affairs_policy",
+          "forbidden_source_families": []
+        },
+        "triggered_by_validator": false,
+        "answer_validation": {
+          "status": "fail",
+          "risk_level": "high",
+          "reason": "answer_conflicts_with_evidence_values",
+          "requires_judge": true,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 13,
+          "required_claims": [
+            {
+              "claim": "MADDE 11 – (1) İlgili bölüm, her akademik yılda haziran ayının ortasına kadar kontenjanları belirler ve temmuz ayının başından itibaren kontenjanlar ÖİDB tarafından duyurulur. (4) Öğrencinin YDP başvurusu yapabilmesi için başvurduğu yarı yıla kadar ana dal lisans programında yer alan tüm dersleri almış ve başarmış olması, başvurusu sırasındaki ana dal genel not ortalamasının 4.00 üzerinden en az 2",
+              "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+              "required_values": [
+                "2,50"
+              ],
+              "reason": "gpa_threshold",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": "match",
+              "policy_target_program": "double_major",
+              "policy_matched_programs": [
+                "double_major",
+                "minor"
+              ],
+              "arbitration_score": 10
+            },
+            {
+              "claim": "genel not ortalamasinin 4.00",
+              "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+              "required_values": [
+                "4.00"
+              ],
+              "reason": "gpa_decimal_fallback",
+              "value_role": "supporting_value",
+              "policy_alignment_status": "match",
+              "policy_target_program": "double_major",
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            }
+          ],
+          "missing_values": [
+            "2,50"
+          ],
+          "conflicting_values": [
+            "3,00"
+          ],
+          "answer_values": [
+            "4,00",
+            "3,00",
+            "%20"
+          ],
+          "value_arbitration": {
+            "primary_values": [
+              "2,50"
+            ],
+            "related_values": [],
+            "secondary_values": [
+              "2,00",
+              "2,50"
+            ],
+            "conflicting_values": [
+              "3,00",
+              "4,00",
+              "2,75"
+            ]
+          }
+        },
+        "repair": {
+          "accepted": true,
+          "outcome": "accepted_improved",
+          "rejection_reason": "repair_improved",
+          "pre_repair_validation": {
+            "status": "fail",
+            "risk_level": "high",
+            "reason": "answer_conflicts_with_evidence_values",
+            "requires_judge": true,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 13,
+            "required_claims": [
+              {
+                "claim": "MADDE 11 – (1) İlgili bölüm, her akademik yılda haziran ayının ortasına kadar kontenjanları belirler ve temmuz ayının başından itibaren kontenjanlar ÖİDB tarafından duyurulur. (4) Öğrencinin YDP başvurusu yapabilmesi için başvurduğu yarı yıla kadar ana dal lisans programında yer alan tüm dersleri almış ve başarmış olması, başvurusu sırasındaki ana dal genel not ortalamasının 4.00 üzerinden en az 2",
+                "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+                "required_values": [
+                  "2,50"
+                ],
+                "reason": "gpa_threshold",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": "match",
+                "policy_target_program": "double_major",
+                "policy_matched_programs": [
+                  "double_major",
+                  "minor"
+                ],
+                "arbitration_score": 10
+              },
+              {
+                "claim": "genel not ortalamasinin 4.00",
+                "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+                "required_values": [
+                  "4.00"
+                ],
+                "reason": "gpa_decimal_fallback",
+                "value_role": "supporting_value",
+                "policy_alignment_status": "match",
+                "policy_target_program": "double_major",
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [
+              "2,50"
+            ],
+            "conflicting_values": [
+              "3,00"
+            ],
+            "answer_values": [
+              "4,00",
+              "3,00",
+              "%20"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "2,50"
+              ],
+              "related_values": [],
+              "secondary_values": [
+                "2,00",
+                "2,50"
+              ],
+              "conflicting_values": [
+                "3,00",
+                "4,00",
+                "2,75"
+              ]
+            }
+          },
+          "post_repair_validation": {
+            "status": "check",
+            "risk_level": "medium",
+            "reason": "answer_missing_required_evidence_values",
+            "requires_judge": true,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 13,
+            "required_claims": [
+              {
+                "claim": "MADDE 11 – (1) İlgili bölüm, her akademik yılda haziran ayının ortasına kadar kontenjanları belirler ve temmuz ayının başından itibaren kontenjanlar ÖİDB tarafından duyurulur. (4) Öğrencinin YDP başvurusu yapabilmesi için başvurduğu yarı yıla kadar ana dal lisans programında yer alan tüm dersleri almış ve başarmış olması, başvurusu sırasındaki ana dal genel not ortalamasının 4.00 üzerinden en az 2",
+                "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+                "required_values": [
+                  "2,50"
+                ],
+                "reason": "gpa_threshold",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": "match",
+                "policy_target_program": "double_major",
+                "policy_matched_programs": [
+                  "double_major",
+                  "minor"
+                ],
+                "arbitration_score": 10
+              },
+              {
+                "claim": "genel not ortalamasinin 4.00",
+                "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+                "required_values": [
+                  "4.00"
+                ],
+                "reason": "gpa_decimal_fallback",
+                "value_role": "supporting_value",
+                "policy_alignment_status": "match",
+                "policy_target_program": "double_major",
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [
+              "4.00"
+            ],
+            "conflicting_values": [],
+            "answer_values": [
+              "2,50",
+              "%20"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "2,50"
+              ],
+              "related_values": [],
+              "secondary_values": [
+                "2,00",
+                "2,50"
+              ],
+              "conflicting_values": [
+                "3,00",
+                "4,00",
+                "2,75"
+              ]
+            }
+          },
+          "pre_repair_coverage": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "eligibility_value",
+            "reason": "answer_contains_eligibility_markers",
+            "positive_markers": [
+              "not ortalamasi",
+              "ortalama",
+              "3,00",
+              "kosul"
+            ],
+            "drift_markers": []
+          },
+          "post_repair_coverage": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "eligibility_value",
+            "reason": "answer_contains_eligibility_markers",
+            "positive_markers": [
+              "not ortalamasi",
+              "ortalama"
+            ],
+            "drift_markers": []
+          },
+          "pre_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "check",
+            "reason": "answer_primary_value_conflicts_with_evidence",
+            "aspect": "gpa",
+            "primary_answer_value": "3,00",
+            "competing_values": [
+              "2,50"
+            ],
+            "value_roles": [
+              {
+                "value": "3,00",
+                "canonical": "3",
+                "role": "answer_threshold",
+                "aspect": "gpa",
+                "reason": "threshold_context",
+                "source": "answer"
+              },
+              {
+                "value": "2,50",
+                "canonical": "2.5",
+                "role": "conflicting_threshold",
+                "aspect": "gpa",
+                "reason": "expected_primary_evidence_threshold",
+                "source": "evidence"
+              },
+              {
+                "value": "4,00",
+                "canonical": "4",
+                "role": "scale_value",
+                "aspect": "gpa",
+                "reason": "scale_context",
+                "source": "answer"
+              },
+              {
+                "value": "%20",
+                "canonical": "20",
+                "role": "related_condition",
+                "aspect": "percentage",
+                "reason": "percent_condition",
+                "source": "answer"
+              }
+            ]
+          },
+          "post_repair_value_conflict": {
+            "mode": "shadow",
+            "status": "pass",
+            "reason": "single_primary_threshold",
+            "aspect": "gpa",
+            "primary_answer_value": "2,50",
+            "competing_values": [],
+            "value_roles": [
+              {
+                "value": "2,50",
+                "canonical": "2.5",
+                "role": "answer_threshold",
+                "aspect": "gpa",
+                "reason": "threshold_context",
+                "source": "answer"
+              },
+              {
+                "value": "%20",
+                "canonical": "20",
+                "role": "related_condition",
+                "aspect": "percentage",
+                "reason": "percent_condition",
+                "source": "answer"
+              }
+            ]
+          }
+        }
+      },
+      "judge_repair_summary": "repair:accepted_improved:repair_improved",
+      "answer_validation": {
+        "status": "fail",
+        "risk_level": "high",
+        "reason": "answer_conflicts_with_evidence_values",
+        "requires_judge": true,
+        "mode": "shadow",
+        "enforceable_by_contract": true,
+        "evidence_claim_count": 13,
+        "required_claims": [
+          {
+            "claim": "MADDE 11 – (1) İlgili bölüm, her akademik yılda haziran ayının ortasına kadar kontenjanları belirler ve temmuz ayının başından itibaren kontenjanlar ÖİDB tarafından duyurulur. (4) Öğrencinin YDP başvurusu yapabilmesi için başvurduğu yarı yıla kadar ana dal lisans programında yer alan tüm dersleri almış ve başarmış olması, başvurusu sırasındaki ana dal genel not ortalamasının 4.00 üzerinden en az 2",
+            "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+            "required_values": [
+              "2,50"
+            ],
+            "reason": "gpa_threshold",
+            "value_role": "answer_threshold",
+            "policy_alignment_status": "match",
+            "policy_target_program": "double_major",
+            "policy_matched_programs": [
+              "double_major",
+              "minor"
+            ],
+            "arbitration_score": 10
+          },
+          {
+            "claim": "genel not ortalamasinin 4.00",
+            "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+            "required_values": [
+              "4.00"
+            ],
+            "reason": "gpa_decimal_fallback",
+            "value_role": "supporting_value",
+            "policy_alignment_status": "match",
+            "policy_target_program": "double_major",
+            "policy_matched_programs": [],
+            "arbitration_score": 0
+          }
+        ],
+        "missing_values": [
+          "2,50"
+        ],
+        "conflicting_values": [
+          "3,00"
+        ],
+        "answer_values": [
+          "4,00",
+          "3,00",
+          "%20"
+        ],
+        "value_arbitration": {
+          "primary_values": [
+            "2,50"
+          ],
+          "related_values": [],
+          "secondary_values": [
+            "2,00",
+            "2,50"
+          ],
+          "conflicting_values": [
+            "3,00",
+            "4,00",
+            "2,75"
+          ]
+        },
+        "pre_final_snapshot": {
+          "status": "check",
+          "risk_level": "medium",
+          "reason": "answer_missing_required_evidence_values",
+          "requires_judge": true,
+          "mode": "shadow",
+          "enforceable_by_contract": true,
+          "evidence_claim_count": 13,
+          "required_claims": [
+            {
+              "claim": "MADDE 11 – (1) İlgili bölüm, her akademik yılda haziran ayının ortasına kadar kontenjanları belirler ve temmuz ayının başından itibaren kontenjanlar ÖİDB tarafından duyurulur. (4) Öğrencinin YDP başvurusu yapabilmesi için başvurduğu yarı yıla kadar ana dal lisans programında yer alan tüm dersleri almış ve başarmış olması, başvurusu sırasındaki ana dal genel not ortalamasının 4.00 üzerinden en az 2",
+              "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+              "required_values": [
+                "2,50"
+              ],
+              "reason": "gpa_threshold",
+              "value_role": "answer_threshold",
+              "policy_alignment_status": "match",
+              "policy_target_program": "double_major",
+              "policy_matched_programs": [
+                "double_major",
+                "minor"
+              ],
+              "arbitration_score": 10
+            },
+            {
+              "claim": "genel not ortalamasinin 4.00",
+              "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+              "required_values": [
+                "4.00"
+              ],
+              "reason": "gpa_decimal_fallback",
+              "value_role": "supporting_value",
+              "policy_alignment_status": "match",
+              "policy_target_program": "double_major",
+              "policy_matched_programs": [],
+              "arbitration_score": 0
+            }
+          ],
+          "missing_values": [
+            "4.00"
+          ],
+          "conflicting_values": [],
+          "answer_values": [
+            "2,50",
+            "%20"
+          ],
+          "value_arbitration": {
+            "primary_values": [
+              "2,50"
+            ],
+            "related_values": [],
+            "secondary_values": [
+              "2,00",
+              "2,50"
+            ],
+            "conflicting_values": [
+              "3,00",
+              "4,00",
+              "2,75"
+            ]
+          },
+          "pre_judge": {
+            "status": "fail",
+            "risk_level": "high",
+            "reason": "answer_conflicts_with_evidence_values",
+            "requires_judge": true,
+            "mode": "shadow",
+            "enforceable_by_contract": true,
+            "evidence_claim_count": 13,
+            "required_claims": [
+              {
+                "claim": "MADDE 11 – (1) İlgili bölüm, her akademik yılda haziran ayının ortasına kadar kontenjanları belirler ve temmuz ayının başından itibaren kontenjanlar ÖİDB tarafından duyurulur. (4) Öğrencinin YDP başvurusu yapabilmesi için başvurduğu yarı yıla kadar ana dal lisans programında yer alan tüm dersleri almış ve başarmış olması, başvurusu sırasındaki ana dal genel not ortalamasının 4.00 üzerinden en az 2",
+                "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+                "required_values": [
+                  "2,50"
+                ],
+                "reason": "gpa_threshold",
+                "value_role": "answer_threshold",
+                "policy_alignment_status": "match",
+                "policy_target_program": "double_major",
+                "policy_matched_programs": [
+                  "double_major",
+                  "minor"
+                ],
+                "arbitration_score": 10
+              },
+              {
+                "claim": "genel not ortalamasinin 4.00",
+                "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+                "required_values": [
+                  "4.00"
+                ],
+                "reason": "gpa_decimal_fallback",
+                "value_role": "supporting_value",
+                "policy_alignment_status": "match",
+                "policy_target_program": "double_major",
+                "policy_matched_programs": [],
+                "arbitration_score": 0
+              }
+            ],
+            "missing_values": [
+              "2,50"
+            ],
+            "conflicting_values": [
+              "3,00"
+            ],
+            "answer_values": [
+              "4,00",
+              "3,00",
+              "%20"
+            ],
+            "value_arbitration": {
+              "primary_values": [
+                "2,50"
+              ],
+              "related_values": [],
+              "secondary_values": [
+                "2,00",
+                "2,50"
+              ],
+              "conflicting_values": [
+                "3,00",
+                "4,00",
+                "2,75"
+              ]
+            }
+          },
+          "judge_escalated": true,
+          "repair_accepted": true,
+          "repair_outcome": "accepted_improved"
+        }
+      },
+      "answer_validation_summary": "shadow/fail:answer_conflicts_with_evidence_values; missing=2,50",
+      "answer_coverage": {
+        "mode": "shadow",
+        "status": "pass",
+        "expected_facet": "eligibility_value",
+        "reason": "answer_contains_eligibility_markers",
+        "positive_markers": [
+          "not ortalamasi",
+          "ortalama",
+          "3,00",
+          "kosul"
+        ],
+        "drift_markers": [],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "pass",
+          "expected_facet": "eligibility_value",
+          "reason": "answer_contains_eligibility_markers",
+          "positive_markers": [
+            "not ortalamasi",
+            "ortalama"
+          ],
+          "drift_markers": [],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "pass",
+            "expected_facet": "eligibility_value",
+            "reason": "answer_contains_eligibility_markers",
+            "positive_markers": [
+              "not ortalamasi",
+              "ortalama",
+              "3,00",
+              "kosul"
+            ],
+            "drift_markers": []
+          },
+          "repair_outcome": "accepted_improved"
+        }
+      },
+      "answer_coverage_summary": "shadow/pass:eligibility_value:answer_contains_eligibility_markers",
+      "answer_value_conflict": {
+        "mode": "shadow",
+        "status": "check",
+        "reason": "answer_primary_value_conflicts_with_evidence",
+        "aspect": "gpa",
+        "primary_answer_value": "3,00",
+        "competing_values": [
+          "2,50"
+        ],
+        "value_roles": [
+          {
+            "value": "3,00",
+            "canonical": "3",
+            "role": "answer_threshold",
+            "aspect": "gpa",
+            "reason": "threshold_context",
+            "source": "answer"
+          },
+          {
+            "value": "2,50",
+            "canonical": "2.5",
+            "role": "conflicting_threshold",
+            "aspect": "gpa",
+            "reason": "expected_primary_evidence_threshold",
+            "source": "evidence"
+          },
+          {
+            "value": "4,00",
+            "canonical": "4",
+            "role": "scale_value",
+            "aspect": "gpa",
+            "reason": "scale_context",
+            "source": "answer"
+          },
+          {
+            "value": "%20",
+            "canonical": "20",
+            "role": "related_condition",
+            "aspect": "percentage",
+            "reason": "percent_condition",
+            "source": "answer"
+          }
+        ],
+        "pre_final_snapshot": {
+          "mode": "shadow",
+          "status": "pass",
+          "reason": "single_primary_threshold",
+          "aspect": "gpa",
+          "primary_answer_value": "2,50",
+          "competing_values": [],
+          "value_roles": [
+            {
+              "value": "2,50",
+              "canonical": "2.5",
+              "role": "answer_threshold",
+              "aspect": "gpa",
+              "reason": "threshold_context",
+              "source": "answer"
+            },
+            {
+              "value": "%20",
+              "canonical": "20",
+              "role": "related_condition",
+              "aspect": "percentage",
+              "reason": "percent_condition",
+              "source": "answer"
+            }
+          ],
+          "pre_judge": {
+            "mode": "shadow",
+            "status": "check",
+            "reason": "answer_primary_value_conflicts_with_evidence",
+            "aspect": "gpa",
+            "primary_answer_value": "3,00",
+            "competing_values": [
+              "2,50"
+            ],
+            "value_roles": [
+              {
+                "value": "3,00",
+                "canonical": "3",
+                "role": "answer_threshold",
+                "aspect": "gpa",
+                "reason": "threshold_context",
+                "source": "answer"
+              },
+              {
+                "value": "2,50",
+                "canonical": "2.5",
+                "role": "conflicting_threshold",
+                "aspect": "gpa",
+                "reason": "expected_primary_evidence_threshold",
+                "source": "evidence"
+              },
+              {
+                "value": "4,00",
+                "canonical": "4",
+                "role": "scale_value",
+                "aspect": "gpa",
+                "reason": "scale_context",
+                "source": "answer"
+              },
+              {
+                "value": "%20",
+                "canonical": "20",
+                "role": "related_condition",
+                "aspect": "percentage",
+                "reason": "percent_condition",
+                "source": "answer"
+              }
+            ]
+          },
+          "repair_outcome": "accepted_improved"
+        }
+      },
+      "answer_value_conflict_summary": "shadow/check:answer_primary_value_conflicts_with_evidence; primary=3,00; competing=2,50",
+      "retrieval_execution": [
+        {
+          "schema": "omu.retrieval_execution_stats.v1",
+          "policy": {
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "support",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "policy_facet": "cap_eligibility",
+            "preferred_specialist": null,
+            "top_k": 4,
+            "reranker_candidate_limit": 4,
+            "multi_query_enabled": false,
+            "max_multi_query_variants": 0,
+            "variant_top_k": 3,
+            "variant_reranker_candidate_limit": 4,
+            "support_lite": true,
+            "reason": "support_branch_lite_budget"
+          },
+          "search_calls": 1,
+          "multi_query_variant_count": 0,
+          "multi_query_added_results": 0,
+          "early_stop_reason": "not_primary_or_empty",
+          "support_lite_applied": true,
+          "multi_query_skipped": true,
+          "multi_query_skip_reason": "policy_disabled",
+          "department": "academic_programs",
+          "specialist": "regulation_agent"
+        },
+        {
+          "schema": "omu.retrieval_execution_stats.v1",
+          "policy": {
+            "schema": "omu.retrieval_execution_policy.v1",
+            "branch_role": "primary",
+            "source_owner": "student_affairs_policy",
+            "capability": "student_affairs.policy_lookup",
+            "policy_facet": "cap_eligibility",
+            "preferred_specialist": null,
+            "top_k": null,
+            "reranker_candidate_limit": 8,
+            "multi_query_enabled": true,
+            "max_multi_query_variants": 1,
+            "variant_top_k": 3,
+            "variant_reranker_candidate_limit": 4,
+            "support_lite": false,
+            "reason": "primary_branch_budget"
+          },
+          "search_calls": 1,
+          "multi_query_variant_count": 0,
+          "multi_query_added_results": 0,
+          "early_stop_reason": "strong_primary_evidence",
+          "support_lite_applied": false,
+          "multi_query_skipped": true,
+          "multi_query_skip_reason": "strong_primary_evidence",
+          "department": "student_affairs",
+          "specialist": "registration_agent"
+        }
+      ],
+      "retrieval_execution_summary": "support:regulation_agent:lite; searches=1; mqe=0; early=not_primary_or_empty; primary:registration_agent:full; searches=1; mqe=0; early=strong_primary_evidence",
+      "answer_length": {
+        "schema": "omu.answer_length.v1",
+        "policy": "normal",
+        "char_count": 556,
+        "sentence_count": 3,
+        "bullet_count": 6,
+        "warning": true,
+        "warnings": [
+          "normal_answer_bullet_count_high"
+        ]
+      },
+      "answer_length_summary": "normal/warn; chars=556; sent=3; bullets=6",
+      "answer_quality": {
+        "mode": "shadow",
+        "status": "pass",
+        "reason": "clean",
+        "issues": [],
+        "bad_tokens": [],
+        "foreign_token_shadow": false,
+        "encoding_noise_shadow": false,
+        "boilerplate_shadow": false
+      },
+      "answer_quality_summary": "shadow/pass:clean; tokens=-",
+      "llm_call_count": 7,
+      "llm_roles_used": [
+        "conversation",
+        "routing",
+        "global_synthesis",
+        "judge"
+      ],
+      "llm_usage": [
+        {
+          "kind": "generate",
+          "model_role": "conversation",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 3436,
+          "system_chars": 9738,
+          "estimated_input_tokens": 3293,
+          "api_key_fingerprint": "5150f63f1a64",
+          "api_key_index": 27,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 90,
+          "system_chars": 16983,
+          "estimated_input_tokens": 4268,
+          "api_key_fingerprint": "a3e421be002a",
+          "api_key_index": 29,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "routing",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "fast",
+          "llm_operating_profile": "standard",
+          "prompt_chars": 5462,
+          "system_chars": 7349,
+          "estimated_input_tokens": 3202,
+          "api_key_fingerprint": "2eb4f14b6ad5",
+          "api_key_index": 30,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 48911,
+          "system_chars": 2398,
+          "estimated_input_tokens": 12827,
+          "api_key_fingerprint": "fba5c0f29033",
+          "api_key_index": 31,
+          "api_key_count": 53,
+          "provider_org_fingerprint": "9670657e8ae2",
+          "error_type": "OpenAIClientError",
+          "error_message": "groq HTTP hatasi (413): {\"error\":{\"message\":\"Request too large for model `llama-3.3-70b-versatile` in organization `org_01kpycx8hkfajv97pxfdx9pgm4` service tier `on_demand` on tokens per minute (TPM): Limit 12000, Requested 12321, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "google_ai",
+          "provider_label": "google_ai",
+          "display_name": "google_ai",
+          "model": "gemini-3-flash-preview",
+          "path": "fallback",
+          "status": "error",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "fallback_from": "openai_compatible",
+          "fallback_from_label": "groq",
+          "fallback_from_model": "llama-3.3-70b-versatile",
+          "prompt_chars": 48911,
+          "system_chars": 2398,
+          "estimated_input_tokens": 12827,
+          "api_key_fingerprint": "1d5cad59f0ab",
+          "api_key_index": 7,
+          "api_key_count": 16,
+          "error_type": "OpenAIClientError",
+          "error_message": "google_ai HTTP hatasi (403): [{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Your project has been denied access. Please contact support.\",\n    \"status\": \"PERMISSION_DENIED\"\n  }\n}\n]"
+        },
+        {
+          "kind": "generate",
+          "model_role": "judge",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": true,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 6398,
+          "system_chars": 1513,
+          "estimated_input_tokens": 1977,
+          "api_key_fingerprint": "64ee113faff7",
+          "api_key_index": 35,
+          "api_key_count": 53
+        },
+        {
+          "kind": "generate",
+          "model_role": "global_synthesis",
+          "provider": "openai_compatible",
+          "provider_label": "groq",
+          "display_name": "groq",
+          "model": "llama-3.3-70b-versatile",
+          "path": "primary",
+          "status": "success",
+          "json_mode": false,
+          "llm_profile": "balanced",
+          "llm_operating_profile": "groq_only",
+          "prompt_chars": 3180,
+          "system_chars": 2398,
+          "estimated_input_tokens": 1394,
+          "api_key_fingerprint": "775f860f28a7",
+          "api_key_index": 36,
+          "api_key_count": 53
+        }
+      ],
+      "timeout_signals": {
+        "capability_planner_ms": 2461.487,
+        "capability_planner_timeout_suspected": false,
+        "routing_ms": 4817.632,
+        "routing_timeout_suspected": false,
+        "conversation_ms": 1836.841,
+        "final_synthesis_ms": 2894.167
+      },
+      "trace_recorded": true,
+      "attempt": 2,
+      "provider_retry_attempts": [
+        {
+          "attempt": 1,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-cap-followup-retry1",
+          "status": "FAIL",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "global_synthesis",
+              "reason": "rate_limit"
+            },
+            {
+              "provider": "google_ai",
+              "role": "global_synthesis",
+              "reason": "other"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "context_id": "shadow-golden-shadow_golden_turkish_fp16_critical_sleep12_20260517-cap-followup-retry1",
+          "status": "FAIL",
+          "retryable_provider_error": true,
+          "provider_errors": [
+            {
+              "provider": "groq",
+              "role": "global_synthesis",
+              "reason": "rate_limit"
+            },
+            {
+              "provider": "google_ai",
+              "role": "global_synthesis",
+              "reason": "other"
+            }
+          ]
+        }
+      ],
+      "provider_retry_count": 1,
+      "provider_retryable_error_seen": true,
+      "provider_warning_summary": "final_retryable=1; retry_history=4",
+      "structural_issues": [
+        "provider_retryable_error_seen",
+        "provider_error_seen"
+      ],
+      "structural_summary": "provider_retryable_error_seen; provider_error_seen",
+      "status": "FAIL"
+    }
+  ]
+}

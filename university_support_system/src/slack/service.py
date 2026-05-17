@@ -110,7 +110,7 @@ def _legacy_build_help_text() -> str:
     """Slack icin kisa kullanim metni."""
 
     return (
-        "OMÜ destek botu kullanımı:\n"
+        f"{settings.institution.support_bot_name} kullanımı:\n"
         "- Normal soru: `Ders kaydı ne zaman başlıyor?`\n"
         "- Giriş: `login 20210001`\n"
         "- OTP doğrulama: `verify 20210001 123456`\n"
@@ -124,7 +124,7 @@ def build_help_text() -> str:
     """Slack icin kisa kullanim metni."""
 
     return (
-        "OMÜ Destek Botu ile şunları sorabilirsiniz:\n"
+        f"{settings.institution.support_bot_name} ile şunları sorabilirsiniz:\n"
         "- Öğrenci işleri: ders kaydı, harç borcu, mezuniyet, yaz okulu, staj, yatay geçiş, ÇAP/Yandal\n"
         "- Akademik programlar: ders programı, müfredat, ön koşul, AKTS, derslik\n"
         "- Finans: öğrenim ücreti, katkı payı, Türk/uluslararası öğrenci ücretleri\n"
@@ -141,7 +141,8 @@ def build_help_text() -> str:
 def build_welcome_text(*, user_mention: str | None = None) -> str:
     """Kanal/DM ilk temasinda gonderilecek kisa onboarding metni."""
 
-    prefix = f"Merhaba {user_mention}, ben OMÜ Destek Botu.\n\n" if user_mention else "Merhaba, ben OMÜ Destek Botu.\n\n"
+    bot_name = settings.institution.support_bot_name
+    prefix = f"Merhaba {user_mention}, ben {bot_name}.\n\n" if user_mention else f"Merhaba, ben {bot_name}.\n\n"
     return prefix + build_help_text() + "\n\nYardım menüsünü tekrar görmek için `help` yazabilirsiniz."
 
 
@@ -221,6 +222,7 @@ class SlackBotService:
 
         document = processed[0]
         self.transcript_store.put(context_id=context_id, user_id=message.user_id, document=document)
+        privacy_note = _transcript_privacy_note(message)
         query = normalize_slack_text(message.text)
         if query and is_transcript_followup_query(query) and _looks_like_transcript_question(query):
             answer = await self.transcript_processor.answer_question(
@@ -228,6 +230,7 @@ class SlackBotService:
                 query=query,
                 llm_profile=self.llm_profile,
             )
+            answer = _append_transcript_privacy_note(answer, privacy_note)
             return split_slack_message(answer)
 
         answer = (
@@ -238,6 +241,7 @@ class SlackBotService:
         )
         if errors:
             answer += "\n\nDiğer dosyalar işlenemedi:\n" + "\n".join(f"- {error}" for error in errors)
+        answer = _append_transcript_privacy_note(answer, privacy_note)
         return split_slack_message(answer)
 
     async def _read_file_content(self, file: SlackFileAttachment, *, slack_client: Any | None = None) -> bytes:
@@ -270,7 +274,31 @@ class SlackBotService:
         async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
             response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
             response.raise_for_status()
-            return response.content
+            content = response.content
+            content_type = (response.headers.get("content-type") or "").lower()
+            mimetype = (resolved_file.mimetype or "").lower()
+            filename = (resolved_file.name or "").lower()
+            expects_binary_document = (
+                "pdf" in mimetype
+                or filename.endswith(".pdf")
+                or mimetype.startswith("image/")
+                or any(filename.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"))
+            )
+            if expects_binary_document and (
+                "text/html" in content_type
+                or content.lstrip().startswith((b"<!DOCTYPE", b"<html", b"<HTML"))
+            ):
+                raise TranscriptProcessingError(
+                    "Slack dosyası indirilemedi. Bot token için `files:read` yetkisini ekleyip Slack app'i "
+                    "workspace'e yeniden kurmanız gerekir."
+                )
+            if "pdf" in mimetype or filename.endswith(".pdf"):
+                if not content.lstrip().startswith(b"%PDF"):
+                    raise TranscriptProcessingError(
+                        "Slack'ten indirilen içerik PDF değil. Botun dosyaya erişimi veya `files:read` yetkisi "
+                        "kontrol edilmelidir."
+                    )
+            return content
 
     async def _handle_login(self, command: SlackCommand, slack_user_id: str) -> str:
         if not command.student_number:
@@ -334,6 +362,7 @@ class SlackBotService:
                     query=query,
                     llm_profile=self.llm_profile,
                 )
+                answer = _append_transcript_privacy_note(answer, _transcript_privacy_note(message))
                 return split_slack_message(answer)
         auth_context = await self.auth_service.resolve_auth_context(slack_user_id=message.user_id)
         response = await self.orchestrator.handle_query(
@@ -386,6 +415,21 @@ def _format_number(value: float) -> str:
     if value.is_integer():
         return str(int(value))
     return f"{value:.2f}".replace(".", ",").rstrip("0").rstrip(",")
+
+
+def _transcript_privacy_note(message: SlackIncomingMessage) -> str:
+    if message.channel_id.startswith("D"):
+        return ""
+    return (
+        "Not: Transkript kisisel veri icerir. Bu belge ve cevap yalnizca bu Slack thread'i "
+        "baglaminda tutulur; mumkunse transkriptleri DM uzerinden paylasin."
+    )
+
+
+def _append_transcript_privacy_note(answer: str, note: str) -> str:
+    if not note or note in answer:
+        return answer
+    return f"{answer.rstrip()}\n\n{note}"
 
 
 def _safe_int(value: object) -> int | None:

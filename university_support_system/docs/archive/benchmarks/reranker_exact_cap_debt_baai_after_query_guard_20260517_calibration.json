@@ -1,0 +1,51 @@
+{
+  "model": "BAAI/bge-reranker-v2-m3",
+  "device": "cuda",
+  "torch_dtype": {
+    "requested": "float16",
+    "resolved": "torch.float16"
+  },
+  "runtime_calibration": {
+    "shift": 0.0652,
+    "scale": 0.5
+  },
+  "suggested_calibration": {
+    "shift": 0.001,
+    "scale": 0.5,
+    "formula": "sigmoid((score - 0.0010) / 0.5000)",
+    "suggested_direct_rag_threshold": 0.5,
+    "suggested_min_source_threshold": 0.5
+  },
+  "raw_stats": {
+    "count": 10,
+    "min": 0.0003,
+    "max": 0.0038,
+    "mean": 0.0013,
+    "std": 0.001,
+    "median": 0.001,
+    "p10": 0.0004,
+    "p25": 0.0005,
+    "p75": 0.0019,
+    "p90": 0.0024
+  },
+  "top1_raw_stats": {
+    "count": 1,
+    "min": 0.0038,
+    "max": 0.0038,
+    "mean": 0.0038,
+    "std": 0.0,
+    "median": 0.0038,
+    "p10": 0.0038,
+    "p25": 0.0038,
+    "p75": 0.0038,
+    "p90": 0.0038
+  },
+  "source_owner_summary": {
+    "top1_source_owner_counts": {
+      "student_affairs_policy": 1
+    },
+    "expected_department_checked": 0,
+    "expected_department_matched": 0
+  },
+  "elapsed_seconds": 34.799
+}

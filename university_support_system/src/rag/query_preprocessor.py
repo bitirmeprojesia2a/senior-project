@@ -267,6 +267,44 @@ _NEGATION_WORDS = (
     "bahsetmiyorum",
     "kastetmiyorum",
 )
+_FEE_SYNONYM_KEYS = frozenset({"harc", "katki payi", "ogrenim ucreti"})
+_APPLICATION_DEBT_CAP_MARKERS = ("cap", "capa", "cift anadal", "cift ana dal", "ikinci lisans")
+_APPLICATION_DEBT_MARKERS = ("borc", "borcum", "borcu", "borclu", "harc borc")
+_APPLICATION_ELIGIBILITY_MARKERS = (
+    "basvur",
+    "basvuru",
+    "engel",
+    "uygun",
+    "yapabilir",
+    "miyim",
+    "mumkun",
+)
+_PAYMENT_AMOUNT_OR_PROCESS_MARKERS = (
+    "ne kadar",
+    "kac tl",
+    "tutar",
+    "miktar",
+    "ucret",
+    "odeme",
+    "ode",
+    "odem",
+    "dekont",
+    "taksit",
+    "iade",
+)
+
+
+def _looks_like_application_debt_eligibility_query(normalized_text_value: str) -> bool:
+    """Keep application/debt eligibility search from drifting into fee amount lookup."""
+    has_cap = any(marker in normalized_text_value for marker in _APPLICATION_DEBT_CAP_MARKERS)
+    has_debt = any(marker in normalized_text_value for marker in _APPLICATION_DEBT_MARKERS)
+    has_application = any(
+        marker in normalized_text_value for marker in _APPLICATION_ELIGIBILITY_MARKERS
+    )
+    asks_payment_or_amount = any(
+        marker in normalized_text_value for marker in _PAYMENT_AMOUNT_OR_PROCESS_MARKERS
+    )
+    return has_cap and has_debt and has_application and not asks_payment_or_amount
 
 
 class QueryPreprocessor:
@@ -390,7 +428,12 @@ class QueryPreprocessor:
         sorted_keys = sorted(self._normalized_synonym_map.keys(), key=len, reverse=True)
 
         matched_keys: Set[str] = set()
+        suppress_fee_expansion = _looks_like_application_debt_eligibility_query(
+            normalized_text_value
+        )
         for key in sorted_keys:
+            if suppress_fee_expansion and key in _FEE_SYNONYM_KEYS:
+                continue
             if self._matches_synonym_key(normalized_text_value, key) and key not in matched_keys:
                 if self._is_negated_topic(normalized_text_value, key):
                     continue

@@ -5,7 +5,35 @@ Bu modul, sistem genelinde kullanilan LLM sistem ve kullanici promptlarini iceri
 Her uzman ajan icin domain-specific prompt sabitleri tanimlanmistir.
 """
 
+from src.core.config import settings
 from src.core.constants import build_department_routing_descriptions
+
+
+def _apply_institution_context(prompt: str) -> str:
+    """Replace institution identity literals with runtime settings.
+
+    The corpus/parser layer can stay institution-specific, but answer prompts
+    should not hard-code the institution name when we present the system as a
+    configurable deployment.
+    """
+    short_name = settings.institution.short_name.strip() or "OMÜ"
+    short_name_ascii = settings.institution.short_name_ascii.strip() or "OMU"
+    name = settings.institution.name.strip() or "Ondokuz Mayıs Üniversitesi"
+    name_ascii = settings.institution.name_ascii.strip() or "Ondokuz Mayis Universitesi"
+    replacements = (
+        ("Bu üniversite OMÜ'dür (Ondokuz Mayıs Üniversitesi). Başka üniversite adı kullanma.",
+         f"Bu kurum {short_name} ({name}) bağlamındadır. Başka kurum adı kullanma."),
+        ("Bu yanıt Ondokuz Mayıs Üniversitesi (OMÜ) öğrenci destek sistemi için üretilecektir.",
+         f"Bu yanıt {name} ({short_name}) öğrenci destek sistemi için üretilecektir."),
+        ("Ondokuz Mayıs Üniversitesi", name),
+        ("Ondokuz Mayis Universitesi", name_ascii),
+        ("OMÜ", short_name),
+        ("OMU", short_name_ascii),
+    )
+    rendered = prompt
+    for old, new in replacements:
+        rendered = rendered.replace(old, new)
+    return rendered
 
 
 DEPARTMENT_ROUTING_SYSTEM_PROMPT = f"""
@@ -753,3 +781,25 @@ JSON FORMAT KURALLARI:
 - `needs_clarification` true ise kisa bir `clarification_message` ver.
 - Yeni bilgi uydurma.
 """
+
+
+_INSTITUTION_SCOPED_PROMPTS = (
+    "GENERAL_QA_SYSTEM_PROMPT",
+    "REGISTRATION_AGENT_SYSTEM_PROMPT",
+    "GRADUATION_AGENT_SYSTEM_PROMPT",
+    "INTERNSHIP_AGENT_SYSTEM_PROMPT",
+    "STUDENT_LIFE_AGENT_SYSTEM_PROMPT",
+    "CURRICULUM_AGENT_SYSTEM_PROMPT",
+    "REGULATION_AGENT_SYSTEM_PROMPT",
+    "INTERNATIONAL_AGENT_SYSTEM_PROMPT",
+    "TUITION_AGENT_SYSTEM_PROMPT",
+    "SCHOLARSHIP_AGENT_SYSTEM_PROMPT",
+    "ANNOUNCEMENT_AGENT_SYSTEM_PROMPT",
+    "ANNOUNCEMENT_SUMMARY_REFINER_SYSTEM_PROMPT",
+    "MULTI_DEPARTMENT_SYNTHESIS_SYSTEM_PROMPT",
+)
+
+for _prompt_name in _INSTITUTION_SCOPED_PROMPTS:
+    globals()[_prompt_name] = _apply_institution_context(globals()[_prompt_name])
+
+del _prompt_name

@@ -24,6 +24,9 @@ DEFAULT_RERANKER_MODEL = "nreimers/mmarco-mMiniLMv2-L6-H384-v1"
 # shift=1.2356, scale=6.0418
 _CALIBRATION_BY_MODEL: dict[str, tuple[float, float]] = {
     "nreimers/mmarco-mminilmv2-l6-h384-v1": (0.0687, 0.5),
+    # Turkish fine-tune denemesi: docs/archive/benchmarks/reranker_score_analysis.*
+    # Ana aday degil, ancak shadow benchmark/rollback icin kalibrasyonu kayitli.
+    "seroe/bge-reranker-v2-m3-turkish-triplet": (0.0405, 0.5),
     # BGE FP16: analyze_reranker_scores.py --all-profiles
     # docs/archive/benchmarks/bge_fp16_reranker_score_analysis.json
     "baai/bge-reranker-v2-m3": (0.0652, 0.5),
@@ -43,7 +46,7 @@ _CALIBRATION_SHIFT, _CALIBRATION_SCALE = _CALIBRATION_BY_MODEL.get(
 class CrossEncoderReranker:
     """Cross-encoder tabanli reranker."""
 
-    _MODEL_CACHE: ClassVar[dict[tuple[str, int, str, bool], CrossEncoder]] = {}
+    _MODEL_CACHE: ClassVar[dict[tuple[str, int, str, str, bool], CrossEncoder]] = {}
 
     @classmethod
     def clear_model_cache(cls) -> None:
@@ -56,13 +59,15 @@ class CrossEncoderReranker:
         max_length: int | None = None,
         batch_size: int | None = None,
         device: str | None = None,
+        torch_dtype: str | None = None,
     ):
         self.model_name = model_name or settings.reranker.model
         self.max_length = max_length or settings.reranker.max_length
         self.batch_size = batch_size or settings.reranker.batch_size
         self.device = device or settings.reranker.device
         self.resolved_device = self._resolve_device(self.device)
-        self.torch_dtype = self._resolve_torch_dtype(settings.reranker.torch_dtype)
+        self.torch_dtype_name = torch_dtype or settings.reranker.torch_dtype
+        self.torch_dtype = self._resolve_torch_dtype(self.torch_dtype_name)
         self.calibration_shift, self.calibration_scale = self._calibration_for_model(self.model_name)
         self._model: Optional[CrossEncoder] = None
         self.last_run_succeeded: Optional[bool] = None

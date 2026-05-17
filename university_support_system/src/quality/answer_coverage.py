@@ -58,6 +58,48 @@ _APPLICATION_PROCESS_ANSWER_MARKERS = (
     "duyuru",
     "takvim",
 )
+_PAYMENT_PROCESS_QUERY_MARKERS = (
+    "harc borcumu nasil odeyebilirim",
+    "harc borcu nasil odenir",
+    "harc borcu nasil ode",
+    "harc odemesi nasil",
+    "harc odeme nasil",
+    "ucret nasil odenir",
+    "ucret nasil ode",
+    "katki payi nasil odenir",
+    "katki payi nasil ode",
+    "borcumu nasil ode",
+    "borcu nasil ode",
+    "nasil odeyebilirim",
+    "nasil odemeliyim",
+    "nasil odenir",
+    "odeme yontemi",
+    "odeme sekli",
+    "hangi banka",
+    "dekont",
+    "taksit",
+    "yatir",
+)
+_PAYMENT_PROCESS_ANSWER_MARKERS = (
+    "odeme",
+    "odenir",
+    "odenmesi",
+    "odeyebilir",
+    "odeyebilirsiniz",
+    "odemelisiniz",
+    "yatir",
+    "banka",
+    "ubys",
+    "ogrenci bilgi sistemi",
+    "katki payi",
+    "ogrenim ucreti",
+    "dekont",
+    "taksit",
+    "net bilgi bulunamadi",
+    "bilgi bulunamadi",
+    "kaynaklarda yer almamaktadir",
+    "kaynaklarda bulunmadi",
+)
 _ELIGIBILITY_VALUE_MARKERS = (
     "gano",
     "gno",
@@ -132,11 +174,31 @@ def validate_answer_coverage(
             positive_markers=positive,
         )
 
+    if expected_facet == "payment_process":
+        positive = _matched(answer_text, _PAYMENT_PROCESS_ANSWER_MARKERS)
+        evidence_positive = _matched(evidence_text, _PAYMENT_PROCESS_ANSWER_MARKERS)
+        if positive:
+            return AnswerCoverageResult(
+                status="pass",
+                expected_facet=expected_facet,
+                reason="answer_contains_payment_process_markers",
+                positive_markers=positive,
+            )
+        return AnswerCoverageResult(
+            status="check",
+            expected_facet=expected_facet,
+            reason="answer_missing_payment_process_markers",
+            positive_markers=evidence_positive,
+            drift_markers=_matched(answer_text, _ELIGIBILITY_VALUE_MARKERS),
+        )
+
     return AnswerCoverageResult(expected_facet=expected_facet)
 
 
 def _expected_facet(query: str) -> str | None:
     normalized = normalize_text(query or "")
+    if any(marker in normalized for marker in _PAYMENT_PROCESS_QUERY_MARKERS):
+        return "payment_process"
     if any(marker in normalized for marker in _APPLICATION_PROCESS_QUERY_MARKERS):
         return "application_process"
     if any(marker in normalized for marker in _ELIGIBILITY_QUERY_MARKERS):

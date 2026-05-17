@@ -776,7 +776,7 @@ async def main():
     parser.add_argument("--student-type", type=str, default="",
                         help="API modunda profil icin ogrenci tipi / uyruk")
     parser.add_argument("--llm-profile", type=str, default="",
-                        help="LLM profil tercihi: fast | balanced | quality")
+                        help="LLM profil tercihi: fast | balanced | quality | groq_only | hybrid_shadow | hybrid_quality")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="SQL echo + tum structlog DEBUG (varsayilan: RAG INFO, SQL kapali)")
     args = parser.parse_args()

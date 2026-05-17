@@ -52,6 +52,14 @@ class _FakeRetriever:
         return None
 
 
+def test_retrieval_service_title_uses_institution_identity(monkeypatch) -> None:
+    monkeypatch.setattr(retrieval_service_module.settings.institution, "short_name_ascii", "ABC")
+
+    app = create_retrieval_service_app()
+
+    assert app.title == "ABC Retrieval Service"
+
+
 def test_remote_hybrid_retriever_sends_search_payload(monkeypatch) -> None:
     fake_client = _FakeHttpClient()
     monkeypatch.setattr("src.rag.remote.httpx.Client", lambda timeout: fake_client)

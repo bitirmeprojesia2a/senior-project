@@ -1492,6 +1492,26 @@ def test_academic_department_clarification_accepts_known_program_name():
     )
 
 
+def test_selected_specialists_from_responses_prefers_specialist_selection():
+    responses = [
+        DepartmentResponse(
+            department=Department.STUDENT_AFFAIRS,
+            answer="Kayit cevabi",
+            metadata={"specialist_selection": {"selected_agent_id": "registration_agent"}},
+        ),
+        DepartmentResponse(
+            department=Department.ACADEMIC_PROGRAMS,
+            answer="Mevzuat cevabi",
+            metadata={"agent_id": "regulation_agent"},
+        ),
+    ]
+
+    assert MainOrchestrator._selected_specialists_from_responses(responses) == [
+        "registration_agent",
+        "regulation_agent",
+    ]
+
+
 @pytest.mark.asyncio
 async def test_main_orchestrator_records_canonical_memory_answer_without_contact_suffix():
     router = AsyncMock()
@@ -2290,6 +2310,53 @@ def test_build_final_user_response_includes_llm_diagnostics_from_profiler():
     assert response.diagnostics.llm_usage[0]["model_role"] == "routing"
     assert response.diagnostics.llm_usage[0]["provider_label"] == "groq"
     assert response.diagnostics.llm_usage[0]["model"] == "llama-3.1-8b-instant"
+    assert response.diagnostics.local_profile is not None
+    assert response.diagnostics.local_profile["attributes"]["answer_length"]["policy"] == "normal"
+
+
+def test_build_final_user_response_includes_answer_debug_report():
+    profiler = QueryProfiler(label="debug-report")
+    with activate_profiler(profiler):
+        response = build_final_user_response(
+            answer="Kaynakli cevap.",
+            responses=[
+                DepartmentResponse(
+                    department=Department.STUDENT_AFFAIRS,
+                    answer="Kayit cevabi",
+                    sources=[
+                        RAGSource(
+                            content="Ders kaydi icin harc odenir.",
+                            score=0.88,
+                            metadata={
+                                "source": "sik_sorulan_sorular.txt",
+                                "score_type": "reranker",
+                                "chunk_index": 3,
+                            },
+                        )
+                    ],
+                    generation_mode="rag",
+                    metadata={
+                        "specialist_selection": {"selected_agent_id": "registration_agent"},
+                        "answer_contract": {"contract_id": "payment_debt_course_registration"},
+                        "source_owner": {"primary": "student_affairs_policy"},
+                    },
+                )
+            ],
+            department_responses=[],
+            context_id="ctx-debug-report",
+            response_time_ms=10.0,
+            student_full_name=None,
+        )
+
+    assert response.diagnostics is not None
+    report = response.diagnostics.answer_debug_report
+    assert report is not None
+    assert report["schema"] == "omu.answer_debug_report.v1"
+    assert report["routes"][0]["agent"] == "registration_agent"
+    assert report["sources"][0]["source"] == "sik_sorulan_sorular.txt"
+    assert report["sources"][0]["chunk_index"] == 3
+    assert report["contracts"][0]["agent"] == "registration_agent"
+    assert report["answer_length"]["policy"] == "normal"
 
 
 def test_should_use_global_synthesis_skips_when_all_meaningful_answers_are_non_rag():

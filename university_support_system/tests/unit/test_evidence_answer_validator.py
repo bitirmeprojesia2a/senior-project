@@ -421,6 +421,48 @@ def test_validator_arbitrates_cap_application_gpa_over_retention_gpa():
     assert result.value_arbitration["secondary_values"] == ["2,00"]
 
 
+def test_validator_does_not_require_fee_values_for_payment_process_question():
+    response = DepartmentResponse(
+        department=Department.STUDENT_AFFAIRS,
+        answer="Kaynak bilgisi final cevap icin hazirlandi.",
+        sources=[],
+        metadata={
+            "evidence_packet": {
+                "facts": [
+                    {
+                        "claim": (
+                            "CAP'tan mezun olabilmek icin onlisans 120 AKTS, "
+                            "lisans 240 AKTS tamamlanir."
+                        ),
+                        "source": "cift_ana_dal_yonergesi.pdf",
+                    },
+                    {
+                        "claim": (
+                            "Alinan derslere iliskin ucretler Kanunun 46 nci "
+                            "maddesine gore belirlenir."
+                        ),
+                        "source": "yonetmelik_onlisans_lisans_egitim_ogretim.pdf",
+                    },
+                ],
+            }
+        },
+    )
+
+    result = validate_evidence_answer(
+        query="CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+        answer=(
+            "CAP basvurusunda harc borcunun dogrudan engel olduguna dair acik "
+            "bir hukum bulamadim; odeme sureci ders kaydi/kayit yenileme "
+            "kapsamindan ayrica degerlendirilmelidir."
+        ),
+        responses=[response],
+    )
+
+    assert result.status == "pass"
+    assert result.reason == "no_query_relevant_required_values"
+    assert result.missing_values == ()
+
+
 def test_validator_still_requires_calendar_date_values():
     response = DepartmentResponse(
         department=Department.STUDENT_AFFAIRS,

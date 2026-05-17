@@ -40,6 +40,7 @@ from src.quality.evidence import (
     extract_evidence_items,
     select_evidence_sentences,
 )
+from src.quality.answer_style import build_answer_length_instruction
 from src.quality.evidence_answer_validator import extract_value_labels, infer_source_family
 from src.quality.evidence_selector import EvidenceSelectionDecision, select_evidence_with_llm
 from src.db.office_contacts import OfficeContactRecord, fetch_office_contacts
@@ -51,7 +52,6 @@ if TYPE_CHECKING:
     from src.rag.retriever import HybridRetriever
 
 logger = logging.getLogger(__name__)
-OMU_SWITCHBOARD_PHONE = "0 (362) 312 19 19"
 _EVIDENCE_QUERY_PREPROCESSOR = QueryPreprocessor()
 
 _SHARED_RETRIEVER: HybridRetriever | None = None
@@ -215,7 +215,7 @@ class BaseSpecialistAgent:
             agent_id=self.agent_id,
             name=self.definition.name,
             description=self.definition.description,
-            url=f"https://omu.edu.tr/agents/{self.agent_id}",
+            url=f"{settings.institution.homepage_url.rstrip('/')}/agents/{self.agent_id}",
             skills=skills,
         )
 
@@ -1078,9 +1078,9 @@ class BaseSpecialistAgent:
                 title_str = f" - {contact.title}" if contact.title else ""
                 parts.append(f"  {contact.person_name}{title_str}")
             if contact.phone_ext:
-                parts.append(f"  Telefon: {OMU_SWITCHBOARD_PHONE} / Dahili: {contact.phone_ext}")
+                parts.append(f"  Telefon: {settings.institution.switchboard_phone} / Dahili: {contact.phone_ext}")
             else:
-                parts.append(f"  Santral: {OMU_SWITCHBOARD_PHONE}")
+                parts.append(f"  Santral: {settings.institution.switchboard_phone}")
             if contact.email:
                 parts.append(f"  E-Posta: {contact.email}")
             lines.append("\n".join(parts))
@@ -1910,7 +1910,7 @@ class BaseSpecialistAgent:
         )
         prompt = safe_prompt
 
-        answer_style_rules = """
+        answer_style_rules = f"""
 
 CEVAP YAZIM KURALLARI:
 - Once sorunun dogrudan yanitini ver; sonra gerekiyorsa kisa maddelerle kosul, adim veya istisnayi ekle.
@@ -1928,6 +1928,7 @@ CEVAP YAZIM KURALLARI:
 - Cevabi yarim cumleyle bitirme; kaynakta ayrintili esik/tutar yoksa o parcayi acmadan tamamlanmis cumleyle dur.
 - OLUMSUZ KURAL ONCELIGI: Kaynakta "giremez", "alamaz", "yapilamaz", "kabul edilmez", "almamis olan ogrenciler giremez" gibi kisitlayici/yasaklayici bir ifade varsa ve kullanicinin sorusu "yapabilir miyim?", "girebilir miyim?" seklindeyse, cevabi dogrudan "Hayir" ile baslat ve kaynaktaki kisitlamayi aynen aktar. Kullanicinin beklentisine uyum saglamak icin olumsuz kurali olumluya cevirme. Kaynakta "giremez" diyorsa cevap "giremezsiniz" olmalidir.
 - COK PARCALI SORU: Kullanici birden fazla seyi soruyorsa (ornegin "ne zaman + kimler + nasil + ucret + gerekli belge + sartlar") cevabi alt basiklara bol. Her alt parca icin kaynakta bilgi varsa ver; kaynak sadece bir alt parcayi destekliyorsa diger parcalar icin "Bu konuda kaynaklarda net bilgi bulunamadi" de. Tarih sorulmus ama kaynakta tarih yoksa tarih UYDURMA; "akademik takvim/duyuru ile ilan edilir" gibi temkinli ifadelendirme kullan.
+{build_answer_length_instruction(query_text)}
 """
         system = (self.definition.system_prompt or GENERAL_QA_SYSTEM_PROMPT) + answer_style_rules
         synthesis_timeout = self._llm_synthesis_timeout_seconds(

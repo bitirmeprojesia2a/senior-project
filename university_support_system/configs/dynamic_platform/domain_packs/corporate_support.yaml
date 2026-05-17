@@ -1,0 +1,30 @@
+schema_version: 1
+domain_pack: corporate_support
+display_name: Corporate Internal Support
+description: Demo domain pack for HR, IT, payroll, internal documents, and company announcements.
+capabilities:
+  - capability_id: policy_qa
+    display_name: Policy Q&A
+    description: Internal policy and procedure questions.
+    answer_mode: rag
+  - capability_id: leave_policy
+    display_name: Leave Policy
+    description: Annual leave, sick leave, unpaid leave, and approval rules.
+    core_capability: policy_qa
+    answer_mode: hybrid
+  - capability_id: payroll_question
+    display_name: Payroll Question
+    description: Payroll cutoff, payslip, salary payment, and deduction questions.
+    answer_mode: hybrid
+  - capability_id: it_ticket_guidance
+    display_name: IT Ticket Guidance
+    description: Account, device, access, and ticket guidance.
+    answer_mode: hybrid
+  - capability_id: internal_announcement
+    display_name: Internal Announcement
+    description: Current internal announcements and detail summarization.
+    answer_mode: hybrid
+  - capability_id: department_contact
+    display_name: Department Contact
+    description: Team, unit, and service desk contact lookup.
+    answer_mode: structured

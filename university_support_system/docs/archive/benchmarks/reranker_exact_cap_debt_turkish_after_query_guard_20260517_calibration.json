@@ -1,0 +1,51 @@
+{
+  "model": "seroe/bge-reranker-v2-m3-turkish-triplet",
+  "device": "cuda",
+  "torch_dtype": {
+    "requested": "float16",
+    "resolved": "torch.float16"
+  },
+  "runtime_calibration": {
+    "shift": 0.0405,
+    "scale": 0.5
+  },
+  "suggested_calibration": {
+    "shift": 0.0006,
+    "scale": 0.5,
+    "formula": "sigmoid((score - 0.0006) / 0.5000)",
+    "suggested_direct_rag_threshold": 0.501,
+    "suggested_min_source_threshold": 0.5
+  },
+  "raw_stats": {
+    "count": 10,
+    "min": 0.0002,
+    "max": 0.0024,
+    "mean": 0.001,
+    "std": 0.0008,
+    "median": 0.0006,
+    "p10": 0.0003,
+    "p25": 0.0004,
+    "p75": 0.0017,
+    "p90": 0.0021
+  },
+  "top1_raw_stats": {
+    "count": 1,
+    "min": 0.0024,
+    "max": 0.0024,
+    "mean": 0.0024,
+    "std": 0.0,
+    "median": 0.0024,
+    "p10": 0.0024,
+    "p25": 0.0024,
+    "p75": 0.0024,
+    "p90": 0.0024
+  },
+  "source_owner_summary": {
+    "top1_source_owner_counts": {
+      "student_affairs_policy": 1
+    },
+    "expected_department_checked": 0,
+    "expected_department_matched": 0
+  },
+  "elapsed_seconds": 30.013
+}

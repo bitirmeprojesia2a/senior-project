@@ -929,6 +929,8 @@ def _required_values_for_claim(
         if decimal_values:
             return [decimal_values[-1]], "gpa_decimal_fallback"
     if "fee" in aspects:
+        if not _query_asks_fee_amount(normalized_query):
+            return [], ""
         return _near_marker_values(normalized_claim, values, _ASPECT_MARKERS["fee"]) or values, "fee_value"
     if "course_credit" in aspects:
         if "akts" in normalized_query or "ects" in normalized_query:
@@ -967,6 +969,22 @@ def _threshold_values(normalized_claim: str, values: Sequence[EvidenceNumber]) -
             if value.canonical == matched and value not in selected:
                 selected.append(value)
     return selected
+
+
+def _query_asks_fee_amount(normalized_query: str) -> bool:
+    return any(
+        marker in normalized_query
+        for marker in (
+            "ne kadar",
+            "kac tl",
+            "tutar",
+            "miktar",
+            "ucret",
+            "katki payi",
+            "donemlik",
+            "yillik",
+        )
+    )
 
 
 def _near_marker_values(

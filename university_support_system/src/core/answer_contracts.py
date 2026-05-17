@@ -14,6 +14,7 @@ from typing import Any
 
 from src.core.constants import Department
 from src.core.source_ownership import (
+    OWNER_ACADEMIC_CALENDAR,
     OWNER_ANNOUNCEMENT_SEARCH,
     OWNER_STUDENT_AFFAIRS_POLICY,
     OWNER_TUITION_FEE_CATALOG,
@@ -23,6 +24,50 @@ from src.core.text_normalization import normalize_text
 
 
 ANSWER_CONTRACT_SCHEMA = "omu.answer_contract.v1"
+_CALENDAR_DATE_MARKERS = ("tarih", "tarihleri", "ne zaman", "takvim", "son gun", "son tarih")
+_CALENDAR_DATE_CONTRACT_TOPICS: tuple[dict[str, Any], ...] = (
+    {
+        "contract_id": "cap_application_dates",
+        "facet": "cap_application_dates",
+        "target_program": "double_major",
+        "query_markers": ("cap", "capa", "cift anadal", "cift ana dal", "yandal", "yan dal"),
+        "frame_facets": ("cap", "cap_eligibility", "cap_application_dates"),
+        "calendar_query_prefix": "CAP basvuru",
+        "forbidden_answer_markers": ("2,50", "2.50", "2,75", "2.75", "120 akts", "240 akts"),
+        "supplemental_source_owner": OWNER_ANNOUNCEMENT_SEARCH,
+    },
+    {
+        "contract_id": "horizontal_transfer_registration_dates",
+        "facet": "horizontal_transfer_registration_dates",
+        "target_program": "horizontal_transfer",
+        "query_markers": ("yatay gecis", "yatay"),
+        "frame_facets": ("yatay", "yatay_gecis", "horizontal_transfer"),
+        "intent_markers": ("kesin kayit", "kayit tarih", "yedek kayit"),
+        "calendar_query_prefix": "yatay gecis kesin kayit",
+        "forbidden_answer_markers": ("cap", "cift anadal", "120 akts", "240 akts"),
+    },
+    {
+        "contract_id": "horizontal_transfer_evaluation_dates",
+        "facet": "horizontal_transfer_evaluation_dates",
+        "target_program": "horizontal_transfer",
+        "query_markers": ("yatay gecis", "yatay"),
+        "frame_facets": ("yatay", "yatay_gecis", "horizontal_transfer"),
+        "intent_markers": ("degerlendirme", "sonuc", "ilan"),
+        "calendar_query_prefix": "yatay gecis degerlendirme",
+        "forbidden_answer_markers": ("cap", "cift anadal", "120 akts", "240 akts"),
+    },
+    {
+        "contract_id": "horizontal_transfer_application_dates",
+        "facet": "horizontal_transfer_application_dates",
+        "target_program": "horizontal_transfer",
+        "query_markers": ("yatay gecis", "yatay"),
+        "frame_facets": ("yatay", "yatay_gecis", "horizontal_transfer"),
+        "intent_markers": ("basvuru", "son basvuru"),
+        "default_when_context_matches": True,
+        "calendar_query_prefix": "yatay gecis basvuru",
+        "forbidden_answer_markers": ("cap", "cift anadal", "120 akts", "240 akts"),
+    },
+)
 _COURSE_CODE_RE = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,5}\s*\d{3}[A-Z]?\b", re.IGNORECASE)
 
 
@@ -172,8 +217,15 @@ def resolve_answer_contract(
             metadata={"target_program": "summer_school"},
         )
 
+    calendar_date_contract = _calendar_date_contract(normalized, frame_facet=frame_facet)
+    if calendar_date_contract is not None:
+        return calendar_date_contract
+
     if _is_cap_contract(normalized, frame_facet=frame_facet):
-        if any(marker in normalized for marker in ("borc", "borcum", "borcu", "harc")):
+        if (
+            any(marker in normalized for marker in ("borc", "borcum", "borcu", "harc"))
+            and not _cap_debt_query_asks_payment_process(normalized)
+        ):
             return AnswerContract(
                 contract_id="cap_debt_eligibility",
                 facet="cap_debt_eligibility",
@@ -200,8 +252,8 @@ def resolve_answer_contract(
             return AnswerContract(
                 contract_id="cap_application_dates",
                 facet="cap_application_dates",
-                source_owner=OWNER_STUDENT_AFFAIRS_POLICY,
-                capability="student_affairs.policy_lookup",
+                source_owner=OWNER_ACADEMIC_CALENDAR,
+                capability="calendar.academic_date",
                 final_owner="main_orchestrator",
                 synthesis_policy="llm_with_supplemental_announcement",
                 allowed_departments=(Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS),
@@ -209,6 +261,7 @@ def resolve_answer_contract(
                 metadata={
                     "supplemental_source_owner": OWNER_ANNOUNCEMENT_SEARCH,
                     "target_program": "double_major",
+                    "calendar_query_prefix": "CAP basvuru",
                 },
             )
         return AnswerContract(
@@ -231,6 +284,50 @@ def resolve_answer_contract(
             metadata={"target_program": "double_major"},
         )
 
+    return None
+
+
+def _calendar_date_contract(normalized: str, *, frame_facet: str) -> AnswerContract | None:
+    if not any(marker in normalized for marker in _CALENDAR_DATE_MARKERS):
+        return None
+    for topic in _CALENDAR_DATE_CONTRACT_TOPICS:
+        query_markers = tuple(str(marker) for marker in topic.get("query_markers") or ())
+        frame_facets = tuple(str(marker) for marker in topic.get("frame_facets") or ())
+        if not (
+            any(marker in normalized for marker in query_markers)
+            or (frame_facet and frame_facet in frame_facets)
+        ):
+            continue
+        intent_markers = tuple(str(marker) for marker in topic.get("intent_markers") or ())
+        if intent_markers and not any(marker in normalized for marker in intent_markers):
+            if not bool(topic.get("default_when_context_matches")):
+                continue
+            other_intent_claimed = any(
+                any(str(marker) in normalized for marker in other_topic.get("intent_markers") or ())
+                for other_topic in _CALENDAR_DATE_CONTRACT_TOPICS
+                if other_topic is not topic
+                and other_topic.get("target_program") == topic.get("target_program")
+            )
+            if other_intent_claimed:
+                continue
+        metadata = {
+            "target_program": topic["target_program"],
+            "calendar_query_prefix": topic["calendar_query_prefix"],
+        }
+        supplemental_owner = topic.get("supplemental_source_owner")
+        if supplemental_owner:
+            metadata["supplemental_source_owner"] = supplemental_owner
+        return AnswerContract(
+            contract_id=str(topic["contract_id"]),
+            facet=str(topic["facet"]),
+            source_owner=OWNER_ACADEMIC_CALENDAR,
+            capability="calendar.academic_date",
+            final_owner="main_orchestrator",
+            synthesis_policy="llm_with_supplemental_announcement",
+            allowed_departments=(Department.STUDENT_AFFAIRS, Department.ACADEMIC_PROGRAMS),
+            forbidden_answer_markers=tuple(str(item) for item in topic.get("forbidden_answer_markers") or ()),
+            metadata=metadata,
+        )
     return None
 
 
@@ -298,16 +395,40 @@ def answer_contract_policy_facet(contract: AnswerContract) -> dict[str, Any]:
         prefer = ["basvurabilmesi", "not ortalamasi", "3,00", "ilk %20", "basvuru kosullari"]
         avoid_markers.extend(["mezun olabilmesi", "diplomasi verilir", "2,75", "120 akts", "240 akts"])
     elif contract.contract_id == "cap_debt_eligibility":
-        prefer = ["harc", "borc", "engel", "basvuru"]
-        avoid_markers.extend(["ne kadar", "ogrenim ucreti", "ucret tablosu"])
+        prefer = ["harc", "borc", "engel", "basvuru", "basvurabilmesi", "basvuru kosullari"]
+        avoid_markers.extend([
+            "ne kadar",
+            "ogrenim ucreti",
+            "ucret tablosu",
+            "mezun olabilmesi",
+            "mezuniyet",
+            "tamamlanmasi",
+            "tamamlama",
+            "kaydi silinir",
+            "2,75",
+            "120 akts",
+            "240 akts",
+        ])
     elif contract.contract_id == "cap_application_dates":
         prefer = ["akademik takvim", "basvuru tarihleri", "oidb", "duyuru"]
         avoid_markers.extend(["mezun olabilmesi", "diplomasi verilir"])
+    elif contract.source_owner == OWNER_ACADEMIC_CALENDAR:
+        prefer = ["akademik takvim", "basvuru tarihleri", "takvim", "tarih"]
+        avoid_markers.extend(["mezuniyet", "akts", "harc", "ucret"])
     elif contract.contract_id == "summer_school_policy":
         prefer = ["yaz okulu", "yaz okulunda ders alabilir", "dersin acilabilmesi", "yaz okulu yonergesi"]
         avoid_markers.extend(["dis hekimligi", "tip fakultesi", "yabanci dil", "pedagojik formasyon"])
     else:
         prefer = []
+    if target_program == "double_major":
+        program_prefer = ["cap", "cift ana dal", "cift anadal", "ikinci ana dal"]
+        program_avoid = ["yan dal not ortalamasi", "yandal not ortalamasi"]
+    elif target_program == "horizontal_transfer":
+        program_prefer = ["yatay gecis", "kurum ici", "kurumlar arasi", "ek madde"]
+        program_avoid = ["cap", "cift anadal", "dikey gecis"]
+    else:
+        program_prefer = []
+        program_avoid = []
     return {
         "schema": "omu.policy_facet.v2",
         "facet": contract.facet,
@@ -317,9 +438,9 @@ def answer_contract_policy_facet(contract: AnswerContract) -> dict[str, Any]:
         "confidence": 0.95,
         "prefer_evidence_markers": prefer,
         "avoid_evidence_markers": [marker for marker in avoid_markers if marker],
-        "program_prefer_evidence_markers": ["cap", "cift ana dal", "cift anadal", "ikinci ana dal"] if target_program else [],
-        "program_avoid_evidence_markers": ["yan dal not ortalamasi", "yandal not ortalamasi"] if target_program else [],
-        "value_aspects": ["date"] if contract.contract_id == "cap_application_dates" else ["gpa", "percentage"] if contract.contract_id == "cap_eligibility" else [],
+        "program_prefer_evidence_markers": program_prefer,
+        "program_avoid_evidence_markers": program_avoid,
+        "value_aspects": ["date"] if contract.source_owner == OWNER_ACADEMIC_CALENDAR else ["gpa", "percentage"] if contract.contract_id == "cap_eligibility" else [],
         "reason": f"answer_contract:{contract.contract_id}",
     }
 
@@ -512,6 +633,27 @@ def _is_cap_contract(normalized: str, *, frame_facet: str) -> bool:
         or "capa" in normalized
         or "cift anadal" in normalized
         or "cift ana dal" in normalized
+    )
+
+
+def _cap_debt_query_asks_payment_process(normalized: str) -> bool:
+    return any(
+        marker in normalized
+        for marker in (
+            "nasil odenir",
+            "nasil odeyebilirim",
+            "nasil odeyecegim",
+            "nasil odemeliyim",
+            "harc borcumu nasil",
+            "borcumu nasil ode",
+            "odeme yontemi",
+            "odeme sekli",
+            "hangi banka",
+            "dekont",
+            "taksit",
+            "yatir",
+            "odeyebilirim",
+        )
     )
 
 

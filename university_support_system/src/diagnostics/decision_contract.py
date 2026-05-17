@@ -469,6 +469,7 @@ def _llm_usage(profiler_snapshot: dict[str, Any] | None) -> tuple[int, list[str]
                     "status",
                     "json_mode",
                     "llm_profile",
+                    "llm_operating_profile",
                     "fallback_from",
                     "fallback_from_label",
                     "fallback_from_model",
@@ -509,6 +510,12 @@ def _answer_coverage_result(profiler_snapshot: dict[str, Any] | None) -> dict[st
 def _answer_value_conflict_result(profiler_snapshot: dict[str, Any] | None) -> dict[str, Any]:
     attributes = (profiler_snapshot or {}).get("attributes") or {}
     value = attributes.get("answer_value_conflict_validator")
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _answer_length_result(profiler_snapshot: dict[str, Any] | None) -> dict[str, Any]:
+    attributes = (profiler_snapshot or {}).get("attributes") or {}
+    value = attributes.get("answer_length")
     return dict(value) if isinstance(value, dict) else {}
 
 
@@ -722,6 +729,9 @@ def build_decision_trace_record(
     answer_validation_result = _answer_validation_result(profiler_snapshot)
     answer_coverage_result = _answer_coverage_result(profiler_snapshot)
     answer_value_conflict_result = _answer_value_conflict_result(profiler_snapshot)
+    answer_length_result = _answer_length_result(profiler_snapshot)
+    if answer_length_result:
+        runtime_payload["answer_length"] = answer_length_result
     runtime_payload["decision_path"] = {
         "router": {
             "departments": [
@@ -760,6 +770,8 @@ def build_decision_trace_record(
             "coverage_facet": answer_coverage_result.get("expected_facet"),
             "value_conflict_status": answer_value_conflict_result.get("status"),
             "primary_answer_value": answer_value_conflict_result.get("primary_answer_value"),
+            "answer_length_policy": answer_length_result.get("policy"),
+            "answer_length_warning": answer_length_result.get("warning"),
         },
     }
 

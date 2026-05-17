@@ -1,0 +1,241 @@
+{
+  "model": "seroe/bge-reranker-v2-m3-turkish-triplet",
+  "device": {
+    "requested": "auto",
+    "resolved": "cuda"
+  },
+  "torch_dtype": {
+    "requested": "float16",
+    "resolved": "torch.float16"
+  },
+  "elapsed_seconds": 796.883,
+  "calibration": {
+    "shift": 0.0405,
+    "scale": 0.5
+  },
+  "raw_stats": {
+    "count": 10,
+    "min": 0.0001,
+    "max": 0.0006,
+    "mean": 0.0003,
+    "std": 0.0002,
+    "median": 0.0003,
+    "p10": 0.0001,
+    "p25": 0.0002,
+    "p75": 0.0004,
+    "p90": 0.0004
+  },
+  "sigmoid_stats": {
+    "count": 10,
+    "min": 0.5,
+    "max": 0.5002,
+    "mean": 0.5001,
+    "std": 0.0,
+    "median": 0.5001,
+    "p10": 0.5,
+    "p25": 0.5,
+    "p75": 0.5001,
+    "p90": 0.5001
+  },
+  "calibrated_stats": {
+    "count": 10,
+    "min": 0.4798,
+    "max": 0.4801,
+    "mean": 0.4799,
+    "std": 0.0001,
+    "median": 0.4799,
+    "p10": 0.4798,
+    "p25": 0.4798,
+    "p75": 0.48,
+    "p90": 0.48
+  },
+  "top1_raw_stats": {
+    "count": 1,
+    "min": 0.0006,
+    "max": 0.0006,
+    "mean": 0.0006,
+    "std": 0.0,
+    "median": 0.0006,
+    "p10": 0.0006,
+    "p25": 0.0006,
+    "p75": 0.0006,
+    "p90": 0.0006
+  },
+  "top1_sigmoid_stats": {
+    "count": 1,
+    "min": 0.5002,
+    "max": 0.5002,
+    "mean": 0.5002,
+    "std": 0.0,
+    "median": 0.5002,
+    "p10": 0.5002,
+    "p25": 0.5002,
+    "p75": 0.5002,
+    "p90": 0.5002
+  },
+  "top1_calibrated_stats": {
+    "count": 1,
+    "min": 0.4801,
+    "max": 0.4801,
+    "mean": 0.4801,
+    "std": 0.0,
+    "median": 0.4801,
+    "p10": 0.4801,
+    "p25": 0.4801,
+    "p75": 0.4801,
+    "p90": 0.4801
+  },
+  "source_owner_summary": {
+    "top1_source_owner_counts": {
+      "tuition_fee_catalog": 1
+    },
+    "expected_department_checked": 0,
+    "expected_department_matched": 0
+  },
+  "suggestion": {
+    "shift": 0.0003,
+    "scale": 0.5,
+    "formula": "sigmoid((score - 0.0003) / 0.5000)",
+    "suggested_direct_rag_threshold": 0.5,
+    "suggested_min_source_threshold": 0.5
+  },
+  "queries": [
+    {
+      "query": "CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+      "department": "?",
+      "profile": "manual",
+      "results": [
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "collection": null,
+          "source_owner": "tuition_fee_catalog",
+          "source_family": "tuition_fee_catalog",
+          "score_type": "semantic_similarity",
+          "content_preview": "Öğrenci harç iademi nasıl alabilirim? İade gerekçenizi belirtir bir dilekçe ve kendi adınıza açılmış hesaba ait 26 hanel",
+          "pre_rerank_score": 0.1548,
+          "raw_reranker_score": 0.000609,
+          "sigmoid_score": 0.500152,
+          "calibrated_score": 0.480065,
+          "content_length": 304
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "semantic_similarity",
+          "content_preview": "MADDE 8 - (1) ÇAP'ta başarı ve mezuniyet koşulları şunlardır: a) Ana dal programında mezuniyet hakkını elde eden ve ÇAP’",
+          "pre_rerank_score": 0.2933,
+          "raw_reranker_score": 0.0004,
+          "sigmoid_score": 0.5001,
+          "calibrated_score": 0.479961,
+          "content_length": 937
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "semantic_similarity",
+          "content_preview": "[MADDE 9 - (1) ÇAP'tan geçici veya sürekli ayrılma ve ilişik kesilme hâlleri şunlardır:] sayılmayan dersleri, genel not ",
+          "pre_rerank_score": 0.206,
+          "raw_reranker_score": 0.0004,
+          "sigmoid_score": 0.5001,
+          "calibrated_score": 0.479961,
+          "content_length": 310
+        },
+        {
+          "source": "çift_ana_dal_ikinci_lisans_ve_yan_dal_programı.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "rank_fusion",
+          "content_preview": "[MADDE 8 - (1) ÇAP'ta başarı ve mezuniyet koşulları şunlardır:] ayrıca öderler. d) Azami süre içinde ÇAP öğreniminin tam",
+          "pre_rerank_score": 0.5,
+          "raw_reranker_score": 0.000383,
+          "sigmoid_score": 0.500096,
+          "calibrated_score": 0.479952,
+          "content_length": 999
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "semantic_similarity",
+          "content_preview": "[MADDE 7 – (1) Öğrencinin kendi bölümünün lisans programı ile ÇAP’ın ayrılığı esastır.] sınırlar, ilgili birim yönetim k",
+          "pre_rerank_score": 0.3158,
+          "raw_reranker_score": 0.000294,
+          "sigmoid_score": 0.500073,
+          "calibrated_score": 0.479908,
+          "content_length": 967
+        },
+        {
+          "source": "sık_sorulan_sorular.txt",
+          "collection": null,
+          "source_owner": "tuition_fee_catalog",
+          "source_family": "tuition_fee_catalog",
+          "score_type": "semantic_similarity",
+          "content_preview": "UBYS’de kayıt ekranında ücret yatırmamam gerekirken borçlu veya yatırmam gereken ücret fazla görünüyor. Ne yapmam gereki",
+          "pre_rerank_score": 0.1606,
+          "raw_reranker_score": 0.000249,
+          "sigmoid_score": 0.500062,
+          "calibrated_score": 0.479885,
+          "content_length": 195
+        },
+        {
+          "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "semantic_similarity",
+          "content_preview": "[MADDE 4 – (1) Ön lisans ve lisans diploma programlarının hazırlık sınıfına; ön lisans] gördüğü programdaki genel not or",
+          "pre_rerank_score": 0.1784,
+          "raw_reranker_score": 0.00021,
+          "sigmoid_score": 0.500052,
+          "calibrated_score": 0.479866,
+          "content_length": 1072
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "semantic_similarity",
+          "content_preview": "[MADDE 5 - (1) ÇAP'a başvuru, kabul ve kayıt koşulları şunlardır:] i) Başarı sıralaması şartı aranan programlarda ÇAP ya",
+          "pre_rerank_score": 0.2301,
+          "raw_reranker_score": 0.000152,
+          "sigmoid_score": 0.500038,
+          "calibrated_score": 0.479837,
+          "content_length": 407
+        },
+        {
+          "source": "yonerge_onlisans_lisans_yatay_gecis.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "semantic_similarity",
+          "content_preview": "[MADDE 4 – (1) Ön lisans ve lisans diploma programlarının hazırlık sınıfına; ön lisans] (3) Başvuru birim komisyonlarınc",
+          "pre_rerank_score": 0.204,
+          "raw_reranker_score": 0.000115,
+          "sigmoid_score": 0.500029,
+          "calibrated_score": 0.479818,
+          "content_length": 1012
+        },
+        {
+          "source": "yonerge_cift_anadal_yandal.pdf",
+          "collection": null,
+          "source_owner": "student_affairs_policy",
+          "source_family": "student_affairs_policy",
+          "score_type": "semantic_similarity",
+          "content_preview": "MADDE 7 – (1) Öğrencinin kendi bölümünün lisans programı ile ÇAP’ın ayrılığı esastır. (2) ÇAP öğrencileri, devam ettikle",
+          "pre_rerank_score": 0.2714,
+          "raw_reranker_score": 0.000102,
+          "sigmoid_score": 0.500025,
+          "calibrated_score": 0.479812,
+          "content_length": 444
+        }
+      ]
+    }
+  ]
+}

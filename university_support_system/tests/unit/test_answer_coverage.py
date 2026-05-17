@@ -64,3 +64,43 @@ def test_answer_coverage_passes_gpa_followup_when_eligibility_value_present():
 
     assert result.status == "pass"
     assert result.expected_facet == "eligibility_value"
+
+
+def test_answer_coverage_flags_missing_payment_process_in_compound_question():
+    result = validate_answer_coverage(
+        query="CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+        answer=(
+            "CAP basvurusu icin genel kosullar: ana dal not ortalamasi en az "
+            "3,00 olmali ve basari siralamasinda ilk yuzde 20 icinde olunmalidir."
+        ),
+        responses=[],
+    )
+
+    assert result.status == "check"
+    assert result.expected_facet == "payment_process"
+    assert result.reason == "answer_missing_payment_process_markers"
+
+
+def test_answer_coverage_passes_payment_process_when_answer_addresses_no_info():
+    result = validate_answer_coverage(
+        query="CAP basvuru sartlari neler ve harc borcumu nasil odeyebilirim?",
+        answer=(
+            "CAP kosullari kaynaklarda yer aliyor; harc borcunun odeme yontemi "
+            "icin kaynaklarda net bilgi bulunamadi."
+        ),
+        responses=[],
+    )
+
+    assert result.status == "pass"
+    assert result.expected_facet == "payment_process"
+
+
+def test_answer_coverage_treats_payment_nasil_yapilir_as_payment_process():
+    result = validate_answer_coverage(
+        query="Harc odemesi nasil yapilir?",
+        answer="Odeme yontemi kaynaklarda net bilgi bulunamadi.",
+        responses=[],
+    )
+
+    assert result.status == "pass"
+    assert result.expected_facet == "payment_process"

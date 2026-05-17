@@ -8,6 +8,7 @@ import pytest
 
 from src.db.auth import AuthContext
 from src.db.schemas import UserQueryResponse
+import src.slack.service as slack_service_module
 from src.slack.service import (
     SlackBotService,
     SlackCommandKind,
@@ -19,6 +20,7 @@ from src.slack.service import (
     parse_slack_command,
 )
 from src.transcripts import TranscriptProcessor, TranscriptSessionStore
+from src.transcripts.service import TranscriptProcessingError
 
 
 def test_parse_slack_command_recognizes_login_verify_logout_and_query():
@@ -44,6 +46,13 @@ def test_slack_help_and_welcome_text_cover_core_commands_and_transcript():
     assert "güncel duyurular" in help_text
     assert "<@U123>" in welcome_text
     assert "help" in welcome_text
+
+
+def test_slack_help_uses_institution_bot_name(monkeypatch):
+    monkeypatch.setattr(slack_service_module.settings.institution, "support_bot_name", "ABC Destek Botu")
+
+    assert build_help_text().startswith("ABC Destek Botu")
+    assert "ben ABC Destek Botu" in build_welcome_text()
 
 
 def test_build_slack_context_id_prefers_thread_ts():
@@ -233,6 +242,93 @@ async def test_slack_service_processes_transcript_upload_and_answers_followup():
     assert "Toplam AKTS: 90" in upload_reply[0]
     assert "MAT101 Matematik I" in failed_reply[0]
     assert orchestrator.last_call is None
+
+
+@pytest.mark.asyncio
+async def test_slack_transcript_public_channel_adds_privacy_note():
+    auth_service = _FakeAuthService()
+    service = SlackBotService(
+        orchestrator=_FakeOrchestrator(),
+        auth_service=auth_service,
+        transcript_processor=TranscriptProcessor(),
+        transcript_store=TranscriptSessionStore(),
+    )
+    transcript_text = (
+        "Genel Not Ortalamasi 3,12\n"
+        "Toplam AKTS 90\n"
+        "Toplam Kredi 60\n"
+        "BIL101 Programlamaya Giris 3 5 AA\n"
+    )
+
+    upload_reply = await service.handle_message(
+        SlackIncomingMessage(
+            text="Mezun olmak icin kac akts gerekiyor bu belgeyi incele?",
+            user_id="U123",
+            channel_id="C1",
+            ts="200.1",
+            files=(
+                SlackFileAttachment(
+                    name="transkript.txt",
+                    mimetype="text/plain",
+                    content=transcript_text.encode("utf-8"),
+                ),
+            ),
+        )
+    )
+    followup_reply = await service.handle_message(
+        SlackIncomingMessage(
+            text="toplam AKTS'im kac?",
+            user_id="U123",
+            channel_id="C1",
+            ts="200.2",
+            thread_ts="200.1",
+        )
+    )
+
+    assert "Toplam AKTS: 90" in upload_reply[0]
+    assert "kisisel veri" in upload_reply[0]
+    assert "DM" in upload_reply[0]
+    assert "toplam AKTS" in followup_reply[0]
+    assert "90" in followup_reply[0]
+    assert "kisisel veri" in followup_reply[0]
+
+
+@pytest.mark.asyncio
+async def test_slack_file_download_rejects_html_login_page(monkeypatch):
+    class _FakeResponse:
+        headers = {"content-type": "text/html; charset=utf-8"}
+        content = b"<!DOCTYPE html><html>login</html>"
+
+        def raise_for_status(self):
+            return None
+
+    class _FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def get(self, url, headers=None):
+            return _FakeResponse()
+
+    monkeypatch.setattr(slack_service_module.settings.slack, "bot_token", "xoxb-test")
+    monkeypatch.setattr(slack_service_module.httpx, "AsyncClient", _FakeClient)
+    service = SlackBotService(orchestrator=_FakeOrchestrator(), auth_service=_FakeAuthService())
+
+    with pytest.raises(TranscriptProcessingError) as exc_info:
+        await service._read_file_content(
+            SlackFileAttachment(
+                name="transkript.pdf",
+                mimetype="application/pdf",
+                url_private_download="https://files.slack.com/files-pri/test/download/transkript.pdf",
+            )
+        )
+
+    assert "files:read" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

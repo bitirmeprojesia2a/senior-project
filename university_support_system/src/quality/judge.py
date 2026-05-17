@@ -37,6 +37,7 @@ DE\u011eERLEND\u0130RME KR\u0130TERLER\u0130:
 6. \u00c7ok par\u00e7al\u0131 soruda t\u00fcm alt niyetler cevapland\u0131 m\u0131?
 7. Plan/cevap sozlesmesi verildiyse answer_contract.must_answer maddeleri cevapta kanitli sekilde karsilandi mi?
 8. Evidence contract verildiyse kaynaklar beklenen konu veya kaynak turuyle uyumlu mu?
+9. answer_coverage_validator "check" diyorsa beklenen facet cevapta gerçekten eksik mi?
 
 JSON FORMAT:
 {
@@ -182,13 +183,18 @@ async def run_judge(
     missing_intents: list[str] | None = None,
     force: bool = False,
     validator_result: dict | None = None,
+    answer_coverage_result: dict | None = None,
 ) -> JudgeResult | None:
     """Run the judge on a risky answer. Returns None if not risky or on error.
 
     Only runs on risky answers. Maximum 1 quality loop is enforced by the caller.
     """
     has_plan_contract = bool(answer_contract or evidence_contract)
-    if not force and not has_plan_contract and not _is_risky_answer(
+    answer_coverage_needs_check = (
+        isinstance(answer_coverage_result, dict)
+        and str(answer_coverage_result.get("status") or "").lower() == "check"
+    )
+    if not force and not has_plan_contract and not answer_coverage_needs_check and not _is_risky_answer(
         answer,
         is_multi_department=is_multi_department,
         has_foreign_suspicion=has_foreign_suspicion,
@@ -209,6 +215,8 @@ async def run_judge(
             "intent_coverage_is_low": intent_coverage_is_low,
             "missing_intents": missing_intents or [],
             "forced_by_validator": force,
+            "answer_coverage_needs_check": answer_coverage_needs_check,
+            "answer_coverage": answer_coverage_result or {},
         },
         "validator_result": validator_result or {},
     }, ensure_ascii=False, indent=2)

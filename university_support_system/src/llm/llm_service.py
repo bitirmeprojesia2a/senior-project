@@ -96,6 +96,7 @@ class LLMService:
             role_provider = getattr(settings.llm, f"{model_role}_provider", None)
             if role_provider:
                 return role_provider
+            return settings.resolve_llm_provider(role=model_role)  # type: ignore[arg-type]
         return self.primary_provider
 
     def _provider_display_name(self, provider: str) -> str:
@@ -173,6 +174,9 @@ class LLMService:
             entry["estimated_input_tokens"] = int(total_input_chars / APPROX_CHARS_PER_TOKEN)
         if llm_profile:
             entry["llm_profile"] = settings.normalize_llm_profile(llm_profile)
+        entry["llm_operating_profile"] = settings.normalize_llm_operating_profile(
+            llm_profile or settings.llm.profile
+        )
         if fallback_from:
             entry["fallback_from"] = fallback_from
             entry["fallback_from_label"] = self._provider_usage_label(fallback_from)

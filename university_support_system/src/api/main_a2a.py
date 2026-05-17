@@ -69,13 +69,13 @@ def main_a2a_url() -> str:
 
 def build_main_agent_card() -> AgentCard:
     return AgentCard(
-        name="OMU Main Orchestrator",
-        description="OMU destek sistemi icin ana A2A orkestrator ajani.",
+        name=f"{settings.institution.short_name_ascii} Main Orchestrator",
+        description=f"{settings.institution.short_name_ascii} destek sistemi icin ana A2A orkestrator ajani.",
         url=main_a2a_url(),
         version=settings.server.app_version,
         provider=AgentProvider(
-            organization="Ondokuz Mayis Universitesi",
-            url="https://www.omu.edu.tr",
+            organization=settings.institution.name_ascii,
+            url=settings.institution.homepage_url,
         ),
         capabilities=AgentCapabilities(
             streaming=False,
@@ -112,7 +112,7 @@ def build_main_agent_card() -> AgentCard:
 def build_main_agent_card_payload() -> dict[str, Any]:
     return {
         "service_id": "main_orchestrator",
-        "name": "OMU Main Orchestrator",
+        "name": f"{settings.institution.short_name_ascii} Main Orchestrator",
         "url": main_a2a_url(),
         "version": settings.server.app_version,
         "build": settings.server.build_metadata(),
@@ -140,9 +140,10 @@ def build_main_agent_card_payload() -> dict[str, Any]:
 def build_main_agent_status_payload() -> dict[str, Any]:
     card_payload = build_main_agent_card_payload()
     capabilities = card_payload["capabilities"]
+    orchestrator_name = f"{settings.institution.short_name_ascii} Main Orchestrator"
     return {
         "agent_id": "main_orchestrator",
-        "name": "OMU Main Orchestrator",
+        "name": orchestrator_name,
         "department": "system",
         "role": "main_orchestrator",
         "description": "Ana sorgu yonlendirme ve birlestirme orkestratoru.",
@@ -163,6 +164,7 @@ def build_user_query_response_task(
     request_message: Message,
     trace: dict[str, Any] | None = None,
 ) -> Task:
+    orchestrator_name = f"{settings.institution.short_name_ascii} Main Orchestrator"
     context_id = request_message.contextId or response.query_id or str(uuid4())
     task_id = request_message.taskId or str(uuid4())
     response_text = response.answer
@@ -176,7 +178,7 @@ def build_user_query_response_task(
         metadata={
             "success": True,
             "emitter_id": "main_orchestrator",
-            "emitter_name": "OMU Main Orchestrator",
+            "emitter_name": orchestrator_name,
             "departments_involved": response.departments_involved,
             **request_trace,
         },
@@ -194,7 +196,7 @@ def build_user_query_response_task(
         metadata={
             "schema": USER_QUERY_RESPONSE_SCHEMA,
             "emitter_id": "main_orchestrator",
-            "emitter_name": "OMU Main Orchestrator",
+            "emitter_name": orchestrator_name,
             **request_trace,
         },
         parts=[
@@ -210,7 +212,7 @@ def build_user_query_response_task(
     task_metadata = {
         "parent_message_id": request_message.messageId,
         "emitter_id": "main_orchestrator",
-        "emitter_name": "OMU Main Orchestrator",
+        "emitter_name": orchestrator_name,
         "response_schema": USER_QUERY_RESPONSE_SCHEMA,
         **request_trace,
     }

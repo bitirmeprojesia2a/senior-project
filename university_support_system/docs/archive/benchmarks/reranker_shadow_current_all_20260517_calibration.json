@@ -1,0 +1,51 @@
+{
+  "model": "BAAI/bge-reranker-v2-m3",
+  "device": "cuda",
+  "torch_dtype": {
+    "requested": "auto",
+    "resolved": "None"
+  },
+  "runtime_calibration": {
+    "shift": 0.0652,
+    "scale": 0.5
+  },
+  "suggested_calibration": {
+    "shift": 0.0595,
+    "scale": 0.5,
+    "formula": "sigmoid((score - 0.0595) / 0.5000)",
+    "suggested_direct_rag_threshold": 0.637,
+    "suggested_min_source_threshold": 0.474
+  },
+  "raw_stats": {
+    "count": 400,
+    "min": 0.0,
+    "max": 0.9998,
+    "mean": 0.2257,
+    "std": 0.3119,
+    "median": 0.0595,
+    "p10": 0.0004,
+    "p25": 0.007,
+    "p75": 0.3412,
+    "p90": 0.87
+  },
+  "top1_raw_stats": {
+    "count": 40,
+    "min": 0.0,
+    "max": 0.9998,
+    "mean": 0.623,
+    "std": 0.3825,
+    "median": 0.6797,
+    "p10": 0.0424,
+    "p25": 0.298,
+    "p75": 0.9887,
+    "p90": 0.9975
+  },
+  "source_owner_summary": {
+    "top1_source_owner_counts": {
+      "-": 40
+    },
+    "expected_department_checked": 38,
+    "expected_department_matched": 0
+  },
+  "elapsed_seconds": 701.974
+}

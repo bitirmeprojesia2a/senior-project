@@ -78,6 +78,37 @@ async def test_judge_can_be_forced_by_deterministic_validator():
 
 
 @pytest.mark.asyncio
+async def test_judge_runs_for_answer_coverage_check_even_without_other_risk():
+    llm_service = AsyncMock()
+    llm_service.generate = AsyncMock(
+        return_value={
+            "approved": False,
+            "action": "rewrite_only",
+            "failure_reason": "payment process part is missing",
+            "missing_intents": ["payment_process"],
+        }
+    )
+
+    result = await run_judge(
+        query="Harc borcumu nasil odeyebilirim?",
+        answer="Basvuru kosullari aciklanmistir.",
+        evidence_summary="Harc odeme sureci kaynaklarda acik degil.",
+        llm_service=llm_service,
+        answer_coverage_result={
+            "status": "check",
+            "expected_facet": "payment_process",
+            "reason": "answer_missing_payment_process_markers",
+        },
+    )
+
+    assert result is not None
+    assert result.action == "rewrite_only"
+    prompt = llm_service.generate.await_args.kwargs["prompt"]
+    assert "answer_coverage_needs_check" in prompt
+    assert "payment_process" in prompt
+
+
+@pytest.mark.asyncio
 async def test_judge_parse_failure_is_not_approved():
     llm_service = AsyncMock()
     llm_service.generate = AsyncMock(return_value="judge failed to return json")

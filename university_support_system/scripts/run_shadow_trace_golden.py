@@ -369,6 +369,12 @@ def _trace_retrieval_execution(record: dict[str, Any] | None) -> list[dict[str, 
     return [dict(item) for item in items if isinstance(item, dict)]
 
 
+def _trace_answer_length(record: dict[str, Any] | None) -> dict[str, Any]:
+    runtime = (record or {}).get("runtime") or {}
+    value = runtime.get("answer_length") or {}
+    return dict(value) if isinstance(value, dict) else {}
+
+
 def _format_retrieval_execution_summary(items: list[dict[str, Any]]) -> str:
     if not items:
         return "-"
@@ -383,6 +389,17 @@ def _format_retrieval_execution_summary(items: list[dict[str, Any]]) -> str:
         lite = "lite" if policy.get("support_lite") or item.get("support_lite_applied") else "full"
         parts.append(f"{role}:{specialist}:{lite}; searches={searches}; mqe={variants}; early={early}")
     return "; ".join(parts)
+
+
+def _format_answer_length_summary(answer_length: dict[str, Any]) -> str:
+    if not answer_length:
+        return "-"
+    policy = str(answer_length.get("policy") or "?")
+    chars = answer_length.get("char_count")
+    sentences = answer_length.get("sentence_count")
+    bullets = answer_length.get("bullet_count")
+    warning = "warn" if answer_length.get("warning") else "ok"
+    return f"{policy}/{warning}; chars={chars}; sent={sentences}; bullets={bullets}"
 
 
 def _format_answer_validation_summary(validation: dict[str, Any]) -> str:
@@ -1181,6 +1198,8 @@ def _hydrate_row_from_trace(row: dict[str, Any], record: dict[str, Any] | None) 
     row["retrieval_execution_summary"] = _format_retrieval_execution_summary(
         row["retrieval_execution"]
     )
+    row["answer_length"] = _trace_answer_length(record)
+    row["answer_length_summary"] = _format_answer_length_summary(row["answer_length"])
     row["answer_quality"] = _answer_quality_shadow(row.get("answer_preview"))
     row["answer_quality_summary"] = _format_answer_quality_summary(row["answer_quality"])
     row["llm_call_count"] = record.get("llm_call_count") if record else None
@@ -1325,8 +1344,8 @@ def _markdown_report(
         "",
         "## Sorgu Tablosu",
         "",
-        "| ID | Aile | Expected Owner | Trace Owner | Capability | Final Owner | Dept | Specialist Selector | Mismatch | Branch Gate | Retrieval Budget | Answer Check | Coverage | Value Conflict | Judge Repair | Provider Warn | Quality | Primary Value | Competing Values | Structure | LLM Calls | Sure ms | Durum |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | ---: | --- |",
+        "| ID | Aile | Expected Owner | Trace Owner | Capability | Final Owner | Dept | Specialist Selector | Mismatch | Branch Gate | Retrieval Budget | Answer Check | Coverage | Value Conflict | Judge Repair | Provider Warn | Quality | Length | Primary Value | Competing Values | Structure | LLM Calls | Sure ms | Durum |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | ---: | --- |",
     ]
     for row in rows:
         status = _row_status(row)
@@ -1334,7 +1353,7 @@ def _markdown_report(
         if response_ms is None:
             response_ms = row.get("response_time_ms") or row.get("elapsed_ms")
         lines.append(
-            "| {id} | {family} | {expected} | {owner} | {capability} | {final_owner} | {dept} | {selector} | {selector_mismatch} | {branch_gate} | {retrieval_budget} | {answer_check} | {coverage} | {value_conflict} | {judge_repair} | {provider_warn} | {quality} | {primary_value} | {competing_values} | {structure} | {llm_calls} | {ms} | {status} |".format(
+            "| {id} | {family} | {expected} | {owner} | {capability} | {final_owner} | {dept} | {selector} | {selector_mismatch} | {branch_gate} | {retrieval_budget} | {answer_check} | {coverage} | {value_conflict} | {judge_repair} | {provider_warn} | {quality} | {length} | {primary_value} | {competing_values} | {structure} | {llm_calls} | {ms} | {status} |".format(
                 id=row.get("id"),
                 family=row.get("family"),
                 expected=row.get("expected_owner") or "-",
@@ -1352,6 +1371,7 @@ def _markdown_report(
                 judge_repair=row.get("judge_repair_summary") or "-",
                 provider_warn=row.get("provider_warning_summary") or _provider_warning_summary(row),
                 quality=row.get("answer_quality_summary") or "-",
+                length=row.get("answer_length_summary") or "-",
                 primary_value=(row.get("answer_value_conflict") or {}).get("primary_answer_value") or "-",
                 competing_values=", ".join(
                     str(item) for item in (row.get("answer_value_conflict") or {}).get("competing_values") or []
@@ -1539,6 +1559,7 @@ def _markdown_report(
                 f"- Judge repair: `{row.get('judge_repair_summary') or '-'}`",
                 f"- Provider warning: `{row.get('provider_warning_summary') or _provider_warning_summary(row)}`",
                 f"- Answer quality: `{row.get('answer_quality_summary') or '-'}`",
+                f"- Answer length: `{row.get('answer_length_summary') or '-'}`",
                 f"- Structural checks: `{row.get('structural_summary') or _format_structural_issues(row)}`",
                 f"- LLM roles: `{', '.join(row.get('llm_roles_used') or []) or '-'}`",
                 f"- LLM usage: `{_format_llm_usage(row.get('llm_usage') or [])}`",
@@ -1585,7 +1606,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--case", nargs="+", default=[], help="Run only selected case ids, e.g. GT01 GT07")
     parser.add_argument("--fail-set", action="store_true", help="Run only current CHECK cases: GT06 GT07 GT08 GT09 GT12")
     parser.add_argument("--limit", type=int, default=0, help="Run only first N selected cases")
-    parser.add_argument("--llm-profile", default="balanced", help="fast | balanced | quality")
+    parser.add_argument(
+        "--llm-profile",
+        default="balanced",
+        help="fast | balanced | quality | groq_only | hybrid_shadow | hybrid_quality",
+    )
     parser.add_argument(
         "--llm-provider",
         choices=["openai_compatible", "google_ai", "anthropic"],

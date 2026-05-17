@@ -158,6 +158,15 @@ def test_opposite_slack_service_name_prevents_duplicate_socket_mode_runtimes():
     assert _opposite_slack_service_name("unknown") == ""
 
 
+def test_slack_rollout_docs_pin_replay_flushdb_and_single_bot_gate():
+    content = (project_root / "docs" / "SLACK_ENTEGRASYON.md").read_text(encoding="utf-8")
+
+    assert 'docker ps -a --filter "name=slack"' in content
+    assert "redis-cli -n 0 FLUSHDB" in content
+    assert "scripts.audit_slack_replay" in content
+    assert "scripts.slack_runtime restart --runtime a2a" in content
+
+
 def test_health_targets_include_department_and_specialist_agents():
     assert _health_targets(
         include_student=True,

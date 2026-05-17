@@ -68,7 +68,7 @@ async def _retrieval_lifespan(app: FastAPI):
 
 def create_retrieval_service_app() -> FastAPI:
     app = FastAPI(
-        title="OMU Retrieval Service",
+        title=f"{settings.institution.short_name_ascii} Retrieval Service",
         version=settings.server.app_version,
         description="Centralized hybrid retrieval and reranking service.",
         lifespan=_retrieval_lifespan,

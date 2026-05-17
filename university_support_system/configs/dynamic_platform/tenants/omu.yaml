@@ -1,0 +1,22 @@
+schema_version: 1
+tenant_key: omu
+display_name: Ondokuz Mayis Universitesi
+bot_name: OMU Destek Bot
+locale: tr-TR
+timezone: Europe/Istanbul
+runtime_strategy: classic_protected
+domain_pack: education_university
+agent_pack: university_student_support
+source_catalog: omu_sources
+replay_suite: omu_golden
+entities:
+  groups:
+    units: []
+    faculties: []
+    departments: []
+    programs: []
+    services: []
+metadata:
+  support_phone: "0 (362) 312 19 19"
+  classic_runtime_protected: true
+  note: "This tenant profile mirrors the current OMU classic runtime and does not change production behavior."

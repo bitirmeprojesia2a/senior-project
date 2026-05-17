@@ -33,6 +33,7 @@ from src.a2a.responses import (
 from src.a2a.schemas import AGENT_RESPONSE_SCHEMA, DEPARTMENT_RESPONSE_SCHEMA
 from src.a2a.state import STATE_TRANSITIONS_METADATA_KEY, build_state_transition, response_state_transitions
 from src.a2a.tracing import ensure_trace_metadata, trace_metadata
+from src.core.config import settings
 from src.db.schemas import DepartmentResponse
 from src.orchestrators.response_utils import response_core_answer
 
@@ -421,8 +422,8 @@ def build_agent_card(
         url=url,
         version=version,
         provider=AgentProvider(
-            organization="Ondokuz Mayis Universitesi",
-            url="https://omu.edu.tr",
+            organization=settings.institution.name_ascii,
+            url=settings.institution.homepage_url,
         ),
         capabilities=AgentCapabilities(
             streaming=True,

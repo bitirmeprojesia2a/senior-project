@@ -169,6 +169,13 @@ def render_contract_answer_plan(plan: ContractAnswerPlan | None) -> str | None:
         )
     if plan.contract_id == "cap_debt_eligibility":
         return (
+            "CAP basvurusunda harc borcunun dogrudan basvuruya engel olduguna "
+            "dair acik bir hukum bulamadim. Ders kaydi veya kayit yenileme icin "
+            "odeme sarti ayri bir konudur; bu hukum CAP basvurusuna otomatik "
+            "engel olarak tasinmamalidir."
+        )
+    if plan.contract_id == "cap_debt_eligibility_legacy":
+        return (
             "ÇAP başvurusu için harç borcunun doğrudan başvuruya engel olduğuna "
             "dair açık bir hüküm bulamadım. Ders kaydı veya kayıt yenileme için "
             "ödeme şartı ayrı bir konudur; bu hükmü ÇAP başvurusuna otomatik "

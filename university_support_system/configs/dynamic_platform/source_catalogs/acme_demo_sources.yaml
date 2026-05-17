@@ -1,0 +1,55 @@
+schema_version: 1
+source_catalog: acme_demo_sources
+tenant_key: acme_demo
+sources:
+  - source_id: acme_hr_documents
+    adapter: pdf_document
+    domain: corporate_support
+    owner_agent: hr_policy
+    source_family: hr_documents
+    capabilities:
+      - policy_qa
+      - leave_policy
+    entity_scope:
+      type: global
+    authority_level: official_policy
+  - source_id: acme_it_knowledge_base
+    adapter: web_page
+    domain: corporate_support
+    owner_agent: it_support
+    source_family: it_knowledge_base
+    capabilities:
+      - it_ticket_guidance
+    entity_scope:
+      type: global
+    authority_level: department_document
+  - source_id: acme_payroll_documents
+    adapter: pdf_document
+    domain: corporate_support
+    owner_agent: payroll
+    source_family: payroll_documents
+    capabilities:
+      - payroll_question
+    entity_scope:
+      type: global
+    authority_level: official_policy
+  - source_id: acme_contact_directory
+    adapter: structured_csv
+    domain: corporate_support
+    owner_agent: hr_policy
+    source_family: contact_directory
+    capabilities:
+      - department_contact
+    entity_scope:
+      type: global
+    authority_level: official_structured
+  - source_id: acme_internal_announcements
+    adapter: announcement_page
+    domain: corporate_support
+    owner_agent: announcement
+    source_family: internal_announcements
+    capabilities:
+      - internal_announcement
+    entity_scope:
+      type: global
+    authority_level: official_announcement

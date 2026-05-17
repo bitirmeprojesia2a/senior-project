@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "tenant_key": "omu",
+  "description": "Expected classic decision contracts that the dynamic OMU profile must be able to represent offline.",
+  "cases": [
+    {
+      "id": "OMU-CAP-ELIGIBILITY",
+      "query": "ÇAP'a başvurabilir miyim?",
+      "expected_capabilities": ["double_major_minor"],
+      "expected_agents": ["student_affairs", "academic_programs"],
+      "expected_specialists": ["registration_agent", "regulation_agent"],
+      "expected_source_families": ["student_policy_documents", "academic_policy_documents"],
+      "expected_source_owners": ["student_affairs", "academic_programs"],
+      "expected_authority_levels": ["official_policy"],
+      "notes": "General CAP eligibility must be represented by policy sources, not by program-specific hardcoded answers."
+    },
+    {
+      "id": "OMU-CAP-DATE",
+      "query": "ÇAP başvuru tarihleri ne zaman?",
+      "expected_capabilities": ["double_major_minor", "academic_calendar", "announcement_lookup"],
+      "expected_agents": ["student_affairs", "academic_programs", "announcement"],
+      "expected_source_families": ["student_policy_documents", "academic_policy_documents", "academic_calendar", "announcements"],
+      "expected_source_owners": ["student_affairs", "academic_programs", "announcement"],
+      "expected_authority_levels": ["official_policy", "official_structured", "official_announcement"],
+      "notes": "Date questions can need policy context, academic calendar, and scoped announcement probing."
+    },
+    {
+      "id": "OMU-GRAD-AKTS",
+      "query": "Lisans programından mezun olmak için kaç AKTS gerekir?",
+      "expected_capabilities": ["graduation_akts"],
+      "expected_agents": ["student_affairs"],
+      "expected_specialists": ["graduation_agent"],
+      "expected_source_families": ["student_policy_documents"],
+      "expected_source_owners": ["student_affairs"],
+      "expected_authority_levels": ["official_policy"],
+      "expected_final_owner": "student_affairs"
+    },
+    {
+      "id": "OMU-SCHEDULE",
+      "query": "Bilgisayar Mühendisliği ders programı ne?",
+      "expected_capabilities": ["course_schedule"],
+      "expected_agents": ["academic_programs"],
+      "expected_specialists": ["curriculum_agent"],
+      "expected_source_families": ["weekly_schedule"],
+      "expected_source_owners": ["academic_programs"],
+      "expected_authority_levels": ["official_structured"],
+      "expected_final_owner": "academic_programs"
+    },
+    {
+      "id": "OMU-TUITION",
+      "query": "Fizik öğretmenliği Türk öğrenci ücreti ne kadar?",
+      "expected_capabilities": ["tuition_fee"],
+      "expected_agents": ["finance"],
+      "expected_specialists": ["tuition_agent"],
+      "expected_source_families": ["tuition_fee_tables"],
+      "expected_source_owners": ["finance"],
+      "expected_authority_levels": ["official_structured"],
+      "expected_final_owner": "finance"
+    },
+    {
+      "id": "OMU-PAYMENT-DEBT-COURSE-REG",
+      "query": "Harç borcum varsa ders kaydı yapabilir miyim?",
+      "expected_capabilities": ["payment_debt_policy"],
+      "expected_agents": ["student_affairs", "finance"],
+      "expected_specialists": ["registration_agent", "tuition_agent"],
+      "expected_source_families": ["student_policy_documents", "tuition_fee_tables"],
+      "expected_source_owners": ["student_affairs", "finance"],
+      "expected_authority_levels": ["official_policy", "official_structured"]
+    },
+    {
+      "id": "OMU-TRANSCRIPT",
+      "query": "Transkriptimi inceleyip mezuniyet durumumu söyler misin?",
+      "expected_capabilities": ["transcript_analysis"],
+      "expected_agents": ["student_affairs"],
+      "expected_specialists": ["graduation_agent"],
+      "expected_source_families": ["uploaded_user_context"],
+      "expected_source_owners": ["student_affairs"],
+      "expected_authority_levels": ["uploaded_user_context"]
+    },
+    {
+      "id": "OMU-PREREQUISITE",
+      "query": "Bu dersin önkoşulu var mı?",
+      "expected_capabilities": ["prerequisite_check"],
+      "expected_agents": ["academic_programs"],
+      "expected_specialists": ["curriculum_agent"],
+      "expected_source_families": ["academic_policy_documents"],
+      "expected_source_owners": ["academic_programs"],
+      "expected_authority_levels": ["official_policy"],
+      "expected_final_owner": "academic_programs"
+    },
+    {
+      "id": "OMU-CONTACT",
+      "query": "Öğrenci işleriyle nasıl iletişime geçebilirim?",
+      "expected_capabilities": ["contact_lookup"],
+      "expected_agents": ["student_affairs"],
+      "expected_source_families": ["contact_directory"],
+      "expected_source_owners": ["student_affairs"],
+      "expected_authority_levels": ["official_structured"]
+    }
+  ]
+}

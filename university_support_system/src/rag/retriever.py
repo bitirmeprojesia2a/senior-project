@@ -198,9 +198,37 @@ def _select_reranker_query(query: str, expanded_query: str) -> str:
     if profile in {"grade_objection", "grade_entry", "grade_visibility", "withdrawal", "discipline", "muafiyet"}:
         return _strip_augmentation_prefix(expanded_query)
     topic = _shared_detect_query_topic(query)
+    if topic and normalize_text(topic) in _SHARED_CAP_PRIMARY_TOPICS and _looks_like_cap_debt_eligibility_query(query):
+        return _strip_augmentation_prefix(query)
     if topic and normalize_text(topic) in _SHARED_CAP_PRIMARY_TOPICS:
         return _strip_augmentation_prefix(expanded_query)
     return _strip_augmentation_prefix(query)
+
+
+def _looks_like_cap_debt_eligibility_query(query: str) -> bool:
+    normalized = normalize_text(query)
+    has_debt = any(marker in normalized for marker in ("borc", "borcum", "borcu", "borclu", "harc borc"))
+    has_application = any(
+        marker in normalized
+        for marker in ("basvur", "basvuru", "engel", "uygun", "yapabilir", "miyim", "mumkun")
+    )
+    asks_payment_or_amount = any(
+        marker in normalized
+        for marker in (
+            "ne kadar",
+            "kac tl",
+            "tutar",
+            "miktar",
+            "ucret",
+            "odeme",
+            "ode",
+            "odem",
+            "dekont",
+            "taksit",
+            "iade",
+        )
+    )
+    return has_debt and has_application and not asks_payment_or_amount
 
 
 _TURKISH_SUFFIXES = (

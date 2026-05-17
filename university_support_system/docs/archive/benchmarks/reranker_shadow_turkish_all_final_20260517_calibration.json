@@ -1,0 +1,55 @@
+{
+  "model": "seroe/bge-reranker-v2-m3-turkish-triplet",
+  "device": "cuda",
+  "torch_dtype": {
+    "requested": "float16",
+    "resolved": "torch.float16"
+  },
+  "runtime_calibration": {
+    "shift": 0.0405,
+    "scale": 0.5
+  },
+  "suggested_calibration": {
+    "shift": 0.0386,
+    "scale": 0.5,
+    "formula": "sigmoid((score - 0.0386) / 0.5000)",
+    "suggested_direct_rag_threshold": 0.571,
+    "suggested_min_source_threshold": 0.483
+  },
+  "raw_stats": {
+    "count": 400,
+    "min": 0.0,
+    "max": 0.9995,
+    "mean": 0.1733,
+    "std": 0.2836,
+    "median": 0.0386,
+    "p10": 0.0003,
+    "p25": 0.0055,
+    "p75": 0.1825,
+    "p90": 0.7452
+  },
+  "top1_raw_stats": {
+    "count": 40,
+    "min": 0.0,
+    "max": 0.9995,
+    "mean": 0.5646,
+    "std": 0.401,
+    "median": 0.6621,
+    "p10": 0.0321,
+    "p25": 0.1683,
+    "p75": 0.9718,
+    "p90": 0.9911
+  },
+  "source_owner_summary": {
+    "top1_source_owner_counts": {
+      "student_affairs_policy": 25,
+      "international_policy": 6,
+      "-": 7,
+      "curriculum_catalog": 1,
+      "tuition_fee_catalog": 1
+    },
+    "expected_department_checked": 40,
+    "expected_department_matched": 33
+  },
+  "elapsed_seconds": 55.543
+}

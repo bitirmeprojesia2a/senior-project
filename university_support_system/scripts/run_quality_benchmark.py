@@ -1164,7 +1164,7 @@ async def main():
     parser.add_argument("--warmup-selected-questions", action="store_true",
                         help="Geriye donuk uyumluluk: warmup-mode=selected ile ayni davranis")
     parser.add_argument("--llm-profile", type=str, default="",
-                        help="LLM profil tercihi: fast | balanced | quality")
+                        help="LLM profil tercihi: fast | balanced | quality | groq_only | hybrid_shadow | hybrid_quality")
     parser.add_argument("--full-name", type=str, default="",
                         help="Benchmark profil ad soyad bilgisi")
     parser.add_argument("--student-number", type=str, default="",

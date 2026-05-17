@@ -1722,13 +1722,46 @@ class MainOrchestrator:
                             final_response.diagnostics = QueryDiagnostics(local_profile=profiler.snapshot())
                         return final_response
 
+                with profile_stage("main.final_answer_validation_snapshot"):
+                    profiler = get_current_profiler()
+                    final_answer_validation = validate_evidence_answer(
+                        query=effective_query,
+                        answer=answer,
+                        responses=filtered_responses,
+                        mode=settings.answer_validation.mode,
+                    )
+                    final_answer_coverage = validate_answer_coverage(
+                        query=effective_query,
+                        answer=answer,
+                        responses=filtered_responses,
+                    )
+                    final_answer_value_conflict = validate_answer_value_conflicts(
+                        query=effective_query,
+                        answer=answer,
+                        responses=filtered_responses,
+                    )
+                    if profiler is not None:
+                        previous_validation = profiler.get_attribute("evidence_answer_validator")
+                        validation_payload = final_answer_validation.to_dict()
+                        if previous_validation and previous_validation != validation_payload:
+                            validation_payload["pre_final_snapshot"] = previous_validation
+                        profiler.set_attribute("evidence_answer_validator", validation_payload)
+
+                        previous_coverage = profiler.get_attribute("answer_coverage_validator")
+                        coverage_payload = final_answer_coverage.to_dict()
+                        if previous_coverage and previous_coverage != coverage_payload:
+                            coverage_payload["pre_final_snapshot"] = previous_coverage
+                        profiler.set_attribute("answer_coverage_validator", coverage_payload)
+
+                        previous_value_conflict = profiler.get_attribute("answer_value_conflict_validator")
+                        value_conflict_payload = final_answer_value_conflict.to_dict()
+                        if previous_value_conflict and previous_value_conflict != value_conflict_payload:
+                            value_conflict_payload["pre_final_snapshot"] = previous_value_conflict
+                        profiler.set_attribute("answer_value_conflict_validator", value_conflict_payload)
+
                 memory_answer = build_memory_answer(answer=answer)
                 
-                agents_involved = []
-                for r in filtered_responses:
-                    agent_name = r.metadata.get("agent_id") or r.department.value
-                    if agent_name not in agents_involved:
-                        agents_involved.append(agent_name)
+                agents_involved = self._selected_specialists_from_responses(filtered_responses)
                 if used_global_synthesis and "orchestrator" not in agents_involved:
                     agents_involved.append("orchestrator")
 
@@ -3552,6 +3585,7 @@ class MainOrchestrator:
             missing_intents=missing_intents if missing_intents else None,
             force=bool(pre_validation and should_enforce_validation(pre_validation)),
             validator_result=pre_validation.to_dict() if pre_validation else None,
+            answer_coverage_result=pre_coverage.to_dict(),
         )
 
         if judge_result is None:
@@ -3568,6 +3602,7 @@ class MainOrchestrator:
             "evidence_contract": evidence_contract,
             "triggered_by_validator": bool(pre_validation and should_enforce_validation(pre_validation)),
             "answer_validation": pre_validation.to_dict() if pre_validation else {},
+            "answer_coverage": pre_coverage.to_dict(),
         }
         if _profiler is not None:
             _profiler.set_attribute("main_judge", judge_meta)

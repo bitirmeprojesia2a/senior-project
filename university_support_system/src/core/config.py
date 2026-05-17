@@ -9,10 +9,12 @@ import os
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LLMProvider = Literal["openai_compatible", "google_ai", "anthropic"]
+LLMSpeedProfile = Literal["fast", "balanced", "quality"]
+LLMOperatingProfile = Literal["standard", "groq_only", "hybrid_shadow", "hybrid_quality"]
 LLMRole = Literal[
     "default",
     "routing",
@@ -169,7 +171,7 @@ class LLMRuntimeSettings(BaseSettings):
         extra="ignore",
     )
 
-    profile: Literal["fast", "balanced", "quality"] = "balanced"
+    profile: str = "balanced"
     routing_model: Optional[str] = None
     conversation_model: Optional[str] = None
     query_expansion_model: Optional[str] = None
@@ -195,6 +197,8 @@ class LLMRuntimeSettings(BaseSettings):
     global_synthesis_timeout_seconds: int = 120
     primary_provider: LLMProvider = "openai_compatible"
     fallback_provider: Literal["none", "openai_compatible", "google_ai", "anthropic"] = "google_ai"
+    high_value_provider: Optional[LLMProvider] = None
+    high_value_roles: str = "global_synthesis,specialist_synthesis"
 
 
 class ChromaSettings(BaseSettings):
@@ -344,6 +348,25 @@ class AuthSettings(BaseSettings):
     allowed_student_email_domain: str = "stu.omu.edu.tr"
 
 
+class InstitutionSettings(BaseSettings):
+    """Kurum kimligi ve sunumda degistirilebilir temel alanlar."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="INSTITUTION_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    short_name: str = "OMÜ"
+    short_name_ascii: str = "OMU"
+    name: str = "Ondokuz Mayıs Üniversitesi"
+    name_ascii: str = "Ondokuz Mayis Universitesi"
+    homepage_url: str = "https://www.omu.edu.tr"
+    support_bot_name: str = "OMÜ Destek Botu"
+    switchboard_phone: str = "0 (362) 312 19 19"
+
+
 class EmailSettings(BaseSettings):
     """SMTP tabanli e-posta gonderim ayarlari."""
 
@@ -359,7 +382,7 @@ class EmailSettings(BaseSettings):
     username: Optional[str] = None
     password: Optional[str] = None
     from_email: Optional[str] = None
-    from_name: str = "OMU Destek Sistemi"
+    from_name: str = ""
     use_tls: bool = True
     timeout_seconds: int = 15
 
@@ -561,6 +584,14 @@ class A2ASettings(BaseSettings):
     announcement_url: Optional[str] = None
     event_url: Optional[str] = None
     specialist_endpoints: str = ""
+
+    @field_validator("department_timeout_seconds", "specialist_timeout_seconds", mode="before")
+    @classmethod
+    def _empty_timeout_to_none(cls, value: object) -> object:
+        """Allow blank env values for optional timeout fields."""
+        if value == "":
+            return None
+        return value
 
     def effective_department_timeout_seconds(self) -> float:
         """Timeout budget for main-orchestrator to department-service calls.
@@ -785,6 +816,7 @@ class Settings(BaseSettings):
     reranker: RerankerSettings = Field(default_factory=RerankerSettings)
     retrieval_service: RetrievalServiceSettings = Field(default_factory=RetrievalServiceSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
+    institution: InstitutionSettings = Field(default_factory=InstitutionSettings)
     email: EmailSettings = Field(default_factory=EmailSettings)
     slack: SlackSettings = Field(default_factory=SlackSettings)
     server: ServerSettings = Field(default_factory=ServerSettings)
@@ -810,12 +842,22 @@ class Settings(BaseSettings):
     docs_dir: Path = base_dir / "docs"
 
     @staticmethod
-    def normalize_llm_profile(profile: str | None) -> Literal["fast", "balanced", "quality"]:
-        """Desteklenen LLM profil adlarini normalize eder."""
+    def normalize_llm_profile(profile: str | None) -> LLMSpeedProfile:
+        """Desteklenen hiz/kalite profil adlarini normalize eder."""
         lowered = (profile or "").strip().lower()
         if lowered in {"fast", "balanced", "quality"}:
             return lowered  # type: ignore[return-value]
+        if lowered == "hybrid_quality":
+            return "quality"
         return "balanced"
+
+    @staticmethod
+    def normalize_llm_operating_profile(profile: str | None) -> LLMOperatingProfile:
+        """Return the high-level provider-routing profile for observability."""
+        lowered = (profile or "").strip().lower()
+        if lowered in {"groq_only", "hybrid_shadow", "hybrid_quality"}:
+            return lowered  # type: ignore[return-value]
+        return "standard"
 
     def resolve_llm_model(
         self,
@@ -882,7 +924,25 @@ class Settings(BaseSettings):
             "judge": self.llm.judge_provider,
             "default": None,
         }
-        return role_providers.get(role) or self.llm.primary_provider
+        explicit_provider = role_providers.get(role)
+        if explicit_provider:
+            return explicit_provider
+        operating_profile = self.normalize_llm_operating_profile(self.llm.profile)
+        if operating_profile in {"groq_only", "hybrid_shadow"}:
+            return self.llm.primary_provider
+        if self.llm.high_value_provider and role in self._resolve_high_value_roles():
+            return self.llm.high_value_provider
+        return self.llm.primary_provider
+
+    def _resolve_high_value_roles(self) -> set[LLMRole]:
+        """Return roles that should use the optional high-value provider lane."""
+        roles: set[LLMRole] = set()
+        valid_roles = set(LLMRole.__args__)  # type: ignore[attr-defined]
+        for raw_role in (self.llm.high_value_roles or "").split(","):
+            role = raw_role.strip()
+            if role in valid_roles:
+                roles.add(role)  # type: ignore[arg-type]
+        return roles
 
     def _resolve_legacy_role_model(self, role: LLMRole) -> Optional[str]:
         """Return old global LLM_* role override values."""
@@ -960,9 +1020,12 @@ class Settings(BaseSettings):
         return {
             "provider": self.llm.primary_provider,
             "fallback_provider": self.llm.fallback_provider,
+            "high_value_provider": self.llm.high_value_provider or "",
+            "high_value_roles": ",".join(sorted(self._resolve_high_value_roles())),
             "primary": self._resolve_provider_primary_model(self.llm.primary_provider),
             "secondary": self._resolve_provider_secondary_model(self.llm.primary_provider),
             "profile": self.normalize_llm_profile(self.llm.profile),
+            "operating_profile": self.normalize_llm_operating_profile(self.llm.profile),
             "routing": _role_model("routing"),
             "routing_provider": _role_provider("routing"),
             "conversation": _role_model("conversation"),

@@ -1,6 +1,7 @@
 """Response post-processing tests."""
 
 from src.core.constants import Department
+from src.core.text_normalization import normalize_text
 from src.db.schemas import DepartmentResponse, RAGSource
 from src.orchestrators.response_utils import (
     append_generation_summary,
@@ -110,9 +111,39 @@ def test_append_generation_summary_explains_parallel_agent_flow():
     )
 
     assert "- Çalışma biçimi: Paralel" in answer
-    assert "- Ajan akışı: student_affairs + academic_programs -> orchestrator" in answer
+    assert "- Ajan akışı: Paralel: Öğrenci İşleri + Akademik Programlar; Son: Orkestratör" in answer
     assert "- Pipeline:" not in answer
     assert "- Routing:" not in answer
+
+
+def test_append_generation_summary_displays_specialist_agents_in_flow():
+    responses = [
+        DepartmentResponse(
+            department=Department.STUDENT_AFFAIRS,
+            answer="Kayit cevabi",
+            generation_mode="rag",
+            metadata={"specialist_selection": {"selected_agent_id": "registration_agent"}},
+        ),
+        DepartmentResponse(
+            department=Department.ACADEMIC_PROGRAMS,
+            answer="Mevzuat cevabi",
+            generation_mode="rag",
+            metadata={"specialist_selection": {"selected_agent_id": "regulation_agent"}},
+        ),
+    ]
+
+    answer = append_generation_summary(
+        "Final cevap",
+        responses,
+        used_global_synthesis=True,
+        routing_strategy="parallel",
+        agents_involved=["registration_agent", "regulation_agent", "orchestrator"],
+    )
+    normalized = normalize_text(answer)
+
+    assert "kayit isleri" in normalized
+    assert "mevzuat" in normalized
+    assert "ogrenci isleri + akademik programlar" not in normalized
 
 
 def test_append_source_summary_counts_duplicate_document_chunks():

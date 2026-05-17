@@ -426,6 +426,7 @@ def create_app() -> FastAPI:
                 "runtime": {
                     "label": settings.server.runtime_label,
                     "llm_profile": settings.normalize_llm_profile(settings.llm.profile),
+                    "llm_operating_profile": settings.normalize_llm_operating_profile(settings.llm.profile),
                 },
                 "active_departments": [department.value for department in Department],
                 "a2a_mode": settings.a2a.mode,

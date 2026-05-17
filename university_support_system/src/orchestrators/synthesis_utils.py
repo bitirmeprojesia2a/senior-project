@@ -20,6 +20,7 @@ from src.quality.evidence import (
     extract_factual_claims,
     select_evidence_sentences,
 )
+from src.quality.answer_style import build_answer_length_instruction
 from src.quality.evidence_answer_validator import extract_value_labels, validate_evidence_answer
 
 _INTERNAL_PATH_PREFIXES = ("/app/data/", "/app/", "data/raw/", "data/")
@@ -537,6 +538,7 @@ def build_global_synthesis_prompt(
         else context_payloads
     )
     machine_context = json.dumps(machine_payload, ensure_ascii=False, indent=2)
+    length_instruction = build_answer_length_instruction(query)
 
     if is_multi_department:
         synthesis_instruction = (
@@ -605,6 +607,6 @@ def build_global_synthesis_prompt(
         "kullanma (\"ogrenci\" de\u011fil \"\u00f6\u011frenci\", \"ucret\" de\u011fil "
         "\"\u00fccret\").\n\n"
         f"{machine_context}\n\n"
-        f"{synthesis_instruction}"
+        f"{synthesis_instruction}\n\n{length_instruction}"
     )
     return prompt, meaningful

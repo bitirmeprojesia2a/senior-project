@@ -79,7 +79,9 @@ Slack kalite replay oncesi pratik sira:
 
 ```powershell
 .\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --skip-build --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --slack-service slack-bot-a2a --health-timeout-seconds 300
+docker ps -a --filter "name=slack" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
 docker exec uni_redis redis-cli -n 0 FLUSHDB
+.\venv\Scripts\python.exe -m scripts.audit_slack_replay --input tests\fixtures\slack_diagnostic_cases.json
 .\venv\Scripts\python.exe -m scripts.slack_runtime restart --runtime a2a
 ```
 

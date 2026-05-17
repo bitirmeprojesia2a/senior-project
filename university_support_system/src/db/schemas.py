@@ -108,7 +108,10 @@ class AuthenticatedUserQueryRequest(UserQueryRequest):
     student_department: Optional[str] = Field(None, description="Ogrencinin bolum veya program bilgisi")
     student_faculty: Optional[str] = Field(None, description="Ogrencinin fakulte bilgisi")
     student_type: Optional[str] = Field(None, description="Ogrenci tipi veya uyruk bilgisi")
-    llm_profile: Optional[str] = Field(None, description="LLM profil tercihi: fast, balanced veya quality")
+    llm_profile: Optional[str] = Field(
+        None,
+        description="LLM profil tercihi: fast, balanced, quality, groq_only, hybrid_shadow veya hybrid_quality",
+    )
     is_authenticated: bool = Field(False, description="Kimlik dogrulama durumu")
     session_token: Optional[str] = Field(None, description="Dogrulama oturum anahtari")
     slack_user_id: Optional[str] = Field(None, description="Slack kullanici kimligi")
@@ -124,6 +127,7 @@ class QueryDiagnostics(BaseModel):
     llm_usage: list[dict[str, Any]] = Field(default_factory=list)
     local_profile: dict[str, Any] | None = None
     remote_profiles: list[dict[str, Any]] = Field(default_factory=list)
+    answer_debug_report: dict[str, Any] | None = None
 
 
 class UserQueryResponse(BaseModel):
