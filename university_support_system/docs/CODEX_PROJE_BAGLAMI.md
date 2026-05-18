@@ -3152,3 +3152,250 @@ Iki Slack runtime ayni token ile ayni anda acik kalirsa duplicate cevap beklenir
 - Turkish/ascii normalizasyonu merkezi helper ile mi yapiliyor?
 - Slack testinden once Redis cache temizlendi mi ve Slack container restart edildi mi?
 - Hedefli unit test veya en az py_compile calisti mi?
+
+## 16-17 Mayis 2026 A2A Kalite Sertlestirme Checkpoint
+
+Bu bolum dinamik kurum platformundan hemen onceki toplu mimari toparlama
+fazinin handoff'udur. Yeni sohbet sadece dinamik platforma bakarsa eksik kalir;
+asagidaki kararlar OMU classic runtime icin halen onemlidir.
+
+Genel uygulama ilkesi:
+
+- Soru bazli statik cevap gommek son care olmali. Once contract/source-owner/
+  capability/retrieval/final synthesis zinciri duzeltilmeli.
+- LLM tamamen kaldirilmadi. Ancak VT/structured owner veya contract siniri olan
+  alanlarda LLM son cevabi yazsa bile kaynak/owner/fact sinirlarini asamaz.
+- Deterministic katmanlar "kullanici metni" yazan buyuk yama haline
+  getirilmemeli; gerekiyorsa fact/state plan uretmeli, metin tek renderer veya
+  kontrollu LLM synthesis tarafindan uretilmeli.
+- Bir cevap kotu cikarsa once `route -> capability -> specialist agent ->
+  source_owner -> chunk/evidence -> final synthesis -> quality gate` zinciri
+  raporlanmali. Direkt prompt veya tek soru patch'iyle gecistirme.
+
+Uygulanan / takip edilen ilk 10 madde:
+
+1. Runtime authority ve karar sozlesmesi netlestirildi; davranis belirleyen
+   alanlar sadece diagnostic olarak birakilmamali.
+2. Capability-first yapi guclendirildi; ajan icindeki ozel kararlar zamanla
+   typed capability/owner sozlesmesine tasinacak.
+3. Slack dosya/kisisel veri siniri eklendi: transkript gibi kisisel dosya
+   akislari public kanalda dikkat notu ve thread baglami ile ele alinmali.
+4. Akademik takvim ve duyuru akisi ayrildi: tarih sorularinda once takvim/
+   policy kaynagi, sonra scoped current duyuru/probe.
+5. Duyuru liste ve "2. duyuruyu ozetle" akisi `source_ref/cache_version`
+   mantigiyla calisir. Full duyuru cevabi genel response cache'e gomulmez.
+6. Bolum/program belirtilirse ilgili bolum belgeleri retrieval'da boost alir;
+   ama genel universite yonetmeligi/policy otoritesini otomatik ezmez.
+7. Onkosul, ders programi ve iletisim capability-owner sozlesmesiyle
+   sertlestirildi; VT owner olan alanlar RAG'e kontrolsuz dusmemeli.
+8. Kotu cevap analizinde `answer_debug_report`/diagnostics icinde route,
+   ajan, source/chunk, source_ref/cache_version ve contract gorunmeli.
+9. Golden trace + Slack replay seti CAP, AKTS, ders programi, ucret, duyuru,
+   transkript, onkosul ve iletisim akislarini kapsayacak sekilde genisletildi.
+10. Rollout kabul sirasi tek Slack bot, Redis temizligi, offline replay ve dar
+    Slack replay ile dogrulanacak.
+
+CAP / AKTS / harc borcu kararlari:
+
+- CAP genel basvuru sorusunda program sormadan genel kosullar verilmeli.
+  Program/kontenjan/ozel uygunluk hesabi istenirse program sorulabilir.
+- CAP basvuru kosulu ile CAP'i tamamlama/mezuniyet kosulu karistirilmamali.
+  120/240 AKTS gibi mezuniyet bilgileri CAP eligibility ana cevabini domine
+  etmemeli.
+- `Harc borcum olsaydi CAP'a basvurabilir miydim?` sorusunda ders kaydi/
+  kayit yenileme borc hukmu CAP basvurusuna otomatik tasinmaz. CAP kaynaginda
+  dogrudan engel yoksa "dogrudan hukum bulamadim; ders kaydi odeme sarti ayri"
+  cizgisi korunur.
+- `Harc borcum varsa ders kaydi yapabilir miyim?` ayri intent'tir. Burada
+  kaynakta acik odeme/kayit yenileme/ders kaydi hukmu varsa net cevap verilir.
+- Mezuniyet toplam AKTS sorularinda context kaybi en buyuk risklerden biri:
+  `Onlisans -> Lisans -> Bilgisayar/EEM/Fizik ogretmenligi icin kac?` zinciri
+  course detail/RAG/erasmus/formasyon kaynaklarina kaymamali. Normal 4 yillik
+  lisans icin 240, onlisans icin 120; tip/dis/veteriner/eczacilik gibi uzun
+  programlarda dogrulanmis program kosulu yoksa 240 uydurulmaz.
+
+Duyuru / akademik takvim kararlari:
+
+- "Basvuru tarihleri ne peki?" gibi tarih follow-up'lari once aktif context
+  facet'ini korumali. CAP, yatay gecis, ders kaydi, tek ders, yaz okulu gibi
+  akislarda takvim/policy source once denenmeli; duyuru yalniz destekleyici veya
+  current scoped probe olmali.
+- Generic latest fallback acik olmamali. Keyword bos, skor dusuk veya tarih
+  current/upcoming degilse duyuru sonucu donmemeli.
+- "Guncel duyurular neler?" explicit duyuru listesidir; bu akista latest
+  duyuru listeleme normaldir.
+- Liste sonrasi "2. duyuruyu ozetle" stale ref kontroluyle ozetlenir. Duyuru
+  guncellenmisse kullaniciya listeyi yenilemesi soylenir.
+
+Ders programi / onkosul / iletisim kararlari:
+
+- Ders programi deterministic `weekly_schedule`/VT owner alanidir. Bilinen
+  program icin once schedule row aranir; LLM tarafindan kisaltilip tek gun/tek
+  sinifa dusmemeli.
+- `Fizik ogretmenligi`, `Fizik ogretimi`, `Fizik Egitimi` gibi aliaslar merkezi
+  canonical registry ile ayni programa cozulmeli; tekil if buyutulmemeli.
+- Lisans programi sorusunda varsayilan 1-4 sinif gosterilir; lisansustu/
+  uzmanlik/blank-group satirlari kullanici acikca istemedikce dokulmemeli.
+- Onkosul sorularinda seed/parse eksigi sik gorulebilir. `--courses-only`
+  calistirilmissa prerequisite verisi eksik olabilir; "onkosul yok" cevabi
+  veri yok mu, seed eksigi mi diye kontrol edilmeli.
+- Iletisim cevaplarinda dahili numara ile birlikte santral
+  `0 (362) 312 19 19` formatinin korunmasi hedeflendi.
+
+Transkript / OCR / Slack dosya akisi:
+
+- Slack dosya yukleme akisi transkript/PDF icin eklendi; sadece "PDF okundu"
+  yeterli sayilmaz. Parse kalitesi, AKTS/kredi, gecti/kaldi, toplam kredi ve
+  mezuniyet sorusuna evidence-grounded cevap ayrica test edilmeli.
+- Taranmis PDF icin OCR gerekir. Docker rebuild sonrasi OCR araclari image'a
+  girecek sekilde planlandi; lokal venv'de gercek OCR denemek icin Windows'a
+  Tesseract kurulumu ve requirements kurulumu gerekir.
+- Public Slack kanalinda transkript gibi kisisel veri islenirse cevapta
+  gizlilik uyarisi gorunmeli; thread/DM context ayrimi dikkatle korunmali.
+
+Reranker / model / cevap uzunlugu kararlari:
+
+- Turkish reranker (`seroe/bge-reranker-v2-m3-turkish-triplet`) production
+  default degildir. Sadece shadow/benchmark modda mevcut MiniLM veya BAAI BGE
+  ile karsilastirilir.
+- FP16 yalniz CUDA ortaminda aktif olmali; CPU'da float32 kalmali. Yeni model
+  kalibrasyonu mevcut model ayarini bozmadan ayri raporlanmali.
+- `scripts/analyze_reranker_scores.py` ve `scripts/compare_reranker_models.py`
+  model/device/dtype parametreleriyle kullanilir. Basarili benchmark olmadan
+  default reranker degistirilmez.
+- Groq mevcut default kalacak. Hybrid LLM profilleri (`hybrid_shadow`,
+  `hybrid_quality`) production'a otomatik alinmayacak; once shadow/rapor.
+- Cevap uzunlugu hard cumle siniriyla kesilmeyecek. Token azaltmada once
+  gereksiz agent cagrisini, alakasiz RAG context'ini ve fazla kaynak tasimayi
+  azalt.
+
+Kalite gate / fallback kararlari:
+
+- Final judge/repair sonrasinda da kalite gate calismali. `necessaire`,
+  `sorumlusanz`, `hanrmlar`, `znajabilir`, `condigini` gibi bozuk tokenlar
+  cevapta kalmamali.
+- Ancak kalite gate fazla agresif olursa "cevabi guvenilir bicimde
+  sentezleyemiyorum" orani artar. Ufak dil puruzleri icin repair/temizleme,
+  tamamen yanlis veya contract-ihlalli cevap icin bloke etme politikasi
+  tekrar kalibre edilecek diye not edildi.
+- LLM timeout/provider limitinde ham RAG chunk kullaniciya basilmamali; fakat
+  deterministic/VT owner cevabi hazirsa LLM timeout onu ezmemeli.
+
+Rollout ve test notlari:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.a2a_rollout --gpu --gpu-scope targeted --transport-protocol jsonrpc --include-announcement --include-event --include-all-specialists --slack-service slack-bot-a2a --health-timeout-seconds 300
+docker ps -a --filter "name=slack" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
+docker exec uni_redis redis-cli -n 0 FLUSHDB
+.\venv\Scripts\python.exe -m scripts.audit_slack_replay --input tests\fixtures\slack_diagnostic_cases.json
+.\venv\Scripts\python.exe -m scripts.run_shadow_trace_golden --profile balanced --cases GT01,GT04,GT12
+.\venv\Scripts\python.exe -m scripts.slack_runtime restart --runtime a2a
+```
+
+Canli dar Slack replay sirasi: CAP genel kosul, CAP harc borcu, CAP tarih,
+yatay gecis tarih, AKTS follow-up, ders programi, ucret follow-up, duyuru
+liste/ozet, transkript AKTS, onkosul ve iletisim.
+
+## 18 Mayis 2026 Dinamik Kurum Platformu Handoff
+
+Ana karar: dinamiklestirme mevcut OMU runtime'ini degistirmeyecek. OMU sistemi
+aynen classic runtime ile calismaya devam eder; dinamik platform simdilik
+yalnizca offline profil/topoloji/env dogrulama katmanidir. Slack/API/router/
+agent production path'lerine `src.dynamic_platform` import'u girmemelidir.
+
+Uygulanan additive katmanlar:
+
+- `src/dynamic_platform/models.py`: tenant, domain pack, agent pack, source
+  catalog ve runtime strategy semalari.
+- `src/dynamic_platform/loader.py`, `validator.py`: profil yukleme ve
+  schema/topology dogrulama.
+- `src/dynamic_platform/classic_compare.py`: OMU dynamic profilini classic A2A
+  topoloji sekliyle offline karsilastirma.
+- `src/dynamic_platform/decision_shadow.py`: golden decision fixture'daki
+  beklenen capability/agent/source sozlesmelerini profil karsilar mi kontrolu.
+- `src/dynamic_platform/source_audit.py`: source adapter / authority / owner /
+  capability uyumu.
+- `src/dynamic_platform/quality_gates.py`: validate + classic compare +
+  source audit + shadow decisions toplu offline gate.
+- `src/dynamic_platform/runtime_plan.py`: tenant icin Docker/env planini uretir,
+  fakat runtime'a baglanmaz.
+- `src/dynamic_platform/runtime_env_check.py`: `.env` veya uretilmis tenant env
+  dosyasinin tenant profiliyle uyumlu olup olmadigini offline denetler.
+
+Eklenen config/profiller:
+
+- `configs/dynamic_platform/tenants/omu.yaml`
+  - `runtime_strategy: classic_protected`
+  - OMU mevcut sistemini temsil eder, production davranisini degistirmez.
+- `configs/dynamic_platform/tenants/acme_demo.yaml`
+  - `runtime_strategy: dynamic_shadow`
+  - Okul kavrami kullanmayan demo sirket tenant'i.
+- `configs/dynamic_platform/domain_packs/education_university.yaml`
+- `configs/dynamic_platform/domain_packs/corporate_support.yaml`
+- `configs/dynamic_platform/agent_packs/university_student_support.yaml`
+- `configs/dynamic_platform/agent_packs/corporate_hr_it_support.yaml`
+- `configs/dynamic_platform/source_catalogs/omu_sources.yaml`
+- `configs/dynamic_platform/source_catalogs/acme_demo_sources.yaml`
+
+CLI komutlari:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.tenant validate --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant plan --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant compare-classic --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant source-audit --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant shadow-decisions --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant quality-gates --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant runtime-plan --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant runtime-env-check --tenant omu --env-file .env.example
+.\venv\Scripts\python.exe -m scripts.tenant scaffold --tenant gamma_demo --display-name "Gamma Kurum" --bot-name "Gamma Destek Botu" --domain corporate_support --agent-pack corporate_hr_it_support --dry-run
+```
+
+Farkli kurum env hazirlama ornegi:
+
+```powershell
+.\venv\Scripts\python.exe -m scripts.tenant runtime-plan --tenant acme_demo --allow-missing-shadow --env-output tmp\acme_demo.tenant.env
+.\venv\Scripts\python.exe -m scripts.tenant runtime-env-check --tenant acme_demo --allow-missing-shadow --env-file tmp\acme_demo.tenant.env
+```
+
+Bu dosya Docker'a profil tasima sozlesmesini gosterir; `DYNAMIC_PLATFORM_RUNTIME`
+`shadow` olsa bile live dynamic routing adapter baglanmadigi surece Slack/API
+davranisi degismez.
+
+Son dogrulananlar:
+
+- `runtime-env-check --tenant omu --env-file .env.example`: OK.
+- `runtime-plan --tenant acme_demo --allow-missing-shadow --env-output tmp\acme_demo.tenant.env`: OK.
+- `runtime-env-check --tenant acme_demo --allow-missing-shadow --env-file tmp\acme_demo.tenant.env`: OK.
+- `rg "dynamic_platform" src\orchestrators src\routing src\agents src\slack src\api`
+  output vermedi. `rg` exit code 1 burada "no matches" anlamina gelir ve bu iyi
+  sinyaldir: classic runtime dynamic platform'u import etmiyor.
+
+Kalan / dikkat edilecek nokta:
+
+- `tests/unit/test_dynamic_platform.py` ilk kosuda 28 passed + 1 setup error
+  verdi; hata kod degil, Windows temp/pytest tmp_path izin hatasiydi:
+  `PermissionError: pytest-of-...` ve sonra workspace `tmp\pytest-basetemp`
+  cleanup izni. Komutlar kullanici interrupt/context gecisiyle yarida kaldi.
+  Devam ederken once testleri izinli temp kok ile tekrar kos:
+
+```powershell
+.\venv\Scripts\python.exe -m pytest tests\unit\test_dynamic_platform.py -q --basetemp C:\tmp\pytest-usys-dynamic -o cache_dir=C:\tmp\pytest-usys-cache
+.\venv\Scripts\python.exe -m pytest tests\unit\test_prompt_templates.py tests\unit\test_router.py -q --basetemp C:\tmp\pytest-usys-router -o cache_dir=C:\tmp\pytest-usys-cache-router
+.\venv\Scripts\python.exe -m scripts.tenant quality-gates --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant runtime-plan --tenant omu
+.\venv\Scripts\python.exe -m scripts.tenant runtime-env-check --tenant omu --env-file .env.example
+```
+
+Dinamiklestirmede asla unutma:
+
+- OMU classic path korunacak; yeni platform runtime'a baglanmadan once shadow,
+  replay ve live Slack dar test gecmeli.
+- Egitim/OMU kavramlari core'a gomulmeyecek; domain pack ve tenant profile
+  icinde kalacak.
+- Baska kurum icin farkli agent/departman/entity yapisi olabilmeli; sistem
+  "okul destek sistemi" varsayimina dusmemeli.
+- `runtime_strategy: dynamic_pilot` veya `dynamic_on` ileride ayri runtime
+  adapter fazi olmadan aktif edilmemeli.
+- Dynamic env dosyasi production `.env` yerine gecmeden once
+  `runtime-env-check` ve OMU replay gecmeli.
