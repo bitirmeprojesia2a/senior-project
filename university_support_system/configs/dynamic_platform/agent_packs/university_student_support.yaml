@@ -1,0 +1,134 @@
+schema_version: 1
+agent_pack: university_student_support
+display_name: University Student Support Agent Pack
+domain_pack: education_university
+agents:
+  - agent_id: student_affairs
+    display_name: Student Affairs
+    role: department_agent
+    capabilities:
+      - policy_qa
+      - graduation_requirement
+      - graduation_akts
+      - transcript_analysis
+      - payment_debt_policy
+      - academic_calendar
+      - double_major_minor
+      - internship_policy
+      - contact_lookup
+    source_families:
+      - student_policy_documents
+      - academic_calendar
+      - contact_directory
+      - uploaded_user_context
+    final_owner_for:
+      - graduation_akts
+      - payment_debt_course_registration
+    llm_allowed: true
+    deterministic_allowed: true
+    specialists:
+      - specialist_id: registration_agent
+        display_name: Registration
+        capabilities:
+          - policy_qa
+          - payment_debt_policy
+          - academic_calendar
+          - double_major_minor
+          - contact_lookup
+      - specialist_id: graduation_agent
+        display_name: Graduation
+        capabilities:
+          - graduation_requirement
+          - graduation_akts
+          - transcript_analysis
+      - specialist_id: internship_agent
+        display_name: Internship
+        capabilities:
+          - internship_policy
+      - specialist_id: student_life_agent
+        display_name: Student Life
+        capabilities:
+          - policy_qa
+          - contact_lookup
+  - agent_id: academic_programs
+    display_name: Academic Programs
+    role: department_agent
+    capabilities:
+      - policy_qa
+      - course_schedule
+      - prerequisite_check
+      - double_major_minor
+      - internship_policy
+      - contact_lookup
+    source_families:
+      - curriculum_catalog
+      - weekly_schedule
+      - academic_policy_documents
+      - contact_directory
+    final_owner_for:
+      - course_schedule
+      - prerequisite_check
+    llm_allowed: true
+    deterministic_allowed: true
+    specialists:
+      - specialist_id: curriculum_agent
+        display_name: Curriculum
+        capabilities:
+          - course_schedule
+          - prerequisite_check
+      - specialist_id: regulation_agent
+        display_name: Academic Regulation
+        capabilities:
+          - policy_qa
+          - double_major_minor
+          - internship_policy
+      - specialist_id: international_agent
+        display_name: International
+        capabilities:
+          - policy_qa
+  - agent_id: finance
+    display_name: Finance
+    role: department_agent
+    capabilities:
+      - policy_qa
+      - tuition_fee
+      - payment_debt_policy
+    source_families:
+      - tuition_fee_tables
+      - finance_documents
+    final_owner_for:
+      - exact_fee_lookup
+      - payment_deadline
+    llm_allowed: true
+    deterministic_allowed: true
+    specialists:
+      - specialist_id: tuition_agent
+        display_name: Tuition
+        capabilities:
+          - tuition_fee
+          - payment_debt_policy
+      - specialist_id: scholarship_agent
+        display_name: Scholarship
+        capabilities:
+          - policy_qa
+  - agent_id: announcement
+    display_name: Announcements
+    role: capability_agent
+    capabilities:
+      - announcement_lookup
+    source_families:
+      - announcements
+    final_owner_for:
+      - announcement_list
+      - announcement_detail_summary
+    llm_allowed: true
+    deterministic_allowed: true
+  - agent_id: event
+    display_name: Events
+    role: capability_agent
+    capabilities:
+      - announcement_lookup
+    source_families:
+      - events
+    llm_allowed: true
+    deterministic_allowed: true

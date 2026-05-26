@@ -1,0 +1,75 @@
+schema_version: 1
+agent_pack: public_service_agents
+display_name: Public Service Agents
+domain_pack: public_service_support
+agents:
+  - agent_id: citizen_services
+    display_name: Citizen Services
+    role: department_agent
+    capabilities:
+      - policy_qa
+      - service_application
+      - document_requirement
+      - unit_contact
+    source_families:
+      - service_policy_documents
+      - contact_directory
+    final_owner_for:
+      - service_application
+      - document_requirement
+    llm_allowed: true
+    deterministic_allowed: true
+    specialists:
+      - specialist_id: application_specialist
+        display_name: Application Specialist
+        capabilities:
+          - service_application
+          - document_requirement
+      - specialist_id: public_policy_specialist
+        display_name: Public Policy Specialist
+        capabilities:
+          - policy_qa
+  - agent_id: fee_office
+    display_name: Fee Office
+    role: department_agent
+    capabilities:
+      - fee_policy
+    source_families:
+      - fee_tables
+    final_owner_for:
+      - fee_policy
+    llm_allowed: true
+    deterministic_allowed: true
+  - agent_id: appointment_office
+    display_name: Appointment Office
+    role: service_agent
+    capabilities:
+      - appointment_schedule
+    source_families:
+      - appointment_calendar
+    final_owner_for:
+      - appointment_schedule
+    llm_allowed: true
+    deterministic_allowed: true
+  - agent_id: public_announcements
+    display_name: Public Announcements
+    role: capability_agent
+    capabilities:
+      - public_announcement
+    source_families:
+      - public_announcements
+    final_owner_for:
+      - public_announcement
+    llm_allowed: true
+    deterministic_allowed: true
+  - agent_id: contact_center
+    display_name: Contact Center
+    role: service_agent
+    capabilities:
+      - unit_contact
+    source_families:
+      - contact_directory
+    final_owner_for:
+      - unit_contact
+    llm_allowed: true
+    deterministic_allowed: true

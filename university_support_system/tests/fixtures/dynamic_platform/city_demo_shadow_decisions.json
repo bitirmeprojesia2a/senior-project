@@ -1,0 +1,38 @@
+[
+  {
+    "case_id": "CITY-SERVICE-APPLICATION",
+    "query": "Nikah salonu başvurusu nasıl yapılır?",
+    "expected_capabilities": ["service_application"],
+    "expected_agents": ["citizen_services"],
+    "expected_source_families": ["service_policy_documents"],
+    "expected_source_owners": ["citizen_services"],
+    "expected_authority_levels": ["official_policy"]
+  },
+  {
+    "case_id": "CITY-DOCUMENTS",
+    "query": "Ruhsat başvurusu için hangi belgeler gerekli?",
+    "expected_capabilities": ["document_requirement"],
+    "expected_agents": ["citizen_services"],
+    "expected_source_families": ["service_policy_documents"],
+    "expected_source_owners": ["citizen_services"],
+    "expected_authority_levels": ["official_policy"]
+  },
+  {
+    "case_id": "CITY-FEE",
+    "query": "İlan reklam vergisi ücreti ne kadar?",
+    "expected_capabilities": ["fee_policy"],
+    "expected_agents": ["fee_office"],
+    "expected_source_families": ["fee_tables"],
+    "expected_source_owners": ["fee_office"],
+    "expected_authority_levels": ["official_structured"]
+  },
+  {
+    "case_id": "CITY-CONTACT",
+    "query": "İmar birimine nasıl ulaşırım?",
+    "expected_capabilities": ["unit_contact"],
+    "expected_agents": ["contact_center"],
+    "expected_source_families": ["contact_directory"],
+    "expected_source_owners": ["contact_center"],
+    "expected_authority_levels": ["official_structured"]
+  }
+]

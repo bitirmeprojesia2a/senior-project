@@ -1,0 +1,66 @@
+schema_version: 1
+source_catalog: city_demo_sources
+tenant_key: city_demo
+sources:
+  - source_id: city_service_policy_documents
+    adapter: pdf_document
+    domain: public_service_support
+    owner_agent: citizen_services
+    source_family: service_policy_documents
+    path: data/dynamic_demo/city/service_policy.md
+    collection: city_demo_service_policy_documents
+    capabilities:
+      - policy_qa
+      - service_application
+      - document_requirement
+    entity_scope:
+      type: global
+    authority_level: official_policy
+  - source_id: city_fee_tables
+    adapter: structured_csv
+    domain: public_service_support
+    owner_agent: fee_office
+    source_family: fee_tables
+    path: data/dynamic_demo/city/fee_tables.csv
+    collection: city_demo_fee_tables
+    capabilities:
+      - fee_policy
+    entity_scope:
+      type: global
+    authority_level: official_structured
+  - source_id: city_appointment_calendar
+    adapter: api_endpoint
+    domain: public_service_support
+    owner_agent: appointment_office
+    source_family: appointment_calendar
+    path: data/dynamic_demo/city/appointment_calendar.md
+    collection: city_demo_appointment_calendar
+    capabilities:
+      - appointment_schedule
+    entity_scope:
+      type: global
+    authority_level: official_structured
+  - source_id: city_public_announcements
+    adapter: announcement_page
+    domain: public_service_support
+    owner_agent: public_announcements
+    source_family: public_announcements
+    path: data/dynamic_demo/city/public_announcements.md
+    collection: city_demo_public_announcements
+    capabilities:
+      - public_announcement
+    entity_scope:
+      type: global
+    authority_level: official_announcement
+  - source_id: city_contact_directory
+    adapter: structured_csv
+    domain: public_service_support
+    owner_agent: contact_center
+    source_family: contact_directory
+    path: data/dynamic_demo/city/contact_directory.csv
+    collection: city_demo_contact_directory
+    capabilities:
+      - unit_contact
+    entity_scope:
+      type: global
+    authority_level: official_structured

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "tenant_key": "acme_demo",
+  "description": "Expected ACME demo decision contracts used to prove non-university tenant profiles are representable offline.",
+  "cases": [
+    {
+      "id": "ACME-HR-LEAVE",
+      "query": "Yillik izin politikasi nedir?",
+      "expected_capabilities": ["leave_policy"],
+      "expected_agents": ["hr_policy"],
+      "expected_specialists": ["leave_specialist"],
+      "expected_source_families": ["hr_documents"],
+      "expected_source_owners": ["hr_policy"],
+      "expected_authority_levels": ["official_policy"],
+      "expected_final_owner": "hr_policy"
+    },
+    {
+      "id": "ACME-IT-ACCESS",
+      "query": "Yeni uygulama erisimi icin nasil talep acilir?",
+      "expected_capabilities": ["it_ticket_guidance"],
+      "expected_agents": ["it_support"],
+      "expected_specialists": ["access_specialist"],
+      "expected_source_families": ["it_knowledge_base"],
+      "expected_source_owners": ["it_support"],
+      "expected_authority_levels": ["department_document"],
+      "expected_final_owner": "it_support"
+    },
+    {
+      "id": "ACME-PAYROLL",
+      "query": "Maas bordrom hakkinda kime sorabilirim?",
+      "expected_capabilities": ["payroll_question"],
+      "expected_agents": ["payroll"],
+      "expected_source_families": ["payroll_documents"],
+      "expected_source_owners": ["payroll"],
+      "expected_authority_levels": ["official_policy"],
+      "expected_final_owner": "payroll"
+    },
+    {
+      "id": "ACME-ANNOUNCEMENT",
+      "query": "Guncel ic duyurular neler?",
+      "expected_capabilities": ["internal_announcement"],
+      "expected_agents": ["announcement"],
+      "expected_source_families": ["internal_announcements"],
+      "expected_source_owners": ["announcement"],
+      "expected_authority_levels": ["official_announcement"]
+    }
+  ]
+}

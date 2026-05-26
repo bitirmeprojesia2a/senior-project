@@ -1,0 +1,92 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.Python
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test & Coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+.pytest-run/
+.pytest-tmp/
+.pytest_tmp/
+.codex_pytest_tmp/
+pytest-cache-files-*/
+pytest-basetemp/
+pytest-codex/
+tests/live_test_results_*.json
+tests/live_test_profile_*.json
+
+# Docker
+
+# Database
+*.db
+*.sqlite3
+*.dump
+
+# ChromaDB Local
+chroma_db/
+data/raw/
+data/chroma/
+data/models/
+data/metadata/doc_registry*.json
+
+# Model Files
+*.bin
+*.safetensors
+models/
+
+# Temporary Files
+*.log
+*.tmp
+tmp/
+tmp_*/
+.tmp/
+scratch/
+temp/
+temp_*.txt
+debug_*.py
+tmp/dynamic_platform_preflight/
+tmp/tenant_packages/
+
+# Public release: keep internal reports, raw benchmark traces, and private handoff notes local-only.
+docs/*.md
+!docs/ARCHITECTURE.md
+!docs/SETUP.md
+!docs/SLACK.md
+!docs/DYNAMIC_PLATFORM.md
+!docs/DEMO_GUIDE.md
+docs/archive/
+tests/archive/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

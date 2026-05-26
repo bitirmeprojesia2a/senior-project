@@ -1,0 +1,130 @@
+"""Main orchestrator query-policy tests."""
+
+from src.orchestrators.query_policy import (
+    build_missing_slot_clarification_message,
+    build_supplemental_announcement_probe_query,
+    looks_like_contact_query,
+    looks_like_announcement_query,
+    should_block_announcement_primary_flow,
+    should_fetch_related_announcements,
+)
+from src.db.schemas import IntentAnalysis
+
+
+def test_plain_course_schedule_query_is_not_announcement_short_circuit():
+    assert not looks_like_announcement_query("Elektrik elektronik muhendisligi ders programi var mi?")
+    assert not looks_like_announcement_query("Fizik ders programi")
+
+
+def test_explicit_course_schedule_announcement_query_stays_announcement():
+    assert looks_like_announcement_query("Elektrik elektronik muhendisligi ders programi duyurusu var mi?")
+    assert looks_like_announcement_query("Ders programi linki olan duyuru var mi?")
+
+
+def test_exam_program_query_stays_announcement_lookup():
+    assert looks_like_announcement_query("Bahar donemi final sinavi programi")
+
+
+def test_single_exam_eligibility_does_not_become_announcement_primary():
+    query = "Hic almadigim bir dersten tek derse girebilir miyim?"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)
+    assert not should_fetch_related_announcements(query)
+
+
+def test_explicit_single_exam_announcement_query_stays_announcement_lookup():
+    query = "Bilgisayar muhendisligi tek ders sinavi duyurusu var mi?"
+
+    assert not should_block_announcement_primary_flow(query)
+    assert looks_like_announcement_query(query)
+    assert should_fetch_related_announcements(query)
+
+
+def test_procedural_muafiyet_application_does_not_become_announcement_primary():
+    query = "Yatay gecisle geldim, muafiyet basvurusu ne zaman yapilir?"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)
+    assert not should_fetch_related_announcements(query)
+
+
+def test_complaint_procedure_does_not_become_announcement_primary():
+    query = "Hocami sikayet etmek istiyorum nasil yapabilirim?"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)
+
+
+def test_explicit_muafiyet_announcement_query_stays_announcement_lookup():
+    query = "Yatay gecis muafiyet duyurusu var mi?"
+
+    assert not should_block_announcement_primary_flow(query)
+    assert looks_like_announcement_query(query)
+    assert should_fetch_related_announcements(query)
+
+
+def test_incidental_announcement_context_does_not_hide_procedure_intent():
+    query = "Duyurulara baktim ama CAP basvurusu nasil yapilir bulamadim, anlatir misin?"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)
+    assert not should_fetch_related_announcements(query)
+
+
+def test_direct_cap_announcement_lookup_stays_announcement():
+    query = "CAP basvuru duyurusu var mi?"
+
+    assert not should_block_announcement_primary_flow(query)
+    assert looks_like_announcement_query(query)
+
+
+def test_general_cap_eligibility_does_not_require_program_slot():
+    intent = IntentAnalysis(
+        primary_intent="application",
+        required_slots=["program"],
+        missing_slots=["program"],
+    )
+
+    assert build_missing_slot_clarification_message(
+        intent=intent,
+        query="Capa basvurabilir miyim?",
+    ) is None
+
+
+def test_supplemental_probe_is_keyword_bearing_for_cap_dates():
+    probe = build_supplemental_announcement_probe_query("CAP basvuru tarihleri ne peki?")
+
+    assert probe is not None
+    assert "CAP" in probe
+    assert "basvuru tarihleri" in probe
+
+
+def test_contact_query_tolerates_small_typo():
+    assert looks_like_contact_query("Ogrenci isleri iletiism bilgisi nedir?")
+
+
+def test_personal_phone_update_is_not_contact_short_circuit():
+    assert not looks_like_contact_query("Telefon numarami degistirmek istiyorum nasil yapabilirim?")
+    assert not looks_like_contact_query("Telefonum degisti ne yapmaliyim?")
+
+
+def test_office_phone_request_stays_contact_query():
+    assert looks_like_contact_query("Ogrenci isleri telefonu nedir?")
+
+
+def test_office_phone_request_tolerates_typo_without_personal_phone_false_positive():
+    assert looks_like_contact_query("Ogrenci isleri telefom bilgisi nedir?")
+    assert not looks_like_contact_query("Telefom numarami degistirmek istiyorum")
+
+
+def test_contact_query_does_not_match_dahil_or_nereden_false_positives():
+    assert not looks_like_contact_query("Pedagojik formasyon dersleri transkripte dahil mi?")
+    assert not looks_like_contact_query("Sinav notlarimi ve derslerimi nereden gorebilirim?")
+
+
+def test_ubys_link_query_is_not_announcement_short_circuit():
+    query = "Ubys linki ne"
+
+    assert should_block_announcement_primary_flow(query)
+    assert not looks_like_announcement_query(query)

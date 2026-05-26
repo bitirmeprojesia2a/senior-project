@@ -1,0 +1,66 @@
+# ================================================
+# Üniversite Destek Sistemi - Runtime Bağımlılıklar
+# ================================================
+# Bu dosyada yalnızca runtime paketleri bulunur.
+# Test ve kod kalitesi araçları `requirements-dev.txt` içindedir.
+
+# -- Web Framework & API (iskelet / ileriki faz) --
+fastapi==0.115.12
+uvicorn==0.34.0
+httpx==0.28.1
+pydantic==2.11.3
+pydantic-settings==2.9.1
+
+# -- A2A Protokolü (hedef mimari / kısmi iskelet) --
+a2a-sdk==0.2.7
+
+# -- Veritabanı --
+sqlalchemy==2.0.37
+asyncpg==0.30.0
+alembic==1.14.1
+psycopg2-binary==2.9.10
+aiosqlite==0.20.0
+
+# -- Kuyruk & Cache (Redis altyapısı hazır, aktif retrieval cache in-memory) --
+redis==5.2.1
+
+# -- RAG & Vektör DB --
+# ChromaDB Docker servisi olarak çalışır; iletişim `httpx` ile REST üzerinden yapılır.
+langchain==0.3.14
+langchain-core==0.3.63
+langchain-community==0.3.14
+langchain-text-splitters==0.3.4
+rank_bm25==0.2.2
+
+# -- Gömme modeli --
+sentence-transformers==3.4.1
+transformers==4.48.1
+torch==2.6.0
+
+# -- LLM entegrasyonu --
+# Mevcut istemciler `httpx` tabanlıdır; `openai` paketi uyumluluk ve ileriki ihtiyaçlar için tutulur.
+openai==1.59.9
+
+# -- Slack entegrasyonu (iskelet / planlı) --
+slack-sdk==3.34.0
+slack-bolt==1.22.0
+
+# -- Güvenlik & kimlik doğrulama (iskelet / planlı) --
+PyJWT==2.10.1
+passlib==1.7.4
+bcrypt==4.2.1
+
+# -- Yardımcı paketler --
+python-dotenv==1.0.1
+PyYAML==6.0.3
+structlog==25.1.0
+tenacity==9.0.0
+pdfplumber==0.11.4
+PyPDF2==3.0.1
+python-docx==1.1.2
+Pillow==10.4.0
+pytesseract==0.3.13
+pdf2image==1.17.0
+tqdm==4.67.1
+
+# NOT: Test ve kod kalitesi araçları `requirements-dev.txt` içindedir.

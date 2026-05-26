@@ -1,0 +1,21 @@
+schema_version: 1
+tenant_key: acme_demo
+display_name: ACME Teknoloji
+bot_name: ACME Ic Destek Botu
+locale: tr-TR
+timezone: Europe/Istanbul
+runtime_strategy: dynamic_shadow
+domain_pack: corporate_support
+agent_pack: corporate_hr_it_support
+source_catalog: acme_demo_sources
+replay_suite: acme_demo_golden
+entities:
+  groups:
+    departments: []
+    teams: []
+    products: []
+    internal_services: []
+metadata:
+  demo_only: true
+  compose_port_offset: 10000
+  note: "Example non-university tenant used to validate that core does not require school-specific entities."

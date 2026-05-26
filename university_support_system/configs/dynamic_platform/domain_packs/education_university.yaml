@@ -1,0 +1,99 @@
+schema_version: 1
+domain_pack: education_university
+display_name: University Education Support
+description: University student support, academic policy, curriculum, finance, announcement, and uploaded transcript flows.
+metadata:
+  portability:
+    domain_specific_identifier_terms:
+      - akts
+      - cap
+      - ders
+      - faculty
+      - fakulte
+      - mezuniyet
+      - mufredat
+      - ogrenci
+      - program
+      - sinif
+      - student
+      - tuition
+    domain_specific_entity_groups:
+      - courses
+      - course
+      - faculties
+      - faculty
+      - programs
+      - program
+      - students
+      - student
+capabilities:
+  - capability_id: policy_qa
+    display_name: Policy Q&A
+    description: General regulation, directive, and institutional policy questions.
+    answer_mode: rag
+    keywords: [yonetmelik, yonerge, politika, sart, kosul, bilgi]
+  - capability_id: graduation_requirement
+    display_name: Graduation Requirement
+    description: Graduation conditions, diploma, transcript, and completion policies.
+    core_capability: policy_qa
+    answer_mode: hybrid
+    keywords: [mezuniyet, mezun, diploma, transkript, tamamlamak, sart]
+  - capability_id: graduation_akts
+    display_name: Graduation AKTS
+    description: Total graduation credit requirements for program levels.
+    core_capability: graduation_requirement
+    answer_mode: hybrid
+    keywords: [akts, kredi, mezun, mezuniyet, lisans, onlisans, önlisans, toplam]
+  - capability_id: course_schedule
+    display_name: Course Schedule
+    description: Weekly course schedule lookup and formatting.
+    answer_mode: structured
+    keywords: [ders, program, ders programi, ders programı, haftalik, haftalık, saat]
+  - capability_id: transcript_analysis
+    display_name: Transcript Analysis
+    description: Uploaded transcript extraction and user-scoped analysis.
+    answer_mode: uploaded_context
+    keywords: [transkript, belge, dosya, not dokum, not döküm, ocr]
+  - capability_id: prerequisite_check
+    display_name: Prerequisite Check
+    description: Course prerequisite and dependency checks.
+    answer_mode: hybrid
+    keywords: [onkosul, önkoşul, prerequisite, bagimli, bağlı, ders]
+  - capability_id: tuition_fee
+    display_name: Tuition Fee
+    description: Exact tuition or contribution fee lookup.
+    answer_mode: structured
+    keywords: [ucret, ücret, harc, harç, katki, katkı, para, tutar]
+  - capability_id: payment_debt_policy
+    display_name: Payment Debt Policy
+    description: Debt, payment, course registration, and eligibility policy questions.
+    core_capability: policy_qa
+    answer_mode: hybrid
+    keywords: [borc, borç, harc borcu, harç borcu, ders kaydi, ders kaydı, kayit yenileme, ödeme]
+  - capability_id: academic_calendar
+    display_name: Academic Calendar
+    description: Academic calendar dates and scoped date lookup.
+    answer_mode: structured
+    keywords: [takvim, tarih, basvuru tarihi, başvuru tarihi, son tarih, akademik takvim]
+  - capability_id: double_major_minor
+    display_name: Double Major Minor
+    description: Double major, minor, application, and eligibility policies.
+    core_capability: policy_qa
+    answer_mode: hybrid
+    keywords: [cap, çap, cift anadal, çift anadal, yandal, basvuru, başvuru]
+  - capability_id: internship_policy
+    display_name: Internship Policy
+    description: Internship requirements, date policy, and scoped program documents.
+    core_capability: policy_qa
+    answer_mode: hybrid
+    keywords: [staj, zorunlu staj, basvuru, başvuru, tarih]
+  - capability_id: announcement_lookup
+    display_name: Announcement Lookup
+    description: Current announcement listing, scoped announcement probing, and detail summarization.
+    answer_mode: hybrid
+    keywords: [duyuru, guncel, güncel, ilan, haber, ozet, özet]
+  - capability_id: contact_lookup
+    display_name: Contact Lookup
+    description: Contact, phone, extension, and central switchboard lookup.
+    answer_mode: structured
+    keywords: [iletisim, iletişim, telefon, dahili, santral, mail, eposta]

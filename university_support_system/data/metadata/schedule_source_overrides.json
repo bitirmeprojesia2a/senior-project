@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "description": "Structured course schedule ingest metadata for sources whose PDF/XLSX text does not expose a clean department/year/term header. These are source-level metadata overrides, not question-specific answer rules.",
+  "sources": {
+    "2025_2026_bahar_muzik_ogretmenligi_ders_programi.xlsx": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Müzik Öğretmenliği"
+    },
+    "2025_2026_guz_muzik_ogretmenligi_ders_programi.xlsx": {
+      "academic_year": "2025-2026",
+      "term": "guz",
+      "department": "Müzik Öğretmenliği"
+    },
+    "2025_2026_bahar_resim_is_ogretmenligi_ders_programi.xlsx": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Resim-İş Öğretmenliği"
+    },
+    "2025_2026_bahar_ders_programı_güncel_xlsx_ders_programı.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Biyoloji"
+    },
+    "2025_2026_guz_resim_is_ogretmenligi_ders_programi.pdf": {
+      "academic_year": "2025-2026",
+      "term": "guz",
+      "department": "Resim-İş Öğretmenliği"
+    },
+    "2526baharbiyolojidp.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Biyoloji Eğitimi"
+    },
+    "2526baharfengüncel.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Fen Bilgisi Eğitimi"
+    },
+    "2526baharfizikson.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Fizik Eğitimi"
+    },
+    "2526baharilkmatsonnn.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "İlköğretim Matematik Eğitimi"
+    },
+    "2526baharmat.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Matematik Eğitimi"
+    },
+    "25_26_bahar_sınıf_eğt_ders_prog.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Sınıf Öğretmenliği"
+    },
+    "okl_lisans_01_29_26.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Okul Öncesi Öğretmenliği"
+    },
+    "dersprogrami30012026.pdf": {
+      "academic_year": "2025-2026",
+      "term": "guz",
+      "department": "Matematik"
+    },
+    "lisans_pedagojik_formasyon_ders_programı.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Pedagojik Formasyon"
+    },
+    "2025_2026_bahar_dönemi_lisansüstü_program_doktora_güncel.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Temel Eğitim Doktora"
+    },
+    "2025_2026_bahar_dönemi_lisansüstü_program_yüksek_lisans.pdf": {
+      "academic_year": "2025-2026",
+      "term": "bahar",
+      "department": "Temel Eğitim Yüksek Lisans"
+    }
+  }
+}

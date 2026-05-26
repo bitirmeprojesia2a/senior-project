@@ -1,0 +1,21 @@
+schema_version: 1
+tenant_key: city_demo
+display_name: City Demo Municipality
+bot_name: City Demo Destek Botu
+locale: tr-TR
+timezone: Europe/Istanbul
+runtime_strategy: dynamic_shadow
+domain_pack: public_service_support
+agent_pack: public_service_agents
+source_catalog: city_demo_sources
+replay_suite: city_demo_golden
+entities:
+  groups:
+    units: []
+    services: []
+    districts: []
+    desks: []
+metadata:
+  demo_only: true
+  compose_port_offset: 20000
+  note: "Example public-service tenant used to validate that dynamic platform can model non-school and non-corporate institutions."

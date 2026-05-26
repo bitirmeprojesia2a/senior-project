@@ -1,0 +1,106 @@
+services:
+  slack-bot-inprocess:
+    image: university_support_system-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${A2A_BASE_IMAGE:-python:3.11-slim}
+        TORCH_VARIANT: ${A2A_TORCH_VARIANT:-cpu}
+        INSTALL_BUILD_TOOLS: ${A2A_INSTALL_BUILD_TOOLS:-false}
+        APP_VERSION: ${APP_VERSION:-1.0.0}
+        BUILD_ID: ${A2A_BUILD_ID:-local-dev}
+        BUILD_TIMESTAMP: ${A2A_BUILD_TIMESTAMP:-unknown}
+        GIT_SHA: ${A2A_GIT_SHA:-unknown}
+        IMAGE_REF: ${A2A_IMAGE_REF:-university_support_system-app:latest}
+    container_name: uni_slack_bot_inprocess
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      SERVER_RUNTIME_LABEL: slack-inprocess
+      LLM_QUERY_NORMALIZATION_ENABLED: ${LLM_QUERY_NORMALIZATION_ENABLED:-true}
+      MULTI_INTENT_PLANNER_MODE: ${MULTI_INTENT_PLANNER_MODE:-shadow}
+      MULTI_INTENT_PLANNER_CONFIDENCE_THRESHOLD: ${MULTI_INTENT_PLANNER_CONFIDENCE_THRESHOLD:-0.72}
+      SLACK_RUNTIME: inprocess
+      A2A_MODE: inprocess
+      A2A_SPECIALIST_MODE: inprocess
+      RETRIEVAL_SERVICE_ENABLED: "false"
+    networks:
+      - a2a_infra
+    command: ["python", "-m", "scripts.run_slack_bot", "--runtime", "inprocess"]
+
+  slack-bot-a2a:
+    image: university_support_system-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${A2A_BASE_IMAGE:-python:3.11-slim}
+        TORCH_VARIANT: ${A2A_TORCH_VARIANT:-cpu}
+        INSTALL_BUILD_TOOLS: ${A2A_INSTALL_BUILD_TOOLS:-false}
+        APP_VERSION: ${APP_VERSION:-1.0.0}
+        BUILD_ID: ${A2A_BUILD_ID:-local-dev}
+        BUILD_TIMESTAMP: ${A2A_BUILD_TIMESTAMP:-unknown}
+        GIT_SHA: ${A2A_GIT_SHA:-unknown}
+        IMAGE_REF: ${A2A_IMAGE_REF:-university_support_system-app:latest}
+    container_name: uni_slack_bot_a2a
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      SERVER_RUNTIME_LABEL: slack-a2a
+      LLM_QUERY_NORMALIZATION_ENABLED: ${LLM_QUERY_NORMALIZATION_ENABLED:-true}
+      MULTI_INTENT_PLANNER_MODE: ${MULTI_INTENT_PLANNER_MODE:-shadow}
+      MULTI_INTENT_PLANNER_CONFIDENCE_THRESHOLD: ${MULTI_INTENT_PLANNER_CONFIDENCE_THRESHOLD:-0.72}
+      SLACK_RUNTIME: a2a
+      A2A_MODE: http
+      A2A_TRANSPORT_PROTOCOL: ${A2A_TRANSPORT_PROTOCOL:-jsonrpc}
+      A2A_TIMEOUT_SECONDS: ${A2A_TIMEOUT_SECONDS:-30}
+      A2A_DEPARTMENT_TIMEOUT_SECONDS: ${A2A_DEPARTMENT_TIMEOUT_SECONDS:-75}
+      SERVER_INTERNAL_API_KEY: ${SERVER_INTERNAL_API_KEY:-local-a2a-secret}
+      A2A_INTERNAL_API_KEY: ${A2A_INTERNAL_API_KEY:-local-a2a-secret}
+      A2A_REQUIRE_SERVICE_IDENTITY: ${A2A_REQUIRE_SERVICE_IDENTITY:-true}
+      A2A_REQUIRE_REQUEST_SIGNATURE: ${A2A_REQUIRE_REQUEST_SIGNATURE:-true}
+      A2A_REQUEST_SIGNATURE_SECRET: ${A2A_REQUEST_SIGNATURE_SECRET:-}
+      A2A_ALLOWED_CALLER_IDS: ${A2A_ALLOWED_CALLER_IDS:-}
+      A2A_DISCOVERY_AGENT_CARD_ENABLED: ${A2A_DISCOVERY_AGENT_CARD_ENABLED:-true}
+      A2A_STUDENT_AFFAIRS_URL: http://agent-student-affairs:8101
+      A2A_ACADEMIC_PROGRAMS_URL: http://agent-academic:8102
+      A2A_FINANCE_URL: http://agent-finance:8103
+      A2A_ANNOUNCEMENT_URL: http://agent-announcement:8104
+      A2A_EVENT_URL: http://agent-event:8105
+      # Specialist agent endpointleri Slack botunda degil, ilgili departman
+      # servislerinde A2A_SPECIALIST_ENDPOINTS ile tanimlanir.
+      SLACK_ENV_PREFIX: ${SLACK_ENV_PREFIX:-}
+    networks:
+      - a2a_infra
+    command:
+      [
+        "python",
+        "-m",
+        "scripts.run_slack_bot",
+        "--runtime",
+        "a2a",
+        "--a2a-endpoint-profile",
+        "docker",
+        "--transport-protocol",
+        "${A2A_TRANSPORT_PROTOCOL:-jsonrpc}",
+      ]
+
+networks:
+  a2a_infra:
+    external: true
+    name: ${A2A_INFRA_NETWORK:-v2_default}

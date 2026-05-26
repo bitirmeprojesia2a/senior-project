@@ -1,0 +1,413 @@
+{
+  "version": "1.0",
+  "description": "Reranker kalite degerlendirme soru seti - LLM sentez odakli, cok kaynakli, senaryo bazli",
+  "created_at": "2026-04-09",
+  "reranker_model": "nreimers/mmarco-mMiniLMv2-L6-H384-v1",
+  "total_questions": 25,
+  "categories": {
+    "A_multi_source_synthesis": {
+      "display_name": "Cok-Kaynakli Sentez (Ayni Departman)",
+      "description": "Cevap ayni departmandaki birden fazla chunk'in birlestirilmesini gerektirir."
+    },
+    "B_cross_department_parallel": {
+      "display_name": "Capraz Departman Paralel Islem",
+      "description": "Router'in birden fazla departmana dispatch etmesi ve sonuclarin sentezlenmesi gerekir."
+    },
+    "C_conditional_scenario": {
+      "display_name": "Kosullu Senaryo Bazli",
+      "description": "Eger X ise ne olur tipi sorular, kural yorumlama gerektirir."
+    },
+    "D_comparison": {
+      "display_name": "Karsilastirma Gerektiren",
+      "description": "Iki kavram veya surec arasindaki farklari sentezlemek gerekir."
+    },
+    "E_process_chain": {
+      "display_name": "Surec Zinciri (Uctan Uca Prosedur)",
+      "description": "Birden fazla adimi sirasiyla sentezlemek gerekir."
+    },
+    "F_edge_cases": {
+      "display_name": "Kenar Durumlar ve Negatif Testler",
+      "description": "Bilginin sinirlarini ve bilgi bulunamadi durumlarini test eder."
+    },
+    "G_semantic_paraphrase": {
+      "display_name": "Semantik Anlama (Paraphrase)",
+      "description": "Belgelerdeki terimlerden farkli ifadelerle sorulan sorular."
+    }
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "category": "A_multi_source_synthesis",
+      "question": "Yatay geçişle gelen bir öğrenci, muafiyet başvurusunu ne zaman yapmalı ve karar çıkana kadar derslere devam etmeli mi?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "üç hafta",
+        "dilekçe",
+        "komisyon",
+        "derslere devam"
+      ],
+      "difficulty": "medium",
+      "why_llm": "Muafiyet zamanlama bilgisi ve bekleme sureci davranisi 2 ayri FAQ bolgesinde"
+    },
+    {
+      "id": "Q2",
+      "category": "A_multi_source_synthesis",
+      "question": "Tek ders sınavına girebilmek için stajımı tamamlamış olmam gerekir mi ve sınavda başarılı sayılmam için minimum not kaç?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "staj",
+        "tamamla",
+        "CC"
+      ],
+      "difficulty": "medium",
+      "why_llm": "Tek ders kosulu, staj istisnasi ve basari notu 3 ayri bilgi parcasi"
+    },
+    {
+      "id": "Q3",
+      "category": "A_multi_source_synthesis",
+      "question": "Başarısız olduğum seçmeli ders yerine başka bir seçmeli seçersem devam zorunluluğum nasıl değişir?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "değiştirebilir",
+        "devam koşulu",
+        "yeni",
+        "ders"
+      ],
+      "difficulty": "medium",
+      "why_llm": "Secmeli degisim kurali ve devam kosulu degisimi 2 FAQ maddesinde"
+    },
+    {
+      "id": "Q4",
+      "category": "A_multi_source_synthesis",
+      "question": "Pedagojik formasyon dersleri transkripte dahil ediliyor mu, mezuniyet ortalamasına etkisi var mı ve diplomada nasıl bir ibare yer alıyor?",
+      "expected_departments": ["academic_programs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "transkript",
+        "dahil",
+        "ortalama",
+        "tamamlamıştır"
+      ],
+      "difficulty": "hard",
+      "why_llm": "3 farkli paragraftaki bilgi (transkript, ortalama, diploma ibaresi) sentezlenmeli"
+    },
+    {
+      "id": "Q5",
+      "category": "B_cross_department_parallel",
+      "question": "Uluslararası öğrenci olarak kayıt yaptırırken öğrenim ücretimi nereye yatırmam gerekiyor ve ayrıca ikamet izni için hangi belgeleri hazırlamalıyım?",
+      "expected_departments": ["academic_programs", "finance", "student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "ücret",
+        "ikamet",
+        "belge"
+      ],
+      "difficulty": "hard",
+      "why_llm": "Uluslararasi ogrenci yonergesi (academic), ucret bilgisi (finance), kayit islemleri (student_affairs) capraz sentez"
+    },
+    {
+      "id": "Q6",
+      "category": "B_cross_department_parallel",
+      "question": "ÇAP programına başvurmak istiyorum ama harç borcum bulunuyor. ÇAP başvuru şartları neler ve harç borcumu nasıl ödeyebilirim?",
+      "expected_departments": ["academic_programs", "finance"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "not ortalaması",
+        "harç",
+        "ödeme",
+        "başvuru"
+      ],
+      "difficulty": "hard",
+      "why_llm": "CAP yonergesi (academic) + harc odeme proseduru (finance) capraz sentez"
+    },
+    {
+      "id": "Q7",
+      "category": "B_cross_department_parallel",
+      "question": "Kayıt yenileme döneminde harç ücretimi yatırdıktan sonra ders kaydını nasıl yapacağım, danışmanın onay süreci nasıl işliyor?",
+      "expected_departments": ["student_affairs", "finance"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "harç",
+        "UBYS",
+        "ders",
+        "danışman",
+        "onay"
+      ],
+      "difficulty": "medium",
+      "why_llm": "Kayit yenileme (student_affairs) ve harc islemleri (finance) birlikte"
+    },
+    {
+      "id": "Q8",
+      "category": "B_cross_department_parallel",
+      "question": "Burslu öğrenciyim ve yatay geçiş yapmak istiyorum. Bursum kesilir mi, yeni üniversitede harç ödemem gerekir mi?",
+      "expected_departments": ["student_affairs", "finance"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "burs",
+        "kesilme",
+        "kurum",
+        "bildiri",
+        "harç"
+      ],
+      "difficulty": "hard",
+      "why_llm": "Yatay gecis + burs kesilme kosullari + harc yeni universite bilgisi capraz"
+    },
+    {
+      "id": "Q9",
+      "category": "C_conditional_scenario",
+      "question": "4. sınıf öğrencisiyim ve program süresini 1 yıl aştım. Ek süre hakkım var mı ve bu sürede katkı payı öder miyim?",
+      "expected_departments": ["academic_programs", "student_affairs", "finance"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "azami",
+        "ek",
+        "süre",
+        "katkı payı",
+        "öde"
+      ],
+      "difficulty": "hard",
+      "why_llm": "Azami sure KURALI (academic), idari surec (student_affairs), ucret bilgisi (finance) capraz sentez"
+    },
+    {
+      "id": "Q10",
+      "category": "C_conditional_scenario",
+      "question": "Devamsızlıktan kaldığım bir dersin bütünleme sınavına girebilir miyim? Giremiyorsam bu dersi ne zaman tekrar alabilirim?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "giremez",
+        "devamsızlık",
+        "bütünleme",
+        "tekrar"
+      ],
+      "difficulty": "medium",
+      "why_llm": "Negatif kural (butunlemeye giremez) + alternatif cozum (tekrar kayit) sentezi"
+    },
+    {
+      "id": "Q11",
+      "category": "C_conditional_scenario",
+      "question": "İkinci öğretim öğrencisiyim ve bir dönem kayıt dondurmak istiyorum. Bu dönem harç ücretimi yatırmak zorunda mıyım ve kayıt dondurduğum süre eğitim süresinden sayılır mı?",
+      "expected_departments": ["student_affairs", "finance"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "öğrenim ücreti",
+        "gerek yok",
+        "yönetim kurulu",
+        "sayılma"
+      ],
+      "difficulty": "hard",
+      "why_llm": "II. ogretim harc istisnasi + kayit dondurma sure kurali + YK onayi 3 bilgi parcasi"
+    },
+    {
+      "id": "Q12",
+      "category": "C_conditional_scenario",
+      "question": "Hazırlık sınıfındayım ve transkriptim yok. Ek Madde-1 ile başka bir üniversiteye yatay geçiş yapabilir miyim?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "transkript",
+        "Ek Madde",
+        "başvuru yapabilir",
+        "GANO"
+      ],
+      "difficulty": "medium",
+      "why_llm": "FAQ'da spesifik kural var ama senaryo cercevelemesi + aciklama gerekli"
+    },
+    {
+      "id": "Q13",
+      "category": "D_comparison",
+      "question": "Kurum içi yatay geçiş ile kurumlar arası yatay geçiş arasındaki farklar nelerdir? Başvuru şartları ve değerlendirme kriterleri nasıl farklılık gösterir?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "kurum içi",
+        "kurumlar arası",
+        "Ek Madde",
+        "GANO",
+        "YKS"
+      ],
+      "difficulty": "hard",
+      "why_llm": "3 farkli yatay gecis turu karsilastirilarak sentezlenmeli"
+    },
+    {
+      "id": "Q14",
+      "category": "D_comparison",
+      "question": "Bağıl değerlendirme sistemi ile mutlak değerlendirme arasındaki fark nedir ve hangi öğrenci sayısında hangisi uygulanır?",
+      "expected_departments": ["academic_programs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "bağıl",
+        "mutlak",
+        "10",
+        "öğrenci sayısı"
+      ],
+      "difficulty": "medium",
+      "why_llm": "Coklu FAQ maddesi birlestirilip karsilastirma yapilmali"
+    },
+    {
+      "id": "Q15",
+      "category": "D_comparison",
+      "question": "Diploma eki ile transkript arasındaki fark nedir? Diploma eki transkript yerine kullanılabilir mi?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "diploma eki",
+        "transkript",
+        "yerine geçmez"
+      ],
+      "difficulty": "medium",
+      "why_llm": "2 farkli belge turu hakkinda bilgi sentezi + negatif ifade"
+    },
+    {
+      "id": "Q16",
+      "category": "D_comparison",
+      "question": "Kayıt dondurma ile kayıt yaptırmamak arasında ne fark var? Her iki durumda da öğrencilik haklarım nasıl etkilenir?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "kayıt dondurma",
+        "sayılma",
+        "süre",
+        "hak"
+      ],
+      "difficulty": "medium",
+      "why_llm": "FAQ'da ayri maddeler, sentez ve karsilastirma gerekli"
+    },
+    {
+      "id": "Q17",
+      "category": "E_process_chain",
+      "question": "İlk kez üniversite kaydını yaptıran bir öğrenci olarak ders kaydından danışmanın onayına kadar tüm süreci başından sonuna anlatır mısın?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "UBYS",
+        "ders seçimi",
+        "danışman",
+        "onay",
+        "yoklama"
+      ],
+      "difficulty": "hard",
+      "why_llm": "5+ FAQ maddesinin adim adim sentezlenmesi gerekli"
+    },
+    {
+      "id": "Q18",
+      "category": "E_process_chain",
+      "question": "Sınav notuma itiraz etmek istiyorum. Başvuru süreci, süresi ve olası sonuçları nelerdir?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "itiraz",
+        "beş iş günü",
+        "dilekçe",
+        "bölüm başkanlığı"
+      ],
+      "difficulty": "medium",
+      "why_llm": "Itiraz sureci + sure siniri + prosedur adimlari sentezi"
+    },
+    {
+      "id": "Q19",
+      "category": "E_process_chain",
+      "question": "Mezuniyet için gerekli tüm koşulları ve ilişik kesme sürecini adım adım açıklar mısın?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "ders",
+        "staj",
+        "GANO",
+        "2,00",
+        "ilişik kesme",
+        "diploma"
+      ],
+      "difficulty": "hard",
+      "why_llm": "Mezuniyet kosullari + ilisik kesme + diploma sureci cok adimli sentez"
+    },
+    {
+      "id": "Q20",
+      "category": "F_edge_cases",
+      "question": "Diplomamı kaybettim ve aynı zamanda e-devlette mezuniyet bilgilerim görünmüyor. Her iki sorun için ne yapmalıyım?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "2. nüsha",
+        "diploma",
+        "e-devlet",
+        "YÖKSİS"
+      ],
+      "difficulty": "hard",
+      "why_llm": "2 farkli problem icin 2 farkli cozum yolu sentezlenmeli"
+    },
+    {
+      "id": "Q21",
+      "category": "F_edge_cases",
+      "question": "Uzaktan eğitim yoluyla alınan 5-i derslerinin sınav ve başarı değerlendirmesi yüz yüze derslerden farklı mıdır?",
+      "expected_departments": ["student_affairs", "academic_programs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "uzaktan",
+        "%20",
+        "%80",
+        "%40",
+        "%60"
+      ],
+      "difficulty": "hard",
+      "why_llm": "Uzaktan ve yuz yuze degerlendirme kurallari farkli kaynaklardan sentez"
+    },
+    {
+      "id": "Q22",
+      "category": "F_edge_cases",
+      "question": "Sınavda kopya çekilmesinin cezası nedir ve disiplin süreci nasıl işler?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "kural",
+      "expected_key_facts": [],
+      "difficulty": "hard",
+      "why_llm": "Disiplin yonetmeligi detayli icerigi belgede sinirli veya yok olabilir"
+    },
+    {
+      "id": "Q23",
+      "category": "G_semantic_paraphrase",
+      "question": "Üniversiteyi bırakıp ayrılmak istiyorum, tüm işlemleri ve dikkat etmem gereken hususları söyler misin?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "ilişik kesme",
+        "UBYS",
+        "form",
+        "birim"
+      ],
+      "difficulty": "medium",
+      "why_llm": "kayit sildirme yerine farkli terim + cok adimli surec sentezi"
+    },
+    {
+      "id": "Q24",
+      "category": "G_semantic_paraphrase",
+      "question": "Okulumu dondurup 1 yıl ara verdikten sonra dönüşte ders seçimini nasıl yapacağım?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "kayıt",
+        "yenileme",
+        "UBYS",
+        "müfredat"
+      ],
+      "difficulty": "medium",
+      "why_llm": "kayit dondurma + donus sonrasi kayit yenileme sureci sentezi"
+    },
+    {
+      "id": "Q25",
+      "category": "G_semantic_paraphrase",
+      "question": "Hocam benim ders notlarımı sisteme girmemiş, bu durumda ne yapabilirim?",
+      "expected_departments": ["student_affairs"],
+      "expected_generation_mode": "llm",
+      "expected_key_facts": [
+        "danışman",
+        "bölüm",
+        "oidb@omu.edu.tr"
+      ],
+      "difficulty": "easy",
+      "why_llm": "not girisi FAQ icerigi farkli terminoloji ile soruluyor"
+    }
+  ]
+}

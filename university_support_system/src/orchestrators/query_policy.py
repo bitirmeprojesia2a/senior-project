@@ -1,0 +1,920 @@
+"""Query policy helpers for the main orchestrator."""
+
+from __future__ import annotations
+
+import re
+
+from src.agents.academic.curriculum_utils import infer_department_from_query
+from src.agents.finance.tuition_utils import extract_requested_unit
+from src.core.constants import Department, TaskType
+from src.core.contact_intent import looks_like_contact_intent
+from src.core.query_markers import (
+    ACADEMIC_DEPARTMENT_CONTEXT_MARKERS,
+    EVENT_QUERY_MARKERS,
+    GLOBAL_SYNTHESIS_QUERY_MARKERS,
+    RELATED_ANNOUNCEMENT_QUERY_MARKERS,
+)
+from src.core.query_intent_guards import looks_like_fee_catalog_amount_query
+from src.core.text_normalization import contains_any_normalized, normalize_text
+from src.db.schemas import DepartmentResponse
+from src.db.schemas import IntentAnalysis
+from src.orchestrators.response_utils import response_eligible_for_global_synthesis
+from src.routing.query_concepts import (
+    CAPABILITY_ANNOUNCEMENT,
+    CONCEPT_ACADEMIC_CALENDAR,
+    CONCEPT_ANNOUNCEMENT,
+    CONCEPT_CAP,
+    CONCEPT_COURSE_SCHEDULE,
+    CONCEPT_EXEMPTION,
+    CONCEPT_GRADUATION,
+    CONCEPT_HORIZONTAL_TRANSFER,
+    CONCEPT_REGISTRATION,
+    extract_query_concepts,
+)
+
+CLARIFICATION_MESSAGE = (
+    "Sorunuzun hangi alana ait olduğunu net olarak belirleyemedim. "
+    "Aşağıdaki seçeneklerden birini belirterek tekrar sorabilirsiniz:\n"
+    "- Öğrenci İşleri (kayıt, not, staj, mezuniyet)\n"
+    "- Akademik Programlar (müfredat, yönetmelik, Erasmus)\n"
+    "- Finans (harç, burs, ödeme)"
+)
+
+ACADEMIC_DEPARTMENT_CLARIFICATION_MESSAGE = (
+    "Bu soruyu doğru cevaplayabilmem için önce bölüm veya program bilgisini bilmem gerekiyor. "
+    "Örneğin şöyle sorabilirsiniz:\n"
+    '- "Bilgisayar Mühendisliği için 1. yarıyıl dersleri nelerdir?"\n'
+    '- "Kimya bölümü teknik seçmeli dersleri hangileri?"\n'
+    "Kişisel ders/AKTS ilerlemesi öğrenmek istiyorsan OTP ile giriş yapabilirsin; "
+    "böylece bölüm bilgin oturumdan otomatik kullanılır."
+)
+
+AUTH_CLARIFICATION_MESSAGE = (
+    "Kişisel sorunuza yanıt verebilmem için kimliğinizi doğrulamam gerekiyor. "
+    "Doğrulamayı öğrenci e-posta adresinize göndereceğim tek kullanımlık kod ile tamamlayabilirsiniz."
+)
+
+FEE_CONTEXT_CLARIFICATION_MESSAGE = (
+    "Öğrenim ücreti öğrenci türüne ve birime göre değişiyor. "
+    "Doğru ücreti paylaşabilmem için Türk öğrenci misiniz, uluslararası öğrenci misiniz? "
+    "Mümkünse fakülte veya bölüm bilginizi de ekleyin."
+)
+
+APPLICATION_TYPE_CLARIFICATION_MESSAGE = (
+    "Hangi başvuru türü için tarih sorduğunuzu yazar mısınız? "
+    "Örneğin yatay geçiş, ÇAP/YAP, Erasmus, staj, yaz okulu veya kayıt başvurusu gibi yazabilirsiniz."
+)
+
+PROGRAM_CONTEXT_CLARIFICATION_MESSAGE = (
+    "Bu soruyu doğru cevaplayabilmem için fakülte, bölüm veya program bilgisini belirtir misiniz?"
+)
+
+STUDENT_TYPE_CLARIFICATION_MESSAGE = (
+    "Bu bilgi öğrenci türüne göre değişiyor. Türk öğrenci misiniz, uluslararası öğrenci misiniz?"
+)
+
+COURSE_CODE_PATTERN = re.compile(r"\b[A-ZÇĞİÖŞÜ]{2,6}\s?\d{3,4}\b", re.IGNORECASE)
+_KNOWN_COURSE_PREFIXES = {
+    "BIL",
+    "BMH",
+    "MAT",
+    "FIZ",
+    "KIM",
+    "MUH",
+    "SSD",
+    "TUR",
+    "ATA",
+    "ING",
+    "EEE",
+    "EEM",
+    "MAK",
+    "INS",
+}
+_INVALID_COURSE_PREFIXES = {
+    "ICIN",
+    "ODEME",
+    "EYLUL",
+    "MAYIS",
+    "HAZIRAN",
+    "TEMMUZ",
+    "AGUSTOS",
+    "MART",
+    "NISAN",
+    "ARALIK",
+    "OCAK",
+    "SUBAT",
+    "AKTS",
+    "TL",
+}
+
+_STUDENT_TYPE_SENSITIVE_INTENTS = {
+    "tuition",
+    "fee",
+    "fees",
+    "finance_fee",
+    "learning_fee",
+    "tuition_fee",
+    "ogrenim_ucreti",
+}
+
+_STUDENT_TYPE_FEE_AMOUNT_MARKERS = (
+    "ucreti",
+    "ucret ne kadar",
+    "ucreti ne kadar",
+    "harc ucreti",
+    "harc ne kadar",
+    "ogrenim ucreti",
+    "katki payi",
+    "donemlik ucret",
+    "yillik ucret",
+    "tutar",
+    "kac tl",
+    "ne kadar",
+)
+
+_APPLICATION_TYPE_MARKERS = (
+    "cap",
+    "cift anadal",
+    "yandal",
+    "yan dal",
+    "erasmus",
+    "staj",
+    "yaz okulu",
+    "yatay gecis",
+    "dikey gecis",
+    "kayit dondurma",
+    "kayit sildirme",
+    "muafiyet",
+    "intibak",
+    "tek ders",
+)
+
+_GENERAL_RULE_BYPASS: tuple[str, ...] = (
+    "devam zorunlulugu",
+    "devamsizlik",
+    "basarisiz",
+    "sinav",
+    "degerlendirme",
+    "not sistemi",
+    "tekrar",
+    "kural",
+    "yonetmelik",
+    "yonerge",
+    "nasil degisir",
+    "ne olur",
+    "etkilenir mi",
+    "sayilir mi",
+    "muaf",
+    "kosul",
+    "sart",
+    "nasil",
+)
+
+_ACADEMIC_DEPARTMENT_CLARIFICATION_BYPASS_MARKERS: tuple[str, ...] = (
+    "basvur",
+    "basvuru",
+    "katilabilir",
+    "yapabilir",
+    "girebilir",
+    "alabilir",
+    "mezun",
+    "kosul",
+    "sart",
+    "tarih",
+    "takvim",
+    "surec",
+)
+
+_GENERAL_POLICY_ELIGIBILITY_TOPICS: tuple[str, ...] = (
+    "cap",
+    "cift anadal",
+    "cift ana dal",
+    "yandal",
+    "yan dal",
+    "yatay gecis",
+    "dikey gecis",
+    "muafiyet",
+    "intibak",
+    "tek ders",
+    "yaz okulu",
+    "staj",
+)
+_GENERAL_POLICY_ELIGIBILITY_QUESTIONS: tuple[str, ...] = (
+    "basvurabilir miyim",
+    "basvuru yapabilir miyim",
+    "yapabilir miyim",
+    "alabilir miyim",
+    "katilabilir miyim",
+    "uygun muyum",
+    "sartlari",
+    "kosullari",
+    "sart nedir",
+    "kosul nedir",
+)
+_PROGRAM_REQUIRED_POLICY_MARKERS: tuple[str, ...] = (
+    "kontenjan",
+    "hangi programa",
+    "hangi bolume",
+    "program bazli",
+    "bolum bazli",
+    "hedef program",
+    "ders programi",
+    "mufredat",
+    "acilan ders",
+    "hangi ders",
+)
+
+_ANNOUNCEMENT_DIRECT_LOOKUP_MARKERS: tuple[str, ...] = (
+    "sinav programi",
+    "ders programi",
+    "final sinavi programi",
+    "butunleme sinavi programi",
+    "ara sinav programi",
+    "tek ders sinavi",
+    "tek ders",
+    "ara sinav",
+    "butunleme sinavi",
+    "final sinavi",
+    "mazeret sinavi",
+)
+
+_ANNOUNCEMENT_DIRECT_LOOKUP_INTENTS: tuple[str, ...] = (
+    "var mi",
+    "nereden takip",
+    "nereden ogren",
+    "linki olan",
+    "duyurusu var mi",
+)
+_ANNOUNCEMENT_EXPLICIT_LOOKUP_INTENTS: tuple[str, ...] = (
+    "duyuru",
+    "duyurusu",
+    "haber",
+    "ilan",
+    "link",
+    "yayinlandi",
+    "yayimlandi",
+    "nereden takip",
+    "nereden ogren",
+)
+_COURSE_SCHEDULE_ANNOUNCEMENT_INTENTS: tuple[str, ...] = tuple(
+    marker for marker in _ANNOUNCEMENT_EXPLICIT_LOOKUP_INTENTS if marker != "var mi"
+)
+_EXAM_PROGRAM_LOOKUP_MARKERS: tuple[str, ...] = (
+    "sinav programi",
+    "final sinavi programi",
+    "butunleme sinavi programi",
+    "ara sinav programi",
+    "mazeret sinavi programi",
+)
+
+_ACADEMIC_CALENDAR_DATE_MARKERS: tuple[str, ...] = (
+    "derslerin baslamasi",
+    "derslerin bitimi",
+    "ders bitimi",
+    "ders bitis",
+    "ders bitis tarihi",
+    "son ders tarihi",
+    "derslerin sonu",
+    "dersler ne zaman basliyor",
+    "dersler ne zaman bitiyor",
+    "final sinavlari",
+    "final sinavlarinin",
+    "butunleme sinavlari",
+    "butunleme sinavlarinin",
+    "ara sinavlari",
+    "ara sinavlarinin",
+    "sinavlari ne zaman",
+    "sinavlar ne zaman",
+    "sinav tarihleri",
+    "not giris",
+    "notlarin giril",
+    "notlarin son",
+    "girilmesinin son gunu",
+    "girilmesinin son günü",
+    "girilmesi son gun",
+)
+
+_RELATED_ANNOUNCEMENT_SUBJECT_MARKERS: tuple[str, ...] = (
+    "duyuru",
+    "haber",
+    "ilan",
+    "program",
+    "takvim",
+    "basvuru",
+    "sinav",
+    "tek ders",
+)
+
+_LATEST_ANNOUNCEMENT_FALLBACK_MARKERS: tuple[str, ...] = (
+    "son duyuru",
+    "son duyurular",
+    "guncel duyuru",
+    "guncel duyurular",
+    "duyurular neler",
+    "duyurulari neler",
+    "haberler neler",
+    "haberleri neler",
+)
+
+_SUBJECT_SPECIFIC_ANNOUNCEMENT_MARKERS: tuple[str, ...] = (
+    "cap",
+    "capa",
+    "cift anadal",
+    "yandal",
+    "basvuru",
+    "sinav takvimi",
+    "sinav programi",
+    "final sinavi programi",
+    "butunleme sinavi programi",
+    "ara sinav programi",
+    "ara sinav",
+    "final sinavi",
+    "butunleme sinavi",
+    "ders programi",
+    "tek ders",
+)
+
+_ANNOUNCEMENT_FOLLOW_UP_MARKERS: tuple[str, ...] = (
+    "detay",
+    "detayi",
+    "ozet",
+    "ozeti",
+    "ozetle",
+    "özet",
+    "özeti",
+    "özetle",
+    "link",
+    "linki",
+    "devami",
+    "icerik",
+    "tarih",
+    "nerede",
+    "hangisi",
+    "ilk",
+    "ikincisi",
+    "ucuncusu",
+)
+
+_ANNOUNCEMENT_TOPIC_SHIFT_MARKERS: tuple[str, ...] = (
+    "kayit",
+    "kayit tarihi",
+    "kayit tarihleri",
+    "kayit donemi",
+    "staj",
+    "ders kaydi",
+    "ders secimi",
+    "mufredat",
+    "dersleri",
+    "dersi hangi",
+    "sinifta",
+    "yariyil",
+    "donem ucreti",
+    "harc",
+    "ogrenim ucreti",
+    "yemekhane",
+    "not",
+    "not giris",
+    "final sinavlari",
+    "sinav tarihleri",
+    "mezuniyet",
+    "diploma",
+    "kayit dondurma",
+    "ilisik kesme",
+)
+
+_PROCEDURAL_ANNOUNCEMENT_BLOCK_MARKERS: tuple[str, ...] = (
+    "muafiyet",
+    "muaf",
+    "intibak",
+    "tek ders",
+    "tek ders sinavi",
+    "tek sinav",
+    "ek sinav",
+    "ders saydir",
+    "ders saydirma",
+    "ders kaydi",
+    "ders secimi",
+    "kayit yenileme",
+    "kayit dondurma",
+    "ilisik kesme",
+    "staj",
+    "cap",
+    "cift anadal",
+    "yandal",
+    "yaz okulu",
+    "yatay gecis",
+    "erasmus",
+    "mezuniyet",
+)
+
+_PROCEDURAL_QUESTION_MARKERS: tuple[str, ...] = (
+    "basvuru",
+    "basvurusu",
+    "basvurulur",
+    "ne zaman",
+    "zaman",
+    "nasil",
+    "ne yapmaliyim",
+    "surec",
+    "son gun",
+    "son tarih",
+    "hangi belgeler",
+    "kimler katilabilir",
+    "katilabilir",
+    "girebilir",
+    "girebilir miyim",
+    "girilebilir",
+)
+
+_EXPLICIT_ANNOUNCEMENT_ALLOW_MARKERS: tuple[str, ...] = (
+    "duyuru",
+    "duyurusu",
+    "haber",
+    "ilan",
+    "link",
+    "yayinlandi",
+    "yayimlandi",
+    "son duyuru",
+    "guncel duyuru",
+    "nereden takip",
+    "nereden ogren",
+)
+
+_STUDENT_PORTAL_LINK_MARKERS: tuple[str, ...] = (
+    "ubys",
+    "obs",
+    "oidb",
+    "ogrenci bilgi sistemi",
+    "ogrenci sistemi",
+    "transkript",
+    "notlarimi",
+    "derslerimi",
+)
+
+_STUDENT_PORTAL_LOOKUP_MARKERS: tuple[str, ...] = (
+    "link",
+    "linki",
+    "nereden",
+    "nerede",
+    "nasil gir",
+    "giris",
+    "sifre",
+    "parola",
+)
+
+_INCIDENTAL_ANNOUNCEMENT_CONTEXT_MARKERS: tuple[str, ...] = (
+    "baktim ama",
+    "duyurulara baktim",
+    "duyuruya baktim",
+    "duyuruda bulamadim",
+    "duyurularda bulamadim",
+    "duyurular icinde bulamadim",
+    "bulamadim",
+    "goremedim",
+    "rastlamadim",
+    "yer almiyor",
+    "anlatir misin",
+    "anlatir misiniz",
+)
+
+
+def _looks_like_incidental_announcement_context(normalized_query: str) -> bool:
+    """Detect when "duyuru" is context, not the user's primary intent."""
+    if not contains_any_normalized(normalized_query, ("duyuru", "duyurular", "ilan", "haber")):
+        return False
+    if not contains_any_normalized(normalized_query, _INCIDENTAL_ANNOUNCEMENT_CONTEXT_MARKERS):
+        return False
+    return contains_any_normalized(
+        normalized_query,
+        _PROCEDURAL_ANNOUNCEMENT_BLOCK_MARKERS,
+    ) and contains_any_normalized(normalized_query, _PROCEDURAL_QUESTION_MARKERS)
+
+
+def _looks_like_student_portal_lookup(normalized_query: str) -> bool:
+    return contains_any_normalized(
+        normalized_query,
+        _STUDENT_PORTAL_LINK_MARKERS,
+    ) and contains_any_normalized(normalized_query, _STUDENT_PORTAL_LOOKUP_MARKERS)
+
+
+def augment_query_for_department(
+    department: Department,
+    query: str,
+    metadata: dict,
+) -> str:
+    """Add lightweight context to the query only when strictly needed.
+
+    ACADEMIC_PROGRAMS queries are no longer prefixed; department context is
+    handled via metadata-based boosting in the retriever instead.
+    Finance queries still receive a student-type hint for fee differentiation.
+    """
+    if department != Department.FINANCE:
+        return query
+
+    student_type = (metadata.get("student_type") or "").strip()
+    student_faculty = (metadata.get("student_faculty") or "").strip()
+
+    lowered_query = normalize_text(query)
+    student_type_prefix = ""
+    if student_type and normalize_text(student_type) not in lowered_query:
+        suffix = " baglami icin: " if "ogrenci" in normalize_text(student_type) else " ogrenci baglami icin: "
+        student_type_prefix = f"{student_type}{suffix}"
+
+    faculty_prefix = ""
+    fee_markers = ("ucret", "harc", "odeme", "katki payi")
+    requested_unit = extract_requested_unit(query)
+    if student_faculty and not requested_unit and any(marker in lowered_query for marker in fee_markers):
+        if normalize_text(student_faculty) not in lowered_query:
+            faculty_prefix = f"{student_faculty} icin: "
+
+    return f"{student_type_prefix}{faculty_prefix}{query}".strip()
+
+
+def _student_type_slot_is_relevant(*, intent: IntentAnalysis, query: str | None) -> bool:
+    """Return true only when student type is needed to answer the current query."""
+    if not query:
+        return normalize_text(intent.primary_intent) in _STUDENT_TYPE_SENSITIVE_INTENTS
+
+    normalized_query = normalize_text(query)
+    primary_intent = normalize_text(intent.primary_intent)
+    target_capability = normalize_text(intent.target_capability)
+
+    if primary_intent not in _STUDENT_TYPE_SENSITIVE_INTENTS and target_capability not in _STUDENT_TYPE_SENSITIVE_INTENTS:
+        return False
+    return looks_like_fee_catalog_amount_query(normalized_query)
+
+
+def _application_type_slot_is_relevant(query: str | None) -> bool:
+    if not query:
+        return True
+    normalized_query = normalize_text(query)
+    if contains_any_normalized(normalized_query, ("harc", "borc", "ucret", "odeme", "katki payi")):
+        asks_date = contains_any_normalized(
+            normalized_query,
+            ("tarih", "ne zaman", "son gun", "son tarih", "basvuru tarihi", "tarihleri"),
+        )
+        if not asks_date or contains_any_normalized(normalized_query, ("tarih degil", "tarih sormuyorum")):
+            return False
+    return not any(marker in normalized_query for marker in _APPLICATION_TYPE_MARKERS)
+
+
+def _looks_like_international_registration_policy_query(query: str | None) -> bool:
+    if not query:
+        return False
+    normalized_query = normalize_text(query)
+    has_international = any(
+        marker in normalized_query
+        for marker in ("uluslararasi", "uluslararası", "yabanci", "yabancı", "international")
+    )
+    has_registration = any(
+        marker in normalized_query
+        for marker in ("kayit", "kayıt", "basvuru", "başvuru", "belge", "evrak")
+    )
+    return has_international and has_registration
+
+
+def _general_policy_query_can_answer_without_program_slot(query: str | None) -> bool:
+    if not query:
+        return False
+    normalized_query = normalize_text(query)
+    if contains_any_normalized(normalized_query, _PROGRAM_REQUIRED_POLICY_MARKERS):
+        return False
+    return contains_any_normalized(
+        normalized_query,
+        _GENERAL_POLICY_ELIGIBILITY_TOPICS,
+    ) and contains_any_normalized(normalized_query, _GENERAL_POLICY_ELIGIBILITY_QUESTIONS)
+
+
+def build_missing_slot_clarification_message(
+    *,
+    intent: IntentAnalysis | None,
+    metadata: dict | None = None,
+    query: str | None = None,
+) -> str | None:
+    """Turn LLM-provided missing slot metadata into a safe clarification prompt.
+
+    The LLM decides which semantic slots are missing; this function only maps
+    known slot names to user-facing questions and ignores slots already present
+    in authenticated/session metadata.
+    """
+    if intent is None or not intent.missing_slots:
+        return None
+    if intent.primary_intent == "academic_calendar":
+        return None
+
+    metadata = metadata or {}
+    missing_slots = set(intent.missing_slots)
+    inferred_program = infer_department_from_query(query or "")
+
+    if metadata.get("is_authenticated"):
+        missing_slots.discard("auth")
+    if metadata.get("student_type"):
+        missing_slots.discard("student_type")
+    elif "student_type" in missing_slots and not _student_type_slot_is_relevant(intent=intent, query=query):
+        missing_slots.discard("student_type")
+
+    fee_slots = {"student_type", "faculty_or_program", "department_or_program", "program"}
+    if (
+        query
+        and missing_slots.intersection(fee_slots)
+        and normalize_text(intent.primary_intent) in _STUDENT_TYPE_SENSITIVE_INTENTS
+        and not looks_like_fee_catalog_amount_query(query)
+    ):
+        missing_slots.difference_update(fee_slots)
+
+    if _looks_like_international_registration_policy_query(query):
+        missing_slots.difference_update({"faculty_or_program", "department_or_program", "program", "course_name"})
+
+    if _general_policy_query_can_answer_without_program_slot(query):
+        missing_slots.difference_update({"faculty_or_program", "department_or_program", "program", "course_name"})
+
+    if metadata.get("student_faculty") or metadata.get("student_department") or inferred_program:
+        missing_slots.discard("faculty_or_program")
+        missing_slots.discard("department_or_program")
+        missing_slots.discard("program")
+    if "application_type" in missing_slots and not _application_type_slot_is_relevant(query):
+        missing_slots.discard("application_type")
+    if not missing_slots:
+        return None
+
+    if "auth" in missing_slots:
+        return AUTH_CLARIFICATION_MESSAGE
+
+    if "student_type" in missing_slots and missing_slots.intersection(fee_slots - {"student_type"}):
+        return FEE_CONTEXT_CLARIFICATION_MESSAGE
+
+    if "application_type" in missing_slots:
+        return APPLICATION_TYPE_CLARIFICATION_MESSAGE
+
+    if "student_type" in missing_slots:
+        return STUDENT_TYPE_CLARIFICATION_MESSAGE
+
+    if missing_slots.intersection({"faculty_or_program", "department_or_program", "program", "course_name"}):
+        return PROGRAM_CONTEXT_CLARIFICATION_MESSAGE
+
+    return None
+
+
+def requires_academic_department_clarification(
+    *,
+    query: str,
+    departments: list[Department],
+    task_type: TaskType | None,
+    student_department: str | None,
+) -> bool:
+    """Return whether academic department information must be clarified."""
+    if student_department:
+        return False
+    if Department.ACADEMIC_PROGRAMS not in departments:
+        return False
+    if task_type not in {TaskType.COURSE_QUERY, None}:
+        return False
+
+    lowered = normalize_text(query)
+    has_explicit_program_signal = any(keyword in lowered for keyword in ("bolumu", "anabilim dali"))
+    has_explicit_course_code = _has_valid_course_code(query)
+    has_known_program_name = infer_department_from_query(query) is not None
+    if has_explicit_program_signal or has_explicit_course_code or has_known_program_name:
+        return False
+
+    if any(signal in lowered for signal in _GENERAL_RULE_BYPASS):
+        return False
+
+    concepts = extract_query_concepts(lowered)
+    if concepts.has_any(
+        (
+            CONCEPT_CAP,
+            CONCEPT_EXEMPTION,
+            CONCEPT_GRADUATION,
+            CONCEPT_HORIZONTAL_TRANSFER,
+            CONCEPT_REGISTRATION,
+        )
+    ):
+        return False
+
+    if contains_any_normalized(lowered, _ACADEMIC_DEPARTMENT_CLARIFICATION_BYPASS_MARKERS):
+        return False
+
+    return contains_any_normalized(lowered, ACADEMIC_DEPARTMENT_CONTEXT_MARKERS)
+
+
+def looks_like_announcement_query(query: str) -> bool:
+    """Return whether the query primarily targets announcements."""
+    normalized = normalize_text(query)
+    concepts = extract_query_concepts(normalized)
+    if _looks_like_student_portal_lookup(normalized):
+        return False
+    if _looks_like_incidental_announcement_context(normalized):
+        return False
+    if CAPABILITY_ANNOUNCEMENT in concepts.blocked_primary_capabilities:
+        return False
+    if concepts.has(CONCEPT_ANNOUNCEMENT):
+        return True
+    if (
+        (concepts.has(CONCEPT_ACADEMIC_CALENDAR) or contains_any_normalized(normalized, _ACADEMIC_CALENDAR_DATE_MARKERS))
+        and not concepts.has(CONCEPT_ANNOUNCEMENT)
+        and "programi" not in normalized
+    ):
+        return False
+    if contains_any_normalized(normalized, _EXAM_PROGRAM_LOOKUP_MARKERS):
+        return True
+    if concepts.has(CONCEPT_COURSE_SCHEDULE) or "ders programi" in normalized:
+        return contains_any_normalized(normalized, _COURSE_SCHEDULE_ANNOUNCEMENT_INTENTS)
+    return (
+        contains_any_normalized(normalized, _ANNOUNCEMENT_DIRECT_LOOKUP_INTENTS)
+        and contains_any_normalized(normalized, _ANNOUNCEMENT_DIRECT_LOOKUP_MARKERS)
+    )
+
+
+def should_block_announcement_primary_flow(query: str) -> bool:
+    """Return whether a procedural question must not become announcement-only.
+
+    Some procedural questions contain timing words such as "basvuru" and
+    "ne zaman". Those can be semantically close to announcements, but the user
+    is asking for the rule/process unless they explicitly ask for a duyuru,
+    ilan, haber or link.
+    """
+    normalized = normalize_text(query)
+    concepts = extract_query_concepts(normalized)
+    if _looks_like_student_portal_lookup(normalized):
+        return True
+    if _looks_like_incidental_announcement_context(normalized):
+        return True
+    if CAPABILITY_ANNOUNCEMENT in concepts.explicit_capabilities:
+        return False
+    if CAPABILITY_ANNOUNCEMENT in concepts.blocked_primary_capabilities:
+        return True
+    if contains_any_normalized(normalized, _EXPLICIT_ANNOUNCEMENT_ALLOW_MARKERS):
+        return False
+    if "yatay gecis" in normalized and contains_any_normalized(
+        normalized,
+        ("muafiyet", "muaf", "intibak", "ders saydir"),
+    ):
+        return True
+    return contains_any_normalized(
+        normalized,
+        _PROCEDURAL_ANNOUNCEMENT_BLOCK_MARKERS,
+    ) and contains_any_normalized(normalized, _PROCEDURAL_QUESTION_MARKERS)
+
+
+def looks_like_event_query(query: str) -> bool:
+    """Return whether the query explicitly asks for events."""
+    normalized = normalize_text(query)
+    if looks_like_contact_query(normalized):
+        return False
+    return contains_any_normalized(normalized, EVENT_QUERY_MARKERS)
+
+
+def looks_like_contact_query(query: str) -> bool:
+    """Return whether the query primarily asks for contact information."""
+    return looks_like_contact_intent(query)
+
+
+def should_fetch_related_announcements(query: str) -> bool:
+    """Return whether a non-announcement query still benefits from related announcements."""
+    normalized = normalize_text(query)
+    concepts = extract_query_concepts(normalized)
+    if should_block_announcement_primary_flow(normalized):
+        if concepts.has(CONCEPT_HORIZONTAL_TRANSFER) and concepts.has(CONCEPT_EXEMPTION):
+            return False
+        if not (
+            contains_any_normalized(normalized, RELATED_ANNOUNCEMENT_QUERY_MARKERS)
+            and contains_any_normalized(normalized, _RELATED_ANNOUNCEMENT_SUBJECT_MARKERS)
+        ):
+            return False
+    if looks_like_announcement_query(normalized):
+        return True
+    if contains_any_normalized(normalized, _ACADEMIC_CALENDAR_DATE_MARKERS) or (
+        "takvim" in normalized and not contains_any_normalized(normalized, _EXPLICIT_ANNOUNCEMENT_ALLOW_MARKERS)
+    ):
+        return False
+    # Ilgili duyuru sinyali, contact marker'larindan once degerlendirilir.
+    # Aksi halde "nerede" marker'i "nereden takip edilir" gibi sorgulari
+    # yanlislikla contact sorusu sanip duyuru zenginlestirmesini kapatabilir.
+    if contains_any_normalized(
+        normalized,
+        RELATED_ANNOUNCEMENT_QUERY_MARKERS,
+    ) and contains_any_normalized(
+        normalized,
+        _RELATED_ANNOUNCEMENT_SUBJECT_MARKERS,
+    ):
+        return True
+    if looks_like_contact_query(normalized):
+        return False
+    return False
+
+
+def build_supplemental_announcement_probe_query(query: str) -> str | None:
+    """Build a scoped, keyword-bearing announcement probe for date/offer facets."""
+    normalized = normalize_text(query)
+    needs_external_date_or_offer = contains_any_normalized(
+        normalized,
+        (
+            "basvuru tarihi",
+            "basvuru tarihleri",
+            "tarihleri",
+            "ne zaman",
+            "takvim",
+            "acilacak ders",
+            "hangi dersler acilacak",
+            "duyuruldu mu",
+        ),
+    )
+    if not needs_external_date_or_offer:
+        return None
+    academic_year = "2025-2026"
+    if contains_any_normalized(normalized, ("cap", "cift anadal", "cift ana dal", "yandal", "yan dal")):
+        return f"CAP cift anadal yandal basvuru tarihleri {academic_year}"
+    if "staj" in normalized:
+        return f"staj basvuru tarihleri {academic_year}"
+    if "yaz okulu" in normalized:
+        return f"yaz okulu acilacak dersler basvuru tarihleri {academic_year}"
+    if contains_any_normalized(normalized, ("sinav takvimi", "sinav programi")):
+        return f"sinav takvimi sinav programi {academic_year}"
+    return None
+
+
+def _has_valid_course_code(query: str) -> bool:
+    for match in COURSE_CODE_PATTERN.finditer(query):
+        raw = match.group(0).replace(" ", "")
+        prefix = re.sub(r"\d+", "", raw).upper()
+        if prefix in _INVALID_COURSE_PREFIXES:
+            continue
+        if prefix in _KNOWN_COURSE_PREFIXES:
+            return True
+        if not match.group(0).replace(" ", "").isupper():
+            continue
+        if 2 <= len(prefix) <= 4:
+            return True
+    return False
+
+
+def should_allow_announcement_latest_fallback(query: str) -> bool:
+    """Return whether announcement lookup may fall back to generic latest records."""
+    normalized = normalize_text(query)
+    if contains_any_normalized(normalized, _SUBJECT_SPECIFIC_ANNOUNCEMENT_MARKERS):
+        return False
+    if contains_any_normalized(normalized, _LATEST_ANNOUNCEMENT_FALLBACK_MARKERS):
+        return True
+    return looks_like_announcement_query(normalized)
+
+
+def should_keep_announcement_follow_up(query: str) -> bool:
+    """Return whether a follow-up should remain in the announcement flow."""
+    normalized = normalize_text(query).strip(" \t\r\n?.!,;:")
+    if looks_like_announcement_query(normalized):
+        return True
+    if (
+        "takvim" in normalized
+        or "hangi tarih" in normalized
+        or "hangi tarihler" in normalized
+        or contains_any_normalized(normalized, _ACADEMIC_CALENDAR_DATE_MARKERS)
+    ):
+        return False
+    if contains_any_normalized(normalized, _ANNOUNCEMENT_TOPIC_SHIFT_MARKERS):
+        return False
+    tokens = normalized.split()
+    return len(tokens) <= 4 and contains_any_normalized(
+        normalized,
+        _ANNOUNCEMENT_FOLLOW_UP_MARKERS,
+    )
+
+
+def personalize_answer(answer: str, full_name: str | None) -> str:
+    """Add a first-name prefix when a profile is available."""
+    if not full_name or not answer:
+        return answer
+    first_name = (full_name.split() or [full_name])[0]
+    return f"{first_name}, {answer}"
+
+
+def query_prefers_global_synthesis(query: str) -> bool:
+    """Return whether the query likely benefits from a combined LLM synthesis."""
+    return contains_any_normalized(query, GLOBAL_SYNTHESIS_QUERY_MARKERS)
+
+
+def should_use_global_synthesis(*, query: str, responses: list[DepartmentResponse]) -> bool:
+    """Return whether final answer composition should use global synthesis."""
+    if looks_like_contact_query(query):
+        return False
+    if any(
+        isinstance(response.metadata, dict)
+        and isinstance(response.metadata.get("answer_contract"), dict)
+        and str(response.metadata["answer_contract"].get("synthesis_policy") or "").strip() == "deterministic"
+        for response in responses
+    ):
+        return False
+    meaningful = [
+        response
+        for response in responses
+        if response_eligible_for_global_synthesis(response)
+    ]
+    if not meaningful:
+        return False
+    if not any(response.sources or response.db_data for response in meaningful):
+        return False
+    if all(not response.sources for response in meaningful):
+        return False
+    # Tek veya cok departman farketmeksizin, anlamli kaynak varsa
+    # her zaman LLM sentezi/refinement uygula.
+    return True

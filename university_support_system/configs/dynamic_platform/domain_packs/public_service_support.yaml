@@ -1,0 +1,42 @@
+schema_version: 1
+domain_pack: public_service_support
+display_name: Public Service Support
+description: Public institution support for service applications, required documents, fees, appointments, announcements, and unit contacts.
+capabilities:
+  - capability_id: policy_qa
+    display_name: Policy Q&A
+    description: General public service policy, procedure, and regulation questions.
+    answer_mode: rag
+    keywords: [yonetmelik, prosedur, prosedür, kural, hizmet, basvuru, başvuru]
+  - capability_id: service_application
+    display_name: Service Application
+    description: Application process guidance for public services.
+    core_capability: policy_qa
+    answer_mode: hybrid
+    keywords: [basvuru, başvuru, basvurusu, başvurusu, hizmet, hizmet başvurusu, nasil basvururum, nasıl başvururum, yapilir, yapılır, form, talep]
+  - capability_id: document_requirement
+    display_name: Document Requirement
+    description: Required documents for service applications.
+    core_capability: service_application
+    answer_mode: hybrid
+    keywords: [belge, evrak, gerekli belgeler, dokuman, doküman]
+  - capability_id: fee_policy
+    display_name: Fee Policy
+    description: Fee, payment, and tariff lookup for public services.
+    answer_mode: structured
+    keywords: [ucret, ücret, ucreti, ücreti, harc, harç, tarife, odeme, ödeme, tutar, vergi, vergisi, reklam]
+  - capability_id: appointment_schedule
+    display_name: Appointment Schedule
+    description: Appointment availability, office hours, and service calendar lookup.
+    answer_mode: structured
+    keywords: [randevu, saat, mesai, takvim, tarih, uygunluk]
+  - capability_id: public_announcement
+    display_name: Public Announcement
+    description: Current public announcements and detail summarization.
+    answer_mode: hybrid
+    keywords: [duyuru, ilan, haber, guncel, güncel, ozet, özet]
+  - capability_id: unit_contact
+    display_name: Unit Contact
+    description: Unit, desk, phone, and email lookup.
+    answer_mode: structured
+    keywords: [iletisim, iletişim, birim, telefon, dahili, mail, eposta, ulas, ulaş, ulasirim, ulaşırım]

@@ -1,0 +1,66 @@
+# ================================================
+# Docker Compose - Üniversite Destek Sistemi
+# ================================================
+# Tüm servisleri ayağa kaldırmak için: docker compose up -d
+# Servisleri durdurmak için: docker compose down
+# Logları görmek için: docker compose logs -f
+# Not: Bu dosya altyapi servislerini ayaga kaldirir; FastAPI uygulamasi
+# repo icinde ayrica `uvicorn src.api.main:app` ile baslatilir.
+
+services:
+  # ── PostgreSQL 15 ─────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: uni_postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-university_support}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 ───────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: uni_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Redis servisi hazır tutulur; mevcut retrieval cache uygulama içinde in-memory çalışır.
+    command: redis-server --appendonly yes
+
+  # ── ChromaDB ──────────────────────────────────
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    container_name: uni_chromadb
+    restart: unless-stopped
+    ports:
+      - "${CHROMA_PORT:-8100}:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+
+volumes:
+  postgres_data:
+    name: uni_postgres_data
+  redis_data:
+    name: uni_redis_data
+  chroma_data:
+    name: uni_chroma_data

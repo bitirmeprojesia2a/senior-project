@@ -1,0 +1,101 @@
+schema_version: 1
+source_catalog: omu_sources
+tenant_key: omu
+sources:
+  - source_id: omu_student_policy_documents
+    adapter: pdf_document
+    domain: education_university
+    owner_agent: student_affairs
+    source_family: student_policy_documents
+    capabilities:
+      - policy_qa
+      - graduation_requirement
+      - graduation_akts
+      - payment_debt_policy
+      - double_major_minor
+      - internship_policy
+    entity_scope:
+      type: global
+    authority_level: official_policy
+    collection: student_affairs_docs
+  - source_id: omu_academic_policy_documents
+    adapter: pdf_document
+    domain: education_university
+    owner_agent: academic_programs
+    source_family: academic_policy_documents
+    capabilities:
+      - policy_qa
+      - double_major_minor
+      - internship_policy
+      - prerequisite_check
+    entity_scope:
+      type: global
+    authority_level: official_policy
+    collection: academic_programs_docs
+  - source_id: omu_weekly_schedule
+    adapter: sql_table
+    domain: education_university
+    owner_agent: academic_programs
+    source_family: weekly_schedule
+    capabilities:
+      - course_schedule
+    entity_scope:
+      type: entity
+      entity_group: programs
+    authority_level: official_structured
+    collection: academic_schedules_docs
+  - source_id: omu_tuition_fee_tables
+    adapter: sql_table
+    domain: education_university
+    owner_agent: finance
+    source_family: tuition_fee_tables
+    capabilities:
+      - tuition_fee
+      - payment_debt_policy
+    entity_scope:
+      type: global
+    authority_level: official_structured
+  - source_id: omu_academic_calendar
+    adapter: calendar_pdf
+    domain: education_university
+    owner_agent: student_affairs
+    source_family: academic_calendar
+    capabilities:
+      - academic_calendar
+      - double_major_minor
+      - internship_policy
+    entity_scope:
+      type: global
+    authority_level: official_structured
+  - source_id: omu_announcements
+    adapter: announcement_page
+    domain: education_university
+    owner_agent: announcement
+    source_family: announcements
+    capabilities:
+      - announcement_lookup
+    entity_scope:
+      type: global
+    authority_level: official_announcement
+  - source_id: omu_contact_directory
+    adapter: sql_table
+    domain: education_university
+    owner_agent: student_affairs
+    source_family: contact_directory
+    capabilities:
+      - contact_lookup
+    entity_scope:
+      type: global
+    authority_level: official_structured
+  - source_id: omu_uploaded_transcripts
+    adapter: slack_uploaded_file
+    domain: education_university
+    owner_agent: student_affairs
+    source_family: uploaded_user_context
+    capabilities:
+      - transcript_analysis
+      - graduation_requirement
+      - graduation_akts
+    entity_scope:
+      type: uploaded_user_context
+    authority_level: uploaded_user_context

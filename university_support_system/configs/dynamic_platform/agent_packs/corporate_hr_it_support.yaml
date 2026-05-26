@@ -1,0 +1,66 @@
+schema_version: 1
+agent_pack: corporate_hr_it_support
+display_name: Corporate HR IT Support Agent Pack
+domain_pack: corporate_support
+agents:
+  - agent_id: hr_policy
+    display_name: HR Policy
+    role: department_agent
+    capabilities:
+      - policy_qa
+      - leave_policy
+      - department_contact
+    source_families:
+      - hr_documents
+      - contact_directory
+    final_owner_for:
+      - leave_policy
+    llm_allowed: true
+    deterministic_allowed: true
+    specialists:
+      - specialist_id: leave_specialist
+        display_name: Leave Specialist
+        capabilities:
+          - leave_policy
+      - specialist_id: hr_contract_specialist
+        display_name: HR Contract Specialist
+        capabilities:
+          - policy_qa
+  - agent_id: it_support
+    display_name: IT Support
+    role: department_agent
+    capabilities:
+      - it_ticket_guidance
+      - department_contact
+    source_families:
+      - it_knowledge_base
+      - contact_directory
+    final_owner_for:
+      - it_ticket_guidance
+    llm_allowed: true
+    deterministic_allowed: true
+    specialists:
+      - specialist_id: access_specialist
+        display_name: Access Specialist
+        capabilities:
+          - it_ticket_guidance
+  - agent_id: payroll
+    display_name: Payroll
+    role: department_agent
+    capabilities:
+      - payroll_question
+    source_families:
+      - payroll_documents
+    final_owner_for:
+      - payroll_question
+    llm_allowed: true
+    deterministic_allowed: true
+  - agent_id: announcement
+    display_name: Internal Announcements
+    role: capability_agent
+    capabilities:
+      - internal_announcement
+    source_families:
+      - internal_announcements
+    llm_allowed: true
+    deterministic_allowed: true
