@@ -1,7 +1,7 @@
-# University Support System
+# A2A PROTOKOLÜ İLE KURUMSAL DESTEK VE İŞ AKIŞI SİSTEMİ
 
 Bu proje; RAG, LLM tabanlı cevap sentezi, Slack entegrasyonu ve çok ajanlı
-orkestrasyon kullanan bir kurumsal destek sistemi prototipidir.
+orkestrasyon kullanan bir kurumsal destek sistemidir.
 
 Sistem ilk olarak üniversite öğrenci destek senaryoları üzerinden geliştirildi.
 Öğrenci işleri, akademik programlar, finans, ders programı, duyuru, akademik
